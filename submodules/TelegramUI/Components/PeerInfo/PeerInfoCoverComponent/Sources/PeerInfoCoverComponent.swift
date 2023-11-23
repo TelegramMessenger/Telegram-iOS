@@ -236,17 +236,13 @@ public final class PeerInfoCoverComponent: Component {
             
             let backgroundColor: UIColor
             var secondaryBackgroundColor: UIColor
-            let patternColor: UIColor
             if let peer = component.peer, let colors = peer._asPeer().profileColor.flatMap({ component.context.peerNameColors.getProfile($0, dark: component.isDark) }) {
                 
                 backgroundColor = colors.main
                 secondaryBackgroundColor = colors.secondary ?? colors.main
-                
-                patternColor = UIColor(white: 0.0, alpha: component.isDark ? 0.2 : 0.15).blendOver(background: backgroundColor)
             } else {
                 backgroundColor = .clear
                 secondaryBackgroundColor = .clear
-                patternColor = .clear
             }
             
             self.backgroundView.backgroundColor = secondaryBackgroundColor
@@ -258,7 +254,8 @@ public final class PeerInfoCoverComponent: Component {
             //self.backgroundGradientLayer.colors = [UIColor.green.cgColor, UIColor.blue.cgColor]
             self.backgroundGradientLayer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
             
-            let backgroundGradientFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - 350.0), size: CGSize(width: availableSize.width, height: 350.0))
+            let gradientHeight: CGFloat = 350.0
+            let backgroundGradientFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - 350.0), size: CGSize(width: availableSize.width, height: gradientHeight))
             if !transition.animation.isImmediate {
                 let previousPosition = self.backgroundGradientLayer.position
                 let updatedPosition = CGPoint(x: backgroundGradientFrame.minX, y: backgroundGradientFrame.maxY)
@@ -332,6 +329,10 @@ public final class PeerInfoCoverComponent: Component {
                         self.avatarPatternContentLayers.append(itemLayer)
                     }
                     
+                    let gradientPosition: CGFloat = max(0.0, min(1.0, (avatarBackgroundPatternContainerFrame.midY + itemFrame.midY) / gradientHeight))
+                    let itemBackgroundColor: UIColor = secondaryBackgroundColor.mixedWith(backgroundColor, alpha: gradientPosition)
+                    let patternColor = UIColor(white: 0.0, alpha: component.isDark ? 0.2 : 0.2).blendOver(background: itemBackgroundColor)
+                    
                     itemLayer.frame = itemFrame
                     itemLayer.layerTintColor = patternColor.cgColor
                     transition.setAlpha(layer: itemLayer, alpha: (1.0 - CGFloat(row) / 5.0) * (1.0 - itemScaleFraction))
@@ -345,55 +346,6 @@ public final class PeerInfoCoverComponent: Component {
                 }
                 self.avatarPatternContentLayers.removeSubrange(avatarBackgroundPatternLayerCount ..< self.avatarPatternContentLayers.count)
             }
-            
-            /*let patternSpanX: CGFloat = 82.0
-            let patternSpanY: CGFloat = 71.0
-            let patternHeight: CGFloat = 86.0
-            
-            var backgroundPatternCount = 0
-            var patternY: CGFloat = -patternHeight
-            var patternRowIndex = 0
-            while true {
-                if patternY >= 50.0 {
-                    break
-                }
-                
-                var offsetFromCenter: CGFloat = patternRowIndex % 2 == 0 ? 0.0 : patternSpanX * 0.5
-                while true {
-                    if offsetFromCenter >= availableSize.width * 0.5 + 50.0 {
-                        break
-                    }
-                    
-                    for i in 0 ..< (offsetFromCenter == 0.0 ? 1 : 2) {
-                        let itemPosition = CGPoint(x: availableSize.width * 0.5 + (i == 0 ? -1.0 : 1.0) * offsetFromCenter, y: patternY)
-                        let itemLayer: SimpleLayer
-                        if self.backgroundPatternContentLayers.count > backgroundPatternCount {
-                            itemLayer = self.backgroundPatternContentLayers[backgroundPatternCount]
-                        } else {
-                            itemLayer = SimpleLayer()
-                            itemLayer.contents = self.patternContentsTarget?.contents
-                            self.backgroundPatternContainer.layer.addSublayer(itemLayer)
-                            self.backgroundPatternContentLayers.append(itemLayer)
-                        }
-                        
-                        let itemFrame = CGSize(width: 24.0, height: 24.0).centered(around: itemPosition)
-                        itemLayer.frame = itemFrame
-                        itemLayer.layerTintColor = patternColor.cgColor
-                        
-                        backgroundPatternCount += 1
-                    }
-                    
-                    offsetFromCenter += patternSpanX
-                }
-                patternY += patternSpanY
-                patternRowIndex += 1
-            }
-            if backgroundPatternCount > self.backgroundPatternContentLayers.count {
-                for i in backgroundPatternCount ..< self.backgroundPatternContentLayers.count {
-                    self.backgroundPatternContentLayers[i].removeFromSuperlayer()
-                }
-                self.backgroundPatternContentLayers.removeSubrange(backgroundPatternCount ..< self.backgroundPatternContentLayers.count)
-            }*/
             
             return availableSize
         }

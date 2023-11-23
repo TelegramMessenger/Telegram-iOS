@@ -64,11 +64,16 @@ func _internal_updateNameColorAndEmoji(account: Account, nameColor: PeerNameColo
     |> switchToLatest
     |> castError(UpdateNameColorAndEmojiError.self)
     |> mapToSignal { _ -> Signal<Void, UpdateNameColorAndEmojiError> in
-        let flagsReplies: Int32 = 1 << 0
-        let flagsProfile: Int32 = (1 << 0) | (1 << 1)
+        let flagsReplies: Int32 = (1 << 0) | (1 << 2)
+        
+        var flagsProfile: Int32 = (1 << 0) | (1 << 1)
+        if profileColor != nil {
+            flagsProfile |= (1 << 2)
+        }
+        
         return combineLatest(
             account.network.request(Api.functions.account.updateColor(flags: flagsReplies, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0)),
-            account.network.request(Api.functions.account.updateColor(flags: flagsProfile, color: profileColor?.rawValue ?? 0, backgroundEmojiId: profileBackgroundEmojiId ?? 0))
+            account.network.request(Api.functions.account.updateColor(flags: flagsProfile, color: profileColor?.rawValue, backgroundEmojiId: profileBackgroundEmojiId ?? 0))
         )
         |> mapError { _ -> UpdateNameColorAndEmojiError in
             return .generic

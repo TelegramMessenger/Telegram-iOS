@@ -526,17 +526,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let regularNavigationContentsSecondaryColor: UIColor
         if let profileColor = peer?.profileColor {
-            let backgroundColor = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance).main
-            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
+            let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance)
+            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
+            let baseButtonBackgroundColor: UIColor
             if presentationData.theme.overallDarkAppearance {
-                let baseButtonBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.25)
-                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColor)
+                baseButtonBackgroundColor = UIColor(white: 0.0, alpha: 0.25)
             } else {
-                let baseButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.25)
-                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColor)
+                baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
-            regularHeaderButtonBackgroundColor = regularContentButtonBackgroundColor
+            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.main)
+            regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.secondary ?? backgroundColors.main)
         } else {
             regularNavigationContentsSecondaryColor = presentationData.theme.list.itemSecondaryTextColor
             regularContentButtonBackgroundColor = presentationData.theme.list.itemBlocksBackgroundColor

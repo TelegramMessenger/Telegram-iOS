@@ -555,7 +555,7 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                         let color = PeerNameColor(rawValue: index)
                         let colors: PeerNameColors.Colors
                         if item.isProfile {
-                            colors = item.colors.getProfile(color, dark: item.theme.overallDarkAppearance)
+                            colors = item.colors.getProfile(color, dark: item.theme.overallDarkAppearance, subject: .palette)
                         } else {
                             colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
                         }

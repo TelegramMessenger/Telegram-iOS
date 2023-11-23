@@ -89,8 +89,17 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         
         let regularNavigationContentsSecondaryColor: UIColor
         if let profileColor = peer?.profileColor {
-            let backgroundColor = self.context.peerNameColors.getProfile(profileColor).main
-            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
+            let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: theme.overallDarkAppearance)
+            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
+            
+            let storyColors = self.context.peerNameColors.getProfile(profileColor, dark: theme.overallDarkAppearance, subject: .stories)
+            
+            var unseenColors: [UIColor] = [storyColors.main]
+            if let secondary = storyColors.secondary {
+                unseenColors.insert(secondary, at: 0)
+            }
+            colors.unseenColors = unseenColors
+            colors.unseenCloseFriendsColors = colors.unseenColors
         } else {
             regularNavigationContentsSecondaryColor = theme.list.controlSecondaryColor
         }
