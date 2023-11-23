@@ -83,4 +83,3 @@ func _internal_updateNameColorAndEmoji(account: Account, nameColor: PeerNameColo
         }
     }
 }
-

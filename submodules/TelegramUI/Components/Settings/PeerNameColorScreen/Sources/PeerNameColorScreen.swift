@@ -667,10 +667,17 @@ public func PeerNameColorScreen(
             emojiContent: emojiContent
         )
         
-        //TODO:localize
+        let title: ItemListControllerTitle
+        if case .user = peer {
+            //TODO:localize
+            title = .sectionControl(["Name", "Profile"], state.selectedTabIndex)
+        } else {
+            title = .text("Set Channel Color")
+        }
+        
         let controllerState = ItemListControllerState(
             presentationData: ItemListPresentationData(presentationData),
-            title: .sectionControl(["Name", "Profile"], state.selectedTabIndex),
+            title: title,
             leftNavigationButton: nil,
             rightNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                 if !isLocked {
