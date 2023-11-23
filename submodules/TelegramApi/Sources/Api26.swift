@@ -1156,18 +1156,18 @@ public extension Api.help {
 }
 public extension Api.help {
     enum PeerColorSet: TypeConstructorDescription {
-        case peerColorProfileSet(palleteColors: [Int32], bgColors: [Int32], storyColors: [Int32])
+        case peerColorProfileSet(paletteColors: [Int32], bgColors: [Int32], storyColors: [Int32])
         case peerColorSet(colors: [Int32])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerColorProfileSet(let palleteColors, let bgColors, let storyColors):
+                case .peerColorProfileSet(let paletteColors, let bgColors, let storyColors):
                     if boxed {
-                        buffer.appendInt32(864391742)
+                        buffer.appendInt32(1987928555)
                     }
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(palleteColors.count))
-                    for item in palleteColors {
+                    buffer.appendInt32(Int32(paletteColors.count))
+                    for item in paletteColors {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                     buffer.appendInt32(481674261)
@@ -1196,8 +1196,8 @@ public extension Api.help {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerColorProfileSet(let palleteColors, let bgColors, let storyColors):
-                return ("peerColorProfileSet", [("palleteColors", palleteColors as Any), ("bgColors", bgColors as Any), ("storyColors", storyColors as Any)])
+                case .peerColorProfileSet(let paletteColors, let bgColors, let storyColors):
+                return ("peerColorProfileSet", [("paletteColors", paletteColors as Any), ("bgColors", bgColors as Any), ("storyColors", storyColors as Any)])
                 case .peerColorSet(let colors):
                 return ("peerColorSet", [("colors", colors as Any)])
     }
@@ -1220,7 +1220,7 @@ public extension Api.help {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.help.PeerColorSet.peerColorProfileSet(palleteColors: _1!, bgColors: _2!, storyColors: _3!)
+                return Api.help.PeerColorSet.peerColorProfileSet(paletteColors: _1!, bgColors: _2!, storyColors: _3!)
             }
             else {
                 return nil

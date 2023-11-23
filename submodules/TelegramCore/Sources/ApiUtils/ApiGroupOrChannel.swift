@@ -157,7 +157,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         var backgroundEmojiId: Int64?
         if let color = color {
             switch color {
-            case let .peerColor(color, backgroundEmojiIdValue):
+            case let .peerColor(_, color, backgroundEmojiIdValue):
                 nameColor = color
                 backgroundEmojiId = backgroundEmojiIdValue
             }
@@ -226,7 +226,7 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                 var backgroundEmojiId: Int64?
                 if let color = color {
                     switch color {
-                    case let .peerColor(color, backgroundEmojiIdValue):
+                    case let .peerColor(_, color, backgroundEmojiIdValue):
                         nameColorIndex = color
                         backgroundEmojiId = backgroundEmojiIdValue
                     }

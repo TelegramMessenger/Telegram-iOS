@@ -100,7 +100,7 @@ extension TelegramUser {
             var backgroundEmojiId: Int64?
             if let color = color {
                 switch color {
-                case let .peerColor(color, backgroundEmojiIdValue):
+                case let .peerColor(_, color, backgroundEmojiIdValue):
                     nameColorIndex = color
                     backgroundEmojiId = backgroundEmojiIdValue
                 }
@@ -110,7 +110,7 @@ extension TelegramUser {
             var profileBackgroundEmojiId: Int64?
             if let profileColor = profileColor {
                 switch profileColor {
-                case let .peerColor(color, backgroundEmojiIdValue):
+                case let .peerColor(_, color, backgroundEmojiIdValue):
                     profileColorIndex = color
                     profileBackgroundEmojiId = backgroundEmojiIdValue
                 }
@@ -204,7 +204,7 @@ extension TelegramUser {
                         var backgroundEmojiId: Int64?
                         if let nameColor = nameColor {
                             switch nameColor {
-                            case let .peerColor(color, backgroundEmojiIdValue):
+                            case let .peerColor(_, color, backgroundEmojiIdValue):
                                 nameColorIndex = color
                                 backgroundEmojiId = backgroundEmojiIdValue
                             }
@@ -214,7 +214,7 @@ extension TelegramUser {
                         var profileBackgroundEmojiId: Int64?
                         if let profileColor = profileColor {
                             switch profileColor {
-                            case let .peerColor(color, backgroundEmojiIdValue):
+                            case let .peerColor(_, color, backgroundEmojiIdValue):
                                 profileColorIndex = color
                                 profileBackgroundEmojiId = backgroundEmojiIdValue
                             }

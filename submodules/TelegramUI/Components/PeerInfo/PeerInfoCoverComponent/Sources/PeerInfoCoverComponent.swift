@@ -315,8 +315,9 @@ public final class PeerInfoCoverComponent: Component {
             
             var avatarBackgroundPatternLayerCount = 0
             let lokiRng = LokiRng(seed0: 123, seed1: 0, seed2: 0)
-            for row in 0 ..< 4 {
-                let avatarPatternCount = row % 2 == 0 ? 9 : 9
+            let numRows = 5
+            for row in 0 ..< numRows {
+                let avatarPatternCount: Int = 7
                 let avatarPatternAngleSpan: CGFloat = CGFloat.pi * 2.0 / CGFloat(avatarPatternCount - 1)
                 
                 for i in 0 ..< avatarPatternCount - 1 {
@@ -326,13 +327,16 @@ public final class PeerInfoCoverComponent: Component {
                     let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction, t: itemDistanceFraction, reverse: false)
                     let itemDistance = baseItemDistance * (1.0 - itemScaleFraction) + 20.0 * itemScaleFraction
                     
-                    var itemAngle = -CGFloat.pi * 0.5 + CGFloat(i) * avatarPatternAngleSpan
+                    var itemAngle: CGFloat
+                    itemAngle = -CGFloat.pi * 0.5 + CGFloat(i) * avatarPatternAngleSpan
                     if row % 2 != 0 {
                         itemAngle += avatarPatternAngleSpan * 0.5
                     }
                     let itemPosition = CGPoint(x: cos(itemAngle) * itemDistance, y: sin(itemAngle) * itemDistance)
                     
-                    let itemScale: CGFloat = 0.7 + CGFloat(lokiRng.next()) * (1.0 - 0.7)
+                    var itemScale: CGFloat
+                    itemScale = 0.7 + CGFloat(lokiRng.next()) * (1.0 - 0.7)
+                    
                     let itemSize: CGFloat = floor(26.0 * itemScale)
                     let itemFrame = CGSize(width: itemSize, height: itemSize).centered(around: itemPosition)
                     
