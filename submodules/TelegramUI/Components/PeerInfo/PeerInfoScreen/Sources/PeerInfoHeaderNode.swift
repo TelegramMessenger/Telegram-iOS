@@ -173,6 +173,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarClippingNode = SparseNode()
         self.avatarClippingNode.alpha = 0.996
         self.avatarClippingNode.clipsToBounds = true
+        
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded, isSettings: isSettings)
         
         self.titleNodeContainer = ASDisplayNode()
@@ -262,6 +263,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 
         self.regularContentNode.addSubnode(self.avatarClippingNode)
         self.avatarClippingNode.addSubnode(self.avatarListNode)
+        
         self.regularContentNode.addSubnode(self.avatarListNode.listContainerNode.controlsClippingOffsetNode)
         self.regularContentNode.addSubnode(self.titleNodeContainer)
         self.regularContentNode.addSubnode(self.subtitleNodeContainer)
@@ -1101,7 +1103,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let expandedTitleScale: CGFloat = 0.8
         
-        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - 70.0), size: CGSize(width: width, height: 70.0)))
+        var bottomShadowHeight: CGFloat = 72.0
+        if !self.isSettings {
+            bottomShadowHeight += 80.0
+        }
+        let bottomShadowFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - bottomShadowHeight), size: CGSize(width: width, height: bottomShadowHeight))
+        transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: bottomShadowFrame, beginWithCurrentState: true)
+        self.avatarListNode.listContainerNode.bottomShadowNode.update(size: bottomShadowFrame.size, transition: transition)
         
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)

@@ -136,7 +136,17 @@ public final class PeerInfoCoverComponent: Component {
         override public init(frame: CGRect) {
             self.backgroundView = UIView()
             self.backgroundGradientLayer = SimpleGradientLayer()
+            
             self.avatarBackgroundGradientLayer = SimpleGradientLayer()
+            let baseAvatarGradientAlpha: CGFloat = 0.4
+            let numSteps = 6
+            self.avatarBackgroundGradientLayer.colors = (0 ..< numSteps).map { i in
+                let step: CGFloat = 1.0 - CGFloat(i) / CGFloat(numSteps - 1)
+                return UIColor(white: 1.0, alpha: baseAvatarGradientAlpha * pow(step, 2.0)).cgColor
+            }
+            self.avatarBackgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+            self.avatarBackgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+            self.avatarBackgroundGradientLayer.type = .radial
             
             self.avatarBackgroundPatternContentsLayer = SimpleGradientLayer()
             self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
@@ -282,7 +292,6 @@ public final class PeerInfoCoverComponent: Component {
             self.backgroundGradientLayer.endPoint = CGPoint(x: 0.5, y: 0.0)
             self.backgroundGradientLayer.type = .axial
             self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]
-            //self.backgroundGradientLayer.colors = [UIColor.green.cgColor, UIColor.blue.cgColor]
             self.backgroundGradientLayer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
             
             let gradientHeight: CGFloat = component.defaultHeight
@@ -306,7 +315,7 @@ public final class PeerInfoCoverComponent: Component {
             
             //transition.setFrame(view: self.avatarBackgroundPatternView, frame: CGSize(width: 200.0, height: 200.0).centered(around: CGPoint()))
             
-            let avatarPatternFrame = CGSize(width: 400.0, height: 400.0).centered(around: component.avatarCenter)
+            let avatarPatternFrame = CGSize(width: 380.0, height: 380.0).centered(around: component.avatarCenter)
             transition.setFrame(layer: self.avatarBackgroundPatternContentsLayer, frame: avatarPatternFrame)
             
             self.avatarBackgroundPatternContentsLayer.type = .radial
@@ -317,16 +326,7 @@ public final class PeerInfoCoverComponent: Component {
                 UIColor(white: 0.0, alpha: 0.0).cgColor
             ]
             
-            let baseAvatarGradientAlpha: CGFloat = 0.24
-            let numSteps = 10
-            self.avatarBackgroundGradientLayer.colors = (0 ..< 10).map { i in
-                let step: CGFloat = 1.0 - CGFloat(i) / CGFloat(numSteps - 1)
-                return UIColor(white: 1.0, alpha: baseAvatarGradientAlpha * pow(step, 3.0)).cgColor
-            }
-            self.avatarBackgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
-            self.avatarBackgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
-            self.avatarBackgroundGradientLayer.type = .radial
-            transition.setFrame(layer: self.avatarBackgroundGradientLayer, frame: CGSize(width: 260.0, height: 260.0).centered(around: component.avatarCenter))
+            transition.setFrame(layer: self.avatarBackgroundGradientLayer, frame: CGSize(width: 300.0, height: 300.0).centered(around: component.avatarCenter))
             transition.setAlpha(layer: self.avatarBackgroundGradientLayer, alpha: 1.0 - component.avatarTransitionFraction)
             
             let backgroundPatternContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height), size: CGSize(width: availableSize.width, height: 0.0))
