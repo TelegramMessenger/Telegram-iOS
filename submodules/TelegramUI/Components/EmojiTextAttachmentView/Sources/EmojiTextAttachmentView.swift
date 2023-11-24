@@ -372,8 +372,14 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 }
             }
             
-            if self.layerTintColor == nil && customColor != nil {
-                setLayerContentsMaskMode(self, true)
+            if customColor != nil {
+                if self.layerTintColor == nil {
+                    setLayerContentsMaskMode(self, true)
+                }
+            } else {
+                if self.layerTintColor != nil {
+                    setLayerContentsMaskMode(self, false)
+                }
             }
             if let customColor {
                 transition.setTintColor(layer: self, color: customColor)
@@ -397,8 +403,14 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 }
             }
             
-            if self.layerTintColor == nil {
-                setLayerContentsMaskMode(self, true)
+            if customColor != nil {
+                if self.layerTintColor == nil {
+                    setLayerContentsMaskMode(self, true)
+                }
+            } else {
+                if self.layerTintColor != nil {
+                    setLayerContentsMaskMode(self, false)
+                }
             }
             self.layerTintColor = customColor?.cgColor
         } else {
