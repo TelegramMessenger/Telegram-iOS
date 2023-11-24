@@ -594,7 +594,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         let baseGradientAlpha: CGFloat = 1.0
         let numSteps = 8
         let firstStep = 1
-        let firstLocation = 0.6
+        let firstLocation = 0.4
         self.backgroundGradientMaskLayer.colors = (0 ..< numSteps).map { i in
             if i < firstStep {
                 return UIColor(white: 1.0, alpha: 1.0).cgColor
