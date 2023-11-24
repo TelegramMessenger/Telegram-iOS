@@ -26,6 +26,8 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
+        "//submodules/UIKitRuntimeUtils",
+        "//submodules/ComponentFlow",
     ],
     visibility = [
         "//visibility:public",

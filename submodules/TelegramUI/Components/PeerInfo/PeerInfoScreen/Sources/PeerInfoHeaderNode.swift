@@ -557,10 +557,29 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let headerButtonBackgroundColor: UIColor
         
+        var panelWithAvatarHeight: CGFloat = 35.0 + avatarSize
+        if threadData != nil {
+            panelWithAvatarHeight += 10.0
+        }
+        
+        let innerBackgroundTransitionFraction: CGFloat
+        
+        let navigationTransition: ContainedViewLayoutTransition
+        if transition.isAnimated {
+            navigationTransition = transition
+        } else {
+            navigationTransition = animateHeader ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
+        }
+        
+        let backgroundBannerAlpha: CGFloat
+        
         var effectiveSeparatorAlpha: CGFloat
         if let navigationTransition = self.navigationTransition {
             transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
             transitionFraction = navigationTransition.fraction
+            
+            innerBackgroundTransitionFraction = 0.0
+            backgroundBannerAlpha = 1.0
             
             if let avatarNavigationNode = navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
                 if let statusView = avatarNavigationNode.statusView.view {
@@ -584,67 +603,64 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
             effectiveSeparatorAlpha = transitionFraction
             
-            if self.isAvatarExpanded {
-                navigationContentsAccentColor = expandedAvatarNavigationContentsAccentColor
-                navigationContentsPrimaryColor = expandedAvatarNavigationContentsPrimaryColor
-                navigationContentsSecondaryColor = expandedAvatarNavigationContentsSecondaryColor
-                
-                contentButtonBackgroundColor = expandedAvatarContentButtonBackgroundColor
-                contentButtonForegroundColor = expandedAvatarContentButtonForegroundColor
-                
-                headerButtonBackgroundColor = expandedAvatarHeaderButtonBackgroundColor
-            } else {
-                navigationContentsAccentColor = regularNavigationContentsAccentColor
-                navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor
-                navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor
-                
-                contentButtonBackgroundColor = regularContentButtonBackgroundColor
-                contentButtonForegroundColor = regularContentButtonForegroundColor
-                
-                headerButtonBackgroundColor = regularHeaderButtonBackgroundColor
-            }
-            
             if self.isAvatarExpanded, case .animated = transition, transitionFraction == 1.0 {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
             }
             self.avatarClippingNode.clipsToBounds = false
         } else {
-            let contentOffset = max(0.0, contentOffset - 140.0)
-            let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / 30.0))
-            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
+            let backgroundTransitionStepDistance: CGFloat = 50.0
+            var backgroundTransitionDistance: CGFloat = navigationHeight + panelWithAvatarHeight - backgroundTransitionStepDistance
+            if self.isSettings {
+                backgroundTransitionDistance -= 100.0
+            }
+            let contentOffset = max(0.0, contentOffset - backgroundTransitionDistance)
+            innerBackgroundTransitionFraction = max(0.0, min(1.0, contentOffset / backgroundTransitionStepDistance))
             
-            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: state.isEditing ? 0.0 : (1.0 - backgroundTransitionFraction))
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - innerBackgroundTransitionFraction), forceKeepBlur: true, transition: transition)
             
             if state.isEditing {
-                navigationContentsAccentColor = collapsedHeaderNavigationContentsAccentColor
-                navigationContentsPrimaryColor = collapsedHeaderNavigationContentsPrimaryColor
-                navigationContentsSecondaryColor = collapsedHeaderNavigationContentsSecondaryColor
-                contentButtonBackgroundColor = collapsedHeaderContentButtonBackgroundColor
-                contentButtonForegroundColor = collapsedHeaderContentButtonForegroundColor
-                
-                headerButtonBackgroundColor = collapsedHeaderButtonBackgroundColor
-            } else if self.isAvatarExpanded {
-                navigationContentsAccentColor = expandedAvatarNavigationContentsAccentColor
-                navigationContentsPrimaryColor = expandedAvatarNavigationContentsPrimaryColor
-                navigationContentsSecondaryColor = expandedAvatarNavigationContentsSecondaryColor
-                contentButtonBackgroundColor = expandedAvatarContentButtonBackgroundColor
-                contentButtonForegroundColor = expandedAvatarContentButtonForegroundColor
-                
-                headerButtonBackgroundColor = expandedAvatarHeaderButtonBackgroundColor
+                backgroundBannerAlpha = 0.0
             } else {
-                navigationContentsAccentColor = regularNavigationContentsAccentColor.mixedWith(collapsedHeaderNavigationContentsAccentColor, alpha: backgroundTransitionFraction)
-                navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor.mixedWith(collapsedHeaderNavigationContentsPrimaryColor, alpha: backgroundTransitionFraction)
-                navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor.mixedWith(collapsedHeaderNavigationContentsSecondaryColor, alpha: backgroundTransitionFraction)
-                
-                contentButtonBackgroundColor = regularContentButtonBackgroundColor.mixedWith(collapsedHeaderContentButtonBackgroundColor, alpha: backgroundTransitionFraction)
-                contentButtonForegroundColor = regularContentButtonForegroundColor.mixedWith(collapsedHeaderContentButtonForegroundColor, alpha: backgroundTransitionFraction)
-                
-                headerButtonBackgroundColor = regularHeaderButtonBackgroundColor.mixedWith(collapsedHeaderButtonBackgroundColor, alpha: backgroundTransitionFraction)
+                if 1.0 - innerBackgroundTransitionFraction < 0.5 {
+                    backgroundBannerAlpha = 0.0
+                } else {
+                    backgroundBannerAlpha = 1.0
+                }
             }
+            navigationTransition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: backgroundBannerAlpha)
             
-            effectiveSeparatorAlpha = backgroundTransitionFraction
+            effectiveSeparatorAlpha = innerBackgroundTransitionFraction
             
             self.avatarClippingNode.clipsToBounds = true
+        }
+        
+        if state.isEditing {
+            navigationContentsAccentColor = collapsedHeaderNavigationContentsAccentColor
+            navigationContentsPrimaryColor = collapsedHeaderNavigationContentsPrimaryColor
+            navigationContentsSecondaryColor = collapsedHeaderNavigationContentsSecondaryColor
+            contentButtonBackgroundColor = collapsedHeaderContentButtonBackgroundColor
+            contentButtonForegroundColor = collapsedHeaderContentButtonForegroundColor
+            
+            headerButtonBackgroundColor = collapsedHeaderButtonBackgroundColor
+        } else if self.isAvatarExpanded {
+            navigationContentsAccentColor = expandedAvatarNavigationContentsAccentColor
+            navigationContentsPrimaryColor = expandedAvatarNavigationContentsPrimaryColor
+            navigationContentsSecondaryColor = expandedAvatarNavigationContentsSecondaryColor
+            contentButtonBackgroundColor = expandedAvatarContentButtonBackgroundColor
+            contentButtonForegroundColor = expandedAvatarContentButtonForegroundColor
+            
+            headerButtonBackgroundColor = expandedAvatarHeaderButtonBackgroundColor
+        } else {
+            let effectiveTransitionFraction: CGFloat = innerBackgroundTransitionFraction < 0.5 ? 0.0 : 1.0
+            
+            navigationContentsAccentColor = regularNavigationContentsAccentColor.mixedWith(collapsedHeaderNavigationContentsAccentColor, alpha: effectiveTransitionFraction)
+            navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor.mixedWith(collapsedHeaderNavigationContentsPrimaryColor, alpha: effectiveTransitionFraction)
+            navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor.mixedWith(collapsedHeaderNavigationContentsSecondaryColor, alpha: effectiveTransitionFraction)
+            
+            contentButtonBackgroundColor = regularContentButtonBackgroundColor//.mixedWith(collapsedHeaderContentButtonBackgroundColor, alpha: effectiveTransitionFraction)
+            contentButtonForegroundColor = regularContentButtonForegroundColor//.mixedWith(collapsedHeaderContentButtonForegroundColor, alpha: effectiveTransitionFraction)
+            
+            headerButtonBackgroundColor = regularHeaderButtonBackgroundColor.mixedWith(collapsedHeaderButtonBackgroundColor, alpha: effectiveTransitionFraction)
         }
         
         do {
@@ -678,7 +694,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             //let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
             
             let iconSize = self.titleCredibilityIconView.update(
-                transition: Transition(transition),
+                transition: Transition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -734,7 +750,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
-                transition: Transition(transition),
+                transition: Transition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -757,20 +773,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.titleExpandedCredibilityIconSize = expandedIconSize
         }
         
-        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: navigationContentsAccentColor, transition: transition)
+        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: navigationContentsAccentColor, transition: navigationTransition)
         
-        self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: transition)
-        self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: transition)
-        self.panelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: transition)
-        self.nextPanelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: transition)
+        self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
+        self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
+        self.panelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
+        self.nextPanelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
         if let navigationBar = self.controller?.navigationBar {
             if let mainContentNode = navigationBar.backButtonNode.mainContentNode {
-                transition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
+                navigationTransition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
             }
-            transition.updateTintColor(layer: navigationBar.backButtonArrow.layer, color: navigationContentsAccentColor)
+            navigationTransition.updateTintColor(layer: navigationBar.backButtonArrow.layer, color: navigationContentsAccentColor)
             
             if let mainContentNode = navigationBar.leftButtonNode.mainContentNode {
-                transition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
+                navigationTransition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
             }
             
             navigationBar.rightButtonNode.contentsColor = navigationContentsAccentColor
@@ -1427,11 +1443,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
         
-        var panelWithAvatarHeight: CGFloat = 35.0 + avatarSize
-        if threadData != nil {
-            panelWithAvatarHeight += 10.0
-        }
-        
         let rawHeight: CGFloat
         let height: CGFloat
         let maxY: CGFloat
@@ -1541,6 +1552,20 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
             }
         }
+        
+        let buttonsTransitionDistance: CGFloat = -min(0.0, apparentBackgroundHeight - backgroundHeight)
+        let buttonsTransitionDistanceNorm: CGFloat = 40.0
+        
+        let innerContentOffset = max(0.0, contentOffset - 140.0)
+        let backgroundTransitionFraction: CGFloat = 1.0 - max(0.0, min(1.0, innerContentOffset / 30.0))
+        
+        let innerButtonsTransitionStepDistance: CGFloat = 58.0
+        let innerButtonsTransitionStepInset: CGFloat = 28.0
+        let innerButtonsTransitionDistance: CGFloat = navigationHeight + panelWithAvatarHeight - innerButtonsTransitionStepDistance - innerButtonsTransitionStepInset
+        let innerButtonsContentOffset = max(0.0, contentOffset - innerButtonsTransitionDistance)
+        let innerButtonsTransitionFraction = max(0.0, min(1.0, innerButtonsContentOffset / innerButtonsTransitionStepDistance))
+        
+        let buttonsTransitionFraction: CGFloat = 1.0 - max(0.0, min(1.0, buttonsTransitionDistance / buttonsTransitionDistanceNorm))
         
         let buttonSpacing: CGFloat = 8.0
         let buttonSideInset = max(16.0, containerInset)
@@ -1685,12 +1710,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 isActive = buttonKey == highlightedButton
             }
             
-            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isActive: isActive, presentationData: presentationData, backgroundColor: contentButtonBackgroundColor, foregroundColor: contentButtonForegroundColor, transition: buttonTransition)
+            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isActive: isActive, presentationData: presentationData, backgroundColor: contentButtonBackgroundColor, foregroundColor: contentButtonForegroundColor, fraction: 1.0 - innerButtonsTransitionFraction, transition: buttonTransition)
             
             if wasAdded {
                 buttonNode.alpha = 0.0
             }
-            transition.updateAlpha(node: buttonNode, alpha: 1.0)
+            transition.updateAlpha(node: buttonNode, alpha: buttonsTransitionFraction)
             
             if case .mute = buttonKey, buttonNode.containerNode.alpha.isZero, additive {
                 if case let .animated(duration, curve) = transition {
@@ -1739,17 +1764,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         transition.updateFrame(node: self.regularContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: resolvedHeight)))
         transition.updateFrameAdditive(node: self.buttonsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentBackgroundHeight - backgroundHeight), size: CGSize(width: width, height: 1000.0)))
-        let buttonsTransitionDistance: CGFloat = -min(0.0, apparentBackgroundHeight - backgroundHeight)
-        let buttonsTransitionDistanceNorm: CGFloat = 40.0
         
-        let innerContentOffset = max(0.0, contentOffset - 140.0)
-        let backgroundTransitionFraction: CGFloat = 1.0 - max(0.0, min(1.0, innerContentOffset / 30.0))
-        
-        let buttonsTransitionFraction: CGFloat = 1.0 - max(0.0, min(1.0, buttonsTransitionDistance / buttonsTransitionDistanceNorm))
-        transition.updateAlpha(node: self.buttonsContainerNode, alpha: buttonsTransitionFraction * backgroundTransitionFraction)
+        navigationTransition.updateAlpha(node: self.buttonsContainerNode, alpha: backgroundBannerAlpha)
         
         let bannerFrame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0 + apparentBackgroundHeight), size: CGSize(width: width, height: 2000.0))
-        transition.updateFrameAdditive(view: self.backgroundBannerView, frame: bannerFrame)
+        
+        if additive {
+            transition.updateFrameAdditive(view: self.backgroundBannerView, frame: bannerFrame)
+        } else {
+            transition.updateFrame(view: self.backgroundBannerView, frame: bannerFrame)
+        }
+        
         let backgroundCoverSize = self.backgroundCover.update(
             transition: Transition(transition),
             component: AnyComponent(PeerInfoCoverComponent(
@@ -1769,7 +1794,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if backgroundCoverView.superview == nil {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
             }
-            transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+            if additive {
+                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+            } else {
+                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+            }
         }
         
         if additive {

@@ -43,6 +43,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
     private let backgroundNode: NavigationBackgroundNode
+    private let contentNode: ASDisplayNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     private var animatedIcon: ComponentView<Empty>?
@@ -62,6 +63,9 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.backgroundNode = NavigationBackgroundNode(color: UIColor(white: 1.0, alpha: 0.2), enableBlur: true, enableSaturation: false)
         self.backgroundNode.isUserInteractionEnabled = false
         
+        self.contentNode = ASDisplayNode()
+        self.contentNode.isUserInteractionEnabled = false
+        
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
@@ -77,9 +81,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         self.containerNode.addSubnode(self.referenceNode)
         self.referenceNode.addSubnode(self.backgroundNode)
-        self.referenceNode.addSubnode(self.iconNode)
+        self.referenceNode.addSubnode(self.contentNode)
+        self.contentNode.addSubnode(self.iconNode)
         self.addSubnode(self.containerNode)
-        self.addSubnode(self.textNode)
+        self.contentNode.addSubnode(self.textNode)
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -114,7 +119,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.action(self, nil)
     }
     
-    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, presentationData: PresentationData, backgroundColor: UIColor, foregroundColor: UIColor, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, presentationData: PresentationData, backgroundColor: UIColor, foregroundColor: UIColor, fraction: CGFloat, transition: ContainedViewLayoutTransition) {
         let previousIcon = self.icon
         let themeUpdated = self.theme != presentationData.theme
         let iconUpdated = self.icon != icon
@@ -224,7 +229,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         if let animatedIconView = self.animatedIcon?.view as? LottieComponent.View {
             if animatedIconView.superview == nil {
-                self.referenceNode.view.addSubview(animatedIconView)
+                self.contentNode.view.addSubview(animatedIconView)
             }
             if playOnce {
                 animatedIconView.playOnce()
@@ -249,8 +254,16 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.backgroundNode.update(size: size, cornerRadius: 11.0, transition: transition)
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height * 0.5 * (1.0 - fraction)), size: size))
+        transition.updateAlpha(node: self.contentNode, alpha: fraction)
+        
+        let backgroundY: CGFloat = size.height * (1.0 - fraction)
+        let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundY), size: CGSize(width: size.width, height: max(0.0, size.height - backgroundY)))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        
+        transition.updateSublayerTransformScale(node: self.contentNode, scale: 1.0 * fraction + 0.001 * (1.0 - fraction))
+        
+        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: min(11.0, backgroundFrame.height * 0.5), transition: transition)
         self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
         if let animatedIconView = self.animatedIcon?.view {
