@@ -179,6 +179,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                         isDark: item.theme.overallDarkAppearance,
                         avatarCenter: avatarFrame.center,
                         avatarScale: 1.0,
+                        defaultHeight: coverFrame.height,
                         avatarTransitionFraction: 0.0,
                         patternTransitionFraction: 0.0
                     )),

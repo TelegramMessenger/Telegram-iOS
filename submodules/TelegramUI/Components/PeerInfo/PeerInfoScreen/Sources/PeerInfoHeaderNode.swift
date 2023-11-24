@@ -171,6 +171,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.chatLocation = chatLocation
         
         self.avatarClippingNode = SparseNode()
+        self.avatarClippingNode.alpha = 0.996
         self.avatarClippingNode.clipsToBounds = true
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded, isSettings: isSettings)
         
@@ -536,7 +537,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
             regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.main)
-            regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.secondary ?? backgroundColors.main)
+            regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: (backgroundColors.secondary ?? backgroundColors.main).mixedWith(backgroundColors.main, alpha: 0.1))
         } else {
             regularNavigationContentsSecondaryColor = presentationData.theme.list.itemSecondaryTextColor
             regularContentButtonBackgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
@@ -1749,6 +1750,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center,
                 avatarScale: avatarScale,
+                defaultHeight: 254.0,
                 avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
                 patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction
             )),
