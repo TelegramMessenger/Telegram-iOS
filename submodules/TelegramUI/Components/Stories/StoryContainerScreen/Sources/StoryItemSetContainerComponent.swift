@@ -3976,7 +3976,7 @@ public final class StoryItemSetContainerComponent: Component {
                             if peer.id == component.context.account.peerId {
                                 self.navigateToMyStories()
                             } else {
-                                self.navigateToPeer(peer: component.slice.peer, chat: false)
+                                self.navigateToPeer(peer: peer, chat: false)
                             }
                         } else {
                             if component.slice.peer.id == component.context.account.peerId {
