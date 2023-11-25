@@ -520,7 +520,7 @@ public class WallpaperGalleryController: ViewController {
                 if forBoth && !strongSelf.context.isPremium {
                     let context = strongSelf.context
                     var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .wallpapers, action: {
                         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
                         replaceImpl?(controller)
                     })

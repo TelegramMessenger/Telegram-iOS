@@ -477,7 +477,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers]
         self.action = action
         self.dismiss = dismiss
     }
@@ -946,7 +946,7 @@ private final class DemoSheetContent: CombinedComponent {
                 )
                 availableItems[.colors] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
-                        id: PremiumDemoScreen.Subject.animatedUserpics,
+                        id: PremiumDemoScreen.Subject.colors,
                         component: AnyComponent(
                             PageComponent(
                                 content: AnyComponent(PhoneDemoComponent(
@@ -964,7 +964,7 @@ private final class DemoSheetContent: CombinedComponent {
                 )
                 availableItems[.wallpapers] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
-                        id: PremiumDemoScreen.Subject.animatedUserpics,
+                        id: PremiumDemoScreen.Subject.wallpapers,
                         component: AnyComponent(
                             PageComponent(
                                 content: AnyComponent(PhoneDemoComponent(
@@ -1078,6 +1078,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonAnimationName = "premium_unlock"
                         case .voiceToText:
                             buttonText = strings.Premium_VoiceToText_Proceed
+                        case .wallpapers:
+                            buttonText = strings.Premium_Wallpaper_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }
