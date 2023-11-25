@@ -2845,7 +2845,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                             self.sendMessageContext.performSendStickerAction(view: self, fileReference: .standalone(media: sticker))
                         },
-                        setMediaRecordingActive: { [weak self] isActive, isVideo, sendAction in
+                        setMediaRecordingActive: { [weak self] isActive, isVideo, sendAction, _ in
                             guard let self else {
                                 return
                             }
@@ -3972,7 +3972,7 @@ public final class StoryItemSetContainerComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        if let forwardInfo = component.slice.item.storyItem.forwardInfo, case let .known(peer, _) = forwardInfo {
+                        if let forwardInfo = component.slice.item.storyItem.forwardInfo, case let .known(peer, _, _) = forwardInfo {
                             if peer.id == component.context.account.peerId {
                                 self.navigateToMyStories()
                             } else {
@@ -3987,7 +3987,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     })),
                     environment: {},
-                    containerSize: CGSize(width: headerRightOffset - 10.0, height: 44.0)
+                    containerSize: CGSize(width: headerRightOffset - 34.0, height: 44.0)
                 )
                 if let view = currentCenterInfoItem.view.view {
                     var animateIn = false
@@ -4097,7 +4097,10 @@ public final class StoryItemSetContainerComponent: Component {
                         enableEntities = false
                     }
                 }
-                
+                var forwardInfoStory: Signal<EngineStoryItem?, NoError>? = nil
+                if let forwardInfo = component.slice.item.storyItem.forwardInfo, case let .known(peer, id, _) = forwardInfo {
+                    forwardInfoStory = component.slice.forwardInfoStories[StoryId(peerId: peer.id, id: id)]?.get()
+                }
                 let captionSize = captionItem.view.update(
                     transition: captionItemTransition,
                     component: AnyComponent(StoryContentCaptionComponent(
@@ -4108,6 +4111,7 @@ public final class StoryItemSetContainerComponent: Component {
                         text: component.slice.item.storyItem.text,
                         author: component.slice.peer,
                         forwardInfo: component.slice.item.storyItem.forwardInfo,
+                        forwardInfoStory: forwardInfoStory,
                         entities: enableEntities ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
@@ -4197,6 +4201,19 @@ public final class StoryItemSetContainerComponent: Component {
                                 return nil
                             }
                             return component.controller()
+                        },
+                        openStory: { [weak self] peer, story in
+                            guard let self else {
+                                return
+                            }
+                            self.sendMessageContext.openResolved(view: self, result: .story(peerId: peer.id, id: story.id), completion: { [weak self] in
+                                guard let self, let controller = self.component?.controller() as? StoryContainerScreen else {
+                                    return
+                                }
+                                Queue.mainQueue().after(0.5) {
+                                    controller.dismissWithoutTransitionOut()
+                                }
+                            })
                         }
                     )),
                     environment: {},
@@ -5115,7 +5132,7 @@ public final class StoryItemSetContainerComponent: Component {
             let subject: Signal<MediaEditorScreen.Subject?, NoError>
             subject = getStorySource(engine: component.context.engine, peerId: component.context.account.peerId, id: Int64(item.id))
             |> mapToSignal { source in
-                if let source {
+                if !repost, let source {
                     return .single(.draft(source, Int64(item.id)))
                 } else {
                     let media = item.media._asMedia()
@@ -5228,7 +5245,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 externalState.isPeerArchived = channel.storiesHidden ?? false
                             }
                             
-                            let forwardInfo = Stories.PendingForwardInfo(peerId: component.slice.peer.id, storyId: item.id)
+                            let forwardInfo = Stories.PendingForwardInfo(peerId: component.slice.peer.id, storyId: item.id, isModified: result.media != nil)
                             
                             if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
                                 var existingMedia: EngineMedia?

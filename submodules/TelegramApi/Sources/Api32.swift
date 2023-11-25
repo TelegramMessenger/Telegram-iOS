@@ -8609,6 +8609,24 @@ public extension Api.functions.stats {
                 }
 }
 public extension Api.functions.stats {
+                static func getStoryPublicForwards(peer: Api.InputPeer, id: Int32, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.PublicForwards>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1505526026)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeString(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getStoryPublicForwards", parameters: [("peer", String(describing: peer)), ("id", String(describing: id)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.PublicForwards? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.PublicForwards?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.PublicForwards
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stats {
                 static func getStoryStats(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.StoryStats>) {
                     let buffer = Buffer()
                     buffer.appendInt32(927985472)

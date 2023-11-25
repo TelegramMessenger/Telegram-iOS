@@ -735,7 +735,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
                     } else {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: self))
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), self.messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: self))
                     }
                 }
             }

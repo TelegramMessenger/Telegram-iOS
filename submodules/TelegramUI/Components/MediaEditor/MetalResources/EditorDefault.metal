@@ -37,3 +37,14 @@ fragment half histogramPrepareFragmentShader(RasterizerData in [[stage_in]],
     half luma = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
     return luma;
 }
+
+typedef struct {
+    float3 topColor;
+    float3 bottomColor;
+} GradientColors;
+
+fragment half4 gradientFragmentShader(RasterizerData in [[stage_in]],
+                                     constant GradientColors& colors [[buffer(0)]]) {
+    
+    return half4(half3(mix(colors.topColor, colors.bottomColor, in.texCoord.y)), 1.0);
+}

@@ -573,6 +573,9 @@ public final class MediaEditorValues: Codable, Equatable {
         try container.encodeIfPresent(self.additionalVideoScale, forKey: .additionalVideoScale)
         try container.encodeIfPresent(self.additionalVideoRotation, forKey: .additionalVideoRotation)
         try container.encodeIfPresent(self.additionalVideoPositionChanges, forKey: .additionalVideoPositionChanges)
+        try container.encodeIfPresent(self.additionalVideoTrimRange, forKey: .additionalVideoTrimRange)
+        try container.encodeIfPresent(self.additionalVideoOffset, forKey: .additionalVideoOffset)
+        try container.encodeIfPresent(self.additionalVideoVolume, forKey: .additionalVideoVolume)
         
         if let drawing = self.drawing, let pngDrawingData = drawing.pngData() {
             try container.encode(pngDrawingData, forKey: .drawing)
@@ -629,7 +632,7 @@ public final class MediaEditorValues: Codable, Equatable {
         return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropRect: self.cropRect, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, cropOrientation: self.cropOrientation, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: position, additionalVideoScale: scale, additionalVideoRotation: rotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, additionalVideoTrimRange: self.additionalVideoTrimRange, additionalVideoOffset: self.additionalVideoOffset, additionalVideoVolume: self.additionalVideoVolume, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples, qualityPreset: self.qualityPreset)
     }
     
-    func withUpdatedAdditionalVideoTrimRange(_ additionalVideoTrimRange: Range<Double>) -> MediaEditorValues {
+    func withUpdatedAdditionalVideoTrimRange(_ additionalVideoTrimRange: Range<Double>?) -> MediaEditorValues {
         return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropRect: self.cropRect, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, cropOrientation: self.cropOrientation, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, additionalVideoTrimRange: additionalVideoTrimRange, additionalVideoOffset: self.additionalVideoOffset, additionalVideoVolume: self.additionalVideoVolume, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples, qualityPreset: self.qualityPreset)
     }
     

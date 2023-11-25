@@ -239,6 +239,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .similarChannels:
+            if case .similarChannels = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -277,6 +283,7 @@ public enum PremiumSource: Equatable {
     case storiesSuggestedReactions
     case channelBoost(EnginePeer.Id)
     case nameColor
+    case similarChannels
     
     var identifier: String? {
         switch self {
@@ -352,6 +359,8 @@ public enum PremiumSource: Equatable {
             return "channel_boost__\(peerId.id._internalGetInt64Value())"
         case .nameColor:
             return "name_color"
+        case .similarChannels:
+            return "similar_channels"
         }
     }
 }
@@ -372,6 +381,8 @@ public enum PremiumPerk: CaseIterable {
     case emojiStatus
     case translation
     case stories
+    case colors
+    case wallpapers
     
     public static var allCases: [PremiumPerk] {
         return [
@@ -389,7 +400,9 @@ public enum PremiumPerk: CaseIterable {
             .animatedEmoji,
             .emojiStatus,
             .translation,
-            .stories
+            .stories,
+            .colors,
+            .wallpapers
         ]
     }
     
@@ -435,6 +448,10 @@ public enum PremiumPerk: CaseIterable {
             return "translations"
         case .stories:
             return "stories"
+        case .colors:
+            return "colors"
+        case .wallpapers:
+            return "wallpapers"
         }
     }
     
@@ -470,6 +487,10 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_Translation
         case .stories:
             return strings.Premium_Stories
+        case .colors:
+            return strings.Premium_Colors
+        case .wallpapers:
+            return strings.Premium_Wallpapers
         }
     }
     
@@ -505,6 +526,10 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_TranslationInfo
         case .stories:
             return strings.Premium_StoriesInfo
+        case .colors:
+            return strings.Premium_ColorsInfo
+        case .wallpapers:
+            return strings.Premium_WallpapersInfo
         }
     }
     
@@ -540,6 +565,10 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/Perk/Translation"
         case .stories:
             return "Premium/Perk/Stories"
+        case .colors:
+            return "Premium/Perk/Colors"
+        case .wallpapers:
+            return "Premium/Perk/Wallpapers"
         }
     }
 }
@@ -555,6 +584,8 @@ struct PremiumIntroConfiguration {
             .voiceToText,
             .noAds,
             .emojiStatus,
+            .colors,
+            .wallpapers,
             .uniqueReactions,
             .premiumStickers,
             .animatedEmoji,
@@ -1670,21 +1701,23 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             size.height += 21.0
             
             let gradientColors: [UIColor] = [
-                UIColor(rgb: 0xF27C30),
-                UIColor(rgb: 0xE36850),
-                UIColor(rgb: 0xda5d63),
-                UIColor(rgb: 0xD15078),
-                UIColor(rgb: 0xC14998),
-                UIColor(rgb: 0xB24CB5),
-                UIColor(rgb: 0xA34ED0),
-                UIColor(rgb: 0x9054E9),
-                UIColor(rgb: 0x7561EB),
-                UIColor(rgb: 0x5A6EEE),
-                UIColor(rgb: 0x548DFF),
-                UIColor(rgb: 0x54A3FF),
-                UIColor(rgb: 0x54bdff),
-                UIColor(rgb: 0x71c8ff),
-                UIColor(rgb: 0xa0daff)
+                UIColor(rgb: 0xef6922),
+                UIColor(rgb: 0xe95a2c),
+                UIColor(rgb: 0xe74e33),
+                UIColor(rgb: 0xe3433c),
+                UIColor(rgb: 0xdb374b),
+                UIColor(rgb: 0xcb3e6d),
+                UIColor(rgb: 0xbc4395),
+                UIColor(rgb: 0xab4ac4),
+                UIColor(rgb: 0x9b4fed),
+                UIColor(rgb: 0x8958ff),
+                UIColor(rgb: 0x676bff),
+                UIColor(rgb: 0x5b79ff),
+                UIColor(rgb: 0x4492ff),
+                UIColor(rgb: 0x429bd5),
+                UIColor(rgb: 0x41a6a5),
+                UIColor(rgb: 0x3eb26d),
+                UIColor(rgb: 0x3dbd4a)
             ]
                         
             let accountContext = context.component.context
@@ -1871,6 +1904,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .translation
                             case .stories:
                                 demoSubject = .stories
+                            case .colors:
+                                demoSubject = .colors
+                            case .wallpapers:
+                                demoSubject = .wallpapers
                             }
                             
                             let isPremium = state?.isPremium == true
@@ -2043,7 +2080,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
                                     }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
                                         controller?.push(c)
-                                    }, dismissInput: {}, contentContext: nil, progress: nil)
+                                    }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                                 })
                             }
                         }

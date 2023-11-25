@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Camera
 import MediaEditor
+import AVFoundation
 
 public final class EntityVideoRecorder {
     private weak var mediaEditor: MediaEditor?
@@ -32,10 +33,10 @@ public final class EntityVideoRecorder {
         self.mediaEditor = mediaEditor
         self.entitiesView = entitiesView
         
-        self.maxDuration = mediaEditor.duration ?? 60.0
+        self.maxDuration = min(60.0, mediaEditor.duration ?? 60.0)
         self.previewView = CameraSimplePreviewView(frame: .zero, main: true)
         
-        self.entity = DrawingStickerEntity(content: .dualVideoReference)
+        self.entity = DrawingStickerEntity(content: .dualVideoReference(true))
         
         self.camera = Camera(
             configuration: Camera.Configuration(
@@ -57,7 +58,6 @@ public final class EntityVideoRecorder {
             self?.previewView.removePlaceholder(delay: 0.15)
             Queue.mainQueue().after(0.1) {
                 self?.startRecording()
-                self?.mediaEditor?.play()
             }
         }
         if #available(iOS 13.0, *) {
@@ -75,8 +75,9 @@ public final class EntityVideoRecorder {
         
         self.micLevelPromise.set(.single(0.0))
         
-        self.mediaEditor?.stop()
-        self.mediaEditor?.seek(0.0, andPlay: false)
+        let start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
+        mediaEditor.stop()
+        mediaEditor.seek(start, andPlay: false)
     }
     
     deinit {
@@ -104,10 +105,19 @@ public final class EntityVideoRecorder {
             self.previewView.resetPlaceholder(front: true)
             entityView.animateInsertion()
         }
+        
+        self.entitiesView?.selectEntity(nil)
     }
 
     var start: Double = 0.0
     private func startRecording() {
+        guard let mediaEditor = self.mediaEditor else {
+            self.onAutomaticStop()
+            return
+        }
+        mediaEditor.maybeMuteVideo()
+        mediaEditor.play()
+        
         self.start = CACurrentMediaTime()
         self.recordingDisposable.set((self.camera.startRecording()
         |> deliverOnMainQueue).startStrict(next: { [weak self] duration in
@@ -126,21 +136,28 @@ public final class EntityVideoRecorder {
     
     public func stopRecording(save: Bool, completion: @escaping () -> Void = {}) {
         var save = save
-        var remove = false
         let duration = CACurrentMediaTime() - self.start
         if duration < 0.2 {
             save = false
-            remove = true
         }
         self.recordingDisposable.set((self.camera.stopRecording()
         |> deliverOnMainQueue).startStrict(next: { [weak self] result in
-            guard let self, let mediaEditor = self.mediaEditor, let entitiesView = self.entitiesView, case let .finished(mainResult, _, duration, _, _) = result else {
+            guard let self, let mediaEditor = self.mediaEditor, let entitiesView = self.entitiesView, case let .finished(mainResult, _, _, _, _) = result else {
                 return
             }
             if save {
+                let duration = AVURLAsset(url: URL(fileURLWithPath: mainResult.path)).duration
+                
+                let start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
+                mediaEditor.setAdditionalVideoOffset(-start, apply: false)
+                mediaEditor.setAdditionalVideoTrimRange(0 ..< duration.seconds, apply: true)
                 mediaEditor.setAdditionalVideo(mainResult.path, positionChanges: [])
-                mediaEditor.setAdditionalVideoTrimRange(0..<duration, apply: true)
-                mediaEditor.seek(0.0, andPlay: true)
+                
+                mediaEditor.stop()
+                Queue.mainQueue().justDispatch {
+                    mediaEditor.seek(start, andPlay: true)
+                }
+                
                 if let entityView = entitiesView.getView(for: self.entity.uuid) as? DrawingStickerEntityView {
                     entityView.invalidateCameraPreviewView()
                     
@@ -155,16 +172,22 @@ public final class EntityVideoRecorder {
                     }
                     update()
                 }
-            } else {
-                self.entitiesView?.remove(uuid: self.entity.uuid, animated: true)
-                if remove {
-                    mediaEditor.setAdditionalVideo(nil, positionChanges: [])
-                }
+                
+                self.camera.stopCapture(invalidate: true)
+                self.mediaEditor?.maybeUnmuteVideo()
+                completion()
             }
+        }))
+        
+        if !save {
             self.camera.stopCapture(invalidate: true)
+            self.mediaEditor?.maybeUnmuteVideo()
+            
+            self.entitiesView?.remove(uuid: self.entity.uuid, animated: true)
+            self.mediaEditor?.setAdditionalVideo(nil, positionChanges: [])
             
             completion()
-        }))
+        }
     }
     
     public func togglePosition() {

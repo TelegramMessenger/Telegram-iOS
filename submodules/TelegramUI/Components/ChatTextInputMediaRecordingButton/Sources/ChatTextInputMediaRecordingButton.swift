@@ -205,6 +205,35 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     private var micLevelDisposable: MetaDisposable?
 
     private weak var currentPresenter: UIView?
+    
+    public var hasShadow: Bool = false {
+        didSet {
+            self.updateShadow()
+        }
+    }
+    
+    public var hidesOnLock: Bool = false {
+        didSet {
+            if self.hidesOnLock {
+                self.setHidesPanelOnLock()
+            }
+        }
+    }
+    
+    private func updateShadow() {
+        if let view = self.animationView.view {
+            if self.hasShadow {
+                view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                view.layer.shadowRadius = 2.0
+                view.layer.shadowColor = UIColor.black.cgColor
+                view.layer.shadowOpacity = 0.35
+            } else {
+                view.layer.shadowRadius = 0.0
+                view.layer.shadowColor = UIColor.clear.cgColor
+                view.layer.shadowOpacity = 0.0
+            }
+        }
+    }
 
     public var contentContainer: (UIView, CGRect)? {
         if let _ = self.currentPresenter {
@@ -283,7 +312,8 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 mediumBlobRange: (0.52, 0.87),
                 bigBlobRange: (0.57, 1.00)
             )
-            blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+            let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
+            blobView.setColor(theme.chat.inputPanel.actionControlFillColor)
             self.micDecorationValue = blobView
             return blobView
         }
@@ -353,13 +383,14 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     
     private func updateAnimation(previousMode: ChatTextInputMediaRecordingButtonMode) {
         let image: UIImage?
+        let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
         switch self.mode {
             case .audio:
-                self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(self.theme)
-                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
+                self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(theme)
+                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(theme)
             case .video:
-                self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(self.theme)
-                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
+                self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(theme)
+                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(theme)
         }
         
         let size = self.bounds.size
@@ -394,6 +425,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             view.isUserInteractionEnabled = false
             if view.superview == nil {
                 self.insertSubview(view, at: 0)
+                self.updateShadow()
             }
             view.frame = animationFrame
             

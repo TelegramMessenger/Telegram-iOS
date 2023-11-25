@@ -179,7 +179,7 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func messageStatsControllerEntries(data: PostStats?, messages: SearchMessagesResult?, presentationData: PresentationData) -> [StatsEntry] {
+private func messageStatsControllerEntries(data: PostStats?, messages: SearchMessagesResult?, forwards: StoryStatsPublicForwardsContext.State?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
@@ -211,11 +211,25 @@ private func messageStatsControllerEntries(data: PostStats?, messages: SearchMes
             entries.append(.reactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsGraph, .bars, isStories))
         }
 
-        if let messages = messages, !messages.messages.isEmpty {
+        if let messages, !messages.messages.isEmpty {
             entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
             var index: Int32 = 0
             for message in messages.messages {
                 entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, EngineMessage(message)))
+                index += 1
+            }
+        }
+        
+        if let forwards, !forwards.forwards.isEmpty {
+            entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
+            var index: Int32 = 0
+            for forward in forwards.forwards {
+                switch forward {
+                case let .message(message):
+                    entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, message))
+                case let .story(story):
+                    let _ = story
+                }
                 index += 1
             }
         }
@@ -251,10 +265,13 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     let actionsDisposable = DisposableSet()
     let dataPromise = Promise<PostStats?>(nil)
     let messagesPromise = Promise<(SearchMessagesResult, SearchMessagesState)?>(nil)
-        
+    let forwardsPromise = Promise<StoryStatsPublicForwardsContext.State?>(nil)
+    
     let anyStatsContext: Any
     let dataSignal: Signal<PostStats?, NoError>
     var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
+    
+    var forwardsContext: StoryStatsPublicForwardsContext?
     switch subject {
     case let .message(id):
         let statsContext = MessageStatsContext(account: context.account, messageId: id)
@@ -267,30 +284,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         dataPromise.set(.single(nil) |> then(dataSignal))
         anyStatsContext = statsContext
-    case let .story(peerId, id, _):
-        let statsContext = StoryStatsContext(account: context.account, peerId: peerId, storyId: id)
-        loadDetailedGraphImpl = { [weak statsContext] graph, x in
-            return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
-        }
-        dataSignal = statsContext.state
-        |> map { state in
-            return state.stats
-        }
-        dataPromise.set(.single(nil) |> then(dataSignal))
-        anyStatsContext = statsContext
-    }
-    
-    let arguments = MessageStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
-        return loadDetailedGraphImpl?(graph, x) ?? .single(nil)
-    }, openMessage: { messageId in
-        navigateToMessageImpl?(messageId)
-    })
-    
-    let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
-    
-    let previousData = Atomic<PostStats?>(value: nil)
-    
-    if case let .message(id) = subject {
+        
         let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: id), query: "", state: nil)
         |> map(Optional.init)
         |> afterNext { result in
@@ -303,9 +297,44 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             }
         }
         messagesPromise.set(.single(nil) |> then(searchSignal))
-    } else {
+        forwardsPromise.set(.single(nil))
+    case let .story(peerId, id, _):
+        let statsContext = StoryStatsContext(account: context.account, peerId: peerId, storyId: id)
+        loadDetailedGraphImpl = { [weak statsContext] graph, x in
+            return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
+        }
+        dataSignal = statsContext.state
+        |> map { state in
+            return state.stats
+        }
+        dataPromise.set(.single(nil) |> then(dataSignal))
+        anyStatsContext = statsContext
+        
         messagesPromise.set(.single(nil))
+        
+        forwardsContext = StoryStatsPublicForwardsContext(account: context.account, peerId: peerId, storyId: id)
+        if let forwardsContext {
+            forwardsPromise.set(
+                .single(nil)
+                |> then(
+                    forwardsContext.state
+                    |> map(Optional.init)
+                )
+            )
+        } else {
+            forwardsPromise.set(.single(nil))
+        }
     }
+    
+    let arguments = MessageStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
+        return loadDetailedGraphImpl?(graph, x) ?? .single(nil)
+    }, openMessage: { messageId in
+        navigateToMessageImpl?(messageId)
+    })
+    
+    let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
+    
+    let previousData = Atomic<PostStats?>(value: nil)
     
     let iconNodePromise = Promise<ASDisplayNode?>()
     if case let .story(peerId, id, storyItem) = subject, let storyItem {
@@ -328,9 +357,16 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     }
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal, iconNodePromise.get())
+    let signal = combineLatest(
+        presentationData,
+        dataPromise.get(), 
+        messagesPromise.get(),
+        forwardsPromise.get(),
+        longLoadingSignal,
+        iconNodePromise.get()
+    )
     |> deliverOnMainQueue
-    |> map { presentationData, data, search, longLoading, iconNode -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, search, forwards, longLoading, iconNode -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
@@ -350,13 +386,14 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, messages: search?.0, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
         actionsDisposable.dispose()
         let _ = anyStatsContext
+        let _ = forwardsContext
     }
     
     let controller = ItemListController(context: context, state: signal)
@@ -367,12 +404,11 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             }
         })
     }
-//    controller.visibleBottomContentOffsetChanged = { offset in
-//        let state = stateValue.with { $0 }
-//        if case let .known(value) = offset, value < 100.0, case .boosts = state.section, state.boostersExpanded {
-//            boostsContext.loadMore()
-//        }
-//    }
+    controller.visibleBottomContentOffsetChanged = { [weak forwardsContext] offset in
+        if case let .known(value) = offset, value < 100.0, case .story = subject {
+            forwardsContext?.loadMore()
+        }
+    }
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }

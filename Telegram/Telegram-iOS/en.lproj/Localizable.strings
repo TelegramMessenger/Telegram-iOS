@@ -10536,3 +10536,15 @@ Sorry for the inconvenience.";
 "Stats.ViewsPerStory" = "Views Per Story";
 "Stats.SharesPerStory" = "Shares Per Story";
 "Stats.ReactionsPerStory" = "Reactions Per Story";
+
+"Channel.SimilarChannels.ShowMore" = "Show More Channels";
+"Channel.SimilarChannels.ShowMoreInfo" = "Subscribe to [Telegram Premium]()\nto unlock up to **100** similar channels.";
+
+"Premium.Colors" = "Name and Profile Colors";
+"Premium.ColorsInfo" = "Choose a color and logo for your profile and replies to your messages.";
+
+"Premium.Wallpapers" = "Wallpapers for Both Sides";
+"Premium.WallpapersInfo" = "Set custom wallpapers for you and your chat partner.";
+
+"MediaEditor.VideoRemovalConfirmation" = "Are you sure you want to delete video message?";
+"MediaEditor.HoldToRecordVideo" = "Hold to record video";

@@ -261,9 +261,17 @@ public struct ChatControllerInitialBotAppStart {
 }
 
 public enum ChatControllerInteractionNavigateToPeer {
+    public struct InfoParams {
+        public let switchToRecommendedChannels: Bool
+        
+        public init(switchToRecommendedChannels: Bool) {
+            self.switchToRecommendedChannels = switchToRecommendedChannels
+        }
+    }
+    
     case `default`
     case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?, peekData: ChatPeekTimeout?)
-    case info
+    case info(InfoParams?)
     case withBotStartPayload(ChatControllerInitialBotStart)
     case withAttachBot(ChatControllerInitialAttachBotStart)
     case withBotApp(ChatControllerInitialBotAppStart)

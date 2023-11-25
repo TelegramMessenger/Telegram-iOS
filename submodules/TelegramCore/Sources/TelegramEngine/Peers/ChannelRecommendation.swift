@@ -6,10 +6,12 @@ import MtProtoKit
 
 final class CachedRecommendedChannels: Codable {
     public let peerIds: [EnginePeer.Id]
+    public let count: Int32
     public let isHidden: Bool
     
-    public init(peerIds: [EnginePeer.Id], isHidden: Bool) {
+    public init(peerIds: [EnginePeer.Id], count: Int32, isHidden: Bool) {
         self.peerIds = peerIds
+        self.count = count
         self.isHidden = isHidden
     }
     
@@ -17,6 +19,7 @@ final class CachedRecommendedChannels: Codable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.peerIds = try container.decode([Int64].self, forKey: "l").map(EnginePeer.Id.init)
+        self.count = try container.decodeIfPresent(Int32.self, forKey: "c") ?? 0
         self.isHidden = try container.decode(Bool.self, forKey: "h")
     }
     
@@ -24,6 +27,7 @@ final class CachedRecommendedChannels: Codable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "l")
+        try container.encode(self.count, forKey: "c")
         try container.encode(self.isHidden, forKey: "h")
     }
 }
@@ -55,11 +59,14 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
             return account.postbox.transaction { transaction -> [EnginePeer] in
                 let chats: [Api.Chat]
                 let parsedPeers: AccumulatedPeers
+                var count: Int32
                 switch result {
                 case let .chats(apiChats):
                     chats = apiChats
-                case let .chatsSlice(_, apiChats):
+                    count = Int32(apiChats.count)
+                case let .chatsSlice(apiCount, apiChats):
                     chats = apiChats
+                    count = apiCount
                 }
                 parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
                 updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
@@ -80,7 +87,7 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
                         }
                     }
                 }
-                if let entry = CodableEntry(CachedRecommendedChannels(peerIds: peers.map(\.id), isHidden: false)) {
+                if let entry = CodableEntry(CachedRecommendedChannels(peerIds: peers.map(\.id), count: count, isHidden: false)) {
                     transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
                 }
                 return peers
@@ -97,6 +104,7 @@ public struct RecommendedChannels: Equatable {
     }
     
     public let channels: [Channel]
+    public let count: Int32
     public let isHidden: Bool
 }
 
@@ -119,7 +127,7 @@ func _internal_recommendedChannels(account: Account, peerId: EnginePeer.Id) -> S
                         }
                     }
                 }
-                return RecommendedChannels(channels: channels, isHidden: cachedChannels.isHidden)
+                return RecommendedChannels(channels: channels, count: cachedChannels.count, isHidden: cachedChannels.isHidden)
             }
         }
     }
@@ -128,7 +136,7 @@ func _internal_recommendedChannels(account: Account, peerId: EnginePeer.Id) -> S
 func _internal_toggleRecommendedChannelsHidden(account: Account, peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction in
         if let cachedChannels = transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedRecommendedChannels.self) {
-            if let entry = CodableEntry(CachedRecommendedChannels(peerIds: cachedChannels.peerIds, isHidden: hidden)) {
+            if let entry = CodableEntry(CachedRecommendedChannels(peerIds: cachedChannels.peerIds, count: cachedChannels.count, isHidden: hidden)) {
                 transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
             }
         }

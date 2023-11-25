@@ -87,4 +87,6 @@
 
 - (void)_commitLocked;
 
+- (void)setHidesPanelOnLock;
+
 @end

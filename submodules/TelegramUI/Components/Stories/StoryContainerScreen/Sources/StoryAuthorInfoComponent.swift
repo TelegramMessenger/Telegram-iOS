@@ -108,9 +108,9 @@ final class StoryAuthorInfoComponent: Component {
             if let forwardInfo = component.forwardInfo {
                 let authorName: String
                 switch forwardInfo {
-                case let .known(peer, _):
+                case let .known(peer, _, _):
                     authorName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                case let .unknown(name):
+                case let .unknown(name, _):
                     authorName = name
                 }
                 let timeString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp, short: true)
@@ -174,7 +174,7 @@ final class StoryAuthorInfoComponent: Component {
                 self.repostIconView = nil
                 repostIconView.removeFromSuperview()
             }
-            if let forwardInfo = component.forwardInfo, case let .known(peer, _) = forwardInfo {
+            if let forwardInfo = component.forwardInfo, case let .known(peer, _, _) = forwardInfo {
                 let avatarNode: AvatarNode
                 if let current = self.avatarNode {
                     avatarNode = current

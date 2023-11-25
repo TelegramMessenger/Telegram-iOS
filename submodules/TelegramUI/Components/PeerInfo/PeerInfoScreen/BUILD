@@ -130,6 +130,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatHistorySearchContainerNode",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoCoverComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/SolidRoundedButtonNode",
     ],
     visibility = [
         "//visibility:public",

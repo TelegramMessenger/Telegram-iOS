@@ -179,6 +179,72 @@ public extension Api {
     }
 }
 public extension Api {
+    indirect enum PublicForward: TypeConstructorDescription {
+        case publicForwardMessage(message: Api.Message)
+        case publicForwardStory(peer: Api.Peer, story: Api.StoryItem)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .publicForwardMessage(let message):
+                    if boxed {
+                        buffer.appendInt32(32685898)
+                    }
+                    message.serialize(buffer, true)
+                    break
+                case .publicForwardStory(let peer, let story):
+                    if boxed {
+                        buffer.appendInt32(-302797360)
+                    }
+                    peer.serialize(buffer, true)
+                    story.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .publicForwardMessage(let message):
+                return ("publicForwardMessage", [("message", message as Any)])
+                case .publicForwardStory(let peer, let story):
+                return ("publicForwardStory", [("peer", peer as Any), ("story", story as Any)])
+    }
+    }
+    
+        public static func parse_publicForwardMessage(_ reader: BufferReader) -> PublicForward? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PublicForward.publicForwardMessage(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_publicForwardStory(_ reader: BufferReader) -> PublicForward? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Api.StoryItem?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PublicForward.publicForwardStory(peer: _1!, story: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Reaction: TypeConstructorDescription {
         case reactionCustomEmoji(documentId: Int64)
         case reactionEmoji(emoticon: String)

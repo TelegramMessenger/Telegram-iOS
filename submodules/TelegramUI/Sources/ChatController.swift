@@ -3607,7 +3607,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/User"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
                         f(.dismissWithoutContent)
-                        self?.openPeer(peer: peer, navigation: .info, fromMessage: nil)
+                        self?.openPeer(peer: peer, navigation: .info(nil), fromMessage: nil)
                     }))
                 ]
                 items.append(.action(ContextMenuActionItem(text: isChannel ? strongSelf.presentationData.strings.Conversation_ContextMenuOpenChannel : strongSelf.presentationData.strings.Conversation_ContextMenuSendMessage, icon: { theme in
@@ -4744,7 +4744,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
-                            self?.navigationButtonAction(.openChatInfo(expandAvatar: true))
+                            self?.navigationButtonAction(.openChatInfo(expandAvatar: true, recommendedChannels: false))
                         }))
                     ]
                     if canViewStats {
@@ -4793,7 +4793,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
-        self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo(expandAvatar: true), buttonItem: chatInfoButtonItem)
+        self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo(expandAvatar: true, recommendedChannels: false), buttonItem: chatInfoButtonItem)
         
         self.moreBarButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: self.presentationData.theme.rootController.navigationBar.buttonColor)))
         self.moreInfoNavigationButton = ChatNavigationButton(action: .toggleInfoPanel, buttonItem: UIBarButtonItem(customDisplayNode: self.moreBarButton)!)
@@ -4810,7 +4810,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.navigationItem.titleView = self.chatTitleView
         self.chatTitleView?.pressed = { [weak self] in
-            self?.navigationButtonAction(.openChatInfo(expandAvatar: false))
+            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, recommendedChannels: false))
         }
         
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
@@ -9057,7 +9057,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
         }, openPeerInfo: { [weak self] in
-            self?.navigationButtonAction(.openChatInfo(expandAvatar: false))
+            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, recommendedChannels: false))
         }, togglePeerNotifications: { [weak self] in
             if let strongSelf = self, let peerId = strongSelf.chatLocation.peerId {
                 let _ = strongSelf.context.engine.peers.togglePeerMuted(peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
@@ -11878,7 +11878,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     @objc func rightNavigationButtonAction() {
         if let button = self.rightNavigationButton {
-            if case let .peer(peerId) = self.chatLocation, case .openChatInfo(expandAvatar: true) = button.action, let storyStats = self.storyStats, storyStats.unseenCount != 0, let avatarNode = self.avatarNode {
+            if case let .peer(peerId) = self.chatLocation, case .openChatInfo(expandAvatar: true, _) = button.action, let storyStats = self.storyStats, storyStats.unseenCount != 0, let avatarNode = self.avatarNode {
                 self.openStories(peerId: peerId, avatarHeaderNode: nil, avatarNode: avatarNode.avatarNode)
             } else {
                 self.navigationButtonAction(button.action)
@@ -12186,7 +12186,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.present(actionSheet, in: .window(.root))
                 })
             }
-        case let .openChatInfo(expandAvatar):
+        case let .openChatInfo(expandAvatar, recommendedChannels):
             let _ = self.presentVoiceMessageDiscardAlert(action: {
                 switch self.chatLocationInfoData {
                 case let .peer(peerView):
@@ -12206,7 +12206,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if let validLayout = strongSelf.validLayout, validLayout.deviceMetrics.type == .tablet {
                                     expandAvatar = false
                                 }
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: strongSelf.inviteRequestsContext) {
+                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, mode: recommendedChannels ? .recommendedChannels : .generic, avatarInitiallyExpanded: expandAvatar, fromChat: true, requestsContext: strongSelf.inviteRequestsContext) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
@@ -12736,7 +12736,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         openBotApp(allowWrite, false)
                     }, showMore: { [weak self] in
                         if let self {
-                            self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
+                            self.openResolved(result: .peer(botPeer._asPeer(), .info(nil)), sourceMessageId: nil)
                         }
                     })
                     self.present(controller, in: .window(.root))
@@ -16343,8 +16343,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             if case let .peer(currentPeerId) = self.chatLocation, peer?.id == currentPeerId {
                 switch navigation {
-                    case .info:
-                        self.navigationButtonAction(.openChatInfo(expandAvatar: expandAvatar))
+                    case let .info(params):
+                        var recommendedChannels = false
+                        if let params, params.switchToRecommendedChannels {
+                            recommendedChannels = true
+                        }
+                        self.navigationButtonAction(.openChatInfo(expandAvatar: expandAvatar, recommendedChannels: recommendedChannels))
                     case let .chat(textInputState, _, _):
                         if let textInputState = textInputState {
                             self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
@@ -16392,6 +16396,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                         if let fromReactionMessageId = fromReactionMessageId {
                                             mode = .reaction(fromReactionMessageId)
+                                        }
+                                        if case let .info(params) = navigation, let params, params.switchToRecommendedChannels {
+                                            mode = .recommendedChannels
                                         }
                                         var expandAvatar = expandAvatar
                                         if peer.smallProfileImage == nil {
@@ -16962,7 +16969,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, dismissInput: { [weak self] in
             self?.chatDisplayNode.dismissInput()
-        }, contentContext: nil, progress: progress)
+        }, contentContext: nil, progress: progress, completion: nil)
     }
     
     func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, commit: @escaping () -> Void = {}) {

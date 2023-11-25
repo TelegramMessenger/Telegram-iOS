@@ -920,7 +920,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                         |> deliverOnMainQueue).startStandalone(next: { peer in
                             if let peer = peer {
-                                controllerInteraction.openPeer(peer, .info, nil, .default)
+                                controllerInteraction.openPeer(peer, .info(nil), nil, .default)
                             }
                         })
                     case let .openWebView(url, simple):

@@ -25,6 +25,9 @@ final class UniversalTextureSource: TextureSource {
     private var mainInputContext: InputContext?
     private var additionalInputContext: InputContext?
     
+    var forceUpdates = false
+    private var rate: Float = 1.0
+    
     weak var output: MediaEditorRenderer?
     
     init(renderTarget: RenderTarget) {
@@ -59,6 +62,11 @@ final class UniversalTextureSource: TextureSource {
         self.update(forced: true)
     }
     
+
+    func setRate(_ rate: Float) {
+        self.rate = rate
+    }
+    
     private var previousAdditionalOutput: MediaEditorRenderer.Input?
     private func update(forced: Bool) {
         let time = CACurrentMediaTime()
@@ -67,7 +75,9 @@ final class UniversalTextureSource: TextureSource {
         if needsDisplayLink {
             if self.displayLink == nil {
                 let displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
-                    self?.update(forced: false)
+                    if let self {
+                        self.update(forced: self.forceUpdates)
+                    }
                 }), selector: #selector(DisplayLinkTarget.handleDisplayLinkUpdate(sender:)))
                 displayLink.preferredFramesPerSecond = 60
                 displayLink.add(to: .main, forMode: .common)
@@ -80,6 +90,10 @@ final class UniversalTextureSource: TextureSource {
             }
         }
         
+        guard self.rate > 0.0 || forced else {
+            return
+        }
+                
         let main = self.mainInputContext?.output(time: time)
         var additional = self.additionalInputContext?.output(time: time)
         if let additional {

@@ -232,3 +232,214 @@ public final class StoryStatsContext {
     }
 }
 
+private final class StoryStatsPublicForwardsContextImpl {
+    private let queue: Queue
+    private let account: Account
+    private let peerId: EnginePeer.Id
+    private let storyId: Int32
+    private let disposable = MetaDisposable()
+    private var isLoadingMore: Bool = false
+    private var hasLoadedOnce: Bool = false
+    private var canLoadMore: Bool = true
+    private var results: [StoryStatsPublicForwardsContext.State.Forward] = []
+    private var count: Int32
+    private var lastOffset: String?
+    
+    let state = Promise<StoryStatsPublicForwardsContext.State>()
+    
+    init(queue: Queue, account: Account, peerId: EnginePeer.Id, storyId: Int32) {
+        self.queue = queue
+        self.account = account
+        self.peerId = peerId
+        self.storyId = storyId
+                
+        self.count = 0
+            
+        self.isLoadingMore = true
+                
+        self.loadMore()
+    }
+    
+    deinit {
+        self.disposable.dispose()
+    }
+    
+    func reload() {
+        self.loadMore()
+    }
+    
+    func loadMore() {
+        if self.isLoadingMore || !self.canLoadMore {
+            return
+        }
+        self.isLoadingMore = true
+        let account = self.account
+        let accountPeerId = account.peerId
+        let peerId = self.peerId
+        let storyId = self.storyId
+        let lastOffset = self.lastOffset
+        
+        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        }
+        |> mapToSignal { inputPeer -> Signal<([StoryStatsPublicForwardsContext.State.Forward], Int32, String?), NoError> in
+            if let inputPeer = inputPeer {
+                let offset = lastOffset ?? ""
+                let signal = account.network.request(Api.functions.stats.getStoryPublicForwards(peer: inputPeer, id: storyId, offset: offset, limit: 50))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.stats.PublicForwards?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<([StoryStatsPublicForwardsContext.State.Forward], Int32, String?), NoError> in
+                    return account.postbox.transaction { transaction -> ([StoryStatsPublicForwardsContext.State.Forward], Int32, String?) in
+                        guard let result = result else {
+                            return ([], 0, nil)
+                        }
+                        switch result {
+                        case let .publicForwards(_, count, forwards, nextOffset, chats, users):
+                            var peers: [PeerId: Peer] = [:]
+                            for user in users {
+                                if let user = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                    peers[user.id] = user
+                                }
+                            }
+                            for chat in chats {
+                                if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
+                                    peers[groupOrChannel.id] = groupOrChannel
+                                }
+                            }
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                            var resultForwards: [StoryStatsPublicForwardsContext.State.Forward] = []
+                            for forward in forwards {
+                                switch forward {
+                                case let .publicForwardMessage(apiMessage):
+                                    if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: false), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                                        resultForwards.append(.message(EngineMessage(renderedMessage)))
+                                    }
+                                case let .publicForwardStory(apiPeer, apiStory):
+                                    if let storedItem = Stories.StoredItem(apiStoryItem: apiStory, peerId: apiPeer.peerId, transaction: transaction), case let .item(item) = storedItem, let media = item.media {
+                                        let mappedItem = EngineStoryItem(
+                                            id: item.id,
+                                            timestamp: item.timestamp,
+                                            expirationTimestamp: item.expirationTimestamp,
+                                            media: EngineMedia(media),
+                                            mediaAreas: item.mediaAreas,
+                                            text: item.text,
+                                            entities: item.entities,
+                                            views: item.views.flatMap { views in
+                                                return EngineStoryItem.Views(
+                                                    seenCount: views.seenCount,
+                                                    reactedCount: views.reactedCount,
+                                                    forwardCount: views.forwardCount,
+                                                    seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                        return transaction.getPeer(id).flatMap(EnginePeer.init)
+                                                    },
+                                                    reactions: views.reactions,
+                                                    hasList: views.hasList
+                                                )
+                                            },
+                                            privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                            isPinned: item.isPinned,
+                                            isExpired: item.isExpired,
+                                            isPublic: item.isPublic,
+                                            isPending: false,
+                                            isCloseFriends: item.isCloseFriends,
+                                            isContacts: item.isContacts,
+                                            isSelectedContacts: item.isSelectedContacts,
+                                            isForwardingDisabled: item.isForwardingDisabled,
+                                            isEdited: item.isEdited,
+                                            isMy: item.isMy,
+                                            myReaction: item.myReaction,
+                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                        )
+                                        resultForwards.append(.story(mappedItem))
+                                    }
+                                }
+                            }
+                            return (resultForwards, count, nextOffset)
+                        }
+                    }
+                }
+                return signal
+            } else {
+                return .single(([], 0, nil))
+            }
+        }
+        |> deliverOn(self.queue)).start(next: { [weak self] forwards, updatedCount, nextOffset in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.lastOffset = nextOffset
+            for forwards in forwards {
+                strongSelf.results.append(forwards)
+            }
+            strongSelf.isLoadingMore = false
+            strongSelf.hasLoadedOnce = true
+            strongSelf.canLoadMore = !forwards.isEmpty && nextOffset != nil
+            if strongSelf.canLoadMore {
+                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
+            } else {
+                strongSelf.count = Int32(strongSelf.results.count)
+            }
+            strongSelf.updateState()
+        }))
+        self.updateState()
+    }
+        
+    private func updateState() {
+        self.state.set(.single(StoryStatsPublicForwardsContext.State(forwards: self.results, isLoadingMore: self.isLoadingMore, hasLoadedOnce: self.hasLoadedOnce, canLoadMore: self.canLoadMore, count: self.count)))
+    }
+}
+
+public final class StoryStatsPublicForwardsContext {
+    public struct State: Equatable {
+        public enum Forward: Equatable {
+            case message(EngineMessage)
+            case story(EngineStoryItem)
+        }
+        public var forwards: [Forward]
+        public var isLoadingMore: Bool
+        public var hasLoadedOnce: Bool
+        public var canLoadMore: Bool
+        public var count: Int32
+        
+        public static var Empty = State(forwards: [], isLoadingMore: false, hasLoadedOnce: true, canLoadMore: false, count: 0)
+        public static var Loading = State(forwards: [], isLoadingMore: false, hasLoadedOnce: false, canLoadMore: false, count: 0)
+    }
+
+    
+    private let queue: Queue = Queue()
+    private let impl: QueueLocalObject<StoryStatsPublicForwardsContextImpl>
+    
+    public var state: Signal<State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.state.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public init(account: Account, peerId: EnginePeer.Id, storyId: Int32) {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return StoryStatsPublicForwardsContextImpl(queue: queue, account: account, peerId: peerId, storyId: storyId)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+    
+    public func reload() {
+        self.impl.with { impl in
+            impl.reload()
+        }
+    }
+}
+

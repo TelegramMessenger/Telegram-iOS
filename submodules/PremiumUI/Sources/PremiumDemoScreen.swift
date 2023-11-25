@@ -477,7 +477,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers]
         self.action = action
         self.dismiss = dismiss
     }
@@ -907,7 +907,6 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                
                 availableItems[.animatedEmoji] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.animatedEmoji,
@@ -926,7 +925,6 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                
                 availableItems[.translation] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.translation,
@@ -941,6 +939,42 @@ private final class DemoSheetContent: CombinedComponent {
                                 )),
                                 title: strings.Premium_Translation,
                                 text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.colors] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.colors,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["colors"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_Colors,
+                                text: strings.Premium_ColorsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.wallpapers] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.wallpapers,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["wallpapers"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_Wallpapers,
+                                text: strings.Premium_WallpapersInfo,
                                 textColor: textColor
                             )
                         )
@@ -1044,6 +1078,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonAnimationName = "premium_unlock"
                         case .voiceToText:
                             buttonText = strings.Premium_VoiceToText_Proceed
+                        case .wallpapers:
+                            buttonText = strings.Premium_Wallpaper_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }
@@ -1075,6 +1111,10 @@ private final class DemoSheetContent: CombinedComponent {
                         text = strings.Premium_AnimatedEmojiStandaloneInfo
                     case .translation:
                         text = strings.Premium_TranslationStandaloneInfo
+                    case .colors:
+                        text = strings.Premium_ColorsInfo
+                    case .wallpapers:
+                        text = strings.Premium_WallpapersInfo
                     case .doubleLimits:
                         text = ""
                     case .stories:
@@ -1293,6 +1333,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case emojiStatus
         case translation
         case stories
+        case colors
+        case wallpapers
     }
     
     public enum Source: Equatable {

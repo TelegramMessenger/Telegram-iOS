@@ -179,6 +179,7 @@ public final class StoryContentContextState {
         public let previousItemId: Int32?
         public let nextItemId: Int32?
         public let allItems: [StoryContentItem]
+        public let forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
         
         public init(
             peer: EnginePeer,
@@ -187,7 +188,8 @@ public final class StoryContentContextState {
             totalCount: Int,
             previousItemId: Int32?,
             nextItemId: Int32?,
-            allItems: [StoryContentItem]
+            allItems: [StoryContentItem],
+            forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
         ) {
             self.peer = peer
             self.additionalPeerData = additionalPeerData
@@ -196,6 +198,7 @@ public final class StoryContentContextState {
             self.previousItemId = previousItemId
             self.nextItemId = nextItemId
             self.allItems = allItems
+            self.forwardInfoStories = forwardInfoStories
         }
         
         public static func ==(lhs: FocusedSlice, rhs: FocusedSlice) -> Bool {

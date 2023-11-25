@@ -4244,7 +4244,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 }
                                 item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId, NavigateToMessageParams(timestamp: nil, quote: nil))
                             } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                                item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                             } else if let _ = forwardInfo.authorSignature {
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                             }
@@ -4264,7 +4264,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             } else {
                                 if let peer = item.message.peers[story.storyId.peerId] {
                                     return .action(InternalBubbleTapAction.Action {
-                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                     })
                                 }
                             }
@@ -4318,7 +4318,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                 |> deliverOnMainQueue).startStandalone(next: { peer in
                                     if let self = self, let item = self.item, let peer = peer {
-                                        item.controllerInteraction.openPeer(peer, openProfile ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                                        item.controllerInteraction.openPeer(peer, openProfile ? .info(nil) : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                     }
                                 })
                             }
@@ -4983,7 +4983,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 item.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), messageReference, .default)
             } else {
-                item.controllerInteraction.openPeer(EnginePeer(peer), .info, messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: nil))
+                item.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: nil))
             }
         }
     }

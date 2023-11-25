@@ -25,6 +25,7 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxGiveawayChannelsCount: Int32
     public let maxGiveawayCountriesCount: Int32
     public let maxGiveawayPeriodSeconds: Int32
+    public let maxChannelRecommendationsCount: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -50,7 +51,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxStoriesSuggestedReactions: 1,
             maxGiveawayChannelsCount: 10,
             maxGiveawayCountriesCount: 10,
-            maxGiveawayPeriodSeconds: 86400 * 7
+            maxGiveawayPeriodSeconds: 86400 * 7,
+            maxChannelRecommendationsCount: 10
         )
     }
 
@@ -77,7 +79,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxStoriesSuggestedReactions: Int32,
         maxGiveawayChannelsCount: Int32,
         maxGiveawayCountriesCount: Int32,
-        maxGiveawayPeriodSeconds: Int32
+        maxGiveawayPeriodSeconds: Int32,
+        maxChannelRecommendationsCount: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -102,6 +105,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxGiveawayChannelsCount = maxGiveawayChannelsCount
         self.maxGiveawayCountriesCount = maxGiveawayCountriesCount
         self.maxGiveawayPeriodSeconds = maxGiveawayPeriodSeconds
+        self.maxChannelRecommendationsCount = maxChannelRecommendationsCount
     }
 }
 
@@ -149,5 +153,6 @@ extension UserLimitsConfiguration {
         self.maxGiveawayChannelsCount = getGeneralValue("giveaway_add_peers_max", orElse: defaultValue.maxGiveawayChannelsCount)
         self.maxGiveawayCountriesCount = getGeneralValue("giveaway_countries_max", orElse: defaultValue.maxGiveawayCountriesCount)
         self.maxGiveawayPeriodSeconds = getGeneralValue("giveaway_period_max", orElse: defaultValue.maxGiveawayPeriodSeconds)
+        self.maxChannelRecommendationsCount = getValue("recommended_channels_limit", orElse: defaultValue.maxChannelRecommendationsCount)
     }
 }

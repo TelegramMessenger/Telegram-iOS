@@ -30,7 +30,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case file(TelegramMediaFile, FileType)
         case image(UIImage, ImageType)
         case video(TelegramMediaFile)
-        case dualVideoReference
+        case dualVideoReference(Bool)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -52,8 +52,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
-            case .dualVideoReference:
-                if case .dualVideoReference = rhs {
+            case let .dualVideoReference(isAdditional):
+                if case .dualVideoReference(isAdditional) = rhs {
                     return true
                 } else {
                     return false
@@ -71,6 +71,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case isRectangle
         case isDualPhoto
         case dualVideo
+        case isAdditionalVideo
         case referenceDrawingSize
         case position
         case scale
@@ -184,7 +185,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
-            self.content = .dualVideoReference
+            let isAdditional = try container.decodeIfPresent(Bool.self, forKey: .isAdditionalVideo) ?? false
+            self.content = .dualVideoReference(isAdditional)
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
             let fileType: Content.FileType
             if let reaction = try container.decodeIfPresent(MessageReaction.Reaction.self, forKey: .reaction) {
@@ -257,8 +259,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             }
         case let .video(file):
             try container.encode(file, forKey: .videoFile)
-        case .dualVideoReference:
+        case let .dualVideoReference(isAdditional):
             try container.encode(true, forKey: .dualVideo)
+            try container.encode(isAdditional, forKey: .isAdditionalVideo)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)
