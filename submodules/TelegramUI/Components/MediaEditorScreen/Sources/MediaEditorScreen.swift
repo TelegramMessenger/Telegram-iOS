@@ -667,7 +667,7 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
 
-            let isRecordingAdditionalVideo = controller.node.recording.status != nil
+            let isRecordingAdditionalVideo = controller.node.recording.isActive
             
             self.component = component
             self.state = state
@@ -715,8 +715,11 @@ final class MediaEditorScreenComponent: Component {
                             size: CGSize(width: 33.0, height: 33.0)
                         )
                     ),
-                    action: {
-                        guard let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
                             return
                         }
                         controller.maybePresentDiscardAlert()
@@ -747,8 +750,11 @@ final class MediaEditorScreenComponent: Component {
                         icon: UIImage(bundleImageName: "Media Editor/Next")!,
                         title: doneButtonTitle.uppercased())),
                     effectAlignment: .center,
-                    action: {
-                        guard let controller = environment.controller() as? MediaEditorScreen else {
+                    action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
                             return
                         }
                         guard controller.checkCaptionLimit() else {
@@ -798,7 +804,13 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.draw),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: {
+                    action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
                         openDrawing(.drawing)
                     }
                 )),
@@ -827,7 +839,13 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.text),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: {
+                    action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
                         openDrawing(.text)
                     }
                 )),
@@ -856,7 +874,13 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.sticker),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: {
+                    action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
                         openDrawing(.sticker)
                     }
                 )),
@@ -885,7 +909,13 @@ final class MediaEditorScreenComponent: Component {
                         image: state.image(.tools),
                         size: CGSize(width: 30.0, height: 30.0)
                     )),
-                    action: {
+                    action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
                         openTools()
                     }
                 )),
@@ -1055,12 +1085,6 @@ final class MediaEditorScreenComponent: Component {
                 if case let .video(_, _, _, additionalPath, _, _, _, _, _) = subject, additionalPath != nil {
                     canRecordVideo = false
                 }
-//                if case let .asset(asset) = subject, asset.mediaType == .image {
-//                    canRecordVideo = false
-//                }
-//                if case .image = subject {
-//                    canRecordVideo = false
-//                }
             }
             
             self.inputPanel.parentState = state
@@ -1105,8 +1129,12 @@ final class MediaEditorScreenComponent: Component {
                         }
                         controller.node.recording.setMediaRecordingActive(isActive, finished: finished, sourceView: sourceView)
                     } : nil,
-                    lockMediaRecording: {
-                        
+                    lockMediaRecording: { [weak controller, weak self] in
+                        guard let controller, let self else {
+                            return
+                        }
+                        controller.node.recording.isLocked = true
+                        self.state?.updated(transition: .easeInOut(duration: 0.2))
                     },
                     stopAndPreviewMediaRecording: { [weak controller] in
                         guard let controller else {
@@ -1197,7 +1225,7 @@ final class MediaEditorScreenComponent: Component {
                     },
                     audioRecorder: nil,
                     videoRecordingStatus: controller.node.recording.status,
-                    isRecordingLocked: false,
+                    isRecordingLocked: controller.node.recording.isLocked,
                     hasRecordedVideo: mediaEditor?.values.additionalVideoPath != nil,
                     recordedAudioPreview: nil,
                     hasRecordedVideoPreview: false,
@@ -1512,12 +1540,16 @@ final class MediaEditorScreenComponent: Component {
                 component: AnyComponent(CameraButton(
                     content: saveContentComponent,
                     action: { [weak self] in
+                        guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
                         if let view = self?.saveButton.findTaggedView(tag: saveButtonTag) as? LottieAnimationComponent.View {
                             view.playOnce()
                         }
-                        if let controller = environment.controller() as? MediaEditorScreen {
-                            controller.requestSave()
-                        }
+                        controller.requestSave()
                     }
                 )),
                 environment: {},
@@ -1578,16 +1610,21 @@ final class MediaEditorScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(CameraButton(
                         content: muteContentComponent,
-                        action: { [weak state, weak mediaEditor] in
+                        action: { [weak self, weak state, weak mediaEditor] in
+                            guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                                return
+                            }
+                            guard !controller.node.recording.isActive else {
+                                return
+                            }
+                            
                             if let mediaEditor {
                                 state?.muteDidChange = true
                                 let isMuted = !mediaEditor.values.videoIsMuted
                                 mediaEditor.setVideoIsMuted(isMuted)
                                 state?.updated()
                                 
-                                if let controller = environment.controller() as? MediaEditorScreen {
-                                    controller.node.presentMutedTooltip()
-                                }
+                                controller.node.presentMutedTooltip()
                             }
                         }
                     )),
@@ -1655,7 +1692,13 @@ final class MediaEditorScreenComponent: Component {
                     transition: transition,
                     component: AnyComponent(CameraButton(
                         content: playbackContentComponent,
-                        action: { [weak mediaEditor, weak state] in
+                        action: { [weak self, weak mediaEditor, weak state] in
+                            guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                                return
+                            }
+                            guard !controller.node.recording.isActive else {
+                                return
+                            }
                             if let mediaEditor {
                                 state?.playbackDidChange = true
                                 mediaEditor.togglePlayback()
@@ -2092,6 +2135,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.entitiesView.externalEntityRemoved = { [weak self] entity in
                 if let self, let stickerEntity = entity as? DrawingStickerEntity, case let .dualVideoReference(isAdditional) = stickerEntity.content, isAdditional {
                     self.mediaEditor?.setAdditionalVideo(nil, positionChanges: [])
+                }
+            }
+            self.entitiesView.canInteract = { [weak self] in
+                if let self, let controller = self.controller {
+                    return !controller.node.recording.isActive
+                } else {
+                    return true
                 }
             }
             
@@ -2562,6 +2612,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         @objc func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard !self.recording.isActive else {
+                return
+            }
             let location = gestureRecognizer.location(in: self.view)
             var entitiesHitTestResult = self.entitiesView.hitTest(self.view.convert(location, to: self.entitiesView), with: nil)
             if entitiesHitTestResult is DrawingMediaEntityView {

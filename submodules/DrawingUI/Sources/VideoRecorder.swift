@@ -105,6 +105,8 @@ public final class EntityVideoRecorder {
             self.previewView.resetPlaceholder(front: true)
             entityView.animateInsertion()
         }
+        
+        self.entitiesView?.selectEntity(nil)
     }
 
     var start: Double = 0.0
@@ -134,11 +136,9 @@ public final class EntityVideoRecorder {
     
     public func stopRecording(save: Bool, completion: @escaping () -> Void = {}) {
         var save = save
-        var remove = false
         let duration = CACurrentMediaTime() - self.start
         if duration < 0.2 {
             save = false
-            remove = true
         }
         self.recordingDisposable.set((self.camera.stopRecording()
         |> deliverOnMainQueue).startStrict(next: { [weak self] result in
@@ -172,18 +172,22 @@ public final class EntityVideoRecorder {
                     }
                     update()
                 }
-            } else {
-                self.entitiesView?.remove(uuid: self.entity.uuid, animated: true)
-                if remove {
-                    mediaEditor.setAdditionalVideo(nil, positionChanges: [])
-                }
+                
+                self.camera.stopCapture(invalidate: true)
+                self.mediaEditor?.maybeUnmuteVideo()
+                completion()
             }
+        }))
+        
+        if !save {
             self.camera.stopCapture(invalidate: true)
-            
             self.mediaEditor?.maybeUnmuteVideo()
             
+            self.entitiesView?.remove(uuid: self.entity.uuid, animated: true)
+            self.mediaEditor?.setAdditionalVideo(nil, positionChanges: [])
+            
             completion()
-        }))
+        }
     }
     
     public func togglePosition() {

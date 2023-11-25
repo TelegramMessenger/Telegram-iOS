@@ -13,6 +13,8 @@ extension MediaEditorScreen {
         
         private var recorder: EntityVideoRecorder?
         
+        var isLocked = false
+        
         init(controller: MediaEditorScreen) {
             self.controller = controller
         }
@@ -28,7 +30,7 @@ extension MediaEditorScreen {
                     context: controller.context,
                     forceTheme: defaultDarkColorPresentationTheme,
                     title: nil,
-                    text: "Are you sure you want to delete video message?",
+                    text: presentationData.strings.MediaEditor_VideoRemovalConfirmation,
                     actions: [
                         TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                         }),
@@ -77,6 +79,7 @@ extension MediaEditorScreen {
                             return
                         }
                         self.recorder = nil
+                        self.isLocked = false
                         self.controller?.node.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.2))
                     })
                     
@@ -121,6 +124,10 @@ extension MediaEditorScreen {
             } else {
                 return nil
             }
+        }
+        
+        var isActive: Bool {
+            return self.status != nil
         }
     }
 }

@@ -1671,7 +1671,7 @@ public final class MessageInputPanelComponent: Component {
                     var animateIn = false
                     if mediaRecordingPanelView.superview == nil {
                         animateIn = true
-                        self.insertSubview(mediaRecordingPanelView, aboveSubview: self.fieldBackgroundView)
+                        self.insertSubview(mediaRecordingPanelView, aboveSubview: self.textClippingView)
                         
                         self.mediaRecordingVibrancyContainer.addSubview(mediaRecordingPanelView.vibrancyContainer)
                     }
