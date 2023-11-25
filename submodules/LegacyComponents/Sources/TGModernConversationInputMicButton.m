@@ -135,6 +135,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     CGFloat _inputLevel;
     bool _animatedIn;
     
+    bool _hidesPanelOnLock;
+    
     UIImage *_icon;
     
     id<TGModernConversationInputMicButtonPresentation> _presentation;
@@ -557,6 +559,10 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _presentation = nil;
 }
 
+- (void)setHidesPanelOnLock {
+    _hidesPanelOnLock = true;
+}
+
 - (void)animateLock {
     if (!_animatedIn) {
         return;
@@ -598,6 +604,15 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _lock.transform = CGAffineTransformMakeTranslation(0.0f, -16.0f);
         _lockArrowView.transform = CGAffineTransformMakeTranslation(0.0f, -39.0f);
         _lockArrowView.alpha = 0.0f;
+        
+        if (_hidesPanelOnLock) {
+            _lockPanelView.transform = CGAffineTransformScale(_lockPanelView.transform, 0.01, 0.01);
+            _lockPanelView.alpha = 0.0;
+        }
+    } completion:^(BOOL finished) {
+        if (_hidesPanelOnLock) {
+            [_lockPanelWrapperView removeFromSuperview];
+        }
     }];
     
     if (_lock == nil) {

@@ -16962,7 +16962,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, dismissInput: { [weak self] in
             self?.chatDisplayNode.dismissInput()
-        }, contentContext: nil, progress: progress)
+        }, contentContext: nil, progress: progress, completion: nil)
     }
     
     func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, commit: @escaping () -> Void = {}) {

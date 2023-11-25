@@ -25,6 +25,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import ChatMessageBackground
 import ContextUI
+import UndoUI
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)
@@ -322,17 +323,36 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                 ChannelListPanelComponent(
                     context: item.context,
                     theme: item.presentationData.theme.theme,
+                    strings: item.presentationData.strings,
                     peers: recommendedChannels,
                     action: { peer in
-                        var jsonString: String = "{"
-                        jsonString += "\"ref_channel_id\": \"\(item.message.id.peerId.id._internalGetInt64Value())\","
-                        jsonString += "\"open_channel_id\": \"\(peer.id.id._internalGetInt64Value())\""
-                        jsonString += "}"
-                        
-                        if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
-                            addAppLogEvent(postbox: item.context.account.postbox, type: "channels.open_recommended_channel", data: json)
+                        if let peer {
+                            var jsonString: String = "{"
+                            jsonString += "\"ref_channel_id\": \"\(item.message.id.peerId.id._internalGetInt64Value())\","
+                            jsonString += "\"open_channel_id\": \"\(peer.id.id._internalGetInt64Value())\""
+                            jsonString += "}"
+                            
+                            if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
+                                addAppLogEvent(postbox: item.context.account.postbox, type: "channels.open_recommended_channel", data: json)
+                            }
+                            item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                        } else {
+                            let context = item.context
+                            let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
+                            let controller = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .premiumPaywall(title: nil, text: "Subcribe to [Telegram Premium]() to unlock up to **100** channels.", customUndoText: nil, timeout: nil, linkAction: nil),
+                                elevatedLayout: false,
+                                action: { [weak self] _ in
+                                    if let self, let item = self.item {
+                                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                                        item.controllerInteraction.navigationController()?.pushViewController(controller)
+                                    }
+                                    return true
+                                }
+                            )
+                            item.controllerInteraction.presentControllerInCurrent(controller, nil)
                         }
-                        item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                     },
                     contextAction: { peer, sourceView, gesture in
                         item.controllerInteraction.openRecommendedChannelContextMenu(peer, sourceView, gesture)
@@ -510,22 +530,31 @@ private let itemSize = CGSize(width: 84.0, height: 90.0)
 private final class ChannelItemComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
-    let peer: EnginePeer
+    let strings: PresentationStrings
+    let peers: [EnginePeer]
+    let isLocked: Bool
+    let title: String
     let subtitle: String
-    let action: (EnginePeer) -> Void
+    let action: (EnginePeer?) -> Void
     let contextAction: (EnginePeer, UIView, ContextGesture?) -> Void
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        peer: EnginePeer,
+        strings: PresentationStrings,
+        peers: [EnginePeer],
+        isLocked: Bool,
+        title: String,
         subtitle: String,
-        action: @escaping (EnginePeer) -> Void,
+        action: @escaping (EnginePeer?) -> Void,
         contextAction: @escaping (EnginePeer, UIView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.theme = theme
-        self.peer = peer
+        self.strings = strings
+        self.peers = peers
+        self.isLocked = isLocked
+        self.title = title
         self.subtitle = subtitle
         self.action = action
         self.contextAction = contextAction
@@ -538,7 +567,13 @@ private final class ChannelItemComponent: Component {
         if lhs.theme !== rhs.theme {
             return false
         }
-        if lhs.peer != rhs.peer {
+        if lhs.peers != rhs.peers {
+            return false
+        }
+        if lhs.isLocked != rhs.isLocked {
+            return false
+        }
+        if lhs.title != rhs.title {
             return false
         }
         if lhs.subtitle != rhs.subtitle {
@@ -553,18 +588,35 @@ private final class ChannelItemComponent: Component {
         
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
+        
+        private let circleView: UIImageView
+        private let circleView2: UIImageView
+        
         private let avatarNode: AvatarNode
         private let avatarBadge: AvatarBadgeView
         private let subtitleIcon = ComponentView<Empty>()
-                
+                        
         private var component: ChannelItemComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
             self.contextContainer = ContextControllerSourceView()
             
+            self.circleView = UIImageView(image: UIImage(bundleImageName: "Avatar/SampleAvatar1"))
+            self.circleView.clipsToBounds = true
+            self.circleView.layer.cornerRadius = 30
+            self.circleView.clipsToBounds = true
+            self.circleView.layer.cornerRadius = 30
+            
+            let colors: NSArray = [UIColor(rgb: 0x6a2267).cgColor, UIColor(rgb: 0x000000).cgColor]
+            self.circleView2 = UIImageView(image: generateGradientFilledCircleImage(diameter: 60, colors: colors))
+            self.circleView2.clipsToBounds = true
+            self.circleView2.layer.cornerRadius = 30
+            
             self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
             self.avatarNode.isUserInteractionEnabled = false
+            self.avatarNode.clipsToBounds = true
+            self.avatarNode.layer.cornerRadius = 30
             
             self.avatarBadge = AvatarBadgeView(frame: CGRect())
             
@@ -575,6 +627,9 @@ private final class ChannelItemComponent: Component {
             self.addSubview(self.contextContainer)
             
             self.contextContainer.addSubview(self.containerButton)
+            
+            self.contextContainer.addSubview(self.circleView2)
+            self.contextContainer.addSubview(self.circleView)
             self.contextContainer.addSubnode(self.avatarNode)
             self.avatarNode.view.addSubview(self.avatarBadge)
             
@@ -583,8 +638,8 @@ private final class ChannelItemComponent: Component {
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             
             self.contextContainer.activated = { [weak self] gesture, point in
-                if let self, let component = self.component {
-                    component.contextAction(component.peer, self.contextContainer, gesture)
+                if let self, let component = self.component, let peer = component.peers.first {
+                    component.contextAction(peer, self.contextContainer, gesture)
                 }
             }
         }
@@ -594,20 +649,24 @@ private final class ChannelItemComponent: Component {
         }
         
         @objc private func pressed() {
-            guard let component = self.component else {
+            guard let component = self.component, let peer = component.peers.first else {
                 return
             }
-            component.action(component.peer)
+            if !component.isLocked {
+                component.action(peer)
+            } else {
+                component.action(nil)
+            }
         }
         
         func update(component: ChannelItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
-                
+                                
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.peer.compactDisplayTitle, font: Font.regular(11.0), textColor: component.theme.chat.message.incoming.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: component.title, font: Font.regular(11.0), textColor: component.isLocked || component.peers.count > 1 ? component.theme.chat.message.incoming.secondaryTextColor : component.theme.chat.message.incoming.primaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 2
                 )),
@@ -624,25 +683,60 @@ private final class ChannelItemComponent: Component {
                 containerSize: CGSize(width: itemSize.width - 6.0, height: 100.0)
             )
             
-            let subtitleIconSize = self.subtitleIcon.update(
-                transition: .immediate,
-                component: AnyComponent(BundleIconComponent(name: "Chat/Message/Subscriber", tintColor: .white)),
-                environment: {},
-                containerSize: CGSize(width: itemSize.width - 6.0, height: 100.0)
-            )
+            var subtitleIconSize: CGSize
+            if component.peers.count == 1 {
+                subtitleIconSize = self.subtitleIcon.update(
+                    transition: .immediate,
+                    component: AnyComponent(BundleIconComponent(name: component.isLocked ? "Chat List/StatusLockIcon" : "Chat/Message/Subscriber", tintColor: .white)),
+                    environment: {},
+                    containerSize: CGSize(width: itemSize.width - 6.0, height: 100.0)
+                )
+                if component.isLocked {
+                    subtitleIconSize = subtitleIconSize.fitted(CGSize(width: 8.0, height: 8.0))
+                }
+            } else {
+                subtitleIconSize = .zero
+            }
             
             let avatarSize = CGSize(width: 60.0, height: 60.0)
-            let avatarFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize)
+            var avatarFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize)
             let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - titleSize.width) / 2.0), y: avatarFrame.maxY + 4.0), size: titleSize)
             
             let subtitleSpacing: CGFloat = 1.0 + UIScreenPixel
             let subtitleTotalWidth = subtitleIconSize.width + subtitleSize.width + subtitleSpacing
-            let subtitleIconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - subtitleTotalWidth) / 2.0) + 1.0 - UIScreenPixel, y: avatarFrame.maxY - subtitleSize.height + 1.0 - UIScreenPixel), size: subtitleIconSize)
-            let subtitleFrame = CGRect(origin: CGPoint(x: subtitleIconFrame.maxX + subtitleSpacing, y: avatarFrame.maxY - subtitleSize.height - UIScreenPixel), size: subtitleSize)
             
+            let subtitleOriginX = floorToScreenPixels((itemSize.width - subtitleTotalWidth) / 2.0) + 1.0 - UIScreenPixel
+            var iconOriginX = subtitleOriginX
+            var textOriginX = subtitleOriginX + subtitleIconSize.width + subtitleSpacing
+            if component.isLocked {
+                textOriginX = subtitleOriginX
+                iconOriginX = subtitleOriginX + subtitleSize.width + subtitleSpacing
+            }
+            
+            let subtitleIconFrame = CGRect(origin: CGPoint(x: iconOriginX, y: avatarFrame.maxY - subtitleSize.height + 1.0 - UIScreenPixel), size: subtitleIconSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: textOriginX, y: avatarFrame.maxY - subtitleSize.height - UIScreenPixel), size: subtitleSize)
+            
+            var avatarHorizontalOffset: CGFloat = 0.0
+            if component.peers.count > 1 || component.isLocked {
+                avatarHorizontalOffset = -10.0
+            }
+            avatarFrame = avatarFrame.offsetBy(dx: avatarHorizontalOffset, dy: 0.0)
             self.avatarNode.frame = avatarFrame
-            self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: component.peer)
+            if let peer = component.peers.first {
+                self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer)
+            }
             
+            if component.isLocked {
+                self.circleView.isHidden = false
+                self.circleView.frame = avatarFrame.offsetBy(dx: 10.0, dy: 0.0)
+                self.circleView2.frame = avatarFrame.offsetBy(dx: 20.0, dy: 0.0)
+                
+                self.circleView2.isHidden = false
+            } else {
+                self.circleView.isHidden = true
+                self.circleView2.isHidden = true
+            }
+                
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -666,10 +760,10 @@ private final class ChannelItemComponent: Component {
             }
             
             let strokeWidth: CGFloat = 1.0 + UIScreenPixel
-            let avatarBadgeSize = CGSize(width: subtitleSize.width + 4.0 + 4.0 + 6.0, height: 15.0)
+            let avatarBadgeSize = CGSize(width: subtitleSize.width + 10.0 + 6.0, height: 15.0)
             self.avatarBadge.update(size: avatarBadgeSize, text: "", hasTimeoutIcon: false, useSolidColor: true, strokeColor: component.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first!)
 
-            let avatarBadgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((avatarFrame.width - avatarBadgeSize.width) / 2.0), y: avatarFrame.height - avatarBadgeSize.height + 2.0), size: avatarBadgeSize).insetBy(dx: -strokeWidth, dy: -strokeWidth)
+            let avatarBadgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((avatarFrame.width - avatarBadgeSize.width) / 2.0) - avatarHorizontalOffset, y: avatarFrame.height - avatarBadgeSize.height + 2.0), size: avatarBadgeSize).insetBy(dx: -strokeWidth, dy: -strokeWidth)
             self.avatarBadge.frame = avatarBadgeFrame
     
             let bounds = CGRect(origin: .zero, size: itemSize)
@@ -689,24 +783,29 @@ private final class ChannelItemComponent: Component {
     }
 }
 
+private let channelsLimit: Int32 = 8
+
 final class ChannelListPanelComponent: Component {
     typealias EnvironmentType = Empty
     
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let peers: RecommendedChannels
-    let action: (EnginePeer) -> Void
+    let action: (EnginePeer?) -> Void
     let contextAction: (EnginePeer, UIView, ContextGesture?) -> Void
 
     init(
         context: AccountContext,
         theme: PresentationTheme,
+        strings: PresentationStrings,
         peers: RecommendedChannels,
-        action: @escaping (EnginePeer) -> Void,
+        action: @escaping (EnginePeer?) -> Void,
         contextAction: @escaping (EnginePeer, UIView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.peers = peers
         self.action = action
         self.contextAction = contextAction
@@ -827,9 +926,13 @@ final class ChannelListPanelComponent: Component {
             
             let visibleBounds = self.scrollView.bounds.insetBy(dx: -100.0, dy: 0.0)
             
+            let hasMore = component.peers.channels.count >= channelsLimit
+            
             var validIds = Set<EnginePeer.Id>()
             if let visibleItems = itemLayout.visibleItems(for: visibleBounds) {
-                for index in visibleItems.lowerBound ..< visibleItems.upperBound {
+                let upperBound = min(Int(channelsLimit), visibleItems.upperBound)
+                
+                for index in visibleItems.lowerBound ..< upperBound {
                     if index >= component.peers.channels.count {
                         continue
                     }
@@ -847,13 +950,28 @@ final class ChannelListPanelComponent: Component {
                         self.visibleItems[id] = itemView
                     }
                     
-                    let subtitle = countString(Int64(item.subscribers))
+                    let title: String
+                    let subtitle: String
+                    var isLocked = false
+                    if index == upperBound - 1 && hasMore {
+                        if !component.context.isPremium {
+                            isLocked = true
+                        }
+                        title = isLocked ? "Unlock More Channels" : "View More Channels"
+                        subtitle = "+\(component.peers.count - channelsLimit)"
+                    } else {
+                        title = item.peer.compactDisplayTitle
+                        subtitle = countString(Int64(item.subscribers))
+                    }
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(ChannelItemComponent(
                             context: component.context,
                             theme: component.theme,
-                            peer: item.peer,
+                            strings: component.strings,
+                            peers: [item.peer],
+                            isLocked: isLocked,
+                            title: title,
                             subtitle: subtitle,
                             action: component.action,
                             contextAction: component.contextAction
@@ -894,7 +1012,7 @@ final class ChannelListPanelComponent: Component {
                 containerInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                 containerHeight: availableSize.height,
                 itemWidth: itemSize.width,
-                itemCount: component.peers.channels.count
+                itemCount: min(Int(channelsLimit), component.peers.channels.count)
             )
             self.itemLayout = itemLayout
             

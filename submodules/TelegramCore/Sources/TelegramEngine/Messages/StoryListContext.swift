@@ -52,8 +52,8 @@ public final class EngineStoryItem: Equatable {
     }
     
     public enum ForwardInfo: Equatable {
-        case known(peer: EnginePeer, storyId: Int32)
-        case unknown(name: String)
+        case known(peer: EnginePeer, storyId: Int32, isModified: Bool)
+        case unknown(name: String, isModified: Bool)
     }
     
     public let id: Int32
@@ -173,10 +173,10 @@ public final class EngineStoryItem: Equatable {
 extension EngineStoryItem.ForwardInfo {
     var storedForwardInfo: Stories.Item.ForwardInfo {
         switch self {
-        case let .known(peer, storyId):
-            return .known(peerId: peer.id, storyId: storyId)
-        case let .unknown(name):
-            return .unknown(name: name)
+        case let .known(peer, storyId, isModified):
+            return .known(peerId: peer.id, storyId: storyId, isModified: isModified)
+        case let .unknown(name, isModified):
+            return .unknown(name: name, isModified: isModified)
         }
     }
 }
@@ -826,7 +826,7 @@ public final class PeerStoryListContext {
                                                     }
                                                 }
                                             }
-                                            if let forwardInfo = item.forwardInfo, case let .known(peerId, _) = forwardInfo {
+                                            if let forwardInfo = item.forwardInfo, case let .known(peerId, _, _) = forwardInfo {
                                                 if let peer = transaction.getPeer(peerId) {
                                                     peers[peer.id] = peer
                                                 }

@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Metal
 import MetalKit
+import SwiftSignalKit
 
 private func verticesData(
     textureRotation: TextureRotation,
@@ -48,6 +49,8 @@ private func verticesData(
         bottomLeft = simd_float2(1.0, 0.0)
         bottomRight = simd_float2(1.0, 1.0)
     }
+    
+    let containerSize = CGSize(width: containerSize.width, height: containerSize.height)
     
     let angle = Float(.pi - rotation)
     let cosAngle = cos(angle)
@@ -137,14 +140,18 @@ private func lookupSpringValue(_ t: CGFloat) -> CGFloat {
     return 1.0
 }
 
+private var transitionDuration = 0.5
+private var apperanceDuration = 0.2
+private var videoRemovalDuration: Double = 0.2
+
 final class VideoFinishPass: RenderPass {
     private var cachedTexture: MTLTexture?
     
+    var gradientPipelineState: MTLRenderPipelineState?
+    
     var mainPipelineState: MTLRenderPipelineState?
-    var mainVerticesBuffer: MTLBuffer?
     var mainTextureRotation: TextureRotation = .rotate0Degrees
     
-    var additionalVerticesBuffer: MTLBuffer?
     var additionalTextureRotation: TextureRotation = .rotate0Degrees
     
     var pixelFormat: MTLPixelFormat  {
@@ -152,20 +159,33 @@ final class VideoFinishPass: RenderPass {
     }
     
     func setup(device: MTLDevice, library: MTLLibrary) {
-        let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction = library.makeFunction(name: "defaultVertexShader")
-        descriptor.fragmentFunction = library.makeFunction(name: "dualFragmentShader")
-        descriptor.colorAttachments[0].pixelFormat = self.pixelFormat
-        descriptor.colorAttachments[0].isBlendingEnabled = true
-        descriptor.colorAttachments[0].rgbBlendOperation = .add
-        descriptor.colorAttachments[0].alphaBlendOperation = .add
-        descriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
-        descriptor.colorAttachments[0].sourceAlphaBlendFactor = .sourceAlpha
-        descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
-        descriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        let mainDescriptor = MTLRenderPipelineDescriptor()
+        mainDescriptor.vertexFunction = library.makeFunction(name: "defaultVertexShader")
+        mainDescriptor.fragmentFunction = library.makeFunction(name: "dualFragmentShader")
+        mainDescriptor.colorAttachments[0].pixelFormat = self.pixelFormat
+        mainDescriptor.colorAttachments[0].isBlendingEnabled = true
+        mainDescriptor.colorAttachments[0].rgbBlendOperation = .add
+        mainDescriptor.colorAttachments[0].alphaBlendOperation = .add
+        mainDescriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        mainDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .sourceAlpha
+        mainDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        mainDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+        
+        let gradientDescriptor = MTLRenderPipelineDescriptor()
+        gradientDescriptor.vertexFunction = library.makeFunction(name: "defaultVertexShader")
+        gradientDescriptor.fragmentFunction = library.makeFunction(name: "gradientFragmentShader")
+        gradientDescriptor.colorAttachments[0].pixelFormat = self.pixelFormat
+        gradientDescriptor.colorAttachments[0].isBlendingEnabled = true
+        gradientDescriptor.colorAttachments[0].rgbBlendOperation = .add
+        gradientDescriptor.colorAttachments[0].alphaBlendOperation = .add
+        gradientDescriptor.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha
+        gradientDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .sourceAlpha
+        gradientDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+        gradientDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
         
         do {
-            self.mainPipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
+            self.mainPipelineState = try device.makeRenderPipelineState(descriptor: mainDescriptor)
+            self.gradientPipelineState = try device.makeRenderPipelineState(descriptor: gradientDescriptor)
         } catch {
             print(error.localizedDescription)
         }
@@ -190,8 +210,8 @@ final class VideoFinishPass: RenderPass {
         )
         
         let size = CGSize(
-            width: position.size.width * position.scale,
-            height: position.size.height * position.scale
+            width: position.size.width * position.scale * position.baseScale,
+            height: position.size.height * position.scale * position.baseScale
         )
         
         let vertices = verticesData(textureRotation: textureRotation, containerSize: containerSize, position: center, size: size, rotation: position.rotation, z: zPosition)
@@ -213,12 +233,27 @@ final class VideoFinishPass: RenderPass {
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
     
-    func update(values: MediaEditorValues) {
+    private let canvasSize = CGSize(width: 1080.0, height: 1920.0)
+    private var gradientColors = GradientColors(topColor: simd_float3(0.0, 0.0, 0.0), bottomColor: simd_float3(0.0, 0.0, 0.0))
+    func update(values: MediaEditorValues, startOffset: Double?, videoDuration: Double?, additionalVideoDuration: Double?) {
+        let position = CGPoint(
+            x: canvasSize.width / 2.0 + values.cropOffset.x,
+            y: canvasSize.height / 2.0 + values.cropOffset.y
+        )
+        
+        self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, baseScale: self.mainPosition.baseScale)
+            
         if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
-            self.additionalPosition = VideoFinishPass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1440.0 / 4.0), scale: scale, rotation: rotation)
+            self.additionalPosition = VideoFinishPass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1440.0 / 4.0), scale: scale, rotation: rotation, baseScale: self.additionalPosition.baseScale)
         }
         if !values.additionalVideoPositionChanges.isEmpty {
             self.videoPositionChanges = values.additionalVideoPositionChanges
+        }
+        self.videoStartOffset = startOffset
+        self.videoDuration = videoDuration
+        self.additionalVideoDuration = additionalVideoDuration
+        if let videoTrimRange = values.videoTrimRange {
+            self.videoRange = videoTrimRange
         }
         if let additionalVideoTrimRange = values.additionalVideoTrimRange {
             self.additionalVideoRange = additionalVideoTrimRange
@@ -226,25 +261,39 @@ final class VideoFinishPass: RenderPass {
         if let additionalVideoOffset = values.additionalVideoOffset {
             self.additionalVideoOffset = additionalVideoOffset
         }
+        
+        if let gradientColors = values.gradientColors, let top = gradientColors.first, let bottom = gradientColors.last {
+            let (topRed, topGreen, topBlue, _) = top.components
+            let (bottomRed, bottomGreen, bottomBlue, _) = bottom.components
+            
+            self.gradientColors = GradientColors(
+                topColor: simd_float3(Float(topRed), Float(topGreen), Float(topBlue)),
+                bottomColor: simd_float3(Float(bottomRed), Float(bottomGreen), Float(bottomBlue))
+            )
+        }
     }
     
     private var mainPosition = VideoPosition(
         position: CGPoint(x: 1080 / 2.0, y: 1920.0 / 2.0),
         size: CGSize(width: 1080.0, height: 1920.0),
         scale: 1.0,
-        rotation: 0.0
+        rotation: 0.0,
+        baseScale: 1.0
     )
     
     private var additionalPosition = VideoPosition(
         position: CGPoint(x: 1080 / 2.0, y: 1920.0 / 2.0),
         size: CGSize(width: 1440.0, height: 1920.0),
         scale: 0.5,
-        rotation: 0.0
+        rotation: 0.0,
+        baseScale: 1.0
     )
     
-    private var transitionDuration = 0.5
-    private var apperanceDuration = 0.2
     private var videoPositionChanges: [VideoPositionChange] = []
+    private var videoStartOffset: Double?
+    private var videoDuration: Double?
+    private var additionalVideoDuration: Double?
+    private var videoRange: Range<Double>?
     private var additionalVideoRange: Range<Double>?
     private var additionalVideoOffset: Double?
     
@@ -259,6 +308,11 @@ final class VideoFinishPass: RenderPass {
         let size: CGSize
         let scale: CGFloat
         let rotation: CGFloat
+        let baseScale: CGFloat
+        
+        func with(size: CGSize, baseScale: CGFloat) -> VideoPosition {
+            return VideoPosition(position: self.position, size: size, scale: self.scale, rotation: self.rotation, baseScale: baseScale)
+        }
         
         func mixed(with other: VideoPosition, fraction: CGFloat) -> VideoPosition {
             let position = CGPoint(
@@ -276,7 +330,8 @@ final class VideoFinishPass: RenderPass {
                 position: position,
                 size: size,
                 scale: scale,
-                rotation: rotation
+                rotation: rotation,
+                baseScale: self.baseScale
             )
         }
     }
@@ -289,8 +344,21 @@ final class VideoFinishPass: RenderPass {
         let alpha: Float
     }
     
+    private var additionalVideoRemovalStartTimestamp: Double?
+    func animateAdditionalRemoval(completion: @escaping () -> Void) {
+        self.additionalVideoRemovalStartTimestamp = CACurrentMediaTime()
+        
+        Queue.mainQueue().after(videoRemovalDuration) {
+            completion()
+            self.additionalVideoRemovalStartTimestamp = nil
+        }
+    }
+    
     func transitionState(for time: CMTime, mainInput: MTLTexture, additionalInput: MTLTexture?) -> (VideoState, VideoState?, VideoState?) {
         let timestamp = time.seconds
+//        if let videoStartOffset = self.videoStartOffset {
+//            timestamp += videoStartOffset
+//        }
         
         var backgroundTexture = mainInput
         var backgroundTextureRotation = self.mainTextureRotation
@@ -319,13 +387,13 @@ final class VideoFinishPass: RenderPass {
                     backgroundTexture = additionalInput
                     backgroundTextureRotation = self.additionalTextureRotation
                     
-                    mainPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation)
-                    additionalPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation)
+                    mainPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation, baseScale: mainPosition.baseScale)
+                    additionalPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation, baseScale: additionalPosition.baseScale)
                     
                     foregroundTexture = mainInput
                     foregroundTextureRotation = self.mainTextureRotation
                 } else {
-                    disappearingPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation)
+                    disappearingPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation, baseScale: mainPosition.baseScale)
                 }
                 if previousChange.timestamp > 0.0 && timestamp < previousChange.timestamp + transitionDuration {
                     transitionFraction = (timestamp - previousChange.timestamp) / transitionDuration
@@ -343,8 +411,8 @@ final class VideoFinishPass: RenderPass {
             if transitionFraction < 1.0 {
                 let springFraction = lookupSpringValue(transitionFraction)
                 
-                let appearingPosition = VideoPosition(position: additionalPosition.position, size: additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation)
-                let backgroundInitialPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: mainPosition.size.width / 4.0, height: mainPosition.size.height / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation)
+                let appearingPosition = VideoPosition(position: additionalPosition.position, size: additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation, baseScale: self.additionalPosition.baseScale)
+                let backgroundInitialPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: mainPosition.size.width / 4.0, height: mainPosition.size.height / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation, baseScale: additionalPosition.baseScale)
                 
                 foregroundPosition = appearingPosition.mixed(with: additionalPosition, fraction: springFraction)
                 
@@ -355,37 +423,53 @@ final class VideoFinishPass: RenderPass {
             }
             
             var isVisible = true
-            
-            var trimRangeLowerBound: Double?
-            var trimRangeUpperBound: Double?
-            if let additionalVideoRange = self.additionalVideoRange {
-                if let additionalVideoOffset = self.additionalVideoOffset {
-                    trimRangeLowerBound = additionalVideoRange.lowerBound - additionalVideoOffset
-                    trimRangeUpperBound = additionalVideoRange.upperBound - additionalVideoOffset
-                } else {
-                    trimRangeLowerBound = additionalVideoRange.lowerBound
-                    trimRangeUpperBound = additionalVideoRange.upperBound
+            if let additionalVideoRemovalStartTimestamp {
+                let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
+                
+                let visibilityFraction = max(0.0, min(1.0, 1.0 - (CACurrentMediaTime() - additionalVideoRemovalStartTimestamp) / videoRemovalDuration))
+                if visibilityFraction.isZero {
+                    isVisible = false
                 }
-            } else if let additionalVideoOffset = self.additionalVideoOffset {
-                trimRangeLowerBound = -additionalVideoOffset
-            }
-            
-            if trimRangeLowerBound != nil || trimRangeUpperBound != nil {
-                let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation)
-                if let trimRangeLowerBound, trimRangeLowerBound > 0.0, timestamp < trimRangeLowerBound + apperanceDuration {
-                    let visibilityFraction = max(0.0, min(1.0, (timestamp - trimRangeLowerBound) / apperanceDuration))
-                    if visibilityFraction.isZero {
-                        isVisible = false
+                foregroundAlpha = Float(visibilityFraction)
+                foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+            } else {
+                var trimRangeLowerBound: Double?
+                var trimRangeUpperBound: Double?
+                if let additionalVideoRange = self.additionalVideoRange {
+                    if let additionalVideoOffset = self.additionalVideoOffset {
+                        trimRangeLowerBound = additionalVideoRange.lowerBound - additionalVideoOffset
+                        trimRangeUpperBound = additionalVideoRange.upperBound - additionalVideoOffset
+                    } else {
+                        trimRangeLowerBound = additionalVideoRange.lowerBound
+                        trimRangeUpperBound = additionalVideoRange.upperBound
                     }
-                    foregroundAlpha = Float(visibilityFraction)
-                    foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
-                } else if let trimRangeUpperBound, timestamp > trimRangeUpperBound - apperanceDuration {
-                    let visibilityFraction = 1.0 - max(0.0, min(1.0, (timestamp - trimRangeUpperBound) / apperanceDuration))
-                    if visibilityFraction.isZero {
-                        isVisible = false
+                } else if let additionalVideoOffset = self.additionalVideoOffset {
+                    trimRangeLowerBound = -additionalVideoOffset
+                    if let additionalVideoDuration = self.additionalVideoDuration {
+                        trimRangeUpperBound = -additionalVideoOffset + additionalVideoDuration
                     }
-                    foregroundAlpha = Float(visibilityFraction)
-                    foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+                }
+                
+                if (trimRangeLowerBound != nil || trimRangeUpperBound != nil), let _ = self.videoDuration {
+                    let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
+                    
+                    let mainLowerBound = self.videoRange?.lowerBound ?? 0.0
+                    
+                    if let trimRangeLowerBound, trimRangeLowerBound > mainLowerBound + 0.1, timestamp < trimRangeLowerBound + apperanceDuration {
+                        let visibilityFraction = max(0.0, min(1.0, (timestamp - trimRangeLowerBound) / apperanceDuration))
+                        if visibilityFraction.isZero {
+                            isVisible = false
+                        }
+                        foregroundAlpha = Float(visibilityFraction)
+                        foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+                    } else if let trimRangeUpperBound, timestamp > trimRangeUpperBound - apperanceDuration {
+                        let visibilityFraction = 1.0 - max(0.0, min(1.0, (timestamp - trimRangeUpperBound) / apperanceDuration))
+                        if visibilityFraction.isZero {
+                            isVisible = false
+                        }
+                        foregroundAlpha = Float(visibilityFraction)
+                        foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+                    }
                 }
             }
             
@@ -398,30 +482,21 @@ final class VideoFinishPass: RenderPass {
     }
     
     func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
-        guard max(input.width, input.height) > 1920 || secondInput != nil else {
-            return input
-        }
-        
-        let scaledSize = CGSize(width: input.width, height: input.height).fitted(CGSize(width: 1920.0, height: 1920.0))
-        let width: Int
-        let height: Int
-        
-        if secondInput != nil {
-            width = 1080
-            height = 1920
+        let baseScale: CGFloat
+        if input.height > input.width {
+            baseScale = max(canvasSize.width / CGFloat(input.width), canvasSize.height / CGFloat(input.height))
         } else {
-            width = Int(scaledSize.width)
-            height = Int(scaledSize.height)
+            baseScale = canvasSize.width / CGFloat(input.width)
         }
-        self.mainPosition = VideoPosition(position: CGPoint(x: width / 2, y: height / 2), size: CGSize(width: width, height: height), scale: 1.0, rotation: 0.0)
+        self.mainPosition = self.mainPosition.with(size: CGSize(width: input.width, height: input.height), baseScale: baseScale)
         
-        let containerSize = CGSize(width: width, height: height)
+        let containerSize = canvasSize
         
-        if self.cachedTexture == nil || self.cachedTexture?.width != width || self.cachedTexture?.height != height {
+        if self.cachedTexture == nil {
             let textureDescriptor = MTLTextureDescriptor()
             textureDescriptor.textureType = .type2D
-            textureDescriptor.width = width
-            textureDescriptor.height = height
+            textureDescriptor.width = Int(containerSize.width)
+            textureDescriptor.height = Int(containerSize.height)
             textureDescriptor.pixelFormat = input.pixelFormat
             textureDescriptor.storageMode = .private
             textureDescriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
@@ -429,7 +504,7 @@ final class VideoFinishPass: RenderPass {
                 return input
             }
             self.cachedTexture = texture
-            texture.label = "scaledVideoTexture"
+            texture.label = "finishedTexture"
         }
         
         let renderPassDescriptor = MTLRenderPassDescriptor()
@@ -443,8 +518,15 @@ final class VideoFinishPass: RenderPass {
         
         renderCommandEncoder.setViewport(MTLViewport(
             originX: 0, originY: 0,
-            width: Double(width), height: Double(height),
+            width: Double(containerSize.width), height: Double(containerSize.height),
             znear: -1.0, zfar: 1.0)
+        )
+        
+        renderCommandEncoder.setRenderPipelineState(self.gradientPipelineState!)
+        self.encodeGradient(
+            using: renderCommandEncoder,
+            containerSize: containerSize,
+            device: device
         )
         
         renderCommandEncoder.setRenderPipelineState(self.mainPipelineState!)
@@ -494,6 +576,29 @@ final class VideoFinishPass: RenderPass {
         renderCommandEncoder.endEncoding()
         
         return self.cachedTexture!
+    }
+    
+    struct GradientColors {
+        var topColor: simd_float3
+        var bottomColor: simd_float3
+    }
+    
+    func encodeGradient(
+        using encoder: MTLRenderCommandEncoder,
+        containerSize: CGSize,
+        device: MTLDevice
+    ) {
+        
+        let vertices = verticesDataForRotation(.rotate0Degrees)
+        let buffer = device.makeBuffer(
+            bytes: vertices,
+            length: MemoryLayout<VertexData>.stride * vertices.count,
+            options: [])
+        encoder.setVertexBuffer(buffer, offset: 0, index: 0)
+    
+        encoder.setFragmentBytes(&self.gradientColors, length: MemoryLayout<GradientColors>.size, index: 0)
+        
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
     
     func process(input: MTLTexture, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {

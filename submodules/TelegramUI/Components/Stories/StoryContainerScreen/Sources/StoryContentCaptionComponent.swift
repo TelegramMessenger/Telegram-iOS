@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import MultilineTextComponent
 import AccountContext
+import Postbox
 import TelegramCore
 import TextNodeWithEntities
 import TextFormat
@@ -13,6 +14,7 @@ import TelegramPresentationData
 import TextSelectionNode
 import SwiftSignalKit
 import ForwardInfoPanelComponent
+import PlainButtonComponent
 
 final class StoryContentCaptionComponent: Component {
     enum Action {
@@ -59,12 +61,14 @@ final class StoryContentCaptionComponent: Component {
     let text: String
     let author: EnginePeer
     let forwardInfo: EngineStoryItem.ForwardInfo?
+    let forwardInfoStory: Signal<EngineStoryItem?, NoError>?
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
     let longTapAction: (Action) -> Void
     let textSelectionAction: (NSAttributedString, TextSelectionAction) -> Void
     let controller: () -> ViewController?
+    let openStory: (EnginePeer, EngineStoryItem) -> Void
     
     init(
         externalState: ExternalState,
@@ -74,12 +78,14 @@ final class StoryContentCaptionComponent: Component {
         text: String,
         author: EnginePeer,
         forwardInfo: EngineStoryItem.ForwardInfo?,
+        forwardInfoStory: Signal<EngineStoryItem?, NoError>?,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void,
         longTapAction: @escaping (Action) -> Void,
         textSelectionAction: @escaping (NSAttributedString, TextSelectionAction) -> Void,
-        controller: @escaping () -> ViewController?
+        controller: @escaping () -> ViewController?,
+        openStory: @escaping (EnginePeer, EngineStoryItem) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -87,6 +93,7 @@ final class StoryContentCaptionComponent: Component {
         self.theme = theme
         self.author = author
         self.forwardInfo = forwardInfo
+        self.forwardInfoStory = forwardInfoStory
         self.text = text
         self.entities = entities
         self.entityFiles = entityFiles
@@ -94,6 +101,7 @@ final class StoryContentCaptionComponent: Component {
         self.longTapAction = longTapAction
         self.textSelectionAction = textSelectionAction
         self.controller = controller
+        self.openStory = openStory
     }
 
     static func ==(lhs: StoryContentCaptionComponent, rhs: StoryContentCaptionComponent) -> Bool {
@@ -176,6 +184,8 @@ final class StoryContentCaptionComponent: Component {
         private let scrollTopMaskView: UIImageView
         
         private var forwardInfoPanel: ComponentView<Empty>?
+        private var forwardInfoDisposable: Disposable?
+        private var forwardInfoStory: EngineStoryItem?
         
         private let shadowGradientView: UIImageView
 
@@ -192,7 +202,7 @@ final class StoryContentCaptionComponent: Component {
         
         private var codeHighlight: CachedMessageSyntaxHighlight?
         private var codeHighlightState: (specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
-        
+                
         private static let shadowImage: UIImage? = {
             UIImage(named: "Stories/PanelGradient")
         }()
@@ -267,6 +277,7 @@ final class StoryContentCaptionComponent: Component {
         
         deinit {
             self.codeHighlightState?.disposable.dispose()
+            self.forwardInfoDisposable?.dispose()
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -280,6 +291,13 @@ final class StoryContentCaptionComponent: Component {
                 let textLocalPoint = self.convert(point, to: textView)
                 if textLocalPoint.y >= -7.0 {
                     return self.textSelectionNode?.view ?? textView
+                }
+            }
+            
+            if let forwardView = self.forwardInfoPanel?.view {
+                let forwardLocalPoint = self.convert(point, to: forwardView)
+                if let result = forwardView.hitTest(forwardLocalPoint, with: nil) {
+                    return result
                 }
             }
             
@@ -655,42 +673,80 @@ final class StoryContentCaptionComponent: Component {
             if let forwardInfo = component.forwardInfo {
                 let authorName: String
                 let isChannel: Bool
+                let text: String?
+                var isEnabled = true
+                
                 switch forwardInfo {
-                case let .known(peer, _):
+                case let .known(peer, _, _):
                     authorName = peer.displayTitle(strings: component.strings, displayOrder: .firstLast)
                     isChannel = peer.id.isGroupOrChannel
-                case let .unknown(name):
+                    
+                    if let story = self.forwardInfoStory {
+                        text = story.text
+                    } else if self.forwardInfoDisposable == nil, let forwardInfoStory = component.forwardInfoStory {
+                        self.forwardInfoDisposable = (forwardInfoStory
+                        |> deliverOnMainQueue).start(next: { story in
+                            if let story {
+                                self.forwardInfoStory = story
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                }
+                            }
+                        })
+                        text = nil
+                    } else {
+                        text = nil
+                    }
+                case let .unknown(name, _):
                     authorName = name
                     isChannel = false
-                }
-                let forwardInfoPanel: ComponentView<Empty>
-                if let current = self.forwardInfoPanel {
-                    forwardInfoPanel = current
-                } else {
-                    forwardInfoPanel = ComponentView<Empty>()
-                    self.forwardInfoPanel = forwardInfoPanel
+                    text = ""
+                    isEnabled = false
                 }
                 
-                let forwardInfoPanelSize = forwardInfoPanel.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        ForwardInfoPanelComponent(
-                            authorName: authorName,
-                            text: "Story",
-                            isChannel: isChannel,
-                            isVibrant: false,
-                            fillsWidth: false
-                        )
-                    ),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
-                )
-                let forwardInfoPanelFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset - forwardInfoPanelSize.height - 10.0), size: forwardInfoPanelSize)
-                if let view = forwardInfoPanel.view {
-                    if view.superview == nil {
-                        self.scrollView.addSubview(view)
+                if let text {
+                    let forwardInfoPanel: ComponentView<Empty>
+                    if let current = self.forwardInfoPanel {
+                        forwardInfoPanel = current
+                    } else {
+                        forwardInfoPanel = ComponentView<Empty>()
+                        self.forwardInfoPanel = forwardInfoPanel
                     }
-                    view.frame = forwardInfoPanelFrame
+                    
+                    let forwardInfoPanelSize = forwardInfoPanel.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            PlainButtonComponent(
+                                content: AnyComponent(
+                                    ForwardInfoPanelComponent(
+                                        authorName: authorName,
+                                        text: text,
+                                        isChannel: isChannel,
+                                        isVibrant: false,
+                                        fillsWidth: false
+                                    )
+                                ),
+                                effectAlignment: .center,
+                                minSize: nil,
+                                action: { [weak self] in
+                                    if let self, case let .known(peer, _, _) = forwardInfo, let story = self.forwardInfoStory {
+                                        self.component?.openStory(peer, story)
+                                    }
+                                },
+                                isEnabled: isEnabled
+                            )
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                    )
+                    let forwardInfoPanelFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset - forwardInfoPanelSize.height - 10.0), size: forwardInfoPanelSize)
+                    if let view = forwardInfoPanel.view {
+                        if view.superview == nil {
+                            self.scrollView.addSubview(view)
+                            transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                        }
+                        view.frame = forwardInfoPanelFrame
+                    }
                 }
             } else if let forwardInfoPanel = self.forwardInfoPanel {
                 self.forwardInfoPanel = nil

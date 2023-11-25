@@ -34,6 +34,7 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/ChatMessageBackground",
         "//submodules/ContextUI",
+        "//submodules/UndoUI",
     ],
     visibility = [
         "//visibility:public",

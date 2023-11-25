@@ -42,6 +42,8 @@ protocol RenderPass: AnyObject {
 protocol TextureSource {
     func connect(to renderer: MediaEditorRenderer)
     func invalidate()
+    
+    func setRate(_ rate: Float)
 }
 
 protocol RenderTarget: AnyObject {
@@ -56,31 +58,6 @@ protocol RenderTarget: AnyObject {
 }
 
 final class MediaEditorRenderer {
-    var textureSource: TextureSource? {
-        didSet {
-            self.textureSource?.connect(to: self)
-        }
-    }
-    
-    private var semaphore = DispatchSemaphore(value: 3)
-    private var renderPasses: [RenderPass] = []
-    
-    private let mainVideoInputPass = VideoInputPass()
-    private let additionalVideoInputPass = VideoInputPass()
-    let videoFinishPass = VideoFinishPass()
-    
-    private let outputRenderPass = OutputRenderPass()
-    private weak var renderTarget: RenderTarget? {
-        didSet {
-            self.outputRenderPass.renderTarget = self.renderTarget
-        }
-    }
-
-    private var device: MTLDevice?
-    private var library: MTLLibrary?
-    private var commandQueue: MTLCommandQueue?
-    private var textureCache: CVMetalTextureCache?
-    
     enum Input {
         case texture(MTLTexture, CMTime)
         case videoBuffer(VideoPixelBuffer)
@@ -95,20 +72,41 @@ final class MediaEditorRenderer {
         }
     }
     
+    private var device: MTLDevice?
+    private var library: MTLLibrary?
+    private var commandQueue: MTLCommandQueue?
+    private var textureCache: CVMetalTextureCache?
+    private var semaphore = DispatchSemaphore(value: 3)
+    
+    private var renderPasses: [RenderPass] = []
+    
+    private let mainVideoInputPass = VideoInputPass()
+    private let additionalVideoInputPass = VideoInputPass()
+    let videoFinishPass = VideoFinishPass()
+    
+    private let outputRenderPass = OutputRenderPass()
+    private weak var renderTarget: RenderTarget? {
+        didSet {
+            self.outputRenderPass.renderTarget = self.renderTarget
+        }
+    }
+
+    var textureSource: TextureSource? {
+        didSet {
+            self.textureSource?.connect(to: self)
+        }
+    }
+    
     private var currentMainInput: Input?
     private var currentAdditionalInput: Input?
+    private(set) var resultTexture: MTLTexture?
     
-//    private var currentTexture: MTLTexture?
-//    private var currentAdditionalTexture: MTLTexture?
-//    private var currentTime: CMTime = .zero
-//    
-//    private var currentPixelBuffer: VideoPixelBuffer?
-//    private var currentAdditionalPixelBuffer: VideoPixelBuffer?
+    var displayEnabled = true
+    var skipEditingPasses = false
+    var needsDisplay = false
     
-    public var onNextRender: (() -> Void)?
+    var onNextRender: (() -> Void)?
     
-    var resultTexture: MTLTexture?
-        
     public init() {
         
     }
@@ -132,11 +130,7 @@ final class MediaEditorRenderer {
         }
     }
     
-    private func setup() {
-        guard let device = self.renderTarget?.mtlDevice else {
-            return
-        }
-        
+    private func commonSetup(device: MTLDevice) {
         CVMetalTextureCacheCreate(nil, nil, device, nil, &self.textureCache)
         
         let mainBundle = Bundle(for: MediaEditorRenderer.self)
@@ -158,6 +152,17 @@ final class MediaEditorRenderer {
         self.additionalVideoInputPass.setup(device: device, library: library)
         self.videoFinishPass.setup(device: device, library: library)
         self.renderPasses.forEach { $0.setup(device: device, library: library) }
+    }
+    
+    private func setup() {
+        guard let device = self.renderTarget?.mtlDevice else {
+            return
+        }
+        
+        self.commonSetup(device: device)
+        guard let library = self.library else {
+            return
+        }
         self.outputRenderPass.setup(device: device, library: library)
     }
     
@@ -166,32 +171,12 @@ final class MediaEditorRenderer {
             return
         }
         self.device = device
-        CVMetalTextureCacheCreate(nil, nil, device, nil, &self.textureCache)
-        
-        let mainBundle = Bundle(for: MediaEditorRenderer.self)
-        guard let path = mainBundle.path(forResource: "MediaEditorBundle", ofType: "bundle") else {
-            return
-        }
-        guard let bundle = Bundle(path: path) else {
-            return
-        }
-        
-        guard let library = try? device.makeDefaultLibrary(bundle: bundle) else {
-            return
-        }
-        self.library = library
-        
-        self.commandQueue = device.makeCommandQueue()
-        self.commandQueue?.label = "Media Editor Command Queue"
-        self.mainVideoInputPass.setup(device: device, library: library)
-        self.additionalVideoInputPass.setup(device: device, library: library)
-        self.videoFinishPass.setup(device: device, library: library)
-        self.renderPasses.forEach { $0.setup(device: device, library: library) }
+        self.commonSetup(device: device)
     }
     
-    public var displayEnabled = true
-    var skipEditingPasses = true
-    var needsDisplay = false
+    func setRate(_ rate: Float) {
+        self.textureSource?.setRate(rate)
+    }
         
     private func combinedTextureFromCurrentInputs(device: MTLDevice, commandBuffer: MTLCommandBuffer, textureCache: CVMetalTextureCache) -> MTLTexture? {
         var mainTexture: MTLTexture?
@@ -215,14 +200,10 @@ final class MediaEditorRenderer {
             additionalTexture = textureFromInput(additionalInput, videoInputPass: self.additionalVideoInputPass)
         }
         
-        if let mainTexture, let additionalTexture {
-            if let result = self.videoFinishPass.process(input: mainTexture, secondInput: additionalTexture, timestamp: mainInput.timestamp, device: device, commandBuffer: commandBuffer) {
-                return result
-            } else {
-                return mainTexture
-            }
+        if let mainTexture {
+            return self.videoFinishPass.process(input: mainTexture, secondInput: additionalTexture, timestamp: mainInput.timestamp, device: device, commandBuffer: commandBuffer)
         } else {
-            return mainTexture
+            return nil
         }
     }
     
@@ -333,51 +314,6 @@ final class MediaEditorRenderer {
             self.renderFrame()
         }
     }
-    
-//    func consumeTexture(_ texture: MTLTexture, render: Bool) {
-//        if render {
-//            self.willRenderFrame()
-//        }
-//        
-//        self.currentTexture = texture
-//        if render {
-//            self.renderFrame()
-//        }
-//    }
-//    
-//    func consumeTexture(_ texture: MTLTexture, additionalTexture: MTLTexture?, time: CMTime, render: Bool) {
-//        self.displayEnabled = false
-//        
-//        if render {
-//            self.willRenderFrame()
-//        }
-//        
-//        self.currentTexture = texture
-//        self.currentAdditionalTexture = additionalTexture
-//        self.currentTime = time
-//        if render {
-//            self.renderFrame()
-//        }
-//    }
-//    
-//    var previousPresentationTimestamp: CMTime?
-//    func consumeVideoPixelBuffer(pixelBuffer: VideoPixelBuffer, additionalPixelBuffer: VideoPixelBuffer?, render: Bool) {
-//        self.willRenderFrame()
-//        
-//        self.currentPixelBuffer = pixelBuffer
-//        if additionalPixelBuffer == nil && self.currentAdditionalPixelBuffer != nil {
-//        } else {
-//            self.currentAdditionalPixelBuffer = additionalPixelBuffer
-//        }
-//        if render {
-//            if self.previousPresentationTimestamp == pixelBuffer.timestamp {
-//                self.didRenderFrame()
-//            } else {
-//                self.renderFrame()
-//            }
-//        }
-//        self.previousPresentationTimestamp = pixelBuffer.timestamp
-//    }
     
     func renderTargetDidChange(_ target: RenderTarget?) {
         self.renderTarget = target

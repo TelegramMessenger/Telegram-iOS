@@ -1,5 +1,6 @@
 import AsyncDisplayKit
 import Display
+import ComponentFlow
 import TelegramCore
 import SwiftSignalKit
 import Postbox
@@ -14,6 +15,9 @@ import MergeLists
 import ItemListUI
 import PeerInfoVisualMediaPaneNode
 import ChatControllerInteraction
+import MultilineTextComponent
+import Markdown
+import SolidRoundedButtonNode
 
 private struct RecommendedChannelsListTransaction {
     let deletions: [ListViewDeleteItem]
@@ -83,6 +87,8 @@ private func preparedTransition(from fromEntries: [RecommendedChannelsListEntry]
     return RecommendedChannelsListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
 }
 
+private let channelsLimit: Int32 = 8
+
 final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let chatControllerInteraction: ChatControllerInteraction
@@ -95,6 +101,10 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     private var currentState: RecommendedChannels?
     private var canLoadMore: Bool = false
     private var enqueuedTransactions: [RecommendedChannelsListTransaction] = []
+    
+    private var unlockBackground: UIImageView?
+    private var unlockText: ComponentView<Empty>?
+    private var unlockButton: SolidRoundedButtonNode?
     
     private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool)?
     private let presentationDataPromise = Promise<PresentationData>()
@@ -185,11 +195,99 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         if isFirstLayout, let recommendedChannels = self.currentState {
             self.updateState(recommendedChannels: recommendedChannels, presentationData: presentationData)
         }
+        
+        if !self.context.isPremium {
+            let unlockText: ComponentView<Empty>
+            let unlockBackground: UIImageView
+            let unlockButton: SolidRoundedButtonNode
+            if let current = self.unlockText {
+                unlockText = current
+            } else {
+                unlockText = ComponentView<Empty>()
+                self.unlockText = unlockText
+            }
+            
+            if let current = self.unlockBackground {
+                unlockBackground = current
+            } else {
+                let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
+                let bottomColor = presentationData.theme.list.plainBackgroundColor
+                unlockBackground = UIImageView(image: generateGradientImage(size: CGSize(width: 1.0, height: 160.0), colors: [topColor, bottomColor], locations: [0.0, 1.0]))
+                unlockBackground.contentMode = .scaleToFill
+                self.view.addSubview(unlockBackground)
+                self.unlockBackground = unlockBackground
+            }
+                        
+            if let current = self.unlockButton {
+                unlockButton = current
+            } else {
+                unlockButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: presentationData.theme), cornerRadius: 11.0)
+                self.view.addSubview(unlockButton.view)
+                self.unlockButton = unlockButton
+            
+                unlockButton.animationLoopTime = 2.5
+                unlockButton.animation = "premium_unlock"
+                unlockButton.iconPosition = .right
+                unlockButton.title = presentationData.strings.Channel_SimilarChannels_ShowMore
+                
+                unlockButton.pressed = { [weak self] in
+                    self?.unlockPressed()
+                }
+            }
+        
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let textFont = Font.regular(15.0)
+            let boldTextFont = Font.semibold(15.0)
+            let textColor = presentationData.theme.list.itemSecondaryTextColor
+            let linkColor = presentationData.theme.list.itemAccentColor
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: boldTextFont, textColor: linkColor), linkAttribute: { _ in
+                return nil
+            })
+            
+            let unlockSize = unlockText.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .markdown(text: presentationData.strings.Channel_SimilarChannels_ShowMoreInfo, attributes: markdownAttributes),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: size.width - 32.0, height: 200.0)
+            )
+            if let view = unlockText.view {
+                if view.superview == nil {
+                    view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.unlockPressed)))
+                    self.view.addSubview(view)
+                }
+                view.frame = CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: size.height - bottomInset - unlockSize.height - 13.0), size: unlockSize)
+            }
+            
+            unlockBackground.frame = CGRect(x: 0.0, y: size.height - bottomInset - 160.0, width: size.width, height: bottomInset + 160.0)
+            
+            let buttonSideInset = sideInset + 16.0
+            let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
+            unlockButton.frame = CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - unlockSize.height - buttonSize.height - 26.0), size: buttonSize)
+            let _ = unlockButton.updateLayout(width: buttonSize.width, transition: transition)
+        } else  {
+            self.unlockBackground?.removeFromSuperview()
+            self.unlockBackground = nil
+            
+            self.unlockText?.view?.removeFromSuperview()
+            self.unlockText = nil
+        }
+    }
+    
+    @objc private func unlockPressed() {
+        let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
+        self.chatControllerInteraction.navigationController()?.pushViewController(controller)
     }
     
     private func updateState(recommendedChannels: RecommendedChannels?, presentationData: PresentationData) {
         var entries: [RecommendedChannelsListEntry] = []
-        
+                                
         if let channels = recommendedChannels?.channels {
             for channel in channels {
                 entries.append(.peer(theme: presentationData.theme, index: entries.count, peer: channel.peer, subscribers: channel.subscribers))

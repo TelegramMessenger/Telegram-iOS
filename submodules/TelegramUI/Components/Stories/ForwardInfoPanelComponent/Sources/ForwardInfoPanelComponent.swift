@@ -66,7 +66,6 @@ public final class ForwardInfoPanelComponent: Component {
                 self.blurBackgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
             }
             self.blurBackgroundView.clipsToBounds = true
-            self.blurBackgroundView.layer.cornerRadius = 4.0
             
             self.backgroundView = UIImageView()
             self.backgroundView.image = generateStretchableFilledCircleImage(radius: 4.0, color: UIColor(white: 1.0, alpha: 0.4))
@@ -87,24 +86,21 @@ public final class ForwardInfoPanelComponent: Component {
             self.state = state
             
             var titleOffset: CGFloat = 0.0
-            if component.isChannel {
-                let iconView: UIImageView
-                if let current = self.iconView {
-                    iconView = current
-                } else {
-                    iconView = UIImageView(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate))
-                    iconView.alpha = 0.55
-                    iconView.tintColor = .white
-                    self.addSubview(iconView)
-                }
-                if let image = iconView.image {
-                    iconView.frame = CGRect(origin: CGPoint(x: 8.0 + UIScreenPixel, y: 6.0 - UIScreenPixel), size: image.size)
-                }
-                titleOffset += 13.0
-            } else if let iconView = self.iconView {
-                self.iconView = nil
-                iconView.removeFromSuperview()
+            
+            let iconView: UIImageView
+            if let current = self.iconView {
+                iconView = current
+            } else {
+                iconView = UIImageView(image: UIImage(bundleImageName: component.isChannel ? "Stories/RepostChannel" : "Stories/RepostUser")?.withRenderingMode(.alwaysTemplate))
+                iconView.alpha = 0.55
+                iconView.tintColor = .white
+                self.addSubview(iconView)
             }
+            if let image = iconView.image {
+                iconView.frame = CGRect(origin: CGPoint(x: 9.0 + UIScreenPixel, y: 5.0), size: image.size)
+            }
+            titleOffset += 13.0
+       
             
             let sideInset: CGFloat = 9.0
             let titleSize = self.title.update(
@@ -149,26 +145,38 @@ public final class ForwardInfoPanelComponent: Component {
                 view.frame = textFrame
             }
             
+            let width: CGFloat
             let size: CGSize
             if component.fillsWidth {
-                size = CGSize(width: availableSize.width, height: 40.0)
+                width = availableSize.width
             } else {
-                size = CGSize(width: max(titleFrame.maxX, textFrame.maxX) + sideInset, height: 40.0)
+                width = max(titleFrame.maxX, textFrame.maxX) + sideInset
             }
             
-            let lineColor: UIColor
-            if !component.isVibrant {
-//                self.blurBackgroundView.update(size: size, cornerRadius: 4.0, transition: .immediate)
-                self.blurBackgroundView.frame = CGRect(origin: .zero, size: size)
-                self.insertSubview(self.blurBackgroundView, at: 0)
+            if !component.text.isEmpty {
+                size = CGSize(width: width, height: 40.0)
+                let lineColor: UIColor
+                if !component.isVibrant {
+                    self.blurBackgroundView.frame = CGRect(origin: .zero, size: size)
+                    self.insertSubview(self.blurBackgroundView, at: 0)
+                    
+                    lineColor = UIColor(white: 1.0, alpha: 0.55)
+                } else {
+                    lineColor = UIColor(white: 1.0, alpha: 0.5)
+                }
+                self.blurBackgroundView.layer.cornerRadius = 4.0
                 
-                lineColor = UIColor.white
+                self.blockView.update(size: size, isTransparent: true, primaryColor: lineColor, secondaryColor: nil, thirdColor: nil, backgroundColor: nil, pattern: nil, animation: .None)
+                self.blockView.frame = CGRect(origin: .zero, size: size)
             } else {
-                lineColor = UIColor(white: 1.0, alpha: 0.5)
+                size = CGSize(width: titleFrame.maxX + sideInset, height: 23.0)
+                
+                if !component.isVibrant {
+                    self.blurBackgroundView.frame = CGRect(origin: .zero, size: size)
+                    self.insertSubview(self.blurBackgroundView, at: 0)
+                }
+                self.blurBackgroundView.layer.cornerRadius = size.height / 2.0
             }
-            
-            self.blockView.update(size: size, isTransparent: true, primaryColor: lineColor, secondaryColor: nil, thirdColor: nil, backgroundColor: nil, pattern: nil, animation: .None)
-            self.blockView.frame = CGRect(origin: .zero, size: size)
             
             return size
         }

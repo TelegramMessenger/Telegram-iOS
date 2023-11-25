@@ -262,7 +262,7 @@ final class StoryPreviewComponent: Component {
                     sendMessageAction: { },
                     sendMessageOptionsAction: nil,
                     sendStickerAction: { _ in },
-                    setMediaRecordingActive: { _, _, _ in },
+                    setMediaRecordingActive: { _, _, _, _ in },
                     lockMediaRecording: nil,
                     stopAndPreviewMediaRecording: nil,
                     discardMediaRecordingPreview: nil,

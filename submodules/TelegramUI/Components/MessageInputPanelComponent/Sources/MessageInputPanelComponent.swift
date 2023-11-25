@@ -117,7 +117,7 @@ public final class MessageInputPanelComponent: Component {
     public let sendMessageAction: () -> Void
     public let sendMessageOptionsAction: ((UIView, ContextGesture?) -> Void)?
     public let sendStickerAction: (TelegramMediaFile) -> Void
-    public let setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?
+    public let setMediaRecordingActive: ((Bool, Bool, Bool, UIView?) -> Void)?
     public let lockMediaRecording: (() -> Void)?
     public let stopAndPreviewMediaRecording: (() -> Void)?
     public let discardMediaRecordingPreview: (() -> Void)?
@@ -172,7 +172,7 @@ public final class MessageInputPanelComponent: Component {
         sendMessageAction: @escaping () -> Void,
         sendMessageOptionsAction: ((UIView, ContextGesture?) -> Void)?,
         sendStickerAction: @escaping (TelegramMediaFile) -> Void,
-        setMediaRecordingActive: ((Bool, Bool, Bool) -> Void)?,
+        setMediaRecordingActive: ((Bool, Bool, Bool, UIView?) -> Void)?,
         lockMediaRecording: (() -> Void)?,
         stopAndPreviewMediaRecording: (() -> Void)?,
         discardMediaRecordingPreview: (() -> Void)?,
@@ -1293,10 +1293,10 @@ public final class MessageInputPanelComponent: Component {
                                 }
                             }
                         case .voiceInput, .videoInput:
-                            component.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction)
+                            component.setMediaRecordingActive?(action == .down, mode == .videoInput, sendAction, self.inputActionButton.view)
                         case .removeVideoInput:
                             if case .up = action {
-                                component.setMediaRecordingActive?(true, true, false)
+                                component.setMediaRecordingActive?(true, true, false, nil)
                             }
                         case .forward:
                             if case .up = action {
@@ -1347,7 +1347,8 @@ public final class MessageInputPanelComponent: Component {
                     strings: component.strings,
                     presentController: component.presentController,
                     audioRecorder: component.audioRecorder,
-                    videoRecordingStatus: component.videoRecordingStatus
+                    videoRecordingStatus: component.videoRecordingStatus,
+                    hasShadow: component.style == .editor
                 )),
                 environment: {},
                 containerSize: CGSize(width: 33.0, height: 33.0)
@@ -1660,7 +1661,7 @@ public final class MessageInputPanelComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            component.setMediaRecordingActive?(false, false, false)
+                            component.setMediaRecordingActive?(false, false, false, nil)
                         }
                     )),
                     environment: {},

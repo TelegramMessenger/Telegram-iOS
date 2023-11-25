@@ -205,6 +205,27 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     private var micLevelDisposable: MetaDisposable?
 
     private weak var currentPresenter: UIView?
+    
+    public var hasShadow: Bool = false {
+        didSet {
+            self.updateShadow()
+        }
+    }
+    
+    private func updateShadow() {
+        if let view = self.animationView.view {
+            if self.hasShadow {
+                view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                view.layer.shadowRadius = 2.0
+                view.layer.shadowColor = UIColor.black.cgColor
+                view.layer.shadowOpacity = 0.35
+            } else {
+                view.layer.shadowRadius = 0.0
+                view.layer.shadowColor = UIColor.clear.cgColor
+                view.layer.shadowOpacity = 0.0
+            }
+        }
+    }
 
     public var contentContainer: (UIView, CGRect)? {
         if let _ = self.currentPresenter {
@@ -319,6 +340,8 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         
         self.updateMode(mode: self.mode, animated: false, force: true)
         
+        self.setHidesPanelOnLock()
+        
         self.delegate = self
         self.isExclusiveTouch = false;
         
@@ -394,6 +417,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             view.isUserInteractionEnabled = false
             if view.superview == nil {
                 self.insertSubview(view, at: 0)
+                self.updateShadow()
             }
             view.frame = animationFrame
             

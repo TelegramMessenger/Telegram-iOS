@@ -42,27 +42,27 @@ public extension EngineStoryPrivacy {
 public extension EngineStoryItem.ForwardInfo {
     init?(_ forwardInfo: Stories.Item.ForwardInfo, transaction: Transaction) {
         switch forwardInfo {
-        case let .known(peerId, storyId):
+        case let .known(peerId, storyId, isModified):
             if let peer = transaction.getPeer(peerId) {
-                self = .known(peer: EnginePeer(peer), storyId: storyId)
+                self = .known(peer: EnginePeer(peer), storyId: storyId, isModified: isModified)
             } else {
                 return nil
             }
-        case let .unknown(name):
-            self = .unknown(name: name)
+        case let .unknown(name, isModified):
+            self = .unknown(name: name, isModified: isModified)
         }
     }
     
     init?(_ forwardInfo: Stories.Item.ForwardInfo, peers: [PeerId: Peer]) {
         switch forwardInfo {
-        case let .known(peerId, storyId):
+        case let .known(peerId, storyId, isModified):
             if let peer = peers[peerId] {
-                self = .known(peer: EnginePeer(peer), storyId: storyId)
+                self = .known(peer: EnginePeer(peer), storyId: storyId, isModified: isModified)
             } else {
                 return nil
             }
-        case let .unknown(name):
-            self = .unknown(name: name)
+        case let .unknown(name, isModified):
+            self = .unknown(name: name, isModified: isModified)
         }
     }
 }
@@ -203,19 +203,20 @@ public enum Stories {
                 case authorPeerId
                 case storyId
                 case authorName
+                case isModified
             }
             
-            case known(peerId: EnginePeer.Id, storyId: Int32)
-            case unknown(name: String)
+            case known(peerId: EnginePeer.Id, storyId: Int32, isModified: Bool)
+            case unknown(name: String, isModified: Bool)
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 
                 switch try container.decode(Int32.self, forKey: .discriminator) {
                 case 0:
-                    self = .known(peerId: EnginePeer.Id(try container.decode(Int64.self, forKey: .authorPeerId)), storyId: try container.decode(Int32.self, forKey: .storyId))
+                    self = .known(peerId: EnginePeer.Id(try container.decode(Int64.self, forKey: .authorPeerId)), storyId: try container.decode(Int32.self, forKey: .storyId), isModified: try container.decodeIfPresent(Bool.self, forKey: .isModified) ?? false)
                 case 1:
-                    self = .unknown(name: try container.decode(String.self, forKey: .authorName))
+                    self = .unknown(name: try container.decode(String.self, forKey: .authorName), isModified: try container.decodeIfPresent(Bool.self, forKey: .isModified) ?? false)
                 default:
                     throw DecodingError.generic
                 }
@@ -225,13 +226,15 @@ public enum Stories {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 
                 switch self {
-                case let .known(peerId, storyId):
+                case let .known(peerId, storyId, isModified):
                     try container.encode(0 as Int32, forKey: .discriminator)
                     try container.encode(peerId.toInt64(), forKey: .authorPeerId)
                     try container.encode(storyId, forKey: .storyId)
-                case let .unknown(name):
+                    try container.encode(isModified, forKey: .isModified)
+                case let .unknown(name, isModified):
                     try container.encode(1 as Int32, forKey: .discriminator)
                     try container.encode(name, forKey: .authorName)
+                    try container.encode(isModified, forKey: .isModified)
                 }
             }
         }
@@ -1098,6 +1101,9 @@ func _internal_uploadStoryImpl(
                         var fwdFromStory: Int32?
                         if let forwardInfo = forwardInfo, let inputPeer = transaction.getPeer(forwardInfo.peerId).flatMap({ apiInputPeer($0) }) {
                             flags |= 1 << 6
+                            if forwardInfo.isModified {
+                                flags |= 1 << 7
+                            }
                             fwdFromId = inputPeer
                             fwdFromStory = forwardInfo.storyId
                         }
@@ -1673,12 +1679,13 @@ extension Stories.Item.Views {
 extension Stories.Item.ForwardInfo {
     init?(apiForwardInfo: Api.StoryFwdHeader) {
         switch apiForwardInfo {
-        case let .storyFwdHeader(_, from, fromName, storyId):
+        case let .storyFwdHeader(flags, from, fromName, storyId):
+            let isModified = (flags & (1 << 3)) != 0
             if let from = from, let storyId = storyId {
-                self = .known(peerId: from.peerId, storyId: storyId)
+                self = .known(peerId: from.peerId, storyId: storyId, isModified: isModified)
                 return
             } else if let fromName = fromName {
-                self = .unknown(name: fromName)
+                self = .unknown(name: fromName, isModified: isModified)
                 return
             }
         }
@@ -1798,6 +1805,77 @@ extension Stories.StoredItem {
             self = .placeholder(Stories.Placeholder(id: id, timestamp: date, expirationTimestamp: expireDate, isCloseFriends: isCloseFriends))
         case .storyItemDeleted:
             return nil
+        }
+    }
+}
+
+func _internal_getStoryById(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: EnginePeer.Id, id: Int32) -> Signal<EngineStoryItem?, NoError> {
+    let storyId = StoryId(peerId: peerId, id: id)
+    return postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
+    }
+    |> mapToSignal { peer -> Signal<EngineStoryItem?, NoError> in
+        guard let inputPeer = peer.flatMap(apiInputPeer) else {
+            return .single(nil)
+        }
+        return network.request(Api.functions.stories.getStoriesByID(peer: inputPeer, id: [id]))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.stories.Stories?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<EngineStoryItem?, NoError> in
+            guard let result = result else {
+                return .single(nil)
+            }
+            return postbox.transaction { transaction -> EngineStoryItem? in
+                switch result {
+                case let .stories(_, stories, chats, users):
+                    updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(transaction: transaction, chats: chats, users: users))
+                    
+                    if let storyItem = stories.first.flatMap({ Stories.StoredItem(apiStoryItem: $0, peerId: peerId, transaction: transaction) }) {
+                        if let entry = CodableEntry(storyItem) {
+                            transaction.setStory(id: storyId, value: entry)
+                        }
+                        if case let .item(item) = storyItem, let media = item.media {
+                            return EngineStoryItem(
+                                id: item.id,
+                                timestamp: item.timestamp,
+                                expirationTimestamp: item.expirationTimestamp,
+                                media: EngineMedia(media),
+                                mediaAreas: item.mediaAreas,
+                                text: item.text,
+                                entities: item.entities,
+                                views: item.views.flatMap { views in
+                                    return EngineStoryItem.Views(
+                                        seenCount: views.seenCount,
+                                        reactedCount: views.reactedCount,
+                                        forwardCount: views.forwardCount,
+                                        seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                            return transaction.getPeer(id).flatMap(EnginePeer.init)
+                                        },
+                                        reactions: views.reactions,
+                                        hasList: views.hasList
+                                    )
+                                },
+                                privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                isPinned: item.isPinned,
+                                isExpired: item.isExpired,
+                                isPublic: item.isPublic,
+                                isPending: false,
+                                isCloseFriends: item.isCloseFriends,
+                                isContacts: item.isContacts,
+                                isSelectedContacts: item.isSelectedContacts,
+                                isForwardingDisabled: item.isForwardingDisabled,
+                                isEdited: item.isEdited,
+                                isMy: item.isMy,
+                                myReaction: item.myReaction,
+                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                            )
+                        }
+                    }
+                    return nil
+                }
+            }
         }
     }
 }

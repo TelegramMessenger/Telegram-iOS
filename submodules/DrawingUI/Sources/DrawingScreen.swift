@@ -3072,13 +3072,15 @@ public final class DrawingToolsInteraction {
             }
             
             var isVideo = false
+            var isAdditional = false
             if let entity = entityView.entity as? DrawingStickerEntity {
-                if case .dualVideoReference = entity.content {
+                if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
+                    isAdditional = isAdditionalValue
                 }
             }
             
-            guard !isVideo else {
+            guard !isVideo || isAdditional else {
                 return
             }
             
@@ -3103,7 +3105,7 @@ public final class DrawingToolsInteraction {
                         self.entitiesView.selectEntity(entityView.entity)
                     }
                 }))
-            } else if entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView {
+            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Flip, accessibilityLabel: presentationData.strings.Paint_Flip), action: { [weak self] in
                     if let self {
                         self.flipSelectedEntity()

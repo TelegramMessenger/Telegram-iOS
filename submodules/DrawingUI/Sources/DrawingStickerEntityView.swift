@@ -310,6 +310,9 @@ public class DrawingStickerEntityView: DrawingEntityView {
                 }
             }
             self.animationNode?.visibility = isPlaying
+            if isPlaying {
+                self.animationNode?.play()
+            }
         }
     }
     
@@ -339,7 +342,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
         guard let cameraPreviewView = self.cameraPreviewView else {
             return
         }
-        Queue.mainQueue().after(0.3, {
+        Queue.mainQueue().after(0.5, {
             self.cameraPreviewView = nil
             cameraPreviewView.removeFromSuperview()
         })

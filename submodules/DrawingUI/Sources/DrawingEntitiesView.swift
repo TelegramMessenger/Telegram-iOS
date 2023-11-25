@@ -81,6 +81,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     
     var entityAdded: (DrawingEntity) -> Void = { _ in }
     var entityRemoved: (DrawingEntity) -> Void = { _ in }
+    public var externalEntityRemoved: (DrawingEntity) -> Void = { _ in }
     
     var autoSelectEntities = false
         
@@ -517,6 +518,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             
             if announce {
                 self.entityRemoved(view.entity)
+                self.externalEntityRemoved(view.entity)
             }
         }
     }

@@ -356,13 +356,21 @@ final class MediaScrubberComponent: Component {
             var trackLayout: [Int32: (CGRect, Transition, Bool)] = [:]
             
             if !component.tracks.contains(where: { $0.id == self.selectedTrackId }) {
-                self.selectedTrackId = 0
+                self.selectedTrackId = component.tracks.first(where: { $0.isMain })?.id ?? 0
             }
+            
+            var lowestVideoId: Int32?
             
             var validIds = Set<Int32>()
             for track in component.tracks {
                 let id = track.id
                 validIds.insert(id)
+                
+                if case .video = track.content {
+                    if lowestVideoId == nil {
+                        lowestVideoId = track.id
+                    }
+                }
                 
                 var trackTransition = transition
                 let trackView: TrackView
@@ -468,9 +476,8 @@ final class MediaScrubberComponent: Component {
             }
 
             let scrubberSize = CGSize(width: availableSize.width, height: trackHeight)
-            self.trimView.isHollow = self.selectedTrackId != 0 || self.isAudioOnly
+            self.trimView.isHollow = self.selectedTrackId != lowestVideoId || self.isAudioOnly
             let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
-                totalWidth: scrubberSize.width,
                 visualInsets: trimViewVisualInsets,
                 scrubberSize: scrubberSize,
                 duration: trimDuration,
@@ -483,7 +490,6 @@ final class MediaScrubberComponent: Component {
             )
             
             let (ghostLeftHandleFrame, ghostRightHandleFrame) = self.ghostTrimView.update(
-                totalWidth: scrubberSize.width,
                 visualInsets: .zero,
                 scrubberSize: CGSize(width: scrubberSize.width, height: collapsedTrackHeight),
                 duration: self.duration,
@@ -515,9 +521,14 @@ final class MediaScrubberComponent: Component {
             let trimViewFrame = CGRect(origin: CGPoint(x: trimViewOffset, y: selectedTrackFrame.minY), size: scrubberSize)
             transition.setFrame(view: self.trimView, frame: trimViewFrame)
             
+            var ghostTrimVisible = false
+            if let lowestVideoId, self.selectedTrackId != lowestVideoId {
+                ghostTrimVisible = true
+            }
+            
             let ghostTrimViewFrame = CGRect(origin: CGPoint(x: 0.0, y: totalHeight - collapsedTrackHeight), size: CGSize(width: availableSize.width, height: collapsedTrackHeight))
             transition.setFrame(view: self.ghostTrimView, frame: ghostTrimViewFrame)
-            transition.setAlpha(view: self.ghostTrimView, alpha: self.selectedTrackId != 0 ? 0.75 : 0.0)
+            transition.setAlpha(view: self.ghostTrimView, alpha: ghostTrimVisible ? 0.75 : 0.0)
             
 //            var containerLeftEdge = leftHandleFrame.maxX
 //            var containerRightEdge = rightHandleFrame.minX
@@ -751,17 +762,17 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         let scrubberSize = CGSize(width: availableSize.width, height: isSelected ? trackHeight : collapsedTrackHeight)
         
-        var trimDuration = duration
+        var screenSpanDuration = duration
         if track.isAudio && track.isMain {
-            trimDuration = min(30.0, track.duration)
+            screenSpanDuration = min(30.0, track.duration)
         }
         
         let minimalAudioWidth = handleWidth * 2.0
-        var audioTotalWidth = scrubberSize.width
-        if track.isAudio, trimDuration > 0.0 {
-            let audioFraction = track.duration / trimDuration
-            if audioFraction < 1.0 - .ulpOfOne || audioFraction > 1.0 + .ulpOfOne {
-                audioTotalWidth = max(minimalAudioWidth, ceil(availableSize.width * audioFraction))
+        var containerTotalWidth = scrubberSize.width
+        if track.isAudio || !track.isMain, screenSpanDuration > 0.0 {
+            let trackFraction = track.duration / screenSpanDuration
+            if trackFraction < 1.0 - .ulpOfOne || trackFraction > 1.0 + .ulpOfOne {
+                containerTotalWidth = max(minimalAudioWidth, ceil(availableSize.width * trackFraction))
             }
         }
         
@@ -813,7 +824,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         let audioChanged = !"".isEmpty
         
-        let contentSize = CGSize(width: audioTotalWidth, height: collapsedTrackHeight)
+        let contentSize = CGSize(width: containerTotalWidth, height: collapsedTrackHeight)
         if self.scrollView.contentSize != contentSize || audioChanged {
             self.scrollView.contentSize = contentSize
             if !track.isMain {
@@ -828,7 +839,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
             }
             
             if let offset = track.offset, track.duration > 0.0 {
-                let contentOffset = offset * audioTotalWidth / duration
+                let contentOffset = offset * containerTotalWidth / track.duration
                 self.scrollView.contentOffset = CGPoint(x: contentOffset, y: 0.0)
             } else {
                 self.scrollView.contentOffset = .zero
@@ -839,18 +850,18 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         transition.setCornerRadius(layer: self.clippingView.layer, cornerRadius: isSelected ? 0.0 : 9.0)
         
-        let audioContainerFrame = CGRect(origin: .zero, size: CGSize(width: audioTotalWidth, height: scrubberSize.height))
-        transition.setFrame(view: self.containerView, frame: audioContainerFrame)
+        let containerFrame = CGRect(origin: .zero, size: CGSize(width: containerTotalWidth, height: scrubberSize.height))
+        transition.setFrame(view: self.containerView, frame: containerFrame)
         
-        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: audioContainerFrame.size))
-        self.backgroundView.update(size: audioContainerFrame.size, transition: transition.containedViewLayoutTransition)
-        transition.setFrame(view: self.vibrancyView, frame: CGRect(origin: .zero, size: audioContainerFrame.size))
-        transition.setFrame(view: self.vibrancyContainer, frame: CGRect(origin: .zero, size: audioContainerFrame.size))
+        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: containerFrame.size))
+        self.backgroundView.update(size: containerFrame.size, transition: transition.containedViewLayoutTransition)
+        transition.setFrame(view: self.vibrancyView, frame: CGRect(origin: .zero, size: containerFrame.size))
+        transition.setFrame(view: self.vibrancyContainer, frame: CGRect(origin: .zero, size: containerFrame.size))
                     
-        let containerFrame = CGRect(origin: .zero, size: CGSize(width: clipWidth, height: audioContainerFrame.height))
+        let contentContainerFrame = CGRect(origin: .zero, size: CGSize(width: clipWidth, height: containerFrame.height))
         let contentContainerOrigin = deselectedClipOrigin + self.scrollView.contentOffset.x
-        transition.setFrame(view: self.audioContentContainerView, frame: containerFrame.offsetBy(dx: contentContainerOrigin, dy: 0.0))
-        transition.setFrame(view: self.audioContentMaskView, frame: CGRect(origin: .zero, size: containerFrame.size))
+        transition.setFrame(view: self.audioContentContainerView, frame: contentContainerFrame.offsetBy(dx: contentContainerOrigin, dy: 0.0))
+        transition.setFrame(view: self.audioContentMaskView, frame: CGRect(origin: .zero, size: contentContainerFrame.size))
         
         switch track.content {
         case let .video(frames, framesUpdateTimestamp):
@@ -888,6 +899,10 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                         opaqueFrameLayer.animate(from: contents as AnyObject, to: frames[i].cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2)
                     } else {
                         opaqueFrameLayer.contents = frames[i].cgImage
+                    }
+                    if frames[i].imageOrientation == .upMirrored {
+                        transparentFrameLayer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                        opaqueFrameLayer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                     }
                 }
             }
@@ -1027,7 +1042,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: audioContainerFrame.width, height: trackHeight)
+                containerSize: CGSize(width: containerFrame.width, height: trackHeight)
             )
             if let view = self.audioWaveform.view as? AudioWaveformComponent.View {
                 if view.superview == nil {
@@ -1173,7 +1188,7 @@ private class TrimView: UIView {
         }
         let location = gestureRecognizer.location(in: self)
         let start = handleWidth / 2.0
-        let end = self.frame.width - handleWidth / 2.0
+        let end = params.scrubberSize.width - handleWidth / 2.0
         let length = end - start
         let fraction = (location.x - start) / length
         
@@ -1211,7 +1226,7 @@ private class TrimView: UIView {
         }
         let location = gestureRecognizer.location(in: self)
         let start = handleWidth / 2.0
-        let end = self.frame.width - handleWidth / 2.0
+        let end = params.scrubberSize.width - handleWidth / 2.0
         let length = end - start
         let fraction = (location.x - start) / length
        
@@ -1244,6 +1259,7 @@ private class TrimView: UIView {
     }
     
     var params: (
+        scrubberSize: CGSize,
         duration: Double,
         startPosition: Double,
         endPosition: Double,
@@ -1253,7 +1269,6 @@ private class TrimView: UIView {
     )?
     
     func update(
-        totalWidth: CGFloat,
         visualInsets: UIEdgeInsets,
         scrubberSize: CGSize,
         duration: Double,
@@ -1265,13 +1280,14 @@ private class TrimView: UIView {
         transition: Transition
     ) -> (leftHandleFrame: CGRect, rightHandleFrame: CGRect)
     {
-        self.params = (duration, startPosition, endPosition, position, minDuration, maxDuration)
+        self.params = (scrubberSize, duration, startPosition, endPosition, position, minDuration, maxDuration)
         
         let trimColor = self.isPanningTrimHandle ? UIColor(rgb: 0xf8d74a) : .white
         transition.setTintColor(view: self.leftHandleView, color: trimColor)
         transition.setTintColor(view: self.rightHandleView, color: trimColor)
         transition.setTintColor(view: self.borderView, color: trimColor)
         
+        let totalWidth = scrubberSize.width
         let totalRange = totalWidth - handleWidth
         let leftHandlePositionFraction = duration > 0.0 ? startPosition / duration : 0.0
         let leftHandlePosition = floorToScreenPixels(handleWidth / 2.0 + totalRange * leftHandlePositionFraction)

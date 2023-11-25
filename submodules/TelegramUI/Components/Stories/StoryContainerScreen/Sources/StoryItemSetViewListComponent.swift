@@ -1293,24 +1293,24 @@ final class StoryItemSetViewListComponent: Component {
             
             let sortMode = self.sortMode
             
-            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReposts, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/Repost"), color: theme.contextMenu.primaryColor)
-            }, additionalLeftIcon: { theme in
-                if sortMode != .repostsFirst {
-                    return nil
-                }
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                guard let self else {
-                    return
-                }
-                if self.sortMode != .repostsFirst {
-                    self.sortMode = .repostsFirst
-                    self.state?.updated(transition: .immediate)
-                }
-            })))
+//            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReposts, icon: { theme in
+//                return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/Repost"), color: theme.contextMenu.primaryColor)
+//            }, additionalLeftIcon: { theme in
+//                if sortMode != .repostsFirst {
+//                    return nil
+//                }
+//                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//            }, action: { [weak self] _, a in
+//                a(.default)
+//                
+//                guard let self else {
+//                    return
+//                }
+//                if self.sortMode != .repostsFirst {
+//                    self.sortMode = .repostsFirst
+//                    self.state?.updated(transition: .immediate)
+//                }
+//            })))
             items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReactions, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
             }, additionalLeftIcon: { theme in

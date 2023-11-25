@@ -694,6 +694,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1103656293] = { return Api.PrivacyRule.parse_privacyValueDisallowChatParticipants($0) }
     dict[-125240806] = { return Api.PrivacyRule.parse_privacyValueDisallowContacts($0) }
     dict[-463335103] = { return Api.PrivacyRule.parse_privacyValueDisallowUsers($0) }
+    dict[32685898] = { return Api.PublicForward.parse_publicForwardMessage($0) }
+    dict[-302797360] = { return Api.PublicForward.parse_publicForwardStory($0) }
     dict[-1992950669] = { return Api.Reaction.parse_reactionCustomEmoji($0) }
     dict[455247544] = { return Api.Reaction.parse_reactionEmoji($0) }
     dict[2046153753] = { return Api.Reaction.parse_reactionEmpty($0) }
@@ -1197,6 +1199,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[963421692] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[2145983508] = { return Api.stats.MessageStats.parse_messageStats($0) }
+    dict[-1828487648] = { return Api.stats.PublicForwards.parse_publicForwards($0) }
     dict[1355613820] = { return Api.stats.StoryStats.parse_storyStats($0) }
     dict[-2046910401] = { return Api.stickers.SuggestedShortName.parse_suggestedShortName($0) }
     dict[-891180321] = { return Api.storage.FileType.parse_fileGif($0) }
@@ -1246,7 +1249,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
@@ -1704,6 +1707,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyRule:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.PublicForward:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.Reaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ReactionCount:
@@ -2113,6 +2118,8 @@ public extension Api {
             case let _1 as Api.stats.MegagroupStats:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.MessageStats:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stats.PublicForwards:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.StoryStats:
                 _1.serialize(buffer, boxed)

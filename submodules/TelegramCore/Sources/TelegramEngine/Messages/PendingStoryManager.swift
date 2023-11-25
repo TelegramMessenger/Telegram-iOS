@@ -43,14 +43,17 @@ public extension Stories {
         private enum CodingKeys: String, CodingKey {
             case peerId = "peerId"
             case storyId = "storyId"
+            case isModified = "isModified"
         }
         
         public let peerId: EnginePeer.Id
         public let storyId: Int32
+        public let isModified: Bool
         
-        public init(peerId: EnginePeer.Id, storyId: Int32) {
+        public init(peerId: EnginePeer.Id, storyId: Int32, isModified: Bool) {
             self.peerId = peerId
             self.storyId = storyId
+            self.isModified = isModified
         }
         
         public init(from decoder: Decoder) throws {
@@ -58,6 +61,7 @@ public extension Stories {
             
             self.peerId = EnginePeer.Id(try container.decode(Int64.self, forKey: .peerId))
             self.storyId = try container.decode(Int32.self, forKey: .storyId)
+            self.isModified = try container.decodeIfPresent(Bool.self, forKey: .isModified) ?? false
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -65,6 +69,7 @@ public extension Stories {
             
             try container.encode(self.peerId.toInt64(), forKey: .peerId)
             try container.encode(self.storyId, forKey: .storyId)
+            try container.encode(self.isModified, forKey: .isModified)
         }
     }
     

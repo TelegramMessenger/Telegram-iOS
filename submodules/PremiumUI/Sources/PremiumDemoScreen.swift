@@ -907,7 +907,6 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                
                 availableItems[.animatedEmoji] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.animatedEmoji,
@@ -926,7 +925,6 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
-                
                 availableItems[.translation] = DemoPagerComponent.Item(
                     AnyComponentWithIdentity(
                         id: PremiumDemoScreen.Subject.translation,
@@ -941,6 +939,42 @@ private final class DemoSheetContent: CombinedComponent {
                                 )),
                                 title: strings.Premium_Translation,
                                 text: isStandalone ? strings.Premium_TranslationStandaloneInfo : strings.Premium_TranslationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.colors] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.animatedUserpics,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["colors"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_Colors,
+                                text: strings.Premium_ColorsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.wallpapers] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.animatedUserpics,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["wallpapers"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_Wallpapers,
+                                text: strings.Premium_WallpapersInfo,
                                 textColor: textColor
                             )
                         )
@@ -1075,6 +1109,10 @@ private final class DemoSheetContent: CombinedComponent {
                         text = strings.Premium_AnimatedEmojiStandaloneInfo
                     case .translation:
                         text = strings.Premium_TranslationStandaloneInfo
+                    case .colors:
+                        text = strings.Premium_ColorsInfo
+                    case .wallpapers:
+                        text = strings.Premium_WallpapersInfo
                     case .doubleLimits:
                         text = ""
                     case .stories:
@@ -1293,6 +1331,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case emojiStatus
         case translation
         case stories
+        case colors
+        case wallpapers
     }
     
     public enum Source: Equatable {

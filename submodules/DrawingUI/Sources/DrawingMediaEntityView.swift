@@ -33,6 +33,8 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
     init(context: AccountContext, entity: DrawingMediaEntity) {
         super.init(context: context, entity: entity)
         
+        self.backgroundColor = UIColor.clear
+        
         self.snapTool.onSnapUpdated = { [weak self] type, snapped in
             if let self {
                 self.onSnapUpdated(type, snapped)
@@ -110,10 +112,10 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         self.bounds = CGRect(origin: .zero, size: size)
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.mediaEntity.rotation), scale, scale)
     
-        if self.previewView?.superview === self {
-            self.previewView?.layer.transform = CATransform3DMakeScale(self.mediaEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
-            self.previewView?.frame = self.bounds
-        }
+//        if self.previewView?.superview === self {
+//            self.previewView?.layer.transform = CATransform3DMakeScale(self.mediaEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
+//            self.previewView?.frame = self.bounds
+//        }
     
         super.update(animated: animated)
         
@@ -189,5 +191,9 @@ public final class DrawingMediaEntityView: DrawingEntityView, DrawingEntityMedia
         default:
             break
         }
+    }
+    
+    public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        return self.bounds.contains(point)
     }
 }
