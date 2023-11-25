@@ -17,6 +17,8 @@ import ShimmerEffect
 import TextFormat
 import TelegramUIPreferences
 import GenerateStickerPlaceholderImage
+import UIKitRuntimeUtils
+import ComponentFlow
 
 public func generateTopicIcon(title: String, backgroundColors: [UIColor], strokeColors: [UIColor], size: CGSize) -> UIImage? {
     let realSize = size
@@ -244,17 +246,27 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     private var fetchDisposable: Disposable?
     private var loadDisposable: Disposable?
     
+    private var _contentTintColor: UIColor?
     public var contentTintColor: UIColor? {
-        didSet {
-            if self.contentTintColor != oldValue {
+        get {
+            return self._contentTintColor
+        }
+        set(value) {
+            if self._contentTintColor != value {
+                self._contentTintColor = value
                 self.updateTintColor()
             }
         }
     }
     
+    private var _dynamicColor: UIColor?
     public var dynamicColor: UIColor? {
-        didSet {
-            if self.dynamicColor != oldValue {
+        get {
+            return self._dynamicColor
+        }
+        set(value) {
+            if self._dynamicColor != value {
+                self._dynamicColor = value
                 self.updateTintColor()
             }
         }
@@ -296,7 +308,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         self.renderer = renderer
         self.unique = unique
         self.placeholderColor = placeholderColor
-        self.dynamicColor = dynamicColor
+        self._dynamicColor = dynamicColor
         self.loopCount = loopCount
         
         let scale = min(2.0, UIScreenScale)
@@ -348,6 +360,40 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         return nullAction
     }
     
+    public func updateTintColor(contentTintColor: UIColor?, dynamicColor: UIColor?, transition: Transition) {
+        self._contentTintColor = contentTintColor
+        self._dynamicColor = dynamicColor
+        
+        if !self.isDisplayingPlaceholder {
+            var customColor = self.contentTintColor
+            if let file = self.file {
+                if file.isCustomTemplateEmoji {
+                    customColor = self.dynamicColor
+                }
+            }
+            
+            if customColor != nil {
+                if self.layerTintColor == nil {
+                    setLayerContentsMaskMode(self, true)
+                }
+            } else {
+                if self.layerTintColor != nil {
+                    setLayerContentsMaskMode(self, false)
+                }
+            }
+            if let customColor {
+                transition.setTintColor(layer: self, color: customColor)
+            } else {
+                self.layerTintColor = nil
+            }
+        } else {
+            if self.layerTintColor != nil {
+                setLayerContentsMaskMode(self, false)
+            }
+            self.layerTintColor = nil
+        }
+    }
+    
     private func updateTintColor() {
         if !self.isDisplayingPlaceholder {
             var customColor = self.contentTintColor
@@ -357,8 +403,20 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 }
             }
             
+            if customColor != nil {
+                if self.layerTintColor == nil {
+                    setLayerContentsMaskMode(self, true)
+                }
+            } else {
+                if self.layerTintColor != nil {
+                    setLayerContentsMaskMode(self, false)
+                }
+            }
             self.layerTintColor = customColor?.cgColor
         } else {
+            if self.layerTintColor != nil {
+                setLayerContentsMaskMode(self, false)
+            }
             self.layerTintColor = nil
         }
     }

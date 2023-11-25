@@ -570,6 +570,64 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
 
 private let fadeWidth: CGFloat = 70.0
 
+public final class PeerAvatarBottomShadowNode: ASDisplayNode {
+    let backgroundNode: NavigationBackgroundNode
+    let backgroundGradientMaskLayer: SimpleGradientLayer
+    let imageView: UIImageView
+    
+    override init() {
+        self.backgroundNode = NavigationBackgroundNode(color: .black, enableBlur: true)
+        self.backgroundGradientMaskLayer = SimpleGradientLayer()
+        self.backgroundNode.layer.mask = self.backgroundGradientMaskLayer
+        
+        self.imageView = UIImageView()
+        self.imageView.contentMode = .scaleToFill
+        
+        super.init()
+        
+        //self.backgroundColor = .blue
+        
+        self.backgroundGradientMaskLayer.type = .axial
+        self.backgroundGradientMaskLayer.startPoint = CGPoint(x: 0.0, y: 1.0)
+        self.backgroundGradientMaskLayer.endPoint = CGPoint(x: 0.0, y: 0.0)
+        
+        let baseGradientAlpha: CGFloat = 1.0
+        let numSteps = 8
+        let firstStep = 1
+        let firstLocation = 0.4
+        self.backgroundGradientMaskLayer.colors = (0 ..< numSteps).map { i in
+            if i < firstStep {
+                return UIColor(white: 1.0, alpha: 1.0).cgColor
+            } else {
+                let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
+                return UIColor(white: 1.0, alpha: baseGradientAlpha * (1.0 - pow(step, 3.0))).cgColor
+            }
+        }
+        self.backgroundGradientMaskLayer.locations = (0 ..< numSteps).map { i -> NSNumber in
+            if i < firstStep {
+                return 0.0 as NSNumber
+            } else {
+                let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
+                return (firstLocation + (1.0 - firstLocation) * step) as NSNumber
+            }
+        }
+        
+        self.backgroundNode.updateColor(color: UIColor(white: 0.0, alpha: 0.1), enableSaturation: false, forceKeepBlur: true, transition: .immediate)
+        
+        self.addSubnode(self.backgroundNode)
+        //self.layer.addSublayer(self.backgroundGradientMaskLayer)
+        //self.view.addSubview(self.imageView)
+    }
+    
+    public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
+        
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
+        transition.updateFrame(layer: self.backgroundGradientMaskLayer, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
+        self.backgroundNode.update(size: size, transition: transition)
+    }
+}
+
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
     private let isSettings: Bool
@@ -579,7 +637,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let controlsClippingNode: ASDisplayNode
     public let controlsClippingOffsetNode: ASDisplayNode
     public let topShadowNode: ASImageNode
-    public let bottomShadowNode: ASImageNode
+    public let bottomShadowNode: PeerAvatarBottomShadowNode
     
     public var storyParams: (peer: EnginePeer, items: [EngineStoryItem], count: Int, hasUnseen: Bool, hasUnseenPrivate: Bool)?
     private var expandedStorySetIndicator: ComponentView<Empty>?
@@ -793,10 +851,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.topShadowNode.displayWithoutProcessing = true
         self.topShadowNode.contentMode = .scaleToFill
         
-        self.bottomShadowNode = ASImageNode()
-        self.bottomShadowNode.displaysAsynchronously = false
-        self.bottomShadowNode.displayWithoutProcessing = true
-        self.bottomShadowNode.contentMode = .scaleToFill
+        self.bottomShadowNode = PeerAvatarBottomShadowNode()
         
         do {
             let size = CGSize(width: 88.0, height: 88.0)
@@ -825,7 +880,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                     })
-                    self.bottomShadowNode.image = generateImage(image.size, contextGenerator: { size, context in
+                    self.bottomShadowNode.imageView.image = generateImage(image.size, contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                         context.rotate(by: CGFloat.pi / 2.0)

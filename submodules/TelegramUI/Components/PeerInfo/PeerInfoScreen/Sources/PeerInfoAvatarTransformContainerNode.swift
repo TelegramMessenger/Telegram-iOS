@@ -100,6 +100,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             }
             colors.unseenColors = unseenColors
             colors.unseenCloseFriendsColors = colors.unseenColors
+            colors.seenColors = colors.unseenColors
         } else {
             regularNavigationContentsSecondaryColor = theme.list.controlSecondaryColor
         }
