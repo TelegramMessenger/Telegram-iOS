@@ -1504,7 +1504,7 @@ public final class MediaEditor {
     private func updateRenderChain() {
         self.renderer.skipEditingPasses = self.previewUnedited
         self.renderChain.update(values: self.values)
-        self.renderer.videoFinishPass.update(values: self.values, startOffset: nil, videoDuration: self.mainVideoDuration, additionalVideoDuration: self.additionalVideoDuration)
+        self.renderer.videoFinishPass.update(values: self.values, videoDuration: self.mainVideoDuration, additionalVideoDuration: self.additionalVideoDuration)
         
         if let player = self.player, player.rate > 0.0 && !self.forceRendering {
         } else {

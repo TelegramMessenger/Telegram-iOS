@@ -463,13 +463,8 @@ public final class MediaEditorVideoExport {
         }
         
         var duration = self.durationValue?.seconds
-        var startOffset: Double?
         if case .image = self.subject {
             duration = nil
-        }
-        
-        if let trimRange = self.configuration.timeRange?.start {
-            startOffset = trimRange.seconds
         }
         
         self.composer = MediaEditorComposer(
@@ -478,7 +473,6 @@ public final class MediaEditorVideoExport {
             dimensions: self.configuration.composerDimensions,
             outputDimensions: self.configuration.dimensions,
             textScale: self.textScale,
-            startOffset: startOffset,
             videoDuration: duration,
             additionalVideoDuration: self.additionalVideoDuration
         )

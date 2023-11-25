@@ -86,7 +86,6 @@ final class MediaEditorComposer {
         dimensions: CGSize,
         outputDimensions: CGSize,
         textScale: CGFloat,
-        startOffset: Double?,
         videoDuration: Double?,
         additionalVideoDuration: Double?
     ) {
@@ -123,7 +122,7 @@ final class MediaEditorComposer {
                 
         self.renderer.setupForComposer(composer: self)
         self.renderChain.update(values: self.values)
-        self.renderer.videoFinishPass.update(values: self.values, startOffset: startOffset, videoDuration: videoDuration, additionalVideoDuration: additionalVideoDuration)
+        self.renderer.videoFinishPass.update(values: self.values, videoDuration: videoDuration, additionalVideoDuration: additionalVideoDuration)
     }
         
     var previousAdditionalInput: Input?

@@ -1072,10 +1072,10 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global()
             ),
-            item |> mapToSignal { item -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]), NoError> in
-                return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]) in
+            item |> mapToSignal { item -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]), NoError> in
+                return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]) in
                     guard let item else {
-                        return (nil, [:], [:])
+                        return (nil, [:], [:], [:])
                     }
                     var peers: [PeerId: Peer] = [:]
                     var stories: [StoryId: EngineStoryItem?] = [:]
@@ -1122,7 +1122,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                             }
                         }
                     }
-                    return (item, peers, allEntityFiles)
+                    return (item, peers, allEntityFiles, stories)
                 }
             }
         )
@@ -1132,7 +1132,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
             }
             
             let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings) = data
-            let (item, peers, allEntityFiles) = itemAndPeers
+            let (item, peers, allEntityFiles, forwardInfoStories) = itemAndPeers
             
             guard let peer else {
                 return
@@ -1146,6 +1146,23 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 presence: presence,
                 canViewStats: canViewStats
             )
+            
+            for (storyId, story) in forwardInfoStories {
+                let promise: Promise<EngineStoryItem?>
+                var added = false
+                if let current = self.currentForwardInfoStories[storyId] {
+                    promise = current
+                } else {
+                    promise = Promise<EngineStoryItem?>()
+                    self.currentForwardInfoStories[storyId] = promise
+                    added = true
+                }
+                if let story {
+                    promise.set(.single(story))
+                } else if added {
+                    promise.set(self.context.engine.messages.getStory(peerId: storyId.peerId, id: storyId.id))
+                }
+            }
             
             if item == nil {
                 let storyKey = StoryKey(peerId: storyId.peerId, id: storyId.id)

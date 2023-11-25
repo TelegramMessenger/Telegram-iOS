@@ -235,12 +235,13 @@ final class VideoFinishPass: RenderPass {
     
     private let canvasSize = CGSize(width: 1080.0, height: 1920.0)
     private var gradientColors = GradientColors(topColor: simd_float3(0.0, 0.0, 0.0), bottomColor: simd_float3(0.0, 0.0, 0.0))
-    func update(values: MediaEditorValues, startOffset: Double?, videoDuration: Double?, additionalVideoDuration: Double?) {
+    func update(values: MediaEditorValues, videoDuration: Double?, additionalVideoDuration: Double?) {
         let position = CGPoint(
             x: canvasSize.width / 2.0 + values.cropOffset.x,
             y: canvasSize.height / 2.0 + values.cropOffset.y
         )
         
+        self.isStory = values.isStory
         self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, baseScale: self.mainPosition.baseScale)
             
         if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
@@ -249,7 +250,6 @@ final class VideoFinishPass: RenderPass {
         if !values.additionalVideoPositionChanges.isEmpty {
             self.videoPositionChanges = values.additionalVideoPositionChanges
         }
-        self.videoStartOffset = startOffset
         self.videoDuration = videoDuration
         self.additionalVideoDuration = additionalVideoDuration
         if let videoTrimRange = values.videoTrimRange {
@@ -289,8 +289,8 @@ final class VideoFinishPass: RenderPass {
         baseScale: 1.0
     )
     
+    private var isStory = true
     private var videoPositionChanges: [VideoPositionChange] = []
-    private var videoStartOffset: Double?
     private var videoDuration: Double?
     private var additionalVideoDuration: Double?
     private var videoRange: Range<Double>?
@@ -356,9 +356,6 @@ final class VideoFinishPass: RenderPass {
     
     func transitionState(for time: CMTime, mainInput: MTLTexture, additionalInput: MTLTexture?) -> (VideoState, VideoState?, VideoState?) {
         let timestamp = time.seconds
-//        if let videoStartOffset = self.videoStartOffset {
-//            timestamp += videoStartOffset
-//        }
         
         var backgroundTexture = mainInput
         var backgroundTextureRotation = self.mainTextureRotation
@@ -482,6 +479,10 @@ final class VideoFinishPass: RenderPass {
     }
     
     func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+        if !self.isStory {
+            return input
+        }
+        
         let baseScale: CGFloat
         if input.height > input.width {
             baseScale = max(canvasSize.width / CGFloat(input.width), canvasSize.height / CGFloat(input.height))
