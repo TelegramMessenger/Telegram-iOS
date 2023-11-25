@@ -2126,6 +2126,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     let isSettings: Bool
     private let isMediaOnly: Bool
+    let initialExpandPanes: Bool
     
     private var presentationData: PresentationData
     
@@ -2247,6 +2248,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
         self.isMediaOnly = context.account.peerId == peerId && !isSettings
+        self.initialExpandPanes = initialPaneKey != nil
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
@@ -2608,7 +2610,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         c.dismiss(completion: {
                             if let strongSelf = self {
                                 strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
-                                strongSelf.expandTabs()
+                                strongSelf.expandTabs(animated: true)
                             }
                         })
                     })))
@@ -2760,7 +2762,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 return
                             }
                             strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
-                            strongSelf.expandTabs()
+                            strongSelf.expandTabs(animated: true)
                             f(.default)
                         })))
                         
@@ -4253,7 +4255,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    private func expandTabs() {
+    func expandTabs(animated: Bool) {
         if self.headerNode.isAvatarExpanded {
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
             
@@ -4269,7 +4271,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let contentOffset = self.scrollNode.view.contentOffset
             let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
             if contentOffset.y < paneAreaExpansionFinalPoint - CGFloat.ulpOfOne {
-                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), animated: true)
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), animated: animated)
             }
         }
     }
@@ -10305,9 +10307,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         return self.displayNode as! PeerInfoScreenNode
     }
     
-    private let _ready = Promise<Bool>()
+    private let _readyProxy = Promise<Bool>()
+    private let _readyInternal = Promise<Bool>()
+    private var readyInternalDisposable: Disposable?
     override public var ready: Promise<Bool> {
-        return self._ready
+        return self._readyProxy
     }
     
     override public var customNavigationData: CustomViewControllerNavigationData? {
@@ -10567,6 +10571,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 if strongSelf.controllerNode.scrollNode.view.contentOffset.y > .ulpOfOne {
                     return nil
                 }
+                if strongSelf.controllerNode.initialExpandPanes {
+                    return nil
+                }
                 if isInteractive && strongSelf.controllerNode.headerNode.isAvatarExpanded {
                     return nil
                 }
@@ -10648,6 +10655,19 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 return true
             }
         }
+        
+        self.readyInternalDisposable = (self._readyInternal.get()
+        |> filter { $0 }
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            if self.controllerNode.initialExpandPanes {
+                self.controllerNode.expandTabs(animated: false)
+            }
+            self._readyProxy.set(.single(true))
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -10655,6 +10675,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     }
     
     deinit {
+        self.readyInternalDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
         self.accountsAndPeersDisposable?.dispose()
         self.tabBarItemDisposable?.dispose()
@@ -10665,7 +10686,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
         self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
         self.cachedDataPromise.set(self.controllerNode.cachedDataPromise.get())
-        self._ready.set(self.controllerNode.ready.get())
+        self._readyInternal.set(self.controllerNode.ready.get())
         
         super.displayNodeDidLoad()
     }
