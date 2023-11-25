@@ -274,7 +274,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             })
             
             if let boostStatus = self.boostStatus, !customReactions.isEmpty, customReactions.count > boostStatus.level {
-                self.displayPremiumScreen()
+                self.displayPremiumScreen(reactionCount: customReactions.count)
                 return
             }
             
@@ -306,7 +306,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 if !standalone {
                     switch error {
                     case .boostRequired:
-                        self.displayPremiumScreen()
+                        self.displayPremiumScreen(reactionCount: customReactions.count)
                     case .generic:
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                         //TODO:localize
@@ -330,7 +330,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             }
         }
         
-        private func displayPremiumScreen() {
+        private func displayPremiumScreen(reactionCount: Int) {
             guard let component = self.component else {
                 return
             }
@@ -344,7 +344,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
                 
                 let link = status.url
-                let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
+                let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions(reactionCount: reactionCount), isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
                     guard let self, let component = self.component else {
                         return true
                     }
