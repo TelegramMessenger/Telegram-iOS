@@ -312,7 +312,8 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 mediumBlobRange: (0.52, 0.87),
                 bigBlobRange: (0.57, 1.00)
             )
-            blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+            let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
+            blobView.setColor(theme.chat.inputPanel.actionControlFillColor)
             self.micDecorationValue = blobView
             return blobView
         }
@@ -382,13 +383,14 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     
     private func updateAnimation(previousMode: ChatTextInputMediaRecordingButtonMode) {
         let image: UIImage?
+        let theme = self.hidesOnLock ? defaultDarkColorPresentationTheme : self.theme
         switch self.mode {
             case .audio:
-                self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(self.theme)
-                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
+                self.icon = PresentationResourcesChat.chatInputPanelVoiceActiveButtonImage(theme)
+                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(theme)
             case .video:
-                self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(self.theme)
-                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(self.theme)
+                self.icon = PresentationResourcesChat.chatInputPanelVideoActiveButtonImage(theme)
+                image = PresentationResourcesChat.chatInputPanelVoiceButtonImage(theme)
         }
         
         let size = self.bounds.size

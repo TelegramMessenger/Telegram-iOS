@@ -83,7 +83,7 @@ func chatHistoryEntriesForView(
                 associatedThreadInfo: nil,
                 associatedStories: [:]
             )
-        } else if let peer = channelPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus {
+        } else if let peer = channelPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus, !peer.flags.contains(.isCreator) {
             joinMessage = Message(
                 stableId: UInt32.max - 1000,
                 stableVersion: 0,

@@ -256,7 +256,7 @@ private final class CameraContext {
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
-                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide)
                 
                 self.queue.after(0.5) {
                     self.modeChange = .none

@@ -86,6 +86,7 @@ public final class ForwardInfoPanelComponent: Component {
             self.state = state
             
             var titleOffset: CGFloat = 0.0
+            let sideInset: CGFloat = !component.text.isEmpty ? 9.0 : 6.0
             
             let iconView: UIImageView
             if let current = self.iconView {
@@ -97,12 +98,10 @@ public final class ForwardInfoPanelComponent: Component {
                 self.addSubview(iconView)
             }
             if let image = iconView.image {
-                iconView.frame = CGRect(origin: CGPoint(x: 9.0 + UIScreenPixel, y: 5.0), size: image.size)
+                iconView.frame = CGRect(origin: CGPoint(x: sideInset + UIScreenPixel, y: 5.0), size: image.size)
             }
             titleOffset += 13.0
        
-            
-            let sideInset: CGFloat = 9.0
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
