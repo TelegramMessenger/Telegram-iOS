@@ -357,8 +357,21 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                             item.controllerInteraction.presentControllerInCurrent(controller, nil)
                         }
                     },
-                    contextAction: { peer, sourceView, gesture in
-                        item.controllerInteraction.openRecommendedChannelContextMenu(peer, sourceView, gesture)
+                    openMore: { [weak self] in
+                        guard let item = self?.item else {
+                            return
+                        }
+                        let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: item.message.id.peerId))
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                            if let peer = peer {
+                                self?.item?.controllerInteraction.openPeer(peer, .info(ChatControllerInteractionNavigateToPeer.InfoParams(switchToRecommendedChannels: true)), nil, .default)
+                            }
+                        })
+                    },
+                    contextAction: { [weak self] peer, sourceView, gesture in
+                        if let item = self?.item {
+                            item.controllerInteraction.openRecommendedChannelContextMenu(peer, sourceView, gesture)
+                        }
                     }
                 )
             ),
@@ -531,6 +544,11 @@ private class MessageBackgroundNode: ASDisplayNode {
 private let itemSize = CGSize(width: 84.0, height: 90.0)
 
 private final class ChannelItemComponent: Component {
+    class ExternalState {
+        var cachedPlaceholderImage: UIImage?
+    }
+    
+    let externalState: ExternalState
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -539,9 +557,11 @@ private final class ChannelItemComponent: Component {
     let title: String
     let subtitle: String
     let action: (EnginePeer?) -> Void
+    let openMore: () -> Void
     let contextAction: ((EnginePeer, UIView, ContextGesture?) -> Void)?
     
     init(
+        externalState: ExternalState,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -550,8 +570,10 @@ private final class ChannelItemComponent: Component {
         title: String,
         subtitle: String,
         action: @escaping (EnginePeer?) -> Void,
+        openMore: @escaping () -> Void,
         contextAction: ((EnginePeer, UIView, ContextGesture?) -> Void)?
     ) {
+        self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -560,6 +582,7 @@ private final class ChannelItemComponent: Component {
         self.title = title
         self.subtitle = subtitle
         self.action = action
+        self.openMore = openMore
         self.contextAction = contextAction
     }
     
@@ -592,8 +615,7 @@ private final class ChannelItemComponent: Component {
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         
-        private let circleView: UIImageView
-        private let circleView2: UIImageView
+        private let circlesView: UIImageView
         
         private let avatarNode: AvatarNode
         private var mergedAvatarsNode: MergedAvatarsNode?
@@ -606,16 +628,7 @@ private final class ChannelItemComponent: Component {
         override init(frame: CGRect) {
             self.contextContainer = ContextControllerSourceView()
             
-            self.circleView = UIImageView(image: UIImage(bundleImageName: "Avatar/SampleAvatar1"))
-            self.circleView.clipsToBounds = true
-            self.circleView.layer.cornerRadius = 30
-            self.circleView.clipsToBounds = true
-            self.circleView.layer.cornerRadius = 30
-            
-            let colors: NSArray = [UIColor(rgb: 0x000000).cgColor, UIColor(rgb: 0x6a2267).cgColor]
-            self.circleView2 = UIImageView(image: generateGradientFilledCircleImage(diameter: 60, colors: colors))
-            self.circleView2.clipsToBounds = true
-            self.circleView2.layer.cornerRadius = 30
+            self.circlesView = UIImageView()
             
             self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
             self.avatarNode.isUserInteractionEnabled = false
@@ -630,8 +643,6 @@ private final class ChannelItemComponent: Component {
             
             self.contextContainer.addSubview(self.containerButton)
             
-            self.contextContainer.addSubview(self.circleView2)
-            self.contextContainer.addSubview(self.circleView)
             self.contextContainer.addSubnode(self.avatarNode)
             self.contextContainer.addSubview(self.avatarBadge)
             
@@ -655,7 +666,11 @@ private final class ChannelItemComponent: Component {
                 return
             }
             if !component.isLocked {
-                component.action(peer)
+                if component.peers.count > 1 {
+                    component.openMore()
+                } else {
+                    component.action(peer)
+                }
             } else {
                 component.action(nil)
             }
@@ -739,6 +754,7 @@ private final class ChannelItemComponent: Component {
                     mergedAvatarsNode = current
                 } else {
                     mergedAvatarsNode = MergedAvatarsNode()
+                    mergedAvatarsNode.isUserInteractionEnabled = false
                     self.contextContainer.insertSubview(mergedAvatarsNode.view, aboveSubview: self.avatarNode.view)
                     self.mergedAvatarsNode = mergedAvatarsNode
                 }
@@ -755,14 +771,80 @@ private final class ChannelItemComponent: Component {
             }
             
             if component.isLocked {
-                self.circleView.isHidden = false
-                self.circleView.frame = avatarFrame.offsetBy(dx: 10.0, dy: 0.0)
-                self.circleView2.frame = avatarFrame.offsetBy(dx: 20.0, dy: 0.0)
+                if self.circlesView.superview == nil {
+                    self.contextContainer.insertSubview(self.circlesView, belowSubview: self.avatarNode.view)
+                }
+                self.circlesView.isHidden = false
                 
-                self.circleView2.isHidden = false
+                if self.circlesView.image == nil {
+                    if let current = component.externalState.cachedPlaceholderImage {
+                        self.circlesView.image = current
+                    } else {
+                        let image = generateImage(CGSize(width: 50.0, height: avatarSize.height), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+                            
+                            let randomColors: [(UInt32, UInt32)] = [
+                                (0x4493de, 0x52d5d9),
+                                (0xfcc418, 0xf6774a),
+                                (0xffc9a2, 0xfbedb2),
+                                (0x133e88, 0x131925),
+                                (0x63c7f0, 0xf6c506),
+                                (0x88a5cb, 0x162639),
+                                (0xd669ed, 0xe0a2f3),
+                                (0x54cb68, 0xa0de7e)
+                            ]
+                            
+                            context.saveGState()
+                            
+                            let rect1 = CGRect(origin: CGPoint(x: size.width - avatarSize.width, y: 0.0), size: avatarSize)
+                            context.addEllipse(in: rect1)
+                            context.clip()
+                            
+                            var firstColors: NSArray = []
+                            if let random = randomColors.randomElement() {
+                                firstColors = [UIColor(rgb: random.0).cgColor, UIColor(rgb: random.1).cgColor]
+                            }
+                            var locations: [CGFloat] = [1.0, 0.0]
+                            
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let firstGradient = CGGradient(colorsSpace: colorSpace, colors: firstColors as CFArray, locations: &locations)!
+                            context.drawLinearGradient(firstGradient, start: CGPoint(x: rect1.minX, y: rect1.minY), end: CGPoint(x: rect1.maxX, y: rect1.maxY), options: CGGradientDrawingOptions())
+                            
+                            context.restoreGState()
+                            
+                            context.setBlendMode(.clear)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - avatarSize.width - 12.0, y: -2.0), size: CGSize(width: avatarSize.width + 4.0, height: avatarSize.height + 4.0)))
+                            
+                            context.setBlendMode(.normal)
+                            
+                            context.saveGState()
+                            
+                            let rect2 = CGRect(origin: CGPoint(x: size.width - avatarSize.width - 10.0, y: 0.0), size: avatarSize)
+                            context.addEllipse(in: rect2)
+                            context.clip()
+                            
+                            var secondColors: NSArray = []
+                            if let random = randomColors.randomElement() {
+                                secondColors = [UIColor(rgb: random.0).cgColor, UIColor(rgb: random.1).cgColor]
+                            }
+                            
+                            let secondGradient = CGGradient(colorsSpace: colorSpace, colors: secondColors as CFArray, locations: &locations)!
+                            context.drawLinearGradient(secondGradient, start: CGPoint(x: rect2.minX, y: rect2.minY), end: CGPoint(x: rect2.minX, y: rect2.maxY), options: CGGradientDrawingOptions())
+                            
+                            context.restoreGState()
+                            
+                            context.setBlendMode(.clear)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - avatarSize.width - 22.0, y: -2.0), size: CGSize(width: avatarSize.width + 4.0, height: avatarSize.height + 4.0)))
+                        })
+                        component.externalState.cachedPlaceholderImage = image
+                        self.circlesView.image = image
+                    }
+                }
+                self.circlesView.frame = CGRect(origin: CGPoint(x: avatarFrame.midX, y: 0.0), size: CGSize(width: 50.0, height: 60.0))
             } else {
-                self.circleView.isHidden = true
-                self.circleView2.isHidden = true
+                if self.circlesView.superview != nil {
+                    self.circlesView.removeFromSuperview()
+                }
             }
                 
             if let titleView = self.title.view {
@@ -821,6 +903,7 @@ final class ChannelListPanelComponent: Component {
     let strings: PresentationStrings
     let peers: RecommendedChannels
     let action: (EnginePeer?) -> Void
+    let openMore: () -> Void
     let contextAction: (EnginePeer, UIView, ContextGesture?) -> Void
 
     init(
@@ -829,6 +912,7 @@ final class ChannelListPanelComponent: Component {
         strings: PresentationStrings,
         peers: RecommendedChannels,
         action: @escaping (EnginePeer?) -> Void,
+        openMore: @escaping () -> Void,
         contextAction: @escaping (EnginePeer, UIView, ContextGesture?) -> Void
     ) {
         self.context = context
@@ -836,6 +920,7 @@ final class ChannelListPanelComponent: Component {
         self.strings = strings
         self.peers = peers
         self.action = action
+        self.openMore = openMore
         self.contextAction = contextAction
     }
     
@@ -906,6 +991,7 @@ final class ChannelListPanelComponent: Component {
         
         private let measureItem = ComponentView<Empty>()
         private var visibleItems: [EnginePeer.Id: ComponentView<Empty>] = [:]
+        private var externalState = ChannelItemComponent.ExternalState()
         
         private var ignoreScrolling: Bool = false
         
@@ -1006,6 +1092,7 @@ final class ChannelListPanelComponent: Component {
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(ChannelItemComponent(
+                            externalState: self.externalState,
                             context: component.context,
                             theme: component.theme,
                             strings: component.strings,
@@ -1014,6 +1101,7 @@ final class ChannelListPanelComponent: Component {
                             title: title,
                             subtitle: subtitle,
                             action: component.action,
+                            openMore: component.openMore,
                             contextAction: !isLocked && peers.count == 1 ? component.contextAction : nil
                         )),
                         environment: {},

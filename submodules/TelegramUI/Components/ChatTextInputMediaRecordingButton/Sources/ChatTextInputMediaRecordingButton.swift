@@ -212,6 +212,14 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         }
     }
     
+    public var hidesOnLock: Bool = false {
+        didSet {
+            if self.hidesOnLock {
+                self.setHidesPanelOnLock()
+            }
+        }
+    }
+    
     private func updateShadow() {
         if let view = self.animationView.view {
             if self.hasShadow {
@@ -339,8 +347,6 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         self.disablesInteractiveTransitionGestureRecognizer = true
         
         self.updateMode(mode: self.mode, animated: false, force: true)
-        
-        self.setHidesPanelOnLock()
         
         self.delegate = self
         self.isExclusiveTouch = false;

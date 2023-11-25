@@ -620,7 +620,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         return .single(.result(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))))
                     }
                 } else {
-                    return .single(.result(.peer(nil, .info)))
+                    return .single(.result(.peer(nil, .info(nil))))
                 }
             }
         case let .peer(reference, parameter):
@@ -780,7 +780,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                     }
                 } else {
-                    return .single(.result(.peer(nil, .info)))
+                    return .single(.result(.peer(nil, .info(nil))))
                 }
             }
         case let .peerId(peerId):
@@ -796,9 +796,9 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
         return .single(.progress) |> then(context.engine.peers.importContactToken(token: token)
             |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
                 if let peer = peer {
-                    return .single(.result(.peer(peer._asPeer(), .info)))
+                    return .single(.result(.peer(peer._asPeer(), .info(nil))))
                 } else {
-                    return .single(.result(.peer(nil, .info)))
+                    return .single(.result(.peer(nil, .info(nil))))
                 }
             })
         case let .privateMessage(messageId, threadId, timecode):

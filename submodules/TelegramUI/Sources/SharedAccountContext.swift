@@ -1899,18 +1899,22 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     } else if let _ = peer as? TelegramChannel {
         var forumTopicThread: ChatReplyThreadMessage?
+        var switchToRecommendedChannels = false
         switch mode {
         case let .forumTopic(thread):
             forumTopicThread = thread
+        case .recommendedChannels:
+            switchToRecommendedChannels = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread, switchToRecommendedChannels: switchToRecommendedChannels)
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var reactionSourceMessageId: MessageId?
         var callMessages: [Message] = []
         var hintGroupInCommon: PeerId?
+
         switch mode {
         case let .nearbyPeer(distance):
             nearbyPeerDistance = distance
@@ -1923,6 +1927,8 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         case let .reaction(messageId):
             reactionSourceMessageId = messageId
         case .forumTopic:
+            break
+        default:
             break
         }
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)

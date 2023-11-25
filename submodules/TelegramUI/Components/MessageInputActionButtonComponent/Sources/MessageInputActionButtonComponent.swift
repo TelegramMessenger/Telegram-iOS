@@ -599,6 +599,7 @@ public final class MessageInputActionButtonComponent: Component {
             
             if let micButton = self.micButton {
                 micButton.hasShadow = component.hasShadow
+                micButton.hidesOnLock = component.hasShadow
                 
                 if themeUpdated {
                     micButton.updateTheme(theme: defaultDarkPresentationTheme)

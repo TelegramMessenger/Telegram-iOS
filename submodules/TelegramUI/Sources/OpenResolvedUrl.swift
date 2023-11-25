@@ -41,7 +41,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
                 return .chat(textInputState: nil, subject: nil, peekData: nil)
             }
         } else {
-            return .info
+            return .info(nil)
         }
     } else {
         return navigation

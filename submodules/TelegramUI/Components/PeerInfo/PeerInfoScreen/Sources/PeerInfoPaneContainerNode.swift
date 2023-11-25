@@ -498,13 +498,16 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     private var currentAvailablePanes: [PeerInfoPaneKey]?
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, isMediaOnly: Bool) {
+    private let initialPaneKey: PeerInfoPaneKey?
+    
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, isMediaOnly: Bool, initialPaneKey: PeerInfoPaneKey?) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
         self.isMediaOnly = isMediaOnly
+        self.initialPaneKey = initialPaneKey
         
         self.additionalBackgroundNode = ASDisplayNode()
         
@@ -730,7 +733,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 self.pendingSwitchToPaneKey = nil
             }
         } else if self.currentPaneKey == nil {
-            self.pendingSwitchToPaneKey = availablePanes.first
+            self.pendingSwitchToPaneKey = self.initialPaneKey ?? availablePanes.first
         }
         
         let currentIndex: Int?
@@ -785,13 +788,13 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         }
         
         for key in requiredPendingKeys {
-            if self.pendingPanes[key] == nil {
+            if self.pendingPanes[key] == nil, let data {
                 var leftScope = false
                 let pane = PeerInfoPendingPane(
                     context: self.context,
                     updatedPresentationData: self.updatedPresentationData,
                     chatControllerInteraction: self.chatControllerInteraction!,
-                    data: data!,
+                    data: data,
                     openPeerContextAction: { [weak self] recommended, peer, node, gesture in
                         self?.openPeerContextAction?(recommended, peer, node, gesture)
                     },

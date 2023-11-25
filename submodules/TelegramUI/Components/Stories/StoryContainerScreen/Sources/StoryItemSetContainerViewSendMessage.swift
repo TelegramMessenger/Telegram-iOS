@@ -2798,7 +2798,7 @@ final class StoryItemSetContainerSendMessage {
             if let peer = peer {
                 var navigation: ChatControllerInteractionNavigateToPeer
                 if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                    navigation = .info
+                    navigation = .info(nil)
                 } else {
                     navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
                 }
