@@ -18,6 +18,7 @@ import ChatControllerInteraction
 import ShimmerEffect
 import Markdown
 import ChatMessageBubbleContentNode
+import ChatMessagePollBubbleContentNode
 import ChatMessageItemCommon
 import RoundedRectWithTailPath
 import AvatarNode
@@ -343,10 +344,12 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                                 presentationData: presentationData,
                                 content: .premiumPaywall(title: nil, text: "Subcribe to [Telegram Premium]() to unlock up to **100** channels.", customUndoText: nil, timeout: nil, linkAction: nil),
                                 elevatedLayout: false,
-                                action: { [weak self] _ in
-                                    if let self, let item = self.item {
-                                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
-                                        item.controllerInteraction.navigationController()?.pushViewController(controller)
+                                action: { [weak self] action in
+                                    if case .info = action {
+                                        if let self, let item = self.item {
+                                            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                                            item.controllerInteraction.navigationController()?.pushViewController(controller)
+                                        }
                                     }
                                     return true
                                 }
@@ -536,7 +539,7 @@ private final class ChannelItemComponent: Component {
     let title: String
     let subtitle: String
     let action: (EnginePeer?) -> Void
-    let contextAction: (EnginePeer, UIView, ContextGesture?) -> Void
+    let contextAction: ((EnginePeer, UIView, ContextGesture?) -> Void)?
     
     init(
         context: AccountContext,
@@ -547,7 +550,7 @@ private final class ChannelItemComponent: Component {
         title: String,
         subtitle: String,
         action: @escaping (EnginePeer?) -> Void,
-        contextAction: @escaping (EnginePeer, UIView, ContextGesture?) -> Void
+        contextAction: ((EnginePeer, UIView, ContextGesture?) -> Void)?
     ) {
         self.context = context
         self.theme = theme
@@ -593,6 +596,7 @@ private final class ChannelItemComponent: Component {
         private let circleView2: UIImageView
         
         private let avatarNode: AvatarNode
+        private var mergedAvatarsNode: MergedAvatarsNode?
         private let avatarBadge: AvatarBadgeView
         private let subtitleIcon = ComponentView<Empty>()
                         
@@ -608,15 +612,13 @@ private final class ChannelItemComponent: Component {
             self.circleView.clipsToBounds = true
             self.circleView.layer.cornerRadius = 30
             
-            let colors: NSArray = [UIColor(rgb: 0x6a2267).cgColor, UIColor(rgb: 0x000000).cgColor]
+            let colors: NSArray = [UIColor(rgb: 0x000000).cgColor, UIColor(rgb: 0x6a2267).cgColor]
             self.circleView2 = UIImageView(image: generateGradientFilledCircleImage(diameter: 60, colors: colors))
             self.circleView2.clipsToBounds = true
             self.circleView2.layer.cornerRadius = 30
             
             self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
             self.avatarNode.isUserInteractionEnabled = false
-            self.avatarNode.clipsToBounds = true
-            self.avatarNode.layer.cornerRadius = 30
             
             self.avatarBadge = AvatarBadgeView(frame: CGRect())
             
@@ -631,7 +633,7 @@ private final class ChannelItemComponent: Component {
             self.contextContainer.addSubview(self.circleView2)
             self.contextContainer.addSubview(self.circleView)
             self.contextContainer.addSubnode(self.avatarNode)
-            self.avatarNode.view.addSubview(self.avatarBadge)
+            self.contextContainer.addSubview(self.avatarBadge)
             
             self.avatarNode.badgeView = self.avatarBadge
             
@@ -639,7 +641,7 @@ private final class ChannelItemComponent: Component {
             
             self.contextContainer.activated = { [weak self] gesture, point in
                 if let self, let component = self.component, let peer = component.peers.first {
-                    component.contextAction(peer, self.contextContainer, gesture)
+                    component.contextAction?(peer, self.contextContainer, gesture)
                 }
             }
         }
@@ -663,6 +665,8 @@ private final class ChannelItemComponent: Component {
             self.component = component
             self.state = state
                                 
+            self.contextContainer.isGestureEnabled = component.contextAction != nil
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
@@ -707,7 +711,10 @@ private final class ChannelItemComponent: Component {
             
             let subtitleOriginX = floorToScreenPixels((itemSize.width - subtitleTotalWidth) / 2.0) + 1.0 - UIScreenPixel
             var iconOriginX = subtitleOriginX
-            var textOriginX = subtitleOriginX + subtitleIconSize.width + subtitleSpacing
+            var textOriginX = subtitleOriginX
+            if subtitleIconSize.width > 0.0 {
+                textOriginX += subtitleIconSize.width + subtitleSpacing
+            }
             if component.isLocked {
                 textOriginX = subtitleOriginX
                 iconOriginX = subtitleOriginX + subtitleSize.width + subtitleSpacing
@@ -717,13 +724,34 @@ private final class ChannelItemComponent: Component {
             let subtitleFrame = CGRect(origin: CGPoint(x: textOriginX, y: avatarFrame.maxY - subtitleSize.height - UIScreenPixel), size: subtitleSize)
             
             var avatarHorizontalOffset: CGFloat = 0.0
-            if component.peers.count > 1 || component.isLocked {
+            if component.isLocked {
                 avatarHorizontalOffset = -10.0
             }
             avatarFrame = avatarFrame.offsetBy(dx: avatarHorizontalOffset, dy: 0.0)
             self.avatarNode.frame = avatarFrame
             if let peer = component.peers.first {
                 self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer)
+            }
+            
+            if component.peers.count > 1 {
+                let mergedAvatarsNode: MergedAvatarsNode
+                if let current = self.mergedAvatarsNode {
+                    mergedAvatarsNode = current
+                } else {
+                    mergedAvatarsNode = MergedAvatarsNode()
+                    self.contextContainer.insertSubview(mergedAvatarsNode.view, aboveSubview: self.avatarNode.view)
+                    self.mergedAvatarsNode = mergedAvatarsNode
+                }
+                
+                mergedAvatarsNode.update(context: component.context, peers: component.peers.map { $0._asPeer() }, synchronousLoad: false, imageSize: 60.0, imageSpacing: 10.0, borderWidth: 2.0)
+                let avatarsSize = CGSize(width: avatarSize.width + 20.0, height: avatarSize.height)
+                mergedAvatarsNode.updateLayout(size: avatarsSize)
+                mergedAvatarsNode.frame = CGRect(origin: CGPoint(x: avatarFrame.midX - avatarsSize.width / 2.0, y: avatarFrame.minY), size: avatarsSize)
+                self.avatarNode.isHidden = true
+            } else {
+                self.mergedAvatarsNode?.view.removeFromSuperview()
+                self.mergedAvatarsNode = nil
+                self.avatarNode.isHidden = false
             }
             
             if component.isLocked {
@@ -760,10 +788,10 @@ private final class ChannelItemComponent: Component {
             }
             
             let strokeWidth: CGFloat = 1.0 + UIScreenPixel
-            let avatarBadgeSize = CGSize(width: subtitleSize.width + 10.0 + 6.0, height: 15.0)
+            let avatarBadgeSize = CGSize(width: subtitleSize.width + subtitleIconSize.width + 10.0, height: 15.0)
             self.avatarBadge.update(size: avatarBadgeSize, text: "", hasTimeoutIcon: false, useSolidColor: true, strokeColor: component.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first!)
 
-            let avatarBadgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((avatarFrame.width - avatarBadgeSize.width) / 2.0) - avatarHorizontalOffset, y: avatarFrame.height - avatarBadgeSize.height + 2.0), size: avatarBadgeSize).insetBy(dx: -strokeWidth, dy: -strokeWidth)
+            let avatarBadgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - avatarBadgeSize.width) / 2.0), y: avatarFrame.minY + avatarFrame.height - avatarBadgeSize.height + 2.0), size: avatarBadgeSize).insetBy(dx: -strokeWidth, dy: -strokeWidth)
             self.avatarBadge.frame = avatarBadgeFrame
     
             let bounds = CGRect(origin: .zero, size: itemSize)
@@ -783,7 +811,7 @@ private final class ChannelItemComponent: Component {
     }
 }
 
-private let channelsLimit: Int32 = 8
+private let channelsLimit: Int32 = 10
 
 final class ChannelListPanelComponent: Component {
     typealias EnvironmentType = Empty
@@ -926,7 +954,7 @@ final class ChannelListPanelComponent: Component {
             
             let visibleBounds = self.scrollView.bounds.insetBy(dx: -100.0, dy: 0.0)
             
-            let hasMore = component.peers.channels.count >= channelsLimit
+            let hasMore = component.peers.count > channelsLimit
             
             var validIds = Set<EnginePeer.Id>()
             if let visibleItems = itemLayout.visibleItems(for: visibleBounds) {
@@ -953,28 +981,40 @@ final class ChannelListPanelComponent: Component {
                     let title: String
                     let subtitle: String
                     var isLocked = false
+                    var isLast = false
                     if index == upperBound - 1 && hasMore {
                         if !component.context.isPremium {
                             isLocked = true
                         }
                         title = isLocked ? "Unlock More Channels" : "View More Channels"
                         subtitle = "+\(component.peers.count - channelsLimit)"
+                        isLast = true
                     } else {
                         title = item.peer.compactDisplayTitle
                         subtitle = countString(Int64(item.subscribers))
                     }
+                    
+                    var peers: [EnginePeer] = [item.peer]
+                    if isLast && !isLocked {
+                        for i in index + 1 ..< index + 3 {
+                            if i < component.peers.channels.count {
+                                peers.append(component.peers.channels[i].peer)
+                            }
+                        }
+                    }
+                    
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(ChannelItemComponent(
                             context: component.context,
                             theme: component.theme,
                             strings: component.strings,
-                            peers: [item.peer],
+                            peers: peers,
                             isLocked: isLocked,
                             title: title,
                             subtitle: subtitle,
                             action: component.action,
-                            contextAction: component.contextAction
+                            contextAction: !isLocked && peers.count == 1 ? component.contextAction : nil
                         )),
                         environment: {},
                         containerSize: CGSize(width: itemLayout.itemWidth, height: itemLayout.containerHeight)

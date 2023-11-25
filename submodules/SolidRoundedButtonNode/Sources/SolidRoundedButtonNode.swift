@@ -378,6 +378,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.image = generateTintedImage(image: icon, color: self.theme.foregroundColor)
+        self.iconNode.isUserInteractionEnabled = false
         
         super.init()
         

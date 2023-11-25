@@ -98,7 +98,7 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     
     private let listNode: ListView
     private var currentEntries: [RecommendedChannelsListEntry] = []
-    private var currentState: RecommendedChannels?
+    private var currentState: (RecommendedChannels?, Bool)?
     private var canLoadMore: Bool = false
     private var enqueuedTransactions: [RecommendedChannelsListTransaction] = []
     
@@ -106,7 +106,9 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     private var unlockText: ComponentView<Empty>?
     private var unlockButton: SolidRoundedButtonNode?
     
-    private var currentParams: (size: CGSize, isScrollingLockedAtTop: Bool)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isScrollingLockedAtTop: Bool)?
+    
+    private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
     
     private let ready = Promise<Bool>()
@@ -144,14 +146,18 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         
         self.disposable = (combineLatest(queue: .mainQueue(),
             self.presentationDataPromise.get(),
-            context.engine.peers.recommendedChannels(peerId: peerId)
+            context.engine.peers.recommendedChannels(peerId: peerId),
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                return peer?.isPremium ?? false
+            }
         )
-        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, recommendedChannels in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, recommendedChannels, isPremium in
             guard let strongSelf = self else {
                 return
             }
-            
-            strongSelf.updateState(recommendedChannels: recommendedChannels, presentationData: presentationData)
+            strongSelf.currentState = (recommendedChannels, isPremium)
+            strongSelf.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
         })
     }
     
@@ -173,7 +179,7 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
-        self.currentParams = (size, isScrollingLockedAtTop)
+        self.currentParams = (size, sideInset, bottomInset, isScrollingLockedAtTop)
         self.presentationDataPromise.set(.single(presentationData))
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -192,11 +198,41 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
-        if isFirstLayout, let recommendedChannels = self.currentState {
-            self.updateState(recommendedChannels: recommendedChannels, presentationData: presentationData)
+        if isFirstLayout, let (recommendedChannels, isPremium) = self.currentState {
+            self.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
+        }
+    }
+    
+    @objc private func unlockPressed() {
+        let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
+        self.chatControllerInteraction.navigationController()?.pushViewController(controller)
+    }
+    
+    private func updateState(recommendedChannels: RecommendedChannels?, isPremium: Bool, presentationData: PresentationData) {
+        var entries: [RecommendedChannelsListEntry] = []
+                                
+        if let channels = recommendedChannels?.channels {
+            for channel in channels {
+                entries.append(.peer(theme: presentationData.theme, index: entries.count, peer: channel.peer, subscribers: channel.subscribers))
+            }
         }
         
-        if !self.context.isPremium {
+        let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, action: { [weak self] peer in
+            self?.chatControllerInteraction.openPeer(peer, .default, nil, .default)
+        }, openPeerContextAction: { [weak self] peer, node, gesture in
+            self?.openPeerContextAction(true, peer, node, gesture)
+        })
+        self.currentEntries = entries
+        self.enqueuedTransactions.append(transaction)
+        self.dequeueTransaction()
+        
+        if !isPremium {
+            guard let size = self.currentParams?.size, let sideInset = self.currentParams?.sideInset, let bottomInset = self.currentParams?.bottomInset else {
+                return
+            }
+            let themeUpdated = self.theme !== presentationData.theme
+            self.theme = presentationData.theme
+            
             let unlockText: ComponentView<Empty>
             let unlockBackground: UIImageView
             let unlockButton: SolidRoundedButtonNode
@@ -210,18 +246,16 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
             if let current = self.unlockBackground {
                 unlockBackground = current
             } else {
-                let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
-                let bottomColor = presentationData.theme.list.plainBackgroundColor
-                unlockBackground = UIImageView(image: generateGradientImage(size: CGSize(width: 1.0, height: 160.0), colors: [topColor, bottomColor], locations: [0.0, 1.0]))
+                unlockBackground = UIImageView()
                 unlockBackground.contentMode = .scaleToFill
                 self.view.addSubview(unlockBackground)
                 self.unlockBackground = unlockBackground
             }
-                        
+                                    
             if let current = self.unlockButton {
                 unlockButton = current
             } else {
-                unlockButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: presentationData.theme), cornerRadius: 11.0)
+                unlockButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 10.0)
                 self.view.addSubview(unlockButton.view)
                 self.unlockButton = unlockButton
             
@@ -235,6 +269,13 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
                 }
             }
         
+            if themeUpdated {
+                let topColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.0)
+                let bottomColor = presentationData.theme.list.itemBlocksBackgroundColor
+                unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
+                unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
+            }
+            
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
@@ -265,43 +306,22 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
                 view.frame = CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: size.height - bottomInset - unlockSize.height - 13.0), size: unlockSize)
             }
             
-            unlockBackground.frame = CGRect(x: 0.0, y: size.height - bottomInset - 160.0, width: size.width, height: bottomInset + 160.0)
+            unlockBackground.frame = CGRect(x: 0.0, y: size.height - bottomInset - 170.0, width: size.width, height: bottomInset + 170.0)
             
             let buttonSideInset = sideInset + 16.0
             let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
             unlockButton.frame = CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - unlockSize.height - buttonSize.height - 26.0), size: buttonSize)
-            let _ = unlockButton.updateLayout(width: buttonSize.width, transition: transition)
-        } else  {
+            let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
+        } else {
             self.unlockBackground?.removeFromSuperview()
             self.unlockBackground = nil
             
+            self.unlockButton?.view.removeFromSuperview()
+            self.unlockButton = nil
+                        
             self.unlockText?.view?.removeFromSuperview()
             self.unlockText = nil
         }
-    }
-    
-    @objc private func unlockPressed() {
-        let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
-        self.chatControllerInteraction.navigationController()?.pushViewController(controller)
-    }
-    
-    private func updateState(recommendedChannels: RecommendedChannels?, presentationData: PresentationData) {
-        var entries: [RecommendedChannelsListEntry] = []
-                                
-        if let channels = recommendedChannels?.channels {
-            for channel in channels {
-                entries.append(.peer(theme: presentationData.theme, index: entries.count, peer: channel.peer, subscribers: channel.subscribers))
-            }
-        }
-        
-        let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, action: { [weak self] peer in
-            self?.chatControllerInteraction.openPeer(peer, .default, nil, .default)
-        }, openPeerContextAction: { [weak self] peer, node, gesture in
-            self?.openPeerContextAction(true, peer, node, gesture)
-        })
-        self.currentEntries = entries
-        self.enqueuedTransactions.append(transaction)
-        self.dequeueTransaction()
     }
     
     private func dequeueTransaction() {

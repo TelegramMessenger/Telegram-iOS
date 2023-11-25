@@ -28,6 +28,7 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/AvatarNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
         "//submodules/Components/MultilineTextComponent",
