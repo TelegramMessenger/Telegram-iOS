@@ -1104,7 +1104,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let expandedTitleScale: CGFloat = 0.8
         
-        var bottomShadowHeight: CGFloat = 82.0
+        var bottomShadowHeight: CGFloat = 98.0
         if !self.isSettings {
             bottomShadowHeight += 80.0
         }
