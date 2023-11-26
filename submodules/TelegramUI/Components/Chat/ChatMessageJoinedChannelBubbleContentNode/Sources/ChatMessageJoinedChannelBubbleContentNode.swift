@@ -342,7 +342,7 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
                             let controller = UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .premiumPaywall(title: nil, text: "Subcribe to [Telegram Premium]() to unlock up to **100** channels.", customUndoText: nil, timeout: nil, linkAction: nil),
+                                content: .premiumPaywall(title: nil, text: item.presentationData.strings.Chat_ChannelRecommendation_PremiumTooltip, customUndoText: nil, timeout: nil, linkAction: nil),
                                 elevatedLayout: false,
                                 action: { [weak self] action in
                                     if case .info = action {
@@ -680,7 +680,7 @@ private final class ChannelItemComponent: Component {
             self.component = component
             self.state = state
                                 
-            self.contextContainer.isGestureEnabled = component.contextAction != nil
+            self.contextContainer.isGestureEnabled = true
             
             let titleSize = self.title.update(
                 transition: .immediate,

@@ -10548,3 +10548,7 @@ Sorry for the inconvenience.";
 
 "MediaEditor.VideoRemovalConfirmation" = "Are you sure you want to delete video message?";
 "MediaEditor.HoldToRecordVideo" = "Hold to record video";
+
+"Chat.ChannelRecommendation.PremiumTooltip" = "Subcribe to [Telegram Premium]() to unlock up to **100** channels.";
+
+"Story.ForwardAuthorHiddenTooltip" = "The account was hidden by the user";
