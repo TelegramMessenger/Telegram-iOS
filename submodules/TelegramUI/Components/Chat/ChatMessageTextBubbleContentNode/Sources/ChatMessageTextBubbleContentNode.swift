@@ -435,7 +435,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         if item.presentationData.theme.theme.overallDarkAppearance {
                             codeBlockTitleColor = .white
                             codeBlockAccentColor = UIColor(white: 1.0, alpha: 0.5)
-                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.65)
+                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.25)
                         } else {
                             codeBlockTitleColor = mainColor
                             codeBlockAccentColor = mainColor
