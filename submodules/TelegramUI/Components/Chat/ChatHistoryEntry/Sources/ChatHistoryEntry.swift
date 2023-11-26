@@ -108,6 +108,17 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
                 return MessageIndex.absoluteLowerBound()
         }
     }
+    
+    public var timestamp: Int32? {
+        switch self {
+        case let .MessageEntry(message, _, _, _, _, _):
+            return message.timestamp
+        case let .MessageGroupEntry(_, messages, _):
+            return messages[0].0.timestamp
+        default:
+            return nil
+        }
+    }
 
     public static func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         switch lhs {
