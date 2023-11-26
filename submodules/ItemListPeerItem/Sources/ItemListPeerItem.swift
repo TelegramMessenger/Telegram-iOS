@@ -468,6 +468,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let hasTopGroupInset: Bool
     let noInsets: Bool
     let noCorners: Bool
+    let style: ItemListStyle
     public let tag: ItemListItemTag?
     let header: ListViewItemHeader?
     let shimmering: ItemListPeerItemShimmering?
@@ -508,6 +509,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         hasTopGroupInset: Bool = true,
         noInsets: Bool = false,
         noCorners: Bool = false,
+        style: ItemListStyle = .blocks,
         tag: ItemListItemTag? = nil,
         header: ListViewItemHeader? = nil,
         shimmering: ItemListPeerItemShimmering? = nil,
@@ -547,6 +549,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.hasTopGroupInset = hasTopGroupInset
         self.noInsets = noInsets
         self.noCorners = noCorners
+        self.style = style
         self.tag = tag
         self.header = header
         self.shimmering = shimmering
@@ -588,6 +591,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         hasTopGroupInset: Bool = true,
         noInsets: Bool = false,
         noCorners: Bool = false,
+        style: ItemListStyle = .blocks,
         tag: ItemListItemTag? = nil,
         header: ListViewItemHeader? = nil,
         shimmering: ItemListPeerItemShimmering? = nil,
@@ -627,6 +631,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.hasTopGroupInset = hasTopGroupInset
         self.noInsets = noInsets
         self.noCorners = noCorners
+        self.style = style
         self.tag = tag
         self.header = header
         self.shimmering = shimmering
@@ -889,7 +894,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         return { item, params, neighbors, headerAtTop in
             var updateArrowImage: UIImage?
-            var updatedTheme: PresentationTheme?
             
             let statusFontSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0)
             let labelFontSize: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0)
@@ -938,7 +942,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             
             let badgeDiameter: CGFloat = 20.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
-                updatedTheme = item.presentationData.theme
                 updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
                 if let badgeColor = badgeColor {
                     updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
@@ -1247,12 +1250,21 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         strongSelf.labelArrowNode?.image = updateArrowImage
                     }
                     
-                    if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
+                    let itemBackgroundColor: UIColor
+                    let itemSeparatorColor: UIColor
+                    switch item.style {
+                    case .plain:
+                        itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                        itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                    case .blocks:
+                        itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     }
+                    
+                    strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                    strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                    strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                    strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     
                     let revealOffset = strongSelf.revealOffset
                     

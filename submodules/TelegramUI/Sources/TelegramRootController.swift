@@ -483,6 +483,32 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
                 rootTabController.selectedIndex = index
             }
+            if forwardInfo != nil {
+                var viewControllers = self.viewControllers
+                var dismissNext = false
+                var range: Range<Int>?
+                for i in (0 ..< viewControllers.count).reversed() {
+                    let controller = viewControllers[i]
+                    if controller is MediaEditorScreen {
+                        dismissNext = true
+                    }
+                    if dismissNext {
+                        if controller !== self.rootTabController {
+                            if let current = range {
+                                range = current.lowerBound - 1 ..< current.upperBound
+                            } else {
+                                range = i ..< i
+                            }
+                        } else {
+                            break
+                        }
+                    }
+                }
+                if let range {
+                    viewControllers.removeSubrange(range)
+                    self.setViewControllers(viewControllers, animated: false)
+                }
+            }
         }
         
         let completionImpl: () -> Void = { [weak self] in

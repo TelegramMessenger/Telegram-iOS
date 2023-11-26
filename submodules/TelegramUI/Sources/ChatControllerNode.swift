@@ -263,7 +263,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var isLoadingValue: Bool = false
     private var isLoadingEarlier: Bool = false
     private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
-        let useLoadingPlaceholder = "".isEmpty
+        let useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
         
         let updated = isLoading != self.isLoadingValue || (isLoading && earlier && !self.isLoadingEarlier)
         

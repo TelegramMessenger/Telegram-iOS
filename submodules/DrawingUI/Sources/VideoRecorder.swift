@@ -47,7 +47,8 @@ public final class EntityVideoRecorder {
                 photo: false,
                 metadata: false,
                 preferredFps: 60.0,
-                preferWide: true
+                preferWide: true,
+                reportAudioLevel: true
             ),
             previewView: self.previewView,
             secondaryPreviewView: nil
@@ -73,7 +74,7 @@ public final class EntityVideoRecorder {
             }
         }
         
-        self.micLevelPromise.set(.single(0.0))
+        self.micLevelPromise.set(camera.audioLevel)
         
         let start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
         mediaEditor.stop()

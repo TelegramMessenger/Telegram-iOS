@@ -563,6 +563,27 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _hidesPanelOnLock = true;
 }
 
++ (UIImage *)stopIconImage
+{
+    static dispatch_once_t onceToken;
+    static UIImage *iconImage;
+    dispatch_once(&onceToken, ^
+    {
+        CGRect rect = CGRectMake(0, 0, 22.0f, 22.0f);
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        
+        CGContextAddPath(context, [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 22, 22) cornerRadius:7].CGPath);
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x0ffffff, 1.3f).CGColor);
+        CGContextFillPath(context);
+        
+        iconImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    });
+    return iconImage;
+}
+
+
 - (void)animateLock {
     if (!_animatedIn) {
         return;
@@ -575,8 +596,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     snapshotView.frame = _innerIconView.frame;
     [_innerIconWrapperView insertSubview:snapshotView atIndex:0];
     
+    UIImage *icon = _hidesPanelOnLock ? [TGModernConversationInputMicButton stopIconImage] : TGComponentsImageNamed(@"RecordSendIcon");
     _previousIcon = _innerIconView.image;
-    [self setIcon:TGTintedImage(TGComponentsImageNamed(@"RecordSendIcon"), _pallete != nil ? _pallete.iconColor : [UIColor whiteColor])];
+    [self setIcon:TGTintedImage(icon, _pallete != nil && !_hidesPanelOnLock ? _pallete.iconColor : [UIColor whiteColor])];
     
     _currentScale = 1;
     _cancelTargetTranslation = 0;

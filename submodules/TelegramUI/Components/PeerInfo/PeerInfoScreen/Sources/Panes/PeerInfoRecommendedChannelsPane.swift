@@ -72,7 +72,7 @@ private enum RecommendedChannelsListEntry: Comparable, Identifiable {
                 }, removePeer: { _ in
                 }, contextAction: { node, gesture in
                     openPeerContextAction(peer._asPeer(), node, gesture)
-                }, hasTopStripe: false, noInsets: true, noCorners: true, disableInteractiveTransitionIfNecessary: true)
+                }, hasTopStripe: false, noInsets: true, noCorners: true, style: .plain, disableInteractiveTransitionIfNecessary: true)
         }
     }
 }
@@ -106,7 +106,7 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     private var unlockText: ComponentView<Empty>?
     private var unlockButton: SolidRoundedButtonNode?
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isScrollingLockedAtTop: Bool)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
     
     private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
@@ -117,10 +117,11 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         return self.ready.get()
     }
 
+    private let statusPromise = Promise<PeerInfoStatusData?>(nil)
     var status: Signal<PeerInfoStatusData?, NoError> {
-        return .single(nil)
+        self.statusPromise.get()
     }
-
+    
     var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
     var tabBarOffset: CGFloat {
         return 0.0
@@ -159,6 +160,16 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
             strongSelf.currentState = (recommendedChannels, isPremium)
             strongSelf.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
         })
+        
+        self.statusPromise.set(context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
+        )
+        |> map { count -> PeerInfoStatusData? in
+            if let count {
+                return PeerInfoStatusData(text: presentationData.strings.Conversation_StatusSubscribers(Int32(count)), isActivity: true, key: .recommended)
+            }
+            return nil
+        })
     }
     
     deinit {
@@ -179,7 +190,7 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.currentParams == nil
-        self.currentParams = (size, sideInset, bottomInset, isScrollingLockedAtTop)
+        self.currentParams = (size, sideInset, bottomInset, isScrollingLockedAtTop, presentationData)
         self.presentationDataPromise.set(.single(presentationData))
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
@@ -226,10 +237,19 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         self.enqueuedTransactions.append(transaction)
         self.dequeueTransaction()
         
+        self.layoutUnlockPanel()
+    }
+    
+    private func layoutUnlockPanel() {
+        guard let (_, isPremium) = self.currentState, let currentParams = self.currentParams else {
+            return
+        }
         if !isPremium {
-            guard let size = self.currentParams?.size, let sideInset = self.currentParams?.sideInset, let bottomInset = self.currentParams?.bottomInset else {
-                return
-            }
+            let size = currentParams.size
+            let sideInset = currentParams.sideInset
+            let bottomInset = currentParams.bottomInset
+            let presentationData = currentParams.presentationData
+          
             let themeUpdated = self.theme !== presentationData.theme
             self.theme = presentationData.theme
             
@@ -270,13 +290,12 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
             }
         
             if themeUpdated {
-                let topColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.0)
-                let bottomColor = presentationData.theme.list.itemBlocksBackgroundColor
+                let topColor = presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.0)
+                let bottomColor = presentationData.theme.list.plainBackgroundColor
                 unlockBackground.image = generateGradientImage(size: CGSize(width: 1.0, height: 170.0), colors: [topColor, bottomColor, bottomColor], locations: [0.0, 0.3, 1.0])
                 unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
             }
             
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             let textColor = presentationData.theme.list.itemSecondaryTextColor
@@ -284,6 +303,11 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: boldTextFont, textColor: linkColor), linkAttribute: { _ in
                 return nil
             })
+            
+            var scrollOffset: CGFloat = 0.0
+            if case let .known(offset) = self.listNode.visibleBottomContentOffset() {
+                scrollOffset = min(0.0, offset + bottomInset + 80.0)
+            }
             
             let unlockSize = unlockText.update(
                 transition: .immediate,
@@ -303,14 +327,14 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
                     view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.unlockPressed)))
                     self.view.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: size.height - bottomInset - unlockSize.height - 13.0), size: unlockSize)
+                view.frame = CGRect(origin: CGPoint(x: floor((size.width - unlockSize.width) / 2.0), y: size.height - bottomInset - unlockSize.height - 13.0 + scrollOffset), size: unlockSize)
             }
             
-            unlockBackground.frame = CGRect(x: 0.0, y: size.height - bottomInset - 170.0, width: size.width, height: bottomInset + 170.0)
+            unlockBackground.frame = CGRect(x: 0.0, y: size.height - bottomInset - 170.0 + scrollOffset, width: size.width, height: bottomInset + 170.0)
             
             let buttonSideInset = sideInset + 16.0
             let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
-            unlockButton.frame = CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - unlockSize.height - buttonSize.height - 26.0), size: buttonSize)
+            unlockButton.frame = CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - unlockSize.height - buttonSize.height - 26.0 + scrollOffset), size: buttonSize)
             let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
         } else {
             self.unlockBackground?.removeFromSuperview()

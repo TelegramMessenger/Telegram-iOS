@@ -10489,6 +10489,7 @@ Sorry for the inconvenience.";
 "Chat.SimilarChannels" = "Similar Channels";
 "Chat.SimilarChannels.Join" = "Join";
 "Chat.SimilarChannels.JoinedChannel" = "You joined channel **%@**.";
+"Chat.SimilarChannels.MoreChannels" = "More Channels";
 
 "Wallpaper.ApplyForMe" = "Apply for Me";
 "Wallpaper.ApplyForBoth" = "Apply for Me and %@";
@@ -10548,3 +10549,7 @@ Sorry for the inconvenience.";
 
 "MediaEditor.VideoRemovalConfirmation" = "Are you sure you want to delete video message?";
 "MediaEditor.HoldToRecordVideo" = "Hold to record video";
+
+"Chat.ChannelRecommendation.PremiumTooltip" = "Subcribe to [Telegram Premium]() to unlock up to **100** channels.";
+
+"Story.ForwardAuthorHiddenTooltip" = "The account was hidden by the user";

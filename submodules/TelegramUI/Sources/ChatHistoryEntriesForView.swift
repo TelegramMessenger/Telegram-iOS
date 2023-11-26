@@ -131,12 +131,6 @@ func chatHistoryEntriesForView(
             }
         }
         
-        if let maybeJoinMessage = joinMessage {
-            if message.timestamp > maybeJoinMessage.timestamp, (!view.holeEarlier || count > 0) {
-                entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)))
-                joinMessage = nil
-            }
-        }
         count += 1
         
         if let customThreadOutgoingReadState = customThreadOutgoingReadState {
@@ -234,7 +228,7 @@ func chatHistoryEntriesForView(
             entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] })))
         }
     }
-    
+        
     if !groupBucket.isEmpty {
         assert(groupMessages || reverseGroupedMessages)
         if reverseGroupedMessages {
@@ -253,11 +247,25 @@ func chatHistoryEntriesForView(
         }
     }
     
-    if let maybeJoinMessage = joinMessage, !view.holeLater {
-        entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)))
-        joinMessage = nil
+    if let lowerTimestamp = view.entries.last?.message.timestamp, let upperTimestamp = view.entries.first?.message.timestamp {
+        if let joinMessage {
+            var insertAtPosition: Int?
+            if joinMessage.timestamp >= lowerTimestamp && view.laterId == nil {
+                insertAtPosition = entries.count
+            } else if joinMessage.timestamp < lowerTimestamp && joinMessage.timestamp > upperTimestamp {
+                for i in 0 ..< entries.count {
+                    if let timestamp = entries[i].timestamp, timestamp > joinMessage.timestamp {
+                        insertAtPosition = i
+                        break
+                    }
+                }
+            }
+            if let insertAtPosition {
+                entries.insert(.MessageEntry(joinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)), at: insertAtPosition)
+            }
+        }
     }
-    
+        
     if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
         var i = 0
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)

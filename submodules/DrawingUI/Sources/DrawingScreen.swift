@@ -2460,6 +2460,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                 },
                 onTextEditingEnded: { _ in },
                 editEntity: { _ in },
+                shouldDeleteEntity: { _ in
+                    return true
+                },
                 getCurrentImage: { [weak controller] in
                     return controller?.getCurrentImage()
                 },
@@ -2981,7 +2984,8 @@ public final class DrawingToolsInteraction {
     private let onInteractionUpdated: (Bool) -> Void
     private let onTextEditingEnded: (Bool) -> Void
     private let editEntity: (DrawingEntity) -> Void
-        
+    private let shouldDeleteEntity: (DrawingEntity) -> Bool
+    
     public let getCurrentImage: () -> UIImage?
     private let getControllerNode: () -> ASDisplayNode?
     private let present: (ViewController, PresentationContextType, Any?) -> Void
@@ -3012,6 +3016,7 @@ public final class DrawingToolsInteraction {
         onInteractionUpdated: @escaping (Bool) -> Void,
         onTextEditingEnded: @escaping (Bool) -> Void,
         editEntity: @escaping (DrawingEntity) -> Void,
+        shouldDeleteEntity: @escaping (DrawingEntity) -> Bool,
         getCurrentImage: @escaping () -> UIImage?,
         getControllerNode: @escaping () -> ASDisplayNode?,
         present: @escaping (ViewController, PresentationContextType, Any?) -> Void,
@@ -3030,6 +3035,7 @@ public final class DrawingToolsInteraction {
         self.onInteractionUpdated = onInteractionUpdated
         self.onTextEditingEnded = onTextEditingEnded
         self.editEntity = editEntity
+        self.shouldDeleteEntity = shouldDeleteEntity
         self.getCurrentImage = getCurrentImage
         self.getControllerNode = getControllerNode
         self.present = present
@@ -3088,7 +3094,9 @@ public final class DrawingToolsInteraction {
             var actions: [ContextMenuAction] = []
             actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in
                 if let self, let entityView {
-                    self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
+                    if self.shouldDeleteEntity(entityView.entity) {
+                        self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
+                    }
                 }
             }))
             if let entityView = entityView as? DrawingLocationEntityView {

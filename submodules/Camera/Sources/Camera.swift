@@ -117,6 +117,7 @@ private final class CameraContext {
     private var invalidated = false
     
     private let detectedCodesPipe = ValuePipe<[CameraCode]>()
+    private let audioLevelPipe = ValuePipe<Float>()
     fileprivate let modeChangePromise = ValuePromise<Camera.ModeChange>(.none)
     
     var previewView: CameraPreviewView?
@@ -281,6 +282,10 @@ private final class CameraContext {
         }
     }
     
+    private var micLevelPeak: Int16 = 0
+    private var micLevelPeakCount = 0
+
+    
     private var isDualCameraEnabled: Bool?
     public func setDualCameraEnabled(_ enabled: Bool, change: Bool = true) {
         guard enabled != self.isDualCameraEnabled else {
@@ -350,6 +355,48 @@ private final class CameraContext {
                     }
                     self.savePreviewSnapshot(pixelBuffer: pixelBuffer, front: front)
                     self.lastSnapshotTimestamp = timestamp
+                }
+            }
+            if self.initialConfiguration.reportAudioLevel {
+                self.mainDeviceContext?.output.processAudioBuffer = { [weak self] sampleBuffer in
+                    guard let self else {
+                        return
+                    }
+                    var blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer)
+                    let numSamplesInBuffer = CMSampleBufferGetNumSamples(sampleBuffer)
+                    var audioBufferList = AudioBufferList()
+
+                    CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(sampleBuffer, bufferListSizeNeededOut: nil, bufferListOut: &audioBufferList, bufferListSize: MemoryLayout<AudioBufferList>.size, blockBufferAllocator: nil, blockBufferMemoryAllocator: nil, flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, blockBufferOut: &blockBuffer)
+
+//                    for bufferCount in 0..<Int(audioBufferList.mNumberBuffers) {
+                        let buffer = audioBufferList.mBuffers.mData
+                        let size = audioBufferList.mBuffers.mDataByteSize
+                        if let data = buffer?.bindMemory(to: Int16.self, capacity: Int(size)) {
+                            processWaveformPreview(samples: data, count: numSamplesInBuffer)
+                        }
+//                    }
+                    
+                    func processWaveformPreview(samples: UnsafePointer<Int16>, count: Int) {
+                        for i in 0..<count {
+                            var sample = samples[i]
+                            if sample < 0 {
+                                sample = -sample
+                            }
+
+                            if self.micLevelPeak < sample {
+                                self.micLevelPeak = sample
+                            }
+                            self.micLevelPeakCount += 1
+
+                            if self.micLevelPeakCount >= 1200 {
+                                let level = Float(self.micLevelPeak) / 4000.0
+                                self.audioLevelPipe.putNext(level)
+                     
+                                self.micLevelPeak = 0
+                                self.micLevelPeakCount = 0
+                            }
+                        }
+                    }
                 }
             }
             self.mainDeviceContext?.output.processCodes = { [weak self] codes in
@@ -526,6 +573,10 @@ private final class CameraContext {
         return self.detectedCodesPipe.signal()
     }
     
+    var audioLevel: Signal<Float, NoError> {
+        return self.audioLevelPipe.signal()
+    }
+    
     @objc private func sessionInterruptionEnded(notification: NSNotification) {
     }
     
@@ -564,8 +615,9 @@ public final class Camera {
         let metadata: Bool
         let preferredFps: Double
         let preferWide: Bool
+        let reportAudioLevel: Bool
         
-        public init(preset: Preset, position: Position, isDualEnabled: Bool = false, audio: Bool, photo: Bool, metadata: Bool, preferredFps: Double, preferWide: Bool = false) {
+        public init(preset: Preset, position: Position, isDualEnabled: Bool = false, audio: Bool, photo: Bool, metadata: Bool, preferredFps: Double, preferWide: Bool = false, reportAudioLevel: Bool = false) {
             self.preset = preset
             self.position = position
             self.isDualEnabled = isDualEnabled
@@ -574,6 +626,7 @@ public final class Camera {
             self.metadata = metadata
             self.preferredFps = preferredFps
             self.preferWide = preferWide
+            self.reportAudioLevel = reportAudioLevel
         }
     }
     
@@ -857,6 +910,20 @@ public final class Camera {
             self.queue.async {
                 if let context = self.contextRef?.takeUnretainedValue() {
                     disposable.set(context.detectedCodes.start(next: { codes in
+                        subscriber.putNext(codes)
+                    }))
+                }
+            }
+            return disposable
+        }
+    }
+    
+    public var audioLevel: Signal<Float, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    disposable.set(context.audioLevel.start(next: { codes in
                         subscriber.putNext(codes)
                     }))
                 }

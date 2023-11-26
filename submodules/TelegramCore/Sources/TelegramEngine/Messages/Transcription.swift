@@ -9,6 +9,12 @@ public enum EngineAudioTranscriptionResult {
     case error
 }
 
+private enum InternalAudioTranscriptionResult {
+    case success(Api.messages.TranscribedAudio)
+    case error(AudioTranscriptionMessageAttribute.TranscriptionError)
+    case limitExceeded(Int32)
+}
+
 func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
@@ -18,17 +24,24 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: Me
             return .single(.error)
         }
         return network.request(Api.functions.messages.transcribeAudio(peer: inputPeer, msgId: messageId.id))
-        |> map { result -> Result<Api.messages.TranscribedAudio, AudioTranscriptionMessageAttribute.TranscriptionError> in
+        |> map { result -> InternalAudioTranscriptionResult in
             return .success(result)
         }
-        |> `catch` { error -> Signal<Result<Api.messages.TranscribedAudio, AudioTranscriptionMessageAttribute.TranscriptionError>, NoError> in
+        |> `catch` { error -> Signal<InternalAudioTranscriptionResult, NoError> in
             let mappedError: AudioTranscriptionMessageAttribute.TranscriptionError
-            if error.errorDescription == "MSG_VOICE_TOO_LONG" {
+            if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+                if let range = error.errorDescription.range(of: "_", options: .backwards) {
+                    if let value = Int32(error.errorDescription[range.upperBound...]) {
+                        return .single(.limitExceeded(value))
+                    }
+                }
+                mappedError = .generic
+            } else if error.errorDescription == "MSG_VOICE_TOO_LONG" {
                 mappedError = .tooLong
             } else {
                 mappedError = .generic
             }
-            return .single(.failure(mappedError))
+            return .single(.error(mappedError))
         }
         |> mapToSignal { result -> Signal<EngineAudioTranscriptionResult, NoError> in
             return postbox.transaction { transaction -> EngineAudioTranscriptionResult in
@@ -38,6 +51,7 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: Me
                     switch transcribedAudio {
                     case let .transcribedAudio(flags, transcriptionId, text, trialRemainingCount, trialUntilDate):
                         let isPending = (flags & (1 << 0)) != 0
+                        updatedAttribute = AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false, error: nil)
                         
                         _internal_updateAudioTranscriptionTrialState(transaction: transaction) { current in
                             var updated = current
@@ -50,10 +64,17 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: Me
                             }
                             return updated
                         }
-                        updatedAttribute = AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending, didRate: false, error: nil)
                     }
-                case let .failure(error):
+                case let .error(error):
                     updatedAttribute = AudioTranscriptionMessageAttribute(id: 0, text: "", isPending: false, didRate: false, error: error)
+                case let .limitExceeded(timeout):
+                    let cooldownTime = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + timeout
+                    _internal_updateAudioTranscriptionTrialState(transaction: transaction) { current in
+                        var updated = current
+                        updated = updated.withUpdatedCooldownUntilTime(cooldownTime)
+                        return updated
+                    }
+                    return .error
                 }
                     
                 transaction.updateMessage(messageId, update: { currentMessage in

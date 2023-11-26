@@ -1,11 +1,14 @@
 import Foundation
 import UIKit
 import Display
+import SwiftSignalKit
 import MediaEditor
 import DrawingUI
 import ChatPresentationInterfaceState
 import PresentationDataUtils
 import TelegramPresentationData
+import DeviceAccess
+import AccountContext
 
 extension MediaEditorScreen {
     final class Recording {
@@ -13,46 +16,73 @@ extension MediaEditorScreen {
         
         private var recorder: EntityVideoRecorder?
         
+        private let idleTimerExtensionDisposable = MetaDisposable()
+        
+        private var authorizationStatusDisposables = DisposableSet()
+        private var cameraAuthorizationStatus: AccessType = .notDetermined
+        private var microphoneAuthorizationStatus: AccessType = .notDetermined
+        
+        fileprivate var cameraIsActive = true {
+            didSet {
+                guard let context = self.controller?.context else {
+                    return
+                }
+                if self.cameraIsActive {
+                    self.idleTimerExtensionDisposable.set(context.sharedContext.applicationBindings.pushIdleTimerExtension())
+                } else {
+                    self.idleTimerExtensionDisposable.set(nil)
+                }
+            }
+        }
+        
         var isLocked = false
         
         init(controller: MediaEditorScreen) {
             self.controller = controller
+            
+            self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .camera(.video))
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let self {
+                    self.cameraAuthorizationStatus = status
+                }
+            }))
+            
+            self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .microphone(.video))
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let self {
+                    self.microphoneAuthorizationStatus = status
+                }
+            }))
+        }
+        
+        deinit {
+            self.idleTimerExtensionDisposable.dispose()
+            self.authorizationStatusDisposables.dispose()
+        }
+        
+        func requestDeviceAccess() {
+            DeviceAccess.authorizeAccess(to: .camera(.video), { granted in
+                if granted {
+                    DeviceAccess.authorizeAccess(to: .microphone(.video))
+                }
+            })
         }
         
         func setMediaRecordingActive(_ isActive: Bool, finished: Bool, sourceView: UIView?) {
             guard let controller, let mediaEditor = controller.node.mediaEditor else {
                 return
             }
-            let entitiesView = controller.node.entitiesView
             if mediaEditor.values.additionalVideoPath != nil {
-                let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                let alertController = textAlertController(
-                    context: controller.context,
-                    forceTheme: defaultDarkColorPresentationTheme,
-                    title: nil,
-                    text: presentationData.strings.MediaEditor_VideoRemovalConfirmation,
-                    actions: [
-                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                        }),
-                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak mediaEditor, weak entitiesView] in
-                            mediaEditor?.setAdditionalVideo(nil, positionChanges: [])
-                            if let entityView = entitiesView?.getView(where: { entityView in
-                                if let entity = entityView.entity as? DrawingStickerEntity, case .dualVideoReference = entity.content {
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            }) {
-                                entitiesView?.remove(uuid: entityView.entity.uuid, animated: false)
-                            }
-                        })
-                    ]
-                )
-                controller.present(alertController, in: .window(.root))
+                controller.node.presentVideoRemoveConfirmation()
                 return
             }
             
             if isActive {
+                if self.cameraAuthorizationStatus != .allowed || self.microphoneAuthorizationStatus != .allowed {
+                    self.requestDeviceAccess()
+                    return
+                }
+                
                 guard self.recorder == nil else {
                     return
                 }
@@ -72,6 +102,8 @@ extension MediaEditorScreen {
                 }
                 self.recorder = recorder
                 controller.node.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.2))
+                
+                self.cameraIsActive = true
             } else {
                 if let recorder = self.recorder {
                     recorder.stopRecording(save: finished, completion: { [weak self] in
@@ -84,6 +116,8 @@ extension MediaEditorScreen {
                     })
                     
                     controller.node.requestLayout(forceUpdate: true, transition: .easeInOut(duration: 0.2))
+                    
+                    self.cameraIsActive = false
                 } else {
                     guard self.tooltipController == nil, let sourceView else {
                         return

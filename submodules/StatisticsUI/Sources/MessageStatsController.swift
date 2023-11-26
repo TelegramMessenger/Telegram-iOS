@@ -36,7 +36,7 @@ private enum StatsSection: Int32 {
 
 private enum StatsEntry: ItemListNodeEntry {
     case overviewTitle(PresentationTheme, String)
-    case overview(PresentationTheme, PostStats, Int32?)
+    case overview(PresentationTheme, PostStats, EngineStoryItem.Views?, Int32?)
     
     case interactionsTitle(PresentationTheme, String)
     case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Bool)
@@ -89,8 +89,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .overview(lhsTheme, lhsStats, lhsPublicShares):
-                if case let .overview(rhsTheme, rhsStats, rhsPublicShares) = rhs, lhsTheme === rhsTheme, lhsPublicShares == rhsPublicShares {
+            case let .overview(lhsTheme, lhsStats, lhsViews, lhsPublicShares):
+                if case let .overview(rhsTheme, rhsStats, rhsViews, rhsPublicShares) = rhs, lhsTheme === rhsTheme, lhsViews == rhsViews, lhsPublicShares == rhsPublicShares {
                     if let lhsMessageStats = lhsStats as? MessageStats, let rhsMessageStats = rhsStats as? MessageStats {
                         return lhsMessageStats == rhsMessageStats
                     } else if let lhsStoryStats = lhsStats as? StoryStats, let rhsStoryStats = rhsStats as? StoryStats {
@@ -152,8 +152,8 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .reactionsTitle(_, text),
                  let .publicForwardsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .overview(_, stats, publicShares):
-                return StatsOverviewItem(presentationData: presentationData, stats: stats as! Stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
+            case let .overview(_, stats, storyViews, publicShares):
+                return StatsOverviewItem(presentationData: presentationData, stats: stats as! Stats, storyViews: storyViews, publicShares: publicShares, sectionId: self.section, style: .blocks)
             case let .interactionsGraph(_, _, _, graph, type, noInitialZoom), let .reactionsGraph(_, _, _, graph, type, noInitialZoom):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, noInitialZoom: noInitialZoom, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
@@ -179,12 +179,19 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func messageStatsControllerEntries(data: PostStats?, messages: SearchMessagesResult?, forwards: StoryStatsPublicForwardsContext.State?, presentationData: PresentationData) -> [StatsEntry] {
+private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineStoryItem.Views?, messages: SearchMessagesResult?, forwards: StoryStatsPublicForwardsContext.State?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
         entries.append(.overviewTitle(presentationData.theme, presentationData.strings.Stats_MessageOverview.uppercased()))
-        entries.append(.overview(presentationData.theme, data, messages?.totalCount))
+        
+        var publicShares: Int32?
+        if let messages {
+            publicShares = messages.totalCount
+        } else if let forwards {
+            publicShares = forwards.count
+        }
+        entries.append(.overview(presentationData.theme, data, storyViews, publicShares))
         
         var isStories = false
         if let _ = data as? StoryStats {
@@ -244,8 +251,6 @@ public enum StatsSubject {
 }
 
 protocol PostStats {
-    var views: Int { get }
-    var forwards: Int { get }
     var interactionsGraph: StatsGraph { get }
     var interactionsGraphDelta: Int64 { get }
     var reactionsGraph: StatsGraph { get }
@@ -378,15 +383,17 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         
         let title: String
+        var storyViews: EngineStoryItem.Views?
         switch subject {
         case .message:
             title = presentationData.strings.Stats_MessageTitle
-        case .story:
+        case let .story(_, _, storyItem):
             title = presentationData.strings.Stats_StoryTitle
+            storyViews = storyItem?.views
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, storyViews: storyViews, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

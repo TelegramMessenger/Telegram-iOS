@@ -342,7 +342,7 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
                             let controller = UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .premiumPaywall(title: nil, text: "Subcribe to [Telegram Premium]() to unlock up to **100** channels.", customUndoText: nil, timeout: nil, linkAction: nil),
+                                content: .premiumPaywall(title: nil, text: item.presentationData.strings.Chat_ChannelRecommendation_PremiumTooltip, customUndoText: nil, timeout: nil, linkAction: nil),
                                 elevatedLayout: false,
                                 action: { [weak self] action in
                                     if case .info = action {
@@ -544,11 +544,6 @@ private class MessageBackgroundNode: ASDisplayNode {
 private let itemSize = CGSize(width: 84.0, height: 90.0)
 
 private final class ChannelItemComponent: Component {
-    class ExternalState {
-        var cachedPlaceholderImage: UIImage?
-    }
-    
-    let externalState: ExternalState
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -561,7 +556,6 @@ private final class ChannelItemComponent: Component {
     let contextAction: ((EnginePeer, UIView, ContextGesture?) -> Void)?
     
     init(
-        externalState: ExternalState,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -573,7 +567,6 @@ private final class ChannelItemComponent: Component {
         openMore: @escaping () -> Void,
         contextAction: ((EnginePeer, UIView, ContextGesture?) -> Void)?
     ) {
-        self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -677,10 +670,13 @@ private final class ChannelItemComponent: Component {
         }
         
         func update(component: ChannelItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let previousComponent = self.component
             self.component = component
             self.state = state
+            
+            let themeUpdated = previousComponent?.theme !== component.theme
                                 
-            self.contextContainer.isGestureEnabled = component.contextAction != nil
+            self.contextContainer.isGestureEnabled = true
             
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -776,69 +772,43 @@ private final class ChannelItemComponent: Component {
                 }
                 self.circlesView.isHidden = false
                 
-                if self.circlesView.image == nil {
-                    if let current = component.externalState.cachedPlaceholderImage {
-                        self.circlesView.image = current
-                    } else {
-                        let image = generateImage(CGSize(width: 50.0, height: avatarSize.height), rotatedContext: { size, context in
-                            context.clear(CGRect(origin: .zero, size: size))
-                            
-                            let randomColors: [(UInt32, UInt32)] = [
-                                (0x4493de, 0x52d5d9),
-                                (0xfcc418, 0xf6774a),
-                                (0xffc9a2, 0xfbedb2),
-                                (0x133e88, 0x131925),
-                                (0x63c7f0, 0xf6c506),
-                                (0x88a5cb, 0x162639),
-                                (0xd669ed, 0xe0a2f3),
-                                (0x54cb68, 0xa0de7e)
-                            ]
-                            
-                            context.saveGState()
-                            
-                            let rect1 = CGRect(origin: CGPoint(x: size.width - avatarSize.width, y: 0.0), size: avatarSize)
-                            context.addEllipse(in: rect1)
-                            context.clip()
-                            
-                            var firstColors: NSArray = []
-                            if let random = randomColors.randomElement() {
-                                firstColors = [UIColor(rgb: random.0).cgColor, UIColor(rgb: random.1).cgColor]
-                            }
-                            var locations: [CGFloat] = [1.0, 0.0]
-                            
-                            let colorSpace = CGColorSpaceCreateDeviceRGB()
-                            let firstGradient = CGGradient(colorsSpace: colorSpace, colors: firstColors as CFArray, locations: &locations)!
-                            context.drawLinearGradient(firstGradient, start: CGPoint(x: rect1.minX, y: rect1.minY), end: CGPoint(x: rect1.maxX, y: rect1.maxY), options: CGGradientDrawingOptions())
-                            
-                            context.restoreGState()
-                            
-                            context.setBlendMode(.clear)
-                            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - avatarSize.width - 12.0, y: -2.0), size: CGSize(width: avatarSize.width + 4.0, height: avatarSize.height + 4.0)))
-                            
-                            context.setBlendMode(.normal)
-                            
-                            context.saveGState()
-                            
-                            let rect2 = CGRect(origin: CGPoint(x: size.width - avatarSize.width - 10.0, y: 0.0), size: avatarSize)
-                            context.addEllipse(in: rect2)
-                            context.clip()
-                            
-                            var secondColors: NSArray = []
-                            if let random = randomColors.randomElement() {
-                                secondColors = [UIColor(rgb: random.0).cgColor, UIColor(rgb: random.1).cgColor]
-                            }
-                            
-                            let secondGradient = CGGradient(colorsSpace: colorSpace, colors: secondColors as CFArray, locations: &locations)!
-                            context.drawLinearGradient(secondGradient, start: CGPoint(x: rect2.minX, y: rect2.minY), end: CGPoint(x: rect2.minX, y: rect2.maxY), options: CGGradientDrawingOptions())
-                            
-                            context.restoreGState()
-                            
-                            context.setBlendMode(.clear)
-                            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - avatarSize.width - 22.0, y: -2.0), size: CGSize(width: avatarSize.width + 4.0, height: avatarSize.height + 4.0)))
-                        })
-                        component.externalState.cachedPlaceholderImage = image
-                        self.circlesView.image = image
-                    }
+                if self.circlesView.image == nil || themeUpdated {
+                    let image = generateImage(CGSize(width: 50.0, height: avatarSize.height), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: .zero, size: size))
+                        
+                        let color = component.theme.chat.message.incoming.secondaryTextColor.withMultipliedAlpha(0.35)
+                        
+                        context.saveGState()
+                        
+                        let rect1 = CGRect(origin: CGPoint(x: size.width - avatarSize.width, y: 0.0), size: avatarSize)
+                        context.addEllipse(in: rect1)
+                        context.clip()
+                        
+                        context.setFillColor(color.cgColor)
+                        context.fill(rect1)
+                        
+                        context.restoreGState()
+                        
+                        context.setBlendMode(.clear)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - avatarSize.width - 12.0, y: -2.0), size: CGSize(width: avatarSize.width + 4.0, height: avatarSize.height + 4.0)))
+                        
+                        context.setBlendMode(.normal)
+                        
+                        context.saveGState()
+                        
+                        let rect2 = CGRect(origin: CGPoint(x: size.width - avatarSize.width - 10.0, y: 0.0), size: avatarSize)
+                        context.addEllipse(in: rect2)
+                        context.clip()
+                        
+                        context.setFillColor(color.cgColor)
+                        context.fill(rect2)
+                        
+                        context.restoreGState()
+                        
+                        context.setBlendMode(.clear)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - avatarSize.width - 22.0, y: -2.0), size: CGSize(width: avatarSize.width + 4.0, height: avatarSize.height + 4.0)))
+                    })
+                    self.circlesView.image = image
                 }
                 self.circlesView.frame = CGRect(origin: CGPoint(x: avatarFrame.midX, y: 0.0), size: CGSize(width: 50.0, height: 60.0))
             } else {
@@ -991,7 +961,6 @@ final class ChannelListPanelComponent: Component {
         
         private let measureItem = ComponentView<Empty>()
         private var visibleItems: [EnginePeer.Id: ComponentView<Empty>] = [:]
-        private var externalState = ChannelItemComponent.ExternalState()
         
         private var ignoreScrolling: Bool = false
         
@@ -1072,7 +1041,7 @@ final class ChannelListPanelComponent: Component {
                         if !component.context.isPremium {
                             isLocked = true
                         }
-                        title = isLocked ? "Unlock More Channels" : "View More Channels"
+                        title =  component.strings.Chat_SimilarChannels_MoreChannels
                         subtitle = "+\(component.peers.count - channelsLimit)"
                         isLast = true
                     } else {
@@ -1092,7 +1061,6 @@ final class ChannelListPanelComponent: Component {
                     let _ = itemView.update(
                         transition: itemTransition,
                         component: AnyComponent(ChannelItemComponent(
-                            externalState: self.externalState,
                             context: component.context,
                             theme: component.theme,
                             strings: component.strings,

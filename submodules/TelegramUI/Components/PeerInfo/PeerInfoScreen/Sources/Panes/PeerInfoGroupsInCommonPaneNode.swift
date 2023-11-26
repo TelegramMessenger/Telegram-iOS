@@ -44,7 +44,7 @@ private struct GroupsInCommonListEntry: Comparable, Identifiable {
         }, removePeer: { _ in
         }, contextAction: { node, gesture in
             openPeerContextAction(peer, node, gesture)
-        }, hasTopStripe: false, noInsets: true, noCorners: true)
+        }, hasTopStripe: false, noInsets: true, noCorners: true, style: .plain)
     }
 }
 
