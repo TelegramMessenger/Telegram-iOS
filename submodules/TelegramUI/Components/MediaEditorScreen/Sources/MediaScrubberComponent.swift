@@ -458,6 +458,9 @@ final class MediaScrubberComponent: Component {
             var endPosition = self.endPosition
             var trimViewOffset: CGFloat = 0.0
             var trimViewVisualInsets: UIEdgeInsets = .zero
+            var trackViewWidth: CGFloat = availableSize.width
+            var mainTrimDuration = self.trimDuration
+            
             if let track = component.tracks.first(where: { $0.id == self.selectedTrackId }), track.id != 0 {
                 if let trimRange = track.trimRange {
                     startPosition = trimRange.lowerBound
@@ -472,15 +475,22 @@ final class MediaScrubberComponent: Component {
                         trimViewOffset = -delta
                         trimViewVisualInsets.left = delta
                     }
+                    
+                    if lowestVideoId == 0 && track.id == 1 {
+                        trimViewVisualInsets = .zero
+                        trackViewWidth = trackView.containerView.frame.width
+                        mainTrimDuration = track.duration
+                    }
                 }
             }
 
             let scrubberSize = CGSize(width: availableSize.width, height: trackHeight)
+            
             self.trimView.isHollow = self.selectedTrackId != lowestVideoId || self.isAudioOnly
             let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
                 visualInsets: trimViewVisualInsets,
-                scrubberSize: scrubberSize,
-                duration: trimDuration,
+                scrubberSize: CGSize(width: trackViewWidth, height: trackHeight),
+                duration: mainTrimDuration,
                 startPosition: startPosition,
                 endPosition: endPosition,
                 position: component.position,
