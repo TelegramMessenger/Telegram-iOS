@@ -1185,12 +1185,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleOffset = -effectiveAreaExpansionFraction * 5.0
                 panelSubtitleOffset = (1.0 - effectiveAreaExpansionFraction) * 5.0
             } else {
-                if effectiveAreaExpansionFraction == 1.0 {
-                    subtitleAlpha = 0.0
-                    panelSubtitleAlpha = 1.0
-                } else {
+                if self.navigationTransition != nil {
                     subtitleAlpha = 1.0
                     panelSubtitleAlpha = 0.0
+                } else {
+                    if effectiveAreaExpansionFraction == 1.0 {
+                        subtitleAlpha = 0.0
+                        panelSubtitleAlpha = 1.0
+                    } else {
+                        subtitleAlpha = 1.0
+                        panelSubtitleAlpha = 0.0
+                    }
                 }
             }
         }
