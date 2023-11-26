@@ -35,13 +35,15 @@ extension StoryStats: Stats {
 class StatsOverviewItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let stats: Stats
+    let storyViews: EngineStoryItem.Views?
     let publicShares: Int32?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, stats: Stats, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, stats: Stats, storyViews: EngineStoryItem.Views? = nil, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.stats = stats
+        self.storyViews = storyViews
         self.publicShares = publicShares
         self.sectionId = sectionId
         self.style = style
@@ -349,11 +351,11 @@ class StatsOverviewItemNode: ListViewItemNode {
                 )
                 
                 height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
-            } else if let stats = item.stats as? StoryStats {
+            } else if let _ = item.stats as? StoryStats, let views = item.storyViews {
                 topLeftItemLayoutAndApply = makeTopLeftItemLayout(
                     params.width,
                     item.presentationData,
-                    compactNumericCountString(stats.views),
+                    compactNumericCountString(views.seenCount),
                     item.presentationData.strings.Stats_Message_Views,
                     nil
                 )
@@ -369,7 +371,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                 middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
                     params.width,
                     item.presentationData,
-                    compactNumericCountString(stats.reactions),
+                    compactNumericCountString(views.reactedCount),
                     item.presentationData.strings.Stats_Message_Reactions,
                     nil
                 )
@@ -377,7 +379,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                 middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
                     params.width,
                     item.presentationData,
-                    compactNumericCountString(stats.forwards),
+                    compactNumericCountString(views.forwardCount),
                     item.presentationData.strings.Stats_Message_PrivateShares,
                     nil
                 )

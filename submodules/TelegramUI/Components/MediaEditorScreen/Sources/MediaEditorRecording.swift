@@ -23,36 +23,17 @@ extension MediaEditorScreen {
             guard let controller, let mediaEditor = controller.node.mediaEditor else {
                 return
             }
-            let entitiesView = controller.node.entitiesView
             if mediaEditor.values.additionalVideoPath != nil {
-                let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                let alertController = textAlertController(
-                    context: controller.context,
-                    forceTheme: defaultDarkColorPresentationTheme,
-                    title: nil,
-                    text: presentationData.strings.MediaEditor_VideoRemovalConfirmation,
-                    actions: [
-                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                        }),
-                        TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak mediaEditor, weak entitiesView] in
-                            mediaEditor?.setAdditionalVideo(nil, positionChanges: [])
-                            if let entityView = entitiesView?.getView(where: { entityView in
-                                if let entity = entityView.entity as? DrawingStickerEntity, case .dualVideoReference = entity.content {
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            }) {
-                                entitiesView?.remove(uuid: entityView.entity.uuid, animated: false)
-                            }
-                        })
-                    ]
-                )
-                controller.present(alertController, in: .window(.root))
+                controller.node.presentVideoRemoveConfirmation()
                 return
             }
             
             if isActive {
+                if controller.cameraAuthorizationStatus != .allowed || controller.microphoneAuthorizationStatus != .allowed {
+                    controller.requestDeviceAccess()
+                    return
+                }
+                
                 guard self.recorder == nil else {
                     return
                 }

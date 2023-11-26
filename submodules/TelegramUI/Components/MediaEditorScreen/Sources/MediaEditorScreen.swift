@@ -2454,6 +2454,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                 },
+                shouldDeleteEntity: { [weak self] entity in
+                    if let self {
+                        if let stickerEntity = entity as? DrawingStickerEntity, case .dualVideoReference(true) = stickerEntity.content {
+                            self.presentVideoRemoveConfirmation()
+                            return false
+                        }
+                    }
+                    return true
+                },
                 getCurrentImage: { [weak self] in
                     guard let mediaEditor = self?.mediaEditor else {
                         return nil
@@ -3396,10 +3405,41 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }), in: .window(.root))
         }
         
+        func presentVideoRemoveConfirmation() {
+            guard let controller = self.controller else {
+                return
+            }
+            let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+            let alertController = textAlertController(
+                context: controller.context,
+                forceTheme: defaultDarkColorPresentationTheme,
+                title: nil,
+                text: presentationData.strings.MediaEditor_VideoRemovalConfirmation,
+                actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                    }),
+                    TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: { [weak mediaEditor, weak entitiesView] in
+                        mediaEditor?.setAdditionalVideo(nil, positionChanges: [])
+                        if let entityView = entitiesView?.getView(where: { entityView in
+                            if let entity = entityView.entity as? DrawingStickerEntity, case .dualVideoReference = entity.content {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }) {
+                            entitiesView?.remove(uuid: entityView.entity.uuid, animated: false)
+                        }
+                    })
+                ]
+            )
+            controller.present(alertController, in: .window(.root))
+        }
+        
         func presentTrackOptions(trackId: Int32, sourceView: UIView) {
             let value = self.mediaEditor?.values.audioTrackVolume ?? 1.0
             
-            let actionTitle: String = trackId == 2 ? self.presentationData.strings.MediaEditor_RemoveAudio : self.presentationData.strings.MediaEditor_RemoveVideo
+            let isVideo = trackId != 2
+            let actionTitle: String = isVideo ? self.presentationData.strings.MediaEditor_RemoveVideo : self.presentationData.strings.MediaEditor_RemoveAudio
             
             let items: [ContextMenuItem] = [
                 .custom(VolumeSliderContextItem(minValue: 0.0, value: value, valueChanged: { [weak self] value, _ in
@@ -3416,19 +3456,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if let self {
                                 if let mediaEditor = self.mediaEditor {
                                     if trackId == 1 {
-                                        mediaEditor.setAdditionalVideo(nil, positionChanges: [])
-                                        if let entityView = self.entitiesView.getView(where: { entityView in
-                                            if let entity = entityView.entity as? DrawingStickerEntity, case .dualVideoReference = entity.content {
-                                                return true
-                                            } else {
-                                                return false
-                                            }
-                                        }) {
-                                            self.entitiesView.remove(uuid: entityView.entity.uuid, animated: false)
-                                        }
+                                        self.presentVideoRemoveConfirmation()
                                     } else {
                                         mediaEditor.setAudioTrack(nil)
-                                        
                                         if !mediaEditor.sourceIsVideo && !mediaEditor.isPlaying {
                                             mediaEditor.play()
                                         }
@@ -4013,7 +4043,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     private var audioSessionDisposable: Disposable?
     private let postingAvailabilityPromise = Promise<StoriesUploadAvailability>()
     private var postingAvailabilityDisposable: Disposable?
-        
+    
+    private var authorizationStatusDisposables = DisposableSet()
+    private(set) var cameraAuthorizationStatus: AccessType = .notDetermined
+    private(set) var microphoneAuthorizationStatus: AccessType = .notDetermined
+    
     public init(
         context: AccountContext,
         subject: Signal<Subject?, NoError>,
@@ -4088,6 +4122,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if let _ = forwardSource {
             self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
         }
+        
+        self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .camera(.video))
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let self {
+                self.cameraAuthorizationStatus = status
+            }
+        }))
+        
+        self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .microphone(.video))
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let self {
+                self.microphoneAuthorizationStatus = status
+            }
+        }))
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -4098,6 +4146,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.exportDisposable.dispose()
         self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
+        self.authorizationStatusDisposables.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -4175,6 +4224,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     fileprivate var isEmbeddedEditor: Bool {
         return self.isEditingStory || self.forwardSource != nil
+    }
+    
+    func requestDeviceAccess() {
+        DeviceAccess.authorizeAccess(to: .camera(.video), { granted in
+            if granted {
+                DeviceAccess.authorizeAccess(to: .microphone(.video))
+            }
+        })
     }
      
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {

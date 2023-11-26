@@ -1647,10 +1647,14 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         
                         var isChannel = false
+                        var canShare = true
                         var displayFooter = false
-                        if case .channel = component.slice.peer {
+                        if case let .channel(channel) = component.slice.peer {
                             displayFooter = true
                             isChannel = true
+                            if channel.addressName == nil {
+                                canShare = false
+                            }
                         } else if component.slice.peer.id == component.context.account.peerId {
                             displayFooter = true
                         } else if component.slice.item.storyItem.isPending {
@@ -1719,6 +1723,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         return StoryFooterPanelComponent.MyReaction(reaction: value, file: centerAnimation, animationFileId: animationFileId)
                                     },
                                     isChannel: isChannel,
+                                    canShare: canShare,
                                     externalViews: nil,
                                     expandFraction: footerExpandFraction,
                                     expandViewStats: { [weak self] in
@@ -1802,6 +1807,13 @@ public final class StoryItemSetContainerComponent: Component {
                                             return
                                         }
                                         self.openStoryEditing(repost: true)
+                                    },
+                                    cancelUploadAction: { [weak self] in
+                                        guard let self, let component = self.component, let controller = self.component?.controller() as? StoryContainerScreen else {
+                                            return
+                                        }
+                                        component.context.engine.messages.cancelStoryUpload(stableId: component.slice.item.storyItem.id)
+                                        controller.dismissWithoutTransitionOut()
                                     }
                                 )),
                                 environment: {},

@@ -5,32 +5,17 @@ import TelegramApi
 import MtProtoKit
 
 public struct StoryStats: Equatable {
-    public let views: Int
-    public let forwards: Int
-    public let reactions: Int
     public let interactionsGraph: StatsGraph
     public let interactionsGraphDelta: Int64
     public let reactionsGraph: StatsGraph
     
-    init(views: Int, forwards: Int, reactions: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
-        self.views = views
-        self.forwards = forwards
-        self.reactions = reactions
+    init(interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
         self.interactionsGraph = interactionsGraph
         self.interactionsGraphDelta = interactionsGraphDelta
         self.reactionsGraph = reactionsGraph
     }
     
     public static func == (lhs: StoryStats, rhs: StoryStats) -> Bool {
-        if lhs.views != rhs.views {
-            return false
-        }
-        if lhs.forwards != rhs.forwards {
-            return false
-        }
-        if lhs.reactions != rhs.reactions {
-            return false
-        }
         if lhs.interactionsGraph != rhs.interactionsGraph {
             return false
         }
@@ -44,7 +29,7 @@ public struct StoryStats: Equatable {
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> StoryStats {
-        return StoryStats(views: self.views, forwards: self.forwards, reactions: self.reactions, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
+        return StoryStats(interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
     }
 }
 
@@ -61,76 +46,57 @@ private func requestStoryStats(accountPeerId: PeerId, postbox: Postbox, network:
         }
     }
     |> mapToSignal { data -> Signal<StoryStats?, NoError> in
-        guard let (statsDatacenterId, peer) = data, let peerReference = PeerReference(peer) else {
+        guard let (statsDatacenterId, peer) = data, let inputPeer = apiInputPeer(peer) else {
             return .never()
         }
-        return _internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peerReference, ids: [storyId])
-        |> mapToSignal { stories -> Signal<StoryStats?, NoError> in
-            guard let storyItem = stories.first, case let .item(story) = storyItem, let inputPeer = apiInputPeer(peer) else {
-                return .never()
+        var flags: Int32 = 0
+        if dark {
+            flags |= (1 << 1)
+        }
+        
+        let request = Api.functions.stats.getStoryStats(flags: flags, peer: inputPeer, id: storyId)
+        let signal: Signal<Api.stats.StoryStats, MTRpcError>
+        if network.datacenterId != statsDatacenterId {
+            signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
+            |> castError(MTRpcError.self)
+            |> mapToSignal { worker in
+                return worker.request(request)
             }
-            
-            var flags: Int32 = 0
-            if dark {
-                flags |= (1 << 1)
-            }
-            
-            let request = Api.functions.stats.getStoryStats(flags: flags, peer: inputPeer, id: storyId)
-            let signal: Signal<Api.stats.StoryStats, MTRpcError>
-            if network.datacenterId != statsDatacenterId {
-                signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-                |> castError(MTRpcError.self)
-                |> mapToSignal { worker in
-                    return worker.request(request)
-                }
-            } else {
-                signal = network.request(request)
-            }
-            
-            var views: Int = 0
-            var forwards: Int = 0
-            var reactions: Int = 0
-            if let storyViews = story.views {
-                views = storyViews.seenCount
-                forwards = storyViews.forwardCount
-                reactions = storyViews.reactedCount
-            }
-            
-            return signal
-            |> mapToSignal { result -> Signal<StoryStats?, MTRpcError> in
-                if case let .storyStats(apiInteractionsGraph, apiReactionsGraph) = result {
-                    let interactionsGraph = StatsGraph(apiStatsGraph: apiInteractionsGraph)
-                    var interactionsGraphDelta: Int64 = 86400
-                    if case let .Loaded(_, data) = interactionsGraph {
-                        if let start = data.range(of: "[\"x\",") {
-                            let substring = data.suffix(from: start.upperBound)
-                            if let end = substring.range(of: "],") {
-                                let valuesString = substring.prefix(through: substring.index(before: end.lowerBound))
-                                let values = valuesString.components(separatedBy: ",").compactMap { Int64($0) }
-                                if values.count > 1 {
-                                    let first = values[0]
-                                    let second = values[1]
-                                    let delta = abs(second - first) / 1000
-                                    interactionsGraphDelta = delta
-                                }
+        } else {
+            signal = network.request(request)
+        }
+        
+        return signal
+        |> mapToSignal { result -> Signal<StoryStats?, MTRpcError> in
+            if case let .storyStats(apiInteractionsGraph, apiReactionsGraph) = result {
+                let interactionsGraph = StatsGraph(apiStatsGraph: apiInteractionsGraph)
+                var interactionsGraphDelta: Int64 = 86400
+                if case let .Loaded(_, data) = interactionsGraph {
+                    if let start = data.range(of: "[\"x\",") {
+                        let substring = data.suffix(from: start.upperBound)
+                        if let end = substring.range(of: "],") {
+                            let valuesString = substring.prefix(through: substring.index(before: end.lowerBound))
+                            let values = valuesString.components(separatedBy: ",").compactMap { Int64($0) }
+                            if values.count > 1 {
+                                let first = values[0]
+                                let second = values[1]
+                                let delta = abs(second - first) / 1000
+                                interactionsGraphDelta = delta
                             }
                         }
                     }
-                    let reactionsGraph = StatsGraph(apiStatsGraph: apiReactionsGraph)
-                    return .single(StoryStats(
-                        views: views,
-                        forwards: forwards,
-                        reactions: reactions,
-                        interactionsGraph: interactionsGraph,
-                        interactionsGraphDelta: interactionsGraphDelta,
-                        reactionsGraph: reactionsGraph
-                    ))
-                } else {
-                    return .single(nil)
                 }
+                let reactionsGraph = StatsGraph(apiStatsGraph: apiReactionsGraph)
+                return .single(StoryStats(
+                    interactionsGraph: interactionsGraph,
+                    interactionsGraphDelta: interactionsGraphDelta,
+                    reactionsGraph: reactionsGraph
+                ))
+            } else {
+                return .single(nil)
             }
-            |> retryRequest
         }
+        |> retryRequest
     }
 }
 
@@ -255,8 +221,6 @@ private final class StoryStatsPublicForwardsContextImpl {
                 
         self.count = 0
             
-        self.isLoadingMore = true
-                
         self.loadMore()
     }
     
