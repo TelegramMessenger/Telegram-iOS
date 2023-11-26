@@ -225,7 +225,7 @@ public final class EmojiSelectionComponent: Component {
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
-                    isContentInFocus: false,
+                    isContentInFocus: true,
                     containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + 16.0, right: component.sideInset),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.emojiContent.withCustomTintColor(component.theme.list.itemPrimaryTextColor),

@@ -196,7 +196,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             
             let allowedReactions: PeerAllowedReactions
             if self.isEnabled {
-                if Set(availableReactions.reactions.map(\.value)) == Set(enabledReactions.map(\.reaction)) {
+                if Set(availableReactions.reactions.filter({ $0.isEnabled }).map(\.value)) == Set(enabledReactions.map(\.reaction)) {
                     allowedReactions = .all
                 } else {
                     allowedReactions = .limited(enabledReactions.map(\.reaction))
@@ -274,7 +274,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             })
             
             if let boostStatus = self.boostStatus, !customReactions.isEmpty, customReactions.count > boostStatus.level {
-                self.displayPremiumScreen()
+                self.displayPremiumScreen(reactionCount: customReactions.count)
                 return
             }
             
@@ -285,7 +285,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             
             let allowedReactions: PeerAllowedReactions
             if self.isEnabled {
-                if Set(availableReactions.reactions.map(\.value)) == Set(enabledReactions.map(\.reaction)) {
+                if Set(availableReactions.reactions.filter({ $0.isEnabled }).map(\.value)) == Set(enabledReactions.map(\.reaction)) {
                     allowedReactions = .all
                 } else if enabledReactions.isEmpty {
                     allowedReactions = .empty
@@ -306,7 +306,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 if !standalone {
                     switch error {
                     case .boostRequired:
-                        self.displayPremiumScreen()
+                        self.displayPremiumScreen(reactionCount: customReactions.count)
                     case .generic:
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                         //TODO:localize
@@ -330,7 +330,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             }
         }
         
-        private func displayPremiumScreen() {
+        private func displayPremiumScreen(reactionCount: Int) {
             guard let component = self.component else {
                 return
             }
@@ -344,7 +344,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
                 
                 let link = status.url
-                let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
+                let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions(reactionCount: reactionCount), isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
                     guard let self, let component = self.component else {
                         return true
                     }
@@ -473,7 +473,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 }
                                 
                                 let reaction: MessageReaction.Reaction
-                                if let availableReactions = self.availableReactions, let reactionItem = availableReactions.reactions.first(where: { $0.selectAnimation.fileId.id == itemFile.fileId.id }) {
+                                if let availableReactions = self.availableReactions, let reactionItem = availableReactions.reactions.filter({ $0.isEnabled }).first(where: { $0.selectAnimation.fileId.id == itemFile.fileId.id }) {
                                     reaction = reactionItem.value
                                 } else {
                                     reaction = .custom(itemFile.fileId.id)
@@ -604,7 +604,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             if self.isEnabled {
                                 if var enabledReactions = self.enabledReactions, enabledReactions.isEmpty {
                                     if let availableReactions = self.availableReactions {
-                                        for reactionItem in availableReactions.reactions {
+                                        for reactionItem in availableReactions.reactions.filter({ $0.isEnabled }) {
                                             enabledReactions.append(EmojiComponentReactionItem(reaction: reactionItem.value, file: reactionItem.selectAnimation))
                                         }
                                     }
@@ -1173,7 +1173,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                 case .all:
                     isEnabled = true
                     if let availableReactions {
-                        reactions = availableReactions.reactions.map(\.value)
+                        reactions = availableReactions.reactions.filter({ $0.isEnabled }).map(\.value)
                     }
                 case let .limited(list):
                     isEnabled = true
@@ -1185,7 +1185,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             
             var missingReactionFiles: [Int64] = []
             for reaction in reactions {
-                if let availableReactions, let _ = availableReactions.reactions.first(where: { $0.value == reaction }) {
+                if let availableReactions, let _ = availableReactions.reactions.filter({ $0.isEnabled }).first(where: { $0.value == reaction }) {
                 } else {
                     if case let .custom(fileId) = reaction {
                         if !missingReactionFiles.contains(fileId) {
@@ -1200,7 +1200,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                 var result: [EmojiComponentReactionItem] = []
                 
                 for reaction in reactions {
-                    if let availableReactions, let item = availableReactions.reactions.first(where: { $0.value == reaction }) {
+                    if let availableReactions, let item = availableReactions.reactions.filter({ $0.isEnabled }).first(where: { $0.value == reaction }) {
                         result.append(EmojiComponentReactionItem(reaction: reaction, file: item.selectAnimation))
                     } else {
                         if case let .custom(fileId) = reaction {

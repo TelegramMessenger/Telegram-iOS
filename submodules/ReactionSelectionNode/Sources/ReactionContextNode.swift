@@ -296,6 +296,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var extensionDistance: CGFloat = 0.0
     public private(set) var visibleExtensionDistance: CGFloat = 0.0
     
+    private var emojiContentHeight: CGFloat = 300.0
+    private var didInitializeEmojiContentHeight: Bool = false
     private var emojiContentLayout: EmojiPagerContentComponent.CustomLayout?
     private var emojiContent: EmojiPagerContentComponent?
     private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
@@ -322,6 +324,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var availableReactions: AvailableReactions?
     private var availableReactionsDisposable: Disposable?
     
+    public let alwaysAllowPremiumReactions: Bool
     private var hasPremium: Bool?
     private var hasPremiumDisposable: Disposable?
     
@@ -368,7 +371,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
+    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, alwaysAllowPremiumReactions: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.items = items
@@ -468,6 +471,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.contentTopInset = 24.0
         }
         
+        self.alwaysAllowPremiumReactions = alwaysAllowPremiumReactions
+        
         super.init()
         
         self.addSubnode(self.backgroundNode)
@@ -486,13 +491,17 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             strongSelf.availableReactions = availableReactions
         })
         
-        self.hasPremiumDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        |> deliverOnMainQueue).start(next: { [weak self] peer in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.hasPremium = peer?.isPremium ?? false
-        })
+        if alwaysAllowPremiumReactions {
+            self.hasPremium = true
+        } else {
+            self.hasPremiumDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                         |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.hasPremium = peer?.isPremium ?? false
+            })
+        }
         
         if let getEmojiContent = getEmojiContent {
             let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
@@ -566,6 +575,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         emojiTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
                     }
                     
+                    var hideTopPanel = false
+                    if strongSelf.isReactionSearchActive {
+                        hideTopPanel = true
+                    } else if strongSelf.alwaysAllowPremiumReactions {
+                        hideTopPanel = true
+                    }
+                    
                     let _ = reactionSelectionComponentHost.update(
                         transition: emojiTransition,
                         component: AnyComponent(EmojiStatusSelectionComponent(
@@ -575,7 +591,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             emojiContent: emojiContent,
                             backgroundColor: .clear,
                             separatorColor: strongSelf.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
-                            hideTopPanel: strongSelf.isReactionSearchActive,
+                            hideTopPanel: hideTopPanel,
                             hideTopPanelUpdated: { hideTopPanel, transition in
                                 guard let strongSelf = self else {
                                     return
@@ -585,7 +601,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         )),
                         environment: {},
-                        containerSize: CGSize(width: componentView.bounds.width, height: 300.0)
+                        containerSize: CGSize(width: componentView.bounds.width, height: strongSelf.emojiContentHeight)
                     )
                 }
             })
@@ -1023,7 +1039,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 expandItemSize = 30.0
                 expandTintOffset = 0.0
             }
-            let baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: self.contentTopInset + containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0) + (self.isExpanded ? (46.0 + 54.0 - 4.0) : 0.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
+            var baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: self.contentTopInset + containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
+            if self.isExpanded {
+                if self.alwaysAllowPremiumReactions {
+                } else {
+                    baseNextFrame.origin.y += 46.0 + 54.0 - 4.0
+                }
+            }
             
             transition.updateFrame(view: expandItemView, frame: baseNextFrame)
             transition.updateFrame(view: expandItemView.tintView, frame: baseNextFrame.offsetBy(dx: 0.0, dy: expandTintOffset))
@@ -1124,7 +1146,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             visibleItemCount: itemCount
         )
         
-        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? (46.0 + 54.0 - 4.0) : self.contentTopInset), size: actualBackgroundFrame.size)
+        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: actualBackgroundFrame.size)
+        if self.isExpanded {
+            if self.alwaysAllowPremiumReactions {
+                scrollFrame.origin.y += 0.0
+            } else {
+                scrollFrame.origin.y += 46.0 + 54.0 - 4.0
+            }
+        } else {
+            scrollFrame.origin.y += self.contentTopInset
+        }
         scrollFrame.origin.y += floorToScreenPixels(self.extensionDistance / 2.0)
         
         transition.updatePosition(node: self.contentContainer, position: visualBackgroundFrame.center, beginWithCurrentState: true)
@@ -1142,6 +1173,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.updateScrolling(transition: transition)
         
         self.emojiContentLayout = EmojiPagerContentComponent.CustomLayout(
+            topPanelAlwaysHidden: self.alwaysAllowPremiumReactions,
             itemsPerRow: itemCount,
             itemSize: itemSize,
             sideInset: sideInset,
@@ -1168,6 +1200,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     componentTransition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
                 }
                 
+                var hideTopPanel = false
+                if self.isReactionSearchActive {
+                    hideTopPanel = true
+                } else if self.alwaysAllowPremiumReactions {
+                    hideTopPanel = true
+                }
+                
                 let _ = reactionSelectionComponentHost.update(
                     transition: componentTransition,
                     component: AnyComponent(EmojiStatusSelectionComponent(
@@ -1177,7 +1216,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         emojiContent: emojiContent,
                         backgroundColor: .clear,
                         separatorColor: self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
-                        hideTopPanel: self.isReactionSearchActive,
+                        hideTopPanel: hideTopPanel,
                         hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
                             guard let strongSelf = self else {
                                 return
@@ -1187,7 +1226,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: actualBackgroundFrame.width, height: 300.0)
+                    containerSize: CGSize(width: actualBackgroundFrame.width, height: self.emojiContentHeight)
                 )
                 if let componentView = reactionSelectionComponentHost.view {
                     var animateIn = false
@@ -1229,7 +1268,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             if let mirrorContentClippingView = emojiView.mirrorContentClippingView {
                                 mirrorContentClippingView.clipsToBounds = false
-                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: 46.0 + 54.0 - 4.0), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
+                                
+                                var animationOffsetY: CGFloat = 0.0
+                                if self.alwaysAllowPremiumReactions {
+                                    animationOffsetY += -4.0
+                                } else {
+                                    animationOffsetY += 46.0 + 54.0 - 4.0
+                                }
+                                
+                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: animationOffsetY), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
                                     mirrorContentClippingView?.clipsToBounds = true
                                 })
                             }
@@ -1260,7 +1307,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     componentTransition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                     
                     if animateIn {
-                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -(46.0 + 54.0 - 4.0) + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
+                        var animationOffsetY: CGFloat = 0.0
+                        if self.alwaysAllowPremiumReactions {
+                            animationOffsetY += 4.0
+                        } else {
+                            animationOffsetY += 46.0 + 54.0 - 4.0
+                        }
+                        
+                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -animationOffsetY + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
                     }
                 }
             }
@@ -1315,6 +1369,17 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private func updateEmojiContent(_ emojiContent: EmojiPagerContentComponent) {
         guard let emojiContentLayout = self.emojiContentLayout else {
             return
+        }
+        
+        if !self.didInitializeEmojiContentHeight {
+            self.didInitializeEmojiContentHeight = true
+            
+            if emojiContent.contentItemGroups.count == 1 {
+                let itemCount = emojiContent.contentItemGroups[0].items.count
+                let numRows = (itemCount + (emojiContentLayout.itemsPerRow - 1)) / emojiContentLayout.itemsPerRow
+                let proposedHeight: CGFloat = CGFloat(numRows) * emojiContentLayout.itemSize + CGFloat(numRows - 1) * emojiContentLayout.itemSpacing + emojiContentLayout.itemSpacing * 2.0 + 5.0
+                self.emojiContentHeight = min(300.0, proposedHeight)
+            }
         }
         
         emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -2347,7 +2412,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if let expandItemView = self.expandItemView, expandItemView.bounds.contains(self.view.convert(point, to: self.expandItemView)) {
                 self.animateFromExtensionDistance = self.contentTopInset * 2.0 + self.extensionDistance
                 self.contentTopInset = 0.0
-                self.currentContentHeight = 300.0
+                self.currentContentHeight = self.emojiContentHeight
                 self.isExpanded = true
                 self.longPressRecognizer?.isEnabled = false
                 self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
@@ -2388,7 +2453,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.extensionDistance = 0.0
         self.visibleExtensionDistance = 0.0
         self.contentTopInset = 0.0
-        self.currentContentHeight = 300.0
+        self.currentContentHeight = self.emojiContentHeight
         self.isExpanded = true
         self.isExpandedUpdated(.animated(duration: 0.4, curve: .spring))
     }

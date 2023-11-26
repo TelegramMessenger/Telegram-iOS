@@ -112,6 +112,10 @@ extension ChatControllerImpl {
                     actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
                     actions.selectedReactionItems = selectedReactions.reactions
                     
+                    if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                        actions.alwaysAllowPremiumReactions = true
+                    }
+                    
                     if !actions.reactionItems.isEmpty {
                         let reactionItems: [EmojiComponentReactionItem] = actions.reactionItems.compactMap { item -> EmojiComponentReactionItem? in
                             switch item {
@@ -150,11 +154,31 @@ extension ChatControllerImpl {
                                     animationCache: animationCache,
                                     animationRenderer: animationRenderer,
                                     isStandalone: false,
-                                    subject: .reaction,
+                                    subject: .reaction(onlyTop: false),
                                     hasTrending: false,
                                     topReactionItems: reactionItems,
                                     areUnicodeEmojiEnabled: false,
                                     areCustomEmojiEnabled: true,
+                                    chatPeerId: self.chatLocation.peerId,
+                                    selectedItems: selectedReactions.files
+                                )
+                            }
+                        } else if reactionItems.count > 10 {
+                            actions.getEmojiContent = { [weak self] animationCache, animationRenderer in
+                                guard let self else {
+                                    preconditionFailure()
+                                }
+                                
+                                return EmojiPagerContentComponent.emojiInputData(
+                                    context: self.context,
+                                    animationCache: animationCache,
+                                    animationRenderer: animationRenderer,
+                                    isStandalone: false,
+                                    subject: .reaction(onlyTop: true),
+                                    hasTrending: false,
+                                    topReactionItems: reactionItems,
+                                    areUnicodeEmojiEnabled: false,
+                                    areCustomEmojiEnabled: false,
                                     chatPeerId: self.chatLocation.peerId,
                                     selectedItems: selectedReactions.files
                                 )
@@ -332,9 +356,12 @@ extension ChatControllerImpl {
                     }*/
                     
                     if removedReaction == nil, case .custom = chosenReaction {
-                        if !self.presentationInterfaceState.isPremium {
-                            controller?.premiumReactionsSelected?()
-                            return
+                        if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
+                        } else {
+                            if !self.presentationInterfaceState.isPremium {
+                                controller?.premiumReactionsSelected?()
+                                return
+                            }
                         }
                     }
                     

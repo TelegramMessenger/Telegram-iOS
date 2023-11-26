@@ -136,6 +136,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
             items: reactionItems.map(ReactionContextItem.reaction),
             selectedItems: Set(),
             title: nil,
+            alwaysAllowPremiumReactions: false,
             getEmojiContent: { [weak self] animationCache, animationRenderer in
                 guard let self else {
                     preconditionFailure()
@@ -150,7 +151,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
                     animationCache: animationCache,
                     animationRenderer: animationRenderer,
                     isStandalone: false,
-                    subject: .reaction,
+                    subject: .reaction(onlyTop: false),
                     hasTrending: false,
                     topReactionItems: mappedReactionItems,
                     areUnicodeEmojiEnabled: false,
