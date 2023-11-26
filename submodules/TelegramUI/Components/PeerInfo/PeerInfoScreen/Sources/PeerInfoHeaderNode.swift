@@ -822,7 +822,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let expandedAvatarControlsHeight: CGFloat = 61.0
-        let expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
+        var expandedAvatarListHeight = min(width, containerHeight - expandedAvatarControlsHeight)
+        if self.isSettings {
+            expandedAvatarListHeight = expandedAvatarListHeight + 60.0
+        } else {
+            let avatarEnlargementFactor: CGFloat = 1.35
+            expandedAvatarListHeight = floor(expandedAvatarListHeight * avatarEnlargementFactor)
+        }
+        
         let expandedAvatarListSize = CGSize(width: width, height: expandedAvatarListHeight)
         
         let actionButtonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderActionButtons(peer: peer, isSecretChat: isSecretChat, isContact: isContact)
@@ -1119,7 +1126,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let expandedTitleScale: CGFloat = 0.8
         
-        var bottomShadowHeight: CGFloat = 72.0
+        var bottomShadowHeight: CGFloat = 82.0
         if !self.isSettings {
             bottomShadowHeight += 80.0
         }
@@ -1321,10 +1328,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         var apparentAvatarFrame: CGRect
+        var apparentAvatarListFrame: CGRect
         let controlsClippingFrame: CGRect
         if self.isAvatarExpanded {
-            let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - contentOffset / 2.0)
+            let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.width / 2.0 - contentOffset / 2.0)
             apparentAvatarFrame = CGRect(origin: CGPoint(x: expandedAvatarCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
+            
+            let expandedAvatarListCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - contentOffset / 2.0)
+            apparentAvatarListFrame = CGRect(origin: CGPoint(x: expandedAvatarListCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarListCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
+            
             if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 var trueAvatarSize = transitionSourceAvatarFrame.size
                 if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
@@ -1345,6 +1357,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 trueAvatarSize.height -= 3.0 * 4.0
             }
             apparentAvatarFrame = CGRect(origin: CGPoint(x: avatarCenter.x - trueAvatarSize.width / 2.0, y: -contentOffset + avatarOffset + avatarCenter.y - trueAvatarSize.height / 2.0), size: trueAvatarSize)
+            apparentAvatarListFrame = apparentAvatarFrame
             controlsClippingFrame = apparentAvatarFrame
         }
         
@@ -1355,6 +1368,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let clippingNodeRadiusTransition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
         clippingNodeRadiusTransition.updateCornerRadius(node: self.avatarClippingNode, cornerRadius: avatarClipOffset > 0.0 ? width / 2.5 : 0.0)
         
+        let _ = apparentAvatarListFrame
         transition.updateFrameAdditive(node: self.avatarListNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
         transition.updateFrameAdditive(node: self.avatarOverlayNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
         
@@ -1370,21 +1384,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     avatarListContainerSize.height -= 1.33 * 5.0
                 }
                 
-                avatarListContainerFrame = CGRect(origin: CGPoint(x: -avatarListContainerSize.width / 2.0, y: -avatarListContainerSize.height / 2.0), size: avatarListContainerSize)
+                avatarListContainerFrame = CGRect(origin: CGPoint(x: -avatarListContainerSize.width / 2.0, y: -avatarListContainerSize.width / 2.0), size: avatarListContainerSize)
             } else {
-                avatarListContainerFrame = CGRect(origin: CGPoint(x: -expandedAvatarListSize.width / 2.0, y: -expandedAvatarListSize.height / 2.0), size: expandedAvatarListSize)
+                avatarListContainerFrame = CGRect(origin: CGPoint(x: -expandedAvatarListSize.width / 2.0, y: -expandedAvatarListSize.width / 2.0), size: expandedAvatarListSize)
             }
-            avatarListContainerScale = 1.0 + max(0.0, -contentOffset / avatarListContainerFrame.height)
+            avatarListContainerScale = 1.0 + max(0.0, -contentOffset / avatarListContainerFrame.width)
         } else {
-            avatarListContainerFrame = CGRect(origin: CGPoint(x: -apparentAvatarFrame.width / 2.0, y: -apparentAvatarFrame.height / 2.0), size: apparentAvatarFrame.size)
+            let expandHeightFraction = expandedAvatarListSize.height / expandedAvatarListSize.width
+            avatarListContainerFrame = CGRect(origin: CGPoint(x: -apparentAvatarFrame.width / 2.0, y: -apparentAvatarFrame.width / 2.0 + expandHeightFraction * 0.0 * apparentAvatarFrame.width), size: apparentAvatarFrame.size)
             avatarListContainerScale = avatarScale
         }
         transition.updateFrame(node: self.avatarListNode.listContainerNode, frame: avatarListContainerFrame)
-        let innerScale = avatarListContainerFrame.height / expandedAvatarListSize.height
+        let innerScale = avatarListContainerFrame.width / expandedAvatarListSize.width
         let innerDeltaX = (avatarListContainerFrame.width - expandedAvatarListSize.width) / 2.0
-        let innerDeltaY = (avatarListContainerFrame.height - expandedAvatarListSize.height) / 2.0
+        var innerDeltaY = (avatarListContainerFrame.height - expandedAvatarListSize.height) / 2.0
+        if !self.isAvatarExpanded {
+            innerDeltaY += (expandedAvatarListSize.height - expandedAvatarListSize.width) * 0.5
+        }
         transition.updateSublayerTransformScale(node: self.avatarListNode.listContainerNode, scale: innerScale)
         transition.updateFrameAdditive(node: self.avatarListNode.listContainerNode.contentNode, frame: CGRect(origin: CGPoint(x: innerDeltaX + expandedAvatarListSize.width / 2.0, y: innerDeltaY + expandedAvatarListSize.height / 2.0), size: CGSize()))
+        self.avatarListNode.listContainerNode.contentNode.update(size: expandedAvatarListSize)
         
         transition.updateFrameAdditive(node: self.avatarListNode.listContainerNode.controlsClippingOffsetNode, frame: CGRect(origin: controlsClippingFrame.center, size: CGSize()))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.controlsClippingNode, frame: CGRect(origin: CGPoint(x: -controlsClippingFrame.width / 2.0, y: -controlsClippingFrame.height / 2.0), size: controlsClippingFrame.size))

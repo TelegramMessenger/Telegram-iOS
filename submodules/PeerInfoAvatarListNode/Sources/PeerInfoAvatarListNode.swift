@@ -585,7 +585,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         
         super.init()
         
-        //self.backgroundColor = .blue
+        //self.backgroundColor = UIColor.blue.withAlphaComponent(0.5)
         
         self.backgroundGradientMaskLayer.type = .axial
         self.backgroundGradientMaskLayer.startPoint = CGPoint(x: 0.0, y: 1.0)
@@ -594,7 +594,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         let baseGradientAlpha: CGFloat = 1.0
         let numSteps = 8
         let firstStep = 1
-        let firstLocation = 0.4
+        let firstLocation = 0.7
         self.backgroundGradientMaskLayer.colors = (0 ..< numSteps).map { i in
             if i < firstStep {
                 return UIColor(white: 1.0, alpha: 1.0).cgColor
@@ -628,6 +628,46 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
     }
 }
 
+public final class AvatarListContentNode: ASDisplayNode {
+    final class View: UIView {
+        override static var layerClass: AnyClass {
+            return CAReplicatorLayer.self
+        }
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            let replicatorLayer = self.layer as! CAReplicatorLayer
+            replicatorLayer.instanceCount = 2
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(size: CGSize) {
+            var instanceTransform = CATransform3DIdentity
+            instanceTransform = CATransform3DTranslate(instanceTransform, 0.0, (size.width - (size.height - size.width)) * 1.5 - 4.0, 0.0)
+            instanceTransform = CATransform3DScale(instanceTransform, 1.0, -2.0, 1.0)
+            
+            let replicatorLayer = self.layer as! CAReplicatorLayer
+            replicatorLayer.instanceTransform = instanceTransform
+        }
+    }
+    
+    override public init() {
+        super.init()
+        
+        self.setViewBlock({
+            return View(frame: CGRect())
+        })
+    }
+    
+    public func update(size: CGSize) {
+        (self.view as? View)?.update(size: size)
+    }
+}
+
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
     private let isSettings: Bool
@@ -649,7 +689,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
     }
     
-    public let contentNode: ASDisplayNode
+    public let contentNode: AvatarListContentNode
     let leftHighlightNode: ASDisplayNode
     let rightHighlightNode: ASDisplayNode
     var highlightedSide: Bool?
@@ -777,7 +817,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.context = context
         self.isSettings = isSettings
         
-        self.contentNode = ASDisplayNode()
+        self.contentNode = AvatarListContentNode()
         
         self.leftHighlightNode = ASDisplayNode()
         self.leftHighlightNode.displaysAsynchronously = false
@@ -1461,7 +1501,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     itemNode.delayCentralityLose = false
                     
                     let indexOffset = CGFloat(i - self.currentIndex)
-                    let itemFrame = CGRect(origin: CGPoint(x: indexOffset * size.width + self.transitionFraction * size.width - size.width / 2.0, y: -size.height / 2.0), size: size)
+                    var itemFrame = CGRect(origin: CGPoint(x: indexOffset * size.width + self.transitionFraction * size.width - size.width / 2.0, y: -size.height / 2.0), size: size)
+                    itemFrame.origin.y -= (size.height - size.width) * 0.5
                     
                     if wasAdded {
                         itemsAdded = true
