@@ -391,6 +391,7 @@ public final class MediaEditor {
                 videoIsMuted: false,
                 videoIsFullHd: false,
                 videoIsMirrored: false,
+                videoVolume: 1.0,
                 additionalVideoPath: nil,
                 additionalVideoPosition: nil,
                 additionalVideoScale: nil,
@@ -888,6 +889,14 @@ public final class MediaEditor {
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedVideoIsMuted(videoIsMuted)
         }
+    }
+    
+    public func setVideoVolume(_ volume: CGFloat?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedVideoVolume(volume)
+        }
+        
+        self.player?.volume = Float(volume ?? 1.0)
     }
     
     public func setVideoIsMirrored(_ videoIsMirrored: Bool) {
@@ -1392,6 +1401,14 @@ public final class MediaEditor {
         if apply {
             self.updateAdditionalVideoPlaybackRange()
         }
+    }
+    
+    public func setAdditionalVideoVolume(_ volume: CGFloat?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAdditionalVideoVolume(volume)
+        }
+        
+        self.additionalPlayer?.volume = Float(volume ?? 1.0)
     }
     
     private func updateAdditionalVideoPlaybackRange() {

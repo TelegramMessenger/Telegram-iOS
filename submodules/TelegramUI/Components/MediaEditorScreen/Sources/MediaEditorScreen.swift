@@ -1459,9 +1459,7 @@ final class MediaEditorScreenComponent: Component {
                             guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                                 return
                             }
-                            if trackId > 0 {
-                                controller.node.presentTrackOptions(trackId: trackId, sourceView: sourceView)
-                            }
+                            controller.node.presentTrackOptions(trackId: trackId, sourceView: sourceView)
                         }
                     )),
                     environment: {},
@@ -3436,25 +3434,46 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentTrackOptions(trackId: Int32, sourceView: UIView) {
-            let value = self.mediaEditor?.values.audioTrackVolume ?? 1.0
-            
             let isVideo = trackId != 2
             let actionTitle: String = isVideo ? self.presentationData.strings.MediaEditor_RemoveVideo : self.presentationData.strings.MediaEditor_RemoveAudio
             
-            let items: [ContextMenuItem] = [
+            let value: CGFloat
+            if trackId == 0 {
+                value = self.mediaEditor?.values.videoVolume ?? 1.0
+            } else if trackId == 1 {
+                value = self.mediaEditor?.values.additionalVideoVolume ?? 1.0
+            } else if trackId == 2 {
+                value = self.mediaEditor?.values.audioTrackVolume ?? 1.0
+            } else {
+                value = 1.0
+            }
+            
+            var items: [ContextMenuItem] = []
+            items.append(
                 .custom(VolumeSliderContextItem(minValue: 0.0, value: value, valueChanged: { [weak self] value, _ in
-                    if let self {
-                        self.mediaEditor?.setAudioTrackVolume(value)
+                    if let self, let mediaEditor = self.mediaEditor {
+                        if trackId == 0 {
+                            if mediaEditor.values.videoIsMuted {
+                                mediaEditor.setVideoIsMuted(false)
+                            }
+                            mediaEditor.setVideoVolume(value)
+                        } else if trackId == 1 {
+                            mediaEditor.setAdditionalVideoVolume(value)
+                        } else if trackId == 2 {
+                            mediaEditor.setAudioTrackVolume(value)
+                        }
                     }
-                }), false),
-                .action(
-                    ContextMenuActionItem(
-                        text: actionTitle,
-                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.primaryColor)},
-                        action: { [weak self] f in
-                            f.dismissWithResult(.default)
-                            if let self {
-                                if let mediaEditor = self.mediaEditor {
+                }), false)
+            )
+            if trackId != 0 {
+                items.append(
+                    .action(
+                        ContextMenuActionItem(
+                            text: actionTitle,
+                            icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.primaryColor)},
+                            action: { [weak self] f in
+                                f.dismissWithResult(.default)
+                                if let self, let mediaEditor = self.mediaEditor {
                                     if trackId == 1 {
                                         self.presentVideoRemoveConfirmation()
                                     } else {
@@ -3463,13 +3482,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                             mediaEditor.play()
                                         }
                                     }
+                                    self.requestUpdate(transition: .easeInOut(duration: 0.25))
                                 }
-                                self.requestUpdate(transition: .easeInOut(duration: 0.25))
                             }
-                        }
+                        )
                     )
                 )
-            ]
+            }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
             let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 0.0, y: -3.0))), items: .single(ContextController.Items(content: .list(items))))

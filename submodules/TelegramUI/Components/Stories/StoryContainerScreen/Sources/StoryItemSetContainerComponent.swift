@@ -5701,6 +5701,8 @@ public final class StoryItemSetContainerComponent: Component {
                     c.dismiss()
                 } else if let c = c as? TooltipScreen {
                     c.dismiss()
+                } else if let c = c as? TooltipController {
+                    c.dismiss()
                 }
                 return true
             }
