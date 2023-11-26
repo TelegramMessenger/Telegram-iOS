@@ -163,7 +163,7 @@ extension ChatControllerImpl {
                                     selectedItems: selectedReactions.files
                                 )
                             }
-                        } else if reactionItems.count > 10 {
+                        } else if reactionItems.count > 16 {
                             actions.getEmojiContent = { [weak self] animationCache, animationRenderer in
                                 guard let self else {
                                     preconditionFailure()
