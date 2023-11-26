@@ -10489,6 +10489,7 @@ Sorry for the inconvenience.";
 "Chat.SimilarChannels" = "Similar Channels";
 "Chat.SimilarChannels.Join" = "Join";
 "Chat.SimilarChannels.JoinedChannel" = "You joined channel **%@**.";
+"Chat.SimilarChannels.MoreChannels" = "More Channels";
 
 "Wallpaper.ApplyForMe" = "Apply for Me";
 "Wallpaper.ApplyForBoth" = "Apply for Me and %@";

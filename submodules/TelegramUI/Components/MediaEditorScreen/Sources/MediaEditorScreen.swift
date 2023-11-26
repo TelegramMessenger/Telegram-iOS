@@ -4043,11 +4043,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     private var audioSessionDisposable: Disposable?
     private let postingAvailabilityPromise = Promise<StoriesUploadAvailability>()
     private var postingAvailabilityDisposable: Disposable?
-    
-    private var authorizationStatusDisposables = DisposableSet()
-    private(set) var cameraAuthorizationStatus: AccessType = .notDetermined
-    private(set) var microphoneAuthorizationStatus: AccessType = .notDetermined
-    
+        
     public init(
         context: AccountContext,
         subject: Signal<Subject?, NoError>,
@@ -4122,20 +4118,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if let _ = forwardSource {
             self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
         }
-        
-        self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .camera(.video))
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let self {
-                self.cameraAuthorizationStatus = status
-            }
-        }))
-        
-        self.authorizationStatusDisposables.add((DeviceAccess.authorizationStatus(subject: .microphone(.video))
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            if let self {
-                self.microphoneAuthorizationStatus = status
-            }
-        }))
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -4146,7 +4128,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.exportDisposable.dispose()
         self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
-        self.authorizationStatusDisposables.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -4224,14 +4205,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     
     fileprivate var isEmbeddedEditor: Bool {
         return self.isEditingStory || self.forwardSource != nil
-    }
-    
-    func requestDeviceAccess() {
-        DeviceAccess.authorizeAccess(to: .camera(.video), { granted in
-            if granted {
-                DeviceAccess.authorizeAccess(to: .microphone(.video))
-            }
-        })
     }
      
     func openPrivacySettings(_ privacy: MediaEditorResultPrivacy? = nil, completion: @escaping () -> Void = {}) {

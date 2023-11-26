@@ -117,10 +117,11 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         return self.ready.get()
     }
 
+    private let statusPromise = Promise<PeerInfoStatusData?>(nil)
     var status: Signal<PeerInfoStatusData?, NoError> {
-        return .single(nil)
+        self.statusPromise.get()
     }
-
+    
     var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
     var tabBarOffset: CGFloat {
         return 0.0
@@ -158,6 +159,16 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
             }
             strongSelf.currentState = (recommendedChannels, isPremium)
             strongSelf.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
+        })
+        
+        self.statusPromise.set(context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
+        )
+        |> map { count -> PeerInfoStatusData? in
+            if let count {
+                return PeerInfoStatusData(text: presentationData.strings.Conversation_StatusSubscribers(Int32(count)), isActivity: true, key: .recommended)
+            }
+            return nil
         })
     }
     

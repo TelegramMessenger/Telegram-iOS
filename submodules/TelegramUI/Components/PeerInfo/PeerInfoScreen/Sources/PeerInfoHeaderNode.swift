@@ -116,7 +116,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var subtitleBackgroundButton: HighlightTrackingButtonNode?
     var subtitleArrowNode: ASImageNode?
     let panelSubtitleNode: MultiScaleTextNode
-    let nextPanelSubtitleNode: MultiScaleTextNode
     let usernameNodeContainer: ASDisplayNode
     let usernameNodeRawContainer: ASDisplayNode
     let usernameNode: MultiScaleTextNode
@@ -195,9 +194,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.panelSubtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.panelSubtitleNode.displaysAsynchronously = false
         
-        self.nextPanelSubtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
-        self.nextPanelSubtitleNode.displaysAsynchronously = false
-        
         self.usernameNodeContainer = ASDisplayNode()
         self.usernameNodeRawContainer = ASDisplayNode()
         self.usernameNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
@@ -258,7 +254,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNodeContainer.addSubnode(self.titleNode)
         self.subtitleNodeContainer.addSubnode(self.subtitleNode)
         self.subtitleNodeContainer.addSubnode(self.panelSubtitleNode)
-//        self.subtitleNodeContainer.addSubnode(self.nextPanelSubtitleNode)
         self.usernameNodeContainer.addSubnode(self.usernameNode)
 
         self.regularContentNode.addSubnode(self.avatarClippingNode)
@@ -778,7 +773,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
         self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
         self.panelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
-        self.nextPanelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)
         if let navigationBar = self.controller?.navigationBar {
             if let mainContentNode = navigationBar.backButtonNode.mainContentNode {
                 navigationTransition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
@@ -839,7 +833,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let subtitleAttributes: MultiScaleTextState.Attributes
         var subtitleIsButton: Bool = false
         var panelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
-        var nextPanelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
         let usernameString: (text: String, attributes: MultiScaleTextState.Attributes)
         if let peer = peer {
             isPremium = peer.isPremium
@@ -899,7 +892,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 subtitleIsButton = true
 
-                let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
+                let (maybePanelStatusData, _, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
                     if panelStatusData.isActivity {
@@ -908,9 +901,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         subtitleColor = UIColor.white
                     }
                     panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
-                }
-                if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white))
                 }
             } else if let statusData = statusData {
                 let subtitleColor: UIColor
@@ -926,7 +916,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
 
-                let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
+                let (maybePanelStatusData, _, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
                     if panelStatusData.isActivity {
@@ -935,9 +925,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         subtitleColor = UIColor.white
                     }
                     panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
-                }
-                if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white))
                 }
             } else {
                 subtitleStringText = " "
@@ -1071,14 +1058,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], mainState: TitleNodeStateRegular)
         self.panelSubtitleNode.accessibilityLabel = panelSubtitleString?.text ?? subtitleStringText
         
-        let nextPanelSubtitleNodeLayout = self.nextPanelSubtitleNode.updateLayout(text: nextPanelSubtitleString?.text ?? subtitleStringText, states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributes: nextPanelSubtitleString?.attributes ?? subtitleAttributes, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributes: nextPanelSubtitleString?.attributes ?? subtitleAttributes, constrainedSize: titleConstrainedSize)
-        ], mainState: TitleNodeStateRegular)
-        if let _ = nextPanelSubtitleString {
-            self.nextPanelSubtitleNode.isHidden = false
-        }
-        
         let usernameNodeLayout = self.usernameNode.updateLayout(text: usernameString.text, states: [
             TitleNodeStateRegular: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
             TitleNodeStateExpanded: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
@@ -1096,7 +1075,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
         let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
         let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
-        let _ = nextPanelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
         
         var titleHorizontalOffset: CGFloat = 0.0
@@ -1203,11 +1181,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if (panelSubtitleString?.text ?? subtitleStringText) != subtitleStringText {
                 subtitleAlpha = 1.0 - effectiveAreaExpansionFraction
                 panelSubtitleAlpha = effectiveAreaExpansionFraction
+                
                 subtitleOffset = -effectiveAreaExpansionFraction * 5.0
                 panelSubtitleOffset = (1.0 - effectiveAreaExpansionFraction) * 5.0
             } else {
-                subtitleAlpha = 1.0
-                panelSubtitleAlpha = 0.0
+                if effectiveAreaExpansionFraction == 1.0 {
+                    subtitleAlpha = 0.0
+                    panelSubtitleAlpha = 1.0
+                } else {
+                    subtitleAlpha = 1.0
+                    panelSubtitleAlpha = 0.0
+                }
             }
         }
         self.subtitleNode.update(stateFractions: [
@@ -1216,11 +1200,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], alpha: subtitleAlpha, transition: transition)
 
         self.panelSubtitleNode.update(stateFractions: [
-            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
-            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
-        ], alpha: panelSubtitleAlpha, transition: transition)
-        
-        self.nextPanelSubtitleNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: panelSubtitleAlpha, transition: transition)
@@ -1501,8 +1480,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.subtitleNodeRawContainer.frame = rawSubtitleFrame
                 transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()))
                 transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
-                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
-                transition.updateFrame(node: self.nextPanelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset - 1.0), size: CGSize()))
                 transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
@@ -1517,7 +1495,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
                     subtitleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * subtitleMinScale
-                    subtitleOffset = titleCollapseFraction * -2.0
+                    subtitleOffset = titleCollapseFraction * -1.0
                 }
                 
                 let rawTitleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
@@ -1544,8 +1522,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                 }
                 transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
-                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
-                transition.updateFrame(node: self.nextPanelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset - 1.0), size: CGSize()))
                 transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)

@@ -96,6 +96,7 @@ final class CameraOutput: NSObject {
     private var videoRecorder: VideoRecorder?
         
     var processSampleBuffer: ((CMSampleBuffer, CVImageBuffer, AVCaptureConnection) -> Void)?
+    var processAudioBuffer: ((CMSampleBuffer) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
     
     init(exclusive: Bool) {
@@ -379,6 +380,8 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
             self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
+        } else {
+            self.processAudioBuffer?(sampleBuffer)
         }
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
