@@ -713,7 +713,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["colors"],
+                                    videoFile: configuration.videos["peer_colors"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Colors,

@@ -952,7 +952,7 @@ private final class DemoSheetContent: CombinedComponent {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: component.context,
                                     position: .top,
-                                    videoFile: configuration.videos["colors"],
+                                    videoFile: configuration.videos["peer_colors"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Colors,

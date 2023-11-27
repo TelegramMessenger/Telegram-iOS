@@ -458,7 +458,7 @@ public enum PremiumPerk: CaseIterable {
         case .stories:
             return "stories"
         case .colors:
-            return "colors"
+            return "peer_colors"
         case .wallpapers:
             return "wallpapers"
         }

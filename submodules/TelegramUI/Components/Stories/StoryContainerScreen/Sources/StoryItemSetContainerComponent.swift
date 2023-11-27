@@ -4218,12 +4218,44 @@ public final class StoryItemSetContainerComponent: Component {
                             return component.controller()
                         },
                         openStory: { [weak self] peer, story in
-                            guard let self else {
+                            guard let self, let component = self.component else {
                                 return
                             }
+                            let context = component.context
+                            let peerId = component.slice.peer.id
+                            let currentResult: ResolvedUrl = .story(peerId: peerId, id: component.slice.item.storyItem.id)
+                            
                             self.sendMessageContext.openResolved(view: self, result: .story(peerId: peer.id, id: story.id), completion: { [weak self] in
                                 guard let self, let controller = self.component?.controller() as? StoryContainerScreen else {
                                     return
+                                }
+                                if let nextController = controller.navigationController?.viewControllers.last as? StoryContainerScreen {
+                                    nextController.customBackAction = { [weak nextController] in
+                                        context.sharedContext.openResolvedUrl(
+                                            currentResult,
+                                            context: context,
+                                            urlContext: .generic,
+                                            navigationController: nextController?.navigationController as? NavigationController,
+                                            forceExternal: false,
+                                            openPeer: { _, _ in
+                                            },
+                                            sendFile: nil,
+                                            sendSticker: nil,
+                                            requestMessageActionUrlAuth: nil,
+                                            joinVoiceChat: nil,
+                                            present: { _, _ in
+                                            },
+                                            dismissInput: {
+                                            },
+                                            contentContext: nil,
+                                            progress: nil,
+                                            completion: { [weak nextController] in
+                                                Queue.mainQueue().after(0.5) {
+                                                    nextController?.dismissWithoutTransitionOut()
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                                 Queue.mainQueue().after(0.5) {
                                     controller.dismissWithoutTransitionOut()

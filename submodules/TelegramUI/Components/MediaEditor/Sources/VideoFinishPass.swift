@@ -420,57 +420,56 @@ final class VideoFinishPass: RenderPass {
             }
             
             var isVisible = true
-            if let additionalVideoRemovalStartTimestamp {
+            var trimRangeLowerBound: Double?
+            var trimRangeUpperBound: Double?
+            if let additionalVideoRange = self.additionalVideoRange {
+                if let additionalVideoOffset = self.additionalVideoOffset {
+                    trimRangeLowerBound = additionalVideoRange.lowerBound - additionalVideoOffset
+                    trimRangeUpperBound = additionalVideoRange.upperBound - additionalVideoOffset
+                } else {
+                    trimRangeLowerBound = additionalVideoRange.lowerBound
+                    trimRangeUpperBound = additionalVideoRange.upperBound
+                }
+            } else if let additionalVideoOffset = self.additionalVideoOffset {
+                trimRangeLowerBound = -additionalVideoOffset
+                if let additionalVideoDuration = self.additionalVideoDuration {
+                    trimRangeUpperBound = -additionalVideoOffset + additionalVideoDuration
+                }
+            }
+            
+            if (trimRangeLowerBound != nil || trimRangeUpperBound != nil), let _ = self.videoDuration {
                 let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
                 
-                let visibilityFraction = max(0.0, min(1.0, 1.0 - (CACurrentMediaTime() - additionalVideoRemovalStartTimestamp) / videoRemovalDuration))
-                if visibilityFraction.isZero {
-                    isVisible = false
-                }
-                foregroundAlpha = Float(visibilityFraction)
-                foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
-            } else {
-                var trimRangeLowerBound: Double?
-                var trimRangeUpperBound: Double?
-                if let additionalVideoRange = self.additionalVideoRange {
-                    if let additionalVideoOffset = self.additionalVideoOffset {
-                        trimRangeLowerBound = additionalVideoRange.lowerBound - additionalVideoOffset
-                        trimRangeUpperBound = additionalVideoRange.upperBound - additionalVideoOffset
-                    } else {
-                        trimRangeLowerBound = additionalVideoRange.lowerBound
-                        trimRangeUpperBound = additionalVideoRange.upperBound
-                    }
-                } else if let additionalVideoOffset = self.additionalVideoOffset {
-                    trimRangeLowerBound = -additionalVideoOffset
-                    if let additionalVideoDuration = self.additionalVideoDuration {
-                        trimRangeUpperBound = -additionalVideoOffset + additionalVideoDuration
-                    }
-                }
+                let mainLowerBound = self.videoRange?.lowerBound ?? 0.0
                 
-                if (trimRangeLowerBound != nil || trimRangeUpperBound != nil), let _ = self.videoDuration {
-                    let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
-                    
-                    let mainLowerBound = self.videoRange?.lowerBound ?? 0.0
-                    
-                    if let trimRangeLowerBound, trimRangeLowerBound > mainLowerBound + 0.1, timestamp < trimRangeLowerBound + apperanceDuration {
-                        let visibilityFraction = max(0.0, min(1.0, (timestamp - trimRangeLowerBound) / apperanceDuration))
-                        if visibilityFraction.isZero {
-                            isVisible = false
-                        }
-                        foregroundAlpha = Float(visibilityFraction)
-                        foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
-                    } else if let trimRangeUpperBound, timestamp > trimRangeUpperBound - apperanceDuration {
-                        let visibilityFraction = 1.0 - max(0.0, min(1.0, (timestamp - trimRangeUpperBound) / apperanceDuration))
-                        if visibilityFraction.isZero {
-                            isVisible = false
-                        }
-                        foregroundAlpha = Float(visibilityFraction)
-                        foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+                if let trimRangeLowerBound, trimRangeLowerBound > mainLowerBound + 0.1, timestamp < trimRangeLowerBound + apperanceDuration {
+                    let visibilityFraction = max(0.0, min(1.0, (timestamp - trimRangeLowerBound) / apperanceDuration))
+                    if visibilityFraction.isZero {
+                        isVisible = false
                     }
+                    foregroundAlpha = Float(visibilityFraction)
+                    foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+                } else if let trimRangeUpperBound, timestamp > trimRangeUpperBound - apperanceDuration {
+                    let visibilityFraction = 1.0 - max(0.0, min(1.0, (timestamp - trimRangeUpperBound) / apperanceDuration))
+                    if visibilityFraction.isZero {
+                        isVisible = false
+                    }
+                    foregroundAlpha = Float(visibilityFraction)
+                    foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
                 }
             }
             
             if isVisible {
+                if let additionalVideoRemovalStartTimestamp {
+                    let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
+                    
+                    let visibilityFraction = max(0.0, min(1.0, 1.0 - (CACurrentMediaTime() - additionalVideoRemovalStartTimestamp) / videoRemovalDuration))
+                    if visibilityFraction.isZero {
+                        isVisible = false
+                    }
+                    foregroundAlpha = Float(visibilityFraction)
+                    foregroundPosition = disappearingPosition.mixed(with: foregroundPosition, fraction: visibilityFraction)
+                }
                 foregroundVideoState = VideoState(texture: foregroundTexture, textureRotation: foregroundTextureRotation, position: foregroundPosition, roundness: 1.0, alpha: foregroundAlpha)
             }
         }
