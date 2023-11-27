@@ -1071,7 +1071,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode?.contentMode = .scaleAspectFill
                 self.iconNode?.image = image
                 self.iconNode?.cornerRadius = round ? 16.0 : 4.0
-                self.iconImageSize = CGSize(width: 32.0, height: 32.0)
+                self.iconImageSize = image.size.aspectFitted(CGSize(width: 128.0, height: 32.0))
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
@@ -1381,7 +1381,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         }
         
         var leftInset: CGFloat = 50.0
-        if let iconSize = preferredSize {
+        if let iconImageSize = self.iconImageSize {
+            leftInset = 9.0 + iconImageSize.width + 9.0
+        } else if let iconSize = preferredSize {
             if iconSize.width > leftInset {
                 leftInset = iconSize.width - 8.0
             }
@@ -1468,7 +1470,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 iconSize = CGSize()
             }
             
-            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
+            let iconFrame: CGRect
+            if self.iconImageSize != nil {
+                iconFrame = CGRect(origin: CGPoint(x: 9.0, y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
+            } else {
+                iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
+            }
             transition.updateFrame(node: iconNode, frame: iconFrame)
             
             if let iconCheckNode = self.iconCheckNode {

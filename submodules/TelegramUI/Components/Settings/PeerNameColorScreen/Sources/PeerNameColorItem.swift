@@ -127,7 +127,7 @@ private func generateRingImage(nameColor: PeerNameColors.Colors) -> UIImage? {
     })
 }
 
-func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
+public func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
     return generateImage(bounds, rotatedContext: { contextSize, context in
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
         context.clear(bounds)
@@ -177,6 +177,37 @@ func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, 
             context.fill(circleBounds)
         }
     })
+}
+
+public func generateSettingsMenuPeerColorsLabelIcon(colors: [PeerNameColors.Colors]) -> UIImage {
+    let iconWidth: CGFloat = 24.0
+    let iconSpacing: CGFloat = 18.0
+    let borderWidth: CGFloat = 2.0
+    
+    if colors.isEmpty {
+        return generateSingleColorImage(size: CGSize(width: iconWidth, height: iconWidth), color: .clear)!
+    }
+
+    return generateImage(CGSize(width: CGFloat(max(0, colors.count - 1)) * iconSpacing + CGFloat(colors.count == 0 ? 0 : 1) * iconWidth, height: 24.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        for i in 0 ..< colors.count {
+            let iconFrame = CGRect(origin: CGPoint(x: CGFloat(i) * iconSpacing, y: 0.0), size: CGSize(width: iconWidth, height: iconWidth))
+            context.setBlendMode(.copy)
+            context.setFillColor(UIColor.clear.cgColor)
+            context.fillEllipse(in: iconFrame.insetBy(dx: -borderWidth, dy: -borderWidth))
+            context.setBlendMode(.normal)
+            
+            if let image = generatePeerNameColorImage(nameColor: colors[i], isDark: false, bounds: iconFrame.size, size: iconFrame.size)?.cgImage {
+                context.saveGState()
+                context.translateBy(x: iconFrame.midX, y: iconFrame.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -iconFrame.midX, y: -iconFrame.midY)
+                context.draw(image, in: iconFrame)
+                context.restoreGState()
+            }
+        }
+    })!
 }
 
 private final class PeerNameColorIconItemNode : ListViewItemNode {

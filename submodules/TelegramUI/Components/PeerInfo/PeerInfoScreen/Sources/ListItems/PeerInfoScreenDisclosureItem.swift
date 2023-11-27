@@ -10,22 +10,23 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
         case badge(String, UIColor)
         case semitransparentBadge(String, UIColor)
         case titleBadge(String, UIColor)
+        case image(UIImage, CGSize)
         
         var text: String {
             switch self {
-                case .none:
-                    return ""
+            case .none, .image:
+                return ""
             case let .text(text), let .badge(text, _), let .semitransparentBadge(text, _), let .titleBadge(text, _):
-                    return text
+                return text
             }
         }
         
         var badgeColor: UIColor? {
             switch self {
-                case .none, .text:
-                    return nil
-                case let .badge(_, color), let .semitransparentBadge(_, color), let .titleBadge(_, color):
-                    return color
+            case .none, .text, .image:
+                return nil
+            case let .badge(_, color), let .semitransparentBadge(_, color), let .titleBadge(_, color):
+                return color
             }
         }
     }
@@ -209,7 +210,13 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         }
         
         var badgeDiameter: CGFloat = 20.0
-        if case let .semitransparentBadge(text, badgeColor) = item.label, !text.isEmpty {
+        if case let .image(image, imageSize) = item.label {
+            self.labelBadgeNode.image = image
+            badgeDiameter = imageSize.height
+            if self.labelBadgeNode.supernode == nil {
+                self.insertSubnode(self.labelBadgeNode, belowSubnode: self.labelNode)
+            }
+        } else if case let .semitransparentBadge(text, badgeColor) = item.label, !text.isEmpty {
             badgeDiameter = 24.0
             if previousItem?.label.badgeColor != badgeColor {
                 self.labelBadgeNode.image = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor.withAlphaComponent(0.1))
@@ -277,7 +284,9 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         }
         
         let labelBadgeNodeFrame: CGRect
-        if case .titleBadge = item.label {
+        if case let .image(_, imageSize) = item.label {
+            labelBadgeNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - imageSize.width, y: floorToScreenPixels(textFrame.midY - imageSize.height / 2.0)), size:imageSize)
+        } else if case .titleBadge = item.label {
             labelBadgeNodeFrame = labelFrame.insetBy(dx: -4.0, dy: -2.0 + UIScreenPixel)
         } else if let additionalLabelNode = self.additionalLabelNode {
             labelBadgeNodeFrame = additionalLabelNode.frame.insetBy(dx: -4.0, dy: -2.0 + UIScreenPixel)

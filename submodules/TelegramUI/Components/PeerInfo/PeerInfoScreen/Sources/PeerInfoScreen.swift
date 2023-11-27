@@ -984,6 +984,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     let ItemAddAccount = 5
     let ItemAddAccountHelp = 6
     let ItemLogout = 7
+    let ItemPeerColor = 8
     
     items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
     
@@ -1008,6 +1009,22 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text(username), text: presentationData.strings.Settings_Username, action: {
           interaction.openSettings(.username)
     }))
+    
+    if let peer = data.peer as? TelegramUser {
+        var colors: [PeerNameColors.Colors] = []
+        if let nameColor = peer.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
+            colors.append(nameColor)
+        }
+        if let profileColor = peer.profileColor.flatMap({ context.peerNameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }) {
+            colors.append(profileColor)
+        }
+        let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
+        
+        //TODO:localize
+        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: "Your Color", icon: nil, action: {
+            interaction.editingOpenNameColorSetup()
+        }))
+    }
     
     items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
         interaction.openSettings(.addAccount)
@@ -7153,8 +7170,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenNameColorSetup() {
-        let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .channel(self.peerId))
-        self.controller?.push(controller)
+        if self.peerId == self.context.account.peerId {
+            let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .account)
+            self.controller?.push(controller)
+        } else {
+            let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .channel(self.peerId))
+            self.controller?.push(controller)
+        }
     }
     
     private func editingOpenInviteLinksSetup() {
