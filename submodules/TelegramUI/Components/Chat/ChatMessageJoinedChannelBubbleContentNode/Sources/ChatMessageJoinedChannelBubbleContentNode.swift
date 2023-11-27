@@ -357,6 +357,7 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                                 }
                             )
                             item.controllerInteraction.presentControllerInCurrent(controller, nil)
+                            HapticFeedback().impact(.light)
                         }
                     },
                     openMore: { [weak self] in
@@ -645,9 +646,27 @@ private final class ChannelItemComponent: Component {
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             
+            self.contextContainer.animateScale = false
             self.contextContainer.activated = { [weak self] gesture, point in
                 if let self, let component = self.component, let peer = component.peers.first {
                     component.contextAction?(peer, self.contextContainer, gesture)
+                }
+            }
+            
+            self.containerButton.highligthedChanged = { [weak self] highlighted in
+                if let self, self.bounds.width > 0.0 {
+                    let topScale: CGFloat = (self.bounds.width - 6.0) / self.bounds.width
+                    
+                    if highlighted {
+                        self.contextContainer.layer.removeAnimation(forKey: "sublayerTransform")
+                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                        transition.setScale(layer: self.contextContainer.layer, scale: topScale)
+                    } else {
+                        let transition = Transition(animation: .none)
+                        transition.setScale(layer: self.contextContainer.layer, scale: 1.0)
+                        
+                        self.contextContainer.layer.animateScale(from: topScale, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
+                    }
                 }
             }
         }

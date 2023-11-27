@@ -13,6 +13,7 @@ import ItemListUI
 import PresentationDataUtils
 import PhotoResources
 import AvatarStoryIndicatorComponent
+import AvatarNode
 
 public class StatsMessageItem: ListViewItem, ItemListItem {
     let context: AccountContext
@@ -82,7 +83,6 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
     
     public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
-        self.action?()
     }
 }
 
@@ -105,6 +105,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
     private var extractedRect: CGRect?
     private var nonExtractedRect: CGRect?
     
+    var avatarNode: AvatarNode?
     let contentImageNode: TransformImageNode
     var storyIndicator: ComponentView<Empty>?
     var storyButton: HighlightTrackingButton?
@@ -245,11 +246,30 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         return result
     }
     
+    override func selected() {
+        guard let item = self.item else {
+            return
+        }
+        if item.isPeer {
+            if case .story = item.item {
+                self.storyPressed()
+            } else {
+                item.action?()
+            }
+        } else {
+            item.action?()
+        }
+    }
+    
     @objc private func storyPressed() {
         guard let item = self.item else {
             return
         }
-        item.openStory(self.contentImageNode.view)
+        if let avatarNode = self.avatarNode {
+            item.openStory(avatarNode.view)
+        } else {
+            item.openStory(self.contentImageNode.view)
+        }
     }
     
     public func asyncLayout() -> (_ item: StatsMessageItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -316,7 +336,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                     }
                 }
                 timestamp = message.timestamp
-            case let .story(story):
+            case let .story(_, story):
                 text = item.presentationData.strings.Message_Story
                 timestamp = story.timestamp
                 if let image = story.media._asMedia() as? TelegramMediaImage {
@@ -328,7 +348,11 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 }
             }
             
-            text = foldLineBreaks(text)
+            if item.isPeer {
+                text = EnginePeer(item.peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+            } else {
+                text = foldLineBreaks(text)
+            }
             
             if let _ = contentImageMedia {
                 totalLeftInset += 46.0
@@ -345,7 +369,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                         } else if let file = contentImageMedia as? TelegramMediaFile {
                             updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true)
                         }
-                    case let .story(story):
+                    case let .story(_, story):
                         if let peerReference = PeerReference(item.peer) {
                             if let image = contentImageMedia as? TelegramMediaImage {
                                 updateImageSignal = mediaGridMessagePhoto(account: item.context.account, userLocation: .peer(item.peer.id), photoReference: .story(peer: peerReference, id: story.id, media: image))
@@ -431,15 +455,36 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     
-                    var dimensions: CGSize?
-                    if let contentImageMedia = contentImageMedia as? TelegramMediaImage {
-                        dimensions = largestRepresentationForPhoto(contentImageMedia)?.dimensions.cgSize
-                    } else if let contentImageMedia = contentImageMedia as? TelegramMediaFile {
-                        dimensions = contentImageMedia.dimensions?.cgSize
-                    }
-                    
                     var contentImageSize = CGSize(width: 40.0, height: 40.0)
+                    
                     var contentImageInset = leftInset - 6.0
+                    var dimensions: CGSize?
+                    if item.isPeer {
+                        let avatarNode: AvatarNode
+                        if let current = strongSelf.avatarNode {
+                            avatarNode = current
+                        } else {
+                            avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0)))
+                            strongSelf.offsetContainerNode.addSubnode(avatarNode)
+                            strongSelf.avatarNode = avatarNode
+                        }
+                        avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer))
+                        
+                        if case .story = item.item {
+                            contentImageInset += 3.0
+                            contentImageSize = CGSize(width: 34.0, height: 34.0)
+                        }
+                    } else {
+                        strongSelf.avatarNode?.removeFromSupernode()
+                        strongSelf.avatarNode = nil
+                        
+                        if let contentImageMedia = contentImageMedia as? TelegramMediaImage {
+                            dimensions = largestRepresentationForPhoto(contentImageMedia)?.dimensions.cgSize
+                        } else if let contentImageMedia = contentImageMedia as? TelegramMediaFile {
+                            dimensions = contentImageMedia.dimensions?.cgSize
+                        }
+                    }
+                
                     if let dimensions = dimensions {
                         let makeImageLayout = strongSelf.contentImageNode.asyncLayout()
                         
@@ -536,13 +581,18 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                     let contentImageFrame = CGRect(origin: CGPoint(x: contentImageInset, y: floorToScreenPixels((height - contentImageSize.height) / 2.0)), size: contentImageSize)
                     strongSelf.contentImageNode.frame = contentImageFrame
                     
+                    if let avatarNode = strongSelf.avatarNode {
+                        avatarNode.frame = contentImageFrame
+                    }
+                    
                     let titleFrame = CGRect(origin: CGPoint(x: totalLeftInset, y: 9.0), size: titleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
                                         
                     let labelFrame = CGRect(origin: CGPoint(x: totalLeftInset, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
                     
-                    let viewsFrame = CGRect(origin: CGPoint(x: params.width - rightInset - viewsLayout.size.width, y: 13.0), size: viewsLayout.size)
+                    let viewsOriginY: CGFloat = forwardsLayout.size.width > 0.0 || reactionsLayout.size.width > 0.0 ? 13.0 : floorToScreenPixels((contentSize.height - viewsLayout.size.height) / 2.0)
+                    let viewsFrame = CGRect(origin: CGPoint(x: params.width - rightInset - viewsLayout.size.width, y: viewsOriginY), size: viewsLayout.size)
                     strongSelf.viewsNode.frame = viewsFrame
                     
                     let iconSpacing: CGFloat = 3.0 - UIScreenPixel

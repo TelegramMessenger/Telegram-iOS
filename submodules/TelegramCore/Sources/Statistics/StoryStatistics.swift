@@ -281,7 +281,8 @@ private final class StoryStatsPublicForwardsContextImpl {
                                         resultForwards.append(.message(EngineMessage(renderedMessage)))
                                     }
                                 case let .publicForwardStory(apiPeer, apiStory):
-                                    if let storedItem = Stories.StoredItem(apiStoryItem: apiStory, peerId: apiPeer.peerId, transaction: transaction), case let .item(item) = storedItem, let media = item.media {
+                                   
+                                    if let storedItem = Stories.StoredItem(apiStoryItem: apiStory, peerId: apiPeer.peerId, transaction: transaction), case let .item(item) = storedItem, let media = item.media, let peer = peers[apiPeer.peerId] {
                                         let mappedItem = EngineStoryItem(
                                             id: item.id,
                                             timestamp: item.timestamp,
@@ -316,7 +317,7 @@ private final class StoryStatsPublicForwardsContextImpl {
                                             myReaction: item.myReaction,
                                             forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
                                         )
-                                        resultForwards.append(.story(mappedItem))
+                                        resultForwards.append(.story(EnginePeer(peer), mappedItem))
                                     }
                                 }
                             }
@@ -359,7 +360,7 @@ public final class StoryStatsPublicForwardsContext {
     public struct State: Equatable {
         public enum Forward: Equatable {
             case message(EngineMessage)
-            case story(EngineStoryItem)
+            case story(EnginePeer, EngineStoryItem)
         }
         public var forwards: [Forward]
         public var isLoadingMore: Bool

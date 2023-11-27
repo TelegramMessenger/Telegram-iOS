@@ -510,7 +510,7 @@ public final class MediaEditor {
                 }
                 textureSource = .single((image, nil, nil, colors))
             }
-        case let .video(path, transitionImage, mirror, additionalPath, _, _):
+        case let .video(path, transitionImage, mirror, _, _, _):
             let _ = mirror
             textureSource = Signal { subscriber in
                 let asset = AVURLAsset(url: URL(fileURLWithPath: path))
@@ -522,22 +522,22 @@ public final class MediaEditor {
                 }
                 player.automaticallyWaitsToMinimizeStalling = false
                 
-                var additionalPlayer: AVPlayer?
-                if let additionalPath {
-                    let additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
-                    additionalPlayer = AVPlayer(playerItem: AVPlayerItem(asset: additionalAsset))
-                    if #available(iOS 15.0, *) {
-                        additionalPlayer?.sourceClock = clock
-                    } else {
-                        additionalPlayer?.masterClock = clock
-                    }
-                    additionalPlayer?.automaticallyWaitsToMinimizeStalling = false
-                }
+//                var additionalPlayer: AVPlayer?
+//                if let additionalPath {
+//                    let additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
+//                    additionalPlayer = AVPlayer(playerItem: AVPlayerItem(asset: additionalAsset))
+//                    if #available(iOS 15.0, *) {
+//                        additionalPlayer?.sourceClock = clock
+//                    } else {
+//                        additionalPlayer?.masterClock = clock
+//                    }
+//                    additionalPlayer?.automaticallyWaitsToMinimizeStalling = false
+//                }
                 
                 if let transitionImage {
                     let colors = mediaEditorGetGradientColors(from: transitionImage)
                     //TODO pass mirror
-                    subscriber.putNext((nil, player, additionalPlayer, colors))
+                    subscriber.putNext((nil, player, nil, colors))
                     subscriber.putCompletion()
                     
                     return EmptyDisposable
@@ -548,7 +548,7 @@ public final class MediaEditor {
                     imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
                         let colors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
                         //TODO pass mirror
-                        subscriber.putNext((nil, player, additionalPlayer, colors))
+                        subscriber.putNext((nil, player, nil, colors))
                         subscriber.putCompletion()
                     }
                     return ActionDisposable {
@@ -644,9 +644,6 @@ public final class MediaEditor {
                     textureSource.setMainInput(.video(playerItem))
                 }
                 if let additionalPlayer, let playerItem = additionalPlayer.currentItem {
-                    if self.values.additionalVideoPath == nil {
-                        self.values = self.values.withUpdatedAdditionalVideo(path: "", positionChanges: [])
-                    }
                     textureSource.setAdditionalInput(.video(playerItem))
                 }
                 self.renderer.textureSource = textureSource
@@ -1378,6 +1375,10 @@ public final class MediaEditor {
         player.automaticallyWaitsToMinimizeStalling = false
         self.additionalPlayer = player
         self.additionalPlayerPromise.set(.single(player))
+        
+        if let volume = self.values.additionalVideoVolume {
+            self.additionalPlayer?.volume = Float(volume)
+        }
         
         (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInput(.video(playerItem))
     }
