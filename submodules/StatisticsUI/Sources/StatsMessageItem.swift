@@ -22,13 +22,14 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
     let views: Int32
     let reactions: Int32
     let forwards: Int32
+    let isPeer: Bool
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: (() -> Void)?
     let openStory: (UIView) -> Void
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    init(context: AccountContext, presentationData: ItemListPresentationData, peer: Peer, item: StatsPostItem, views: Int32, reactions: Int32, forwards: Int32, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, openStory: @escaping (UIView) -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
+    init(context: AccountContext, presentationData: ItemListPresentationData, peer: Peer, item: StatsPostItem, views: Int32, reactions: Int32, forwards: Int32, isPeer: Bool = false, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, openStory: @escaping (UIView) -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.peer = peer
@@ -36,6 +37,7 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
         self.views = views
         self.reactions = reactions
         self.forwards = forwards
+        self.isPeer = isPeer
         self.sectionId = sectionId
         self.style = style
         self.action = action
