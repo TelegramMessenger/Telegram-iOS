@@ -519,6 +519,13 @@ public final class MediaEditorVideoExport {
                 if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, !self.configuration.values.videoIsMuted {
                     if let compositionTrack = composition?.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
                         try? compositionTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: audioAssetTrack, at: .zero)
+                        
+                        if let volume = self.configuration.values.videoVolume, volume < 1.0 {
+                            let trackParameters = AVMutableAudioMixInputParameters(track: compositionTrack)
+                            trackParameters.trackID = compositionTrack.trackID
+                            trackParameters.setVolume(Float(volume), at: .zero)
+                            audioMixParameters.append(trackParameters)
+                        }
                     }
                 }
                 if let timeRange = self.configuration.timeRange {

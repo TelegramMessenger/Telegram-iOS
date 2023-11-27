@@ -1660,6 +1660,9 @@ public final class StoryItemSetContainerComponent: Component {
                         } else if component.slice.item.storyItem.isPending {
                             displayFooter = true
                         }
+                        if component.slice.item.storyItem.isForwardingDisabled {
+                            canShare = false
+                        }
                         
                         if displayFooter {
                             let contentViewsShadowView: UIImageView
@@ -5701,6 +5704,8 @@ public final class StoryItemSetContainerComponent: Component {
                     c.dismiss()
                 } else if let c = c as? TooltipScreen {
                     c.dismiss()
+                } else if let c = c as? TooltipController {
+                    c.dismiss()
                 }
                 return true
             }
@@ -6093,7 +6098,8 @@ public final class StoryItemSetContainerComponent: Component {
                         updatedPresentationData: (presentationData, .single(presentationData)),
                         peerId: component.slice.peer.id,
                         storyId: component.slice.item.storyItem.id,
-                        storyItem: component.slice.item.storyItem
+                        storyItem: component.slice.item.storyItem,
+                        fromStory: true
                     )
                     component.controller()?.push(statsController)
                 })))
@@ -6495,7 +6501,8 @@ public final class StoryItemSetContainerComponent: Component {
                             updatedPresentationData: (presentationData, .single(presentationData)),
                             peerId: component.slice.peer.id,
                             storyId: component.slice.item.storyItem.id,
-                            storyItem: component.slice.item.storyItem
+                            storyItem: component.slice.item.storyItem,
+                            fromStory: true
                         )
                         component.controller()?.push(statsController)
                     })))

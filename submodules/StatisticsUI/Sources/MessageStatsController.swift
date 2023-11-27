@@ -247,7 +247,7 @@ private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineS
 
 public enum StatsSubject {
     case message(id: EngineMessage.Id)
-    case story(peerId: EnginePeer.Id, id: Int32, item: EngineStoryItem?)
+    case story(peerId: EnginePeer.Id, id: Int32, item: EngineStoryItem, fromStory: Bool)
 }
 
 protocol PostStats {
@@ -303,7 +303,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         messagesPromise.set(.single(nil) |> then(searchSignal))
         forwardsPromise.set(.single(nil))
-    case let .story(peerId, id, _):
+    case let .story(peerId, id, _, _):
         let statsContext = StoryStatsContext(account: context.account, peerId: peerId, storyId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
@@ -342,7 +342,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     let previousData = Atomic<PostStats?>(value: nil)
     
     let iconNodePromise = Promise<ASDisplayNode?>()
-    if case let .story(peerId, id, storyItem) = subject, let storyItem {
+    if case let .story(peerId, id, storyItem, fromStory) = subject, !fromStory {
         let _ = id
         iconNodePromise.set(
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
@@ -387,9 +387,9 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         switch subject {
         case .message:
             title = presentationData.strings.Stats_MessageTitle
-        case let .story(_, _, storyItem):
+        case let .story(_, _, storyItem, _):
             title = presentationData.strings.Stats_StoryTitle
-            storyViews = storyItem?.views
+            storyViews = storyItem.views
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)

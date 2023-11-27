@@ -220,7 +220,9 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                             strongSelf.item = item
                             strongSelf.isExpanded = isExpanded
                             
-                            info?.setInvertOffsetDirection()
+                            if !item.controllerInteraction.recommendedChannelsOpenUp {
+                                info?.setInvertOffsetDirection()
+                            }
                                                         
                             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: labelLayout.size.height + spacing - 14.0), size: CGSize(width: constrainedSize.width, height: 140.0))
                             

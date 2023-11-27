@@ -7752,6 +7752,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             strongSelf.shouldDisplayDownButton = !offsetAlpha.isZero
+            strongSelf.controllerInteraction?.recommendedChannelsOpenUp = !strongSelf.shouldDisplayDownButton
             strongSelf.updateDownButtonVisibility()
             strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
