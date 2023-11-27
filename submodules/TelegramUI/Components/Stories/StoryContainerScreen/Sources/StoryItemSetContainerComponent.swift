@@ -1220,10 +1220,13 @@ public final class StoryItemSetContainerComponent: Component {
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                         }
                     } else {
+                        if let visibleItemView = self.visibleItems[component.slice.item.storyItem.id]?.view.view as? StoryItemContentComponent.View  {
+                            visibleItemView.seekEnded()
+                        }
                         if translation.y > 200.0 || (translation.y > 5.0 && velocity.y > 200.0) {
                             self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                             self.component?.controller()?.dismiss()
-                        }  else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
+                        } else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
                             var displayViewLists = false
                             if component.slice.peer.id == component.context.account.peerId {
                                 displayViewLists = true

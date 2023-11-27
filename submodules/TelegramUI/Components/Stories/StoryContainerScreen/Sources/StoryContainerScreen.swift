@@ -502,7 +502,7 @@ private final class StoryContainerScreenComponent: Component {
                 }
             }
             longPressRecognizer.updatePanMove = { [weak self] initialLocation, translation in
-                guard let self else {
+                guard let self, self.itemSetPanState?.didBegin == false else {
                     return
                 }
                 guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
@@ -538,11 +538,7 @@ private final class StoryContainerScreenComponent: Component {
                     let fraction = translation.x / (self.bounds.width / 2.0)
                     timestamp = initialSeekTimestamp + duration * fraction
                 }
-                if translation.y < 64.0 {
-                    visibleItemView.seekTo(max(0.0, min(duration, timestamp)), apply: apply)
-                } else {
-                    visibleItemView.seekTo(initialSeekTimestamp, apply: apply)
-                }
+                visibleItemView.seekTo(max(0.0, min(duration, timestamp)), apply: apply)
             }
             longPressRecognizer.updatePanEnded = { [weak self] in
                 guard let self else {
