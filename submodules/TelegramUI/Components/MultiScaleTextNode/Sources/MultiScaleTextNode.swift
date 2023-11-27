@@ -29,10 +29,12 @@ public final class MultiScaleTextState {
     public struct Attributes {
         public var font: UIFont
         public var color: UIColor
+        public var shadowColor: UIColor?
 
-        public init(font: UIFont, color: UIColor) {
+        public init(font: UIFont, color: UIColor, shadowColor: UIColor? = nil) {
             self.font = font
             self.color = color
+            self.shadowColor = shadowColor
         }
     }
     
@@ -84,8 +86,23 @@ public final class MultiScaleTextNode: ASDisplayNode {
         var mainLayout: MultiScaleTextLayout?
         for (key, state) in states {
             if let node = self.stateNodes[key] {
-                node.tintTextNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
-                node.noTintTextNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
+                node.tintTextNode.attributedText = NSAttributedString(string: text, attributes: [
+                    .font: state.attributes.font,
+                    .foregroundColor: state.attributes.color
+                ])
+                node.noTintTextNode.attributedText = NSAttributedString(string: text, attributes: [
+                    .font: state.attributes.font,
+                    .foregroundColor: state.attributes.color
+                ])
+                if let shadowColor = state.attributes.shadowColor {
+                    node.tintTextNode.textShadowColor = shadowColor
+                    node.tintTextNode.textShadowBlur = 3.0
+                    node.noTintTextNode.textShadowColor = shadowColor
+                    node.noTintTextNode.textShadowBlur = 3.0
+                } else {
+                    node.tintTextNode.shadowColor = nil
+                    node.noTintTextNode.shadowColor = nil
+                }
                 node.tintTextNode.isAccessibilityElement = true
                 node.tintTextNode.accessibilityLabel = text
                 node.noTintTextNode.isAccessibilityElement = false
