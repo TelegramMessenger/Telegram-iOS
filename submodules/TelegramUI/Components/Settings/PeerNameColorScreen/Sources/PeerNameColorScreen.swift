@@ -712,7 +712,14 @@ public func PeerNameColorScreen(
                         elevatedLayout: false,
                         action: { action in
                             if case .info = action {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .nameColor, forceDark: false, dismissed: nil)
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .colors, action: {
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
+                                    replaceImpl?(controller)
+                                })
+                                replaceImpl = { [weak controller] c in
+                                    controller?.replace(with: c)
+                                }
                                 pushImpl?(controller)
                             }
                             return true

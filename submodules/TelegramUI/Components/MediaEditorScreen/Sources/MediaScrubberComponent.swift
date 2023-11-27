@@ -201,6 +201,10 @@ final class MediaScrubberComponent: Component {
                     component.trackTrimUpdated(0, startValue, endValue, updatedEnd, done)
                 }
             }
+            
+            let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressed(_:)))
+            longPressGesture.delegate = self
+            self.addGestureRecognizer(longPressGesture)
         }
         
         required init?(coder: NSCoder) {
@@ -264,6 +268,19 @@ final class MediaScrubberComponent: Component {
                 return nil
             }
             return firstTrack.offset
+        }
+        
+        @objc private func longPressed(_ gestureRecognizer: UILongPressGestureRecognizer) {
+            guard let component = self.component, case .began = gestureRecognizer.state else {
+                return
+            }
+            let point = gestureRecognizer.location(in: self)
+            for (id, trackView) in self.trackViews {
+                if trackView.frame.contains(point) {
+                    component.trackLongPressed(id, trackView.clippingView)
+                    return
+                }
+            }
         }
                 
         @objc private func handleCursorPan(_ gestureRecognizer: UIPanGestureRecognizer) {
@@ -386,12 +403,6 @@ final class MediaScrubberComponent: Component {
                         }
                         self.selectedTrackId = id
                         self.state?.updated(transition: .easeInOut(duration: 0.2))
-                    }
-                    trackView.onLongPress = { [weak self] id, sourceView in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.trackLongPressed(id, sourceView)
                     }
                     trackView.offsetUpdated = { [weak self] offset, apply in
                         guard let self, let component = self.component else {
@@ -617,7 +628,6 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     fileprivate var videoOpaqueFrameLayers: [VideoFrameLayer] = []
     
     var onSelection: (Int32) -> Void = { _ in }
-    var onLongPress: (Int32, UIView) -> Void = { _, _ in }
     var offsetUpdated: (Double, Bool) -> Void = { _, _ in }
     var updated: (Transition) -> Void = { _ in }
     
@@ -684,11 +694,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         self.clippingView.addSubview(self.scrollView)
         self.scrollView.addSubview(self.containerView)
         self.backgroundView.addSubview(self.vibrancyView)
-                        
-        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressed(_:)))
-        longPressGesture.delegate = self
-        self.addGestureRecognizer(longPressGesture)
-        
+                                
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
         self.addGestureRecognizer(tapGesture)
         
@@ -697,13 +703,6 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    @objc private func longPressed(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        guard let (track, _, _) = self.params, case .began = gestureRecognizer.state else {
-            return
-        }
-        self.onLongPress(track.id, self.clippingView)
     }
     
     @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {

@@ -1783,6 +1783,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .nameColor
         case .similarChannels:
             mappedSource = .similarChannels
+        case .wallpapers:
+            mappedSource = .wallpapers
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed

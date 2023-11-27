@@ -1622,8 +1622,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return
         }
         
+        if !item.context.isPremium, case .inProgress = self.audioTranscriptionState {
+            return
+        }
+        
         let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
-                
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = transcribedText(message: item.message)

@@ -4038,7 +4038,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     let subject: Signal<Subject?, NoError>
     let isEditingStory: Bool
     fileprivate let customTarget: EnginePeer.Id?
-    fileprivate let forwardSource: (EnginePeer, EngineStoryItem)?
+    let forwardSource: (EnginePeer, EngineStoryItem)?
     
     fileprivate let initialCaption: NSAttributedString?
     fileprivate let initialPrivacy: EngineStoryPrivacy?

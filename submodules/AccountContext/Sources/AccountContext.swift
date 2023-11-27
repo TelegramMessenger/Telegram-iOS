@@ -1003,6 +1003,7 @@ public enum PremiumIntroSource {
     case channelBoost(EnginePeer.Id)
     case nameColor
     case similarChannels
+    case wallpapers
 }
 
 public enum PremiumDemoSubject {
