@@ -149,7 +149,9 @@ public final class PeerInfoCoverComponent: Component {
             self.avatarBackgroundGradientLayer.type = .radial
             
             self.avatarBackgroundPatternContentsLayer = SimpleGradientLayer()
-            self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
+            self.avatarBackgroundPatternContentsLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+            self.avatarBackgroundPatternContentsLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+            self.avatarBackgroundPatternContentsLayer.type = .radial
             
             self.avatarBackgroundPatternMaskLayer = SimpleLayer()
             self.backgroundPatternContainer = UIView()
@@ -269,32 +271,14 @@ public final class PeerInfoCoverComponent: Component {
             let backgroundColor: UIColor
             let secondaryBackgroundColor: UIColor
             
-            let patternBackgroundColor: UIColor
-            let secondaryPatternBackgroundColor: UIColor
-            let useClearPatternColor: Bool
-            
             if let peer = component.peer, let colors = peer._asPeer().profileColor.flatMap({ component.context.peerNameColors.getProfile($0, dark: component.isDark) }) {
                 
                 backgroundColor = colors.main
                 secondaryBackgroundColor = colors.secondary ?? colors.main
-                
-                patternBackgroundColor = backgroundColor
-                secondaryPatternBackgroundColor = secondaryBackgroundColor
-                
-                useClearPatternColor = false
             } else {
                 backgroundColor = .clear
                 secondaryBackgroundColor = .clear
-                
-                patternBackgroundColor = component.isDark ? UIColor(white: 1.0, alpha: 0.2) : UIColor(white: 0.0, alpha: 0.2)
-                secondaryPatternBackgroundColor = patternBackgroundColor
-                
-                useClearPatternColor = true
             }
-            
-            let _ = useClearPatternColor
-            let _ = patternBackgroundColor
-            let _ = secondaryPatternBackgroundColor
             
             self.backgroundView.backgroundColor = secondaryBackgroundColor
             
@@ -325,17 +309,27 @@ public final class PeerInfoCoverComponent: Component {
             
             //transition.setFrame(view: self.avatarBackgroundPatternView, frame: CGSize(width: 200.0, height: 200.0).centered(around: CGPoint()))
             
-            let avatarPatternFrame = CGSize(width: 380.0, height: 380.0).centered(around: component.avatarCenter)
+            let avatarPatternFrame = CGSize(width: 380.0, height: floor(component.defaultHeight * 1.0)).centered(around: component.avatarCenter)
             transition.setFrame(layer: self.avatarBackgroundPatternContentsLayer, frame: avatarPatternFrame)
             
-            self.avatarBackgroundPatternContentsLayer.type = .radial
-            self.avatarBackgroundPatternContentsLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
-            self.avatarBackgroundPatternContentsLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
-            self.avatarBackgroundPatternContentsLayer.colors = [
-                UIColor(white: 0.0, alpha: 0.6).cgColor,
-                UIColor(white: 0.0, alpha: 0.0).cgColor
-            ]
+            if component.peer?.profileColor != nil {
+                self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
+                self.avatarBackgroundPatternContentsLayer.colors = [
+                    UIColor(white: 0.0, alpha: 0.6).cgColor,
+                    UIColor(white: 0.0, alpha: 0.0).cgColor
+                ]
+                
+            } else {
+                self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
+                let baseWhite: CGFloat = component.isDark ? 0.5 : 0.3
+                
+                self.avatarBackgroundPatternContentsLayer.colors = [
+                    UIColor(white: baseWhite, alpha: 0.6).cgColor,
+                    UIColor(white: baseWhite, alpha: 0.0).cgColor
+                ]
+            }
             
+            self.avatarBackgroundGradientLayer.isHidden = component.peer?.profileColor == nil
             transition.setFrame(layer: self.avatarBackgroundGradientLayer, frame: CGSize(width: 300.0, height: 300.0).centered(around: component.avatarCenter))
             transition.setAlpha(layer: self.avatarBackgroundGradientLayer, alpha: 1.0 - component.avatarTransitionFraction)
             
