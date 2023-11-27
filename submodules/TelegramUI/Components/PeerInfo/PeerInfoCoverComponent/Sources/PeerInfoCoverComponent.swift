@@ -187,32 +187,42 @@ public final class PeerInfoCoverComponent: Component {
             guard let patternFile = self.patternFile else {
                 return
             }
-            self.patternImageDisposable = component.context.animationRenderer.loadFirstFrame(
-                target: patternContentsTarget,
-                cache: component.context.animationCache, itemId: "reply-pattern-\(patternFile.fileId)",
-                size: CGSize(width: 64, height: 64),
-                fetch: animationCacheFetchFile(
-                    postbox: component.context.account.postbox,
-                    userLocation: .other,
-                    userContentType: .sticker,
-                    resource: .media(media: .standalone(media: patternFile), resource: patternFile.resource),
-                    type: AnimationCacheAnimationType(file: patternFile),
-                    keyframeOnly: false,
-                    customColor: .white
-                ),
-                completion: { [weak self] _, _ in
-                    guard let self else {
-                        return
+            
+            if component.context.animationRenderer.loadFirstFrameSynchronously(target: patternContentsTarget, cache: component.context.animationCache, itemId: "reply-pattern-\(patternFile.fileId)", size: CGSize(width: 64, height: 64)) {
+                self.updatePatternLayerImages(animated: false)
+            } else {
+                self.patternImageDisposable = component.context.animationRenderer.loadFirstFrame(
+                    target: patternContentsTarget,
+                    cache: component.context.animationCache,
+                    itemId: "reply-pattern-\(patternFile.fileId)",
+                    size: CGSize(width: 64, height: 64),
+                    fetch: animationCacheFetchFile(
+                        postbox: component.context.account.postbox,
+                        userLocation: .other,
+                        userContentType: .sticker,
+                        resource: .media(media: .standalone(media: patternFile), resource: patternFile.resource),
+                        type: AnimationCacheAnimationType(file: patternFile),
+                        keyframeOnly: false,
+                        customColor: .white
+                    ),
+                    completion: { [weak self] _, _ in
+                        guard let self else {
+                            return
+                        }
+                        self.updatePatternLayerImages(animated: true)
                     }
-                    self.updatePatternLayerImages()
-                }
-            )
+                )
+            }
         }
         
-        private func updatePatternLayerImages() {
+        private func updatePatternLayerImages(animated: Bool) {
             let image = self.patternContentsTarget?.contents
             for patternContentLayer in self.avatarPatternContentLayers {
                 patternContentLayer.contents = image
+                
+                if image != nil && animated {
+                    patternContentLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
             }
         }
         
@@ -224,7 +234,7 @@ public final class PeerInfoCoverComponent: Component {
                             guard let self else {
                                 return
                             }
-                            self.updatePatternLayerImages()
+                            self.updatePatternLayerImages(animated: true)
                         })
                     }
                     
@@ -249,7 +259,7 @@ public final class PeerInfoCoverComponent: Component {
                     self.patternFileDisposable?.dispose()
                     self.patternFileDisposable = nil
                     self.patternFile = nil
-                    self.updatePatternLayerImages()
+                    self.updatePatternLayerImages(animated: false)
                 }
             }
             
