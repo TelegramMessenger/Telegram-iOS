@@ -336,7 +336,7 @@ public final class MediaEditor {
                     trimRange: values.additionalVideoTrimRange,
                     offset: values.additionalVideoOffset,
                     isMain: tracks.isEmpty,
-                    visibleInTimeline: true
+                    visibleInTimeline: !values.additionalVideoIsDual
                 ))
             }
             if let audioTrack = values.audioTrack {
@@ -393,6 +393,7 @@ public final class MediaEditor {
                 videoIsMirrored: false,
                 videoVolume: 1.0,
                 additionalVideoPath: nil,
+                additionalVideoIsDual: false,
                 additionalVideoPosition: nil,
                 additionalVideoScale: nil,
                 additionalVideoRotation: nil,
@@ -438,11 +439,14 @@ public final class MediaEditor {
         self.invalidateTimeObservers()
     }
     
-    public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime) {
+    public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime, mirror: Bool) {
         guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice, let texture = loadTexture(image: image, device: device) else {
             return
         }
         let additionalTexture = additionalImage.flatMap { loadTexture(image: $0, device: device) }
+        if mirror {
+            self.renderer.videoFinishPass.additionalTextureRotation = .rotate0DegreesMirrored
+        }
         self.renderer.consume(main: .texture(texture, time), additional: additionalTexture.flatMap { .texture($0, time) }, render: true, displayEnabled: false)
     }
     
@@ -1316,9 +1320,9 @@ public final class MediaEditor {
         }
     }
     
-    public func setAdditionalVideo(_ path: String?, positionChanges: [VideoPositionChange]) {
+    public func setAdditionalVideo(_ path: String?, isDual: Bool = false, positionChanges: [VideoPositionChange]) {
         self.updateValues(mode: .skipRendering) { values in
-            var values = values.withUpdatedAdditionalVideo(path: path, positionChanges: positionChanges)
+            var values = values.withUpdatedAdditionalVideo(path: path, isDual: isDual, positionChanges: positionChanges)
             if path == nil {
                 values = values.withUpdatedAdditionalVideoOffset(nil).withUpdatedAdditionalVideoTrimRange(nil).withUpdatedAdditionalVideoVolume(nil)
             }

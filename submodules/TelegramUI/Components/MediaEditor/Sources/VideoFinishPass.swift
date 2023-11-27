@@ -151,7 +151,6 @@ final class VideoFinishPass: RenderPass {
     
     var mainPipelineState: MTLRenderPipelineState?
     var mainTextureRotation: TextureRotation = .rotate0Degrees
-    
     var additionalTextureRotation: TextureRotation = .rotate0Degrees
     
     var pixelFormat: MTLPixelFormat  {

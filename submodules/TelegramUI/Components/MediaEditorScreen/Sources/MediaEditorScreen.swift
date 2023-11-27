@@ -2281,7 +2281,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     videoEntity.position = position.getPosition(storyDimensions)
                     self.entitiesView.add(videoEntity, announce: false)
                     
-                    mediaEditor.setAdditionalVideo(additionalVideoPath, positionChanges: changes.map { VideoPositionChange(additional: $0.0, timestamp: $0.1) })
+                    mediaEditor.setAdditionalVideo(additionalVideoPath, isDual: true, positionChanges: changes.map { VideoPositionChange(additional: $0.0, timestamp: $0.1) })
                     mediaEditor.setAdditionalVideoPosition(videoEntity.position, scale: videoEntity.scale, rotation: videoEntity.rotation)
                     if let entityView = self.entitiesView.getView(for: videoEntity.uuid) as? DrawingStickerEntityView {
                         entityView.updated = { [weak videoEntity, weak self] in
@@ -4809,6 +4809,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 } else {
                     duration = durationValue
                 }
+                
+                var additionalPath = additionalPath
+                if additionalPath == nil, let valuesAdditionalPath = mediaEditor.values.additionalVideoPath {
+                    additionalPath = valuesAdditionalPath
+                }
                                 
                 firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
                     let avAsset = AVURLAsset(url: URL(fileURLWithPath: path))
@@ -4850,6 +4855,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 } else {
                     duration = 5.0
                 }
+                
+                var additionalPath: String?
+                if let valuesAdditionalPath = mediaEditor.values.additionalVideoPath {
+                    additionalPath = valuesAdditionalPath
+                }
+                
                 firstFrame = Signal<(UIImage?, UIImage?), NoError> { subscriber in
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
@@ -4858,8 +4869,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 avAssetGenerator.appliesPreferredTrackTransform = true
                                 avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, cgImage, _, _, _ in
                                     if let cgImage {
-                                        subscriber.putNext((UIImage(cgImage: cgImage), nil))
-                                        subscriber.putCompletion()
+                                        if let additionalPath {
+                                            let avAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
+                                            let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
+                                            avAssetGenerator.appliesPreferredTrackTransform = true
+                                            avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, additionalCGImage, _, _, _ in
+                                                if let additionalCGImage {
+                                                    subscriber.putNext((UIImage(cgImage: cgImage), UIImage(cgImage: additionalCGImage)))
+                                                    subscriber.putCompletion()
+                                                } else {
+                                                    subscriber.putNext((UIImage(cgImage: cgImage), nil))
+                                                    subscriber.putCompletion()
+                                                }
+                                            })
+                                        } else {
+                                            subscriber.putNext((UIImage(cgImage: cgImage), nil))
+                                            subscriber.putCompletion()
+                                        }
                                     }
                                 })
                             }
@@ -4869,8 +4895,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         options.deliveryMode = .highQualityFormat
                         PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
                             if let image {
-                                subscriber.putNext((image, nil))
-                                subscriber.putCompletion()
+                                if let additionalPath {
+                                    let avAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
+                                    let avAssetGenerator = AVAssetImageGenerator(asset: avAsset)
+                                    avAssetGenerator.appliesPreferredTrackTransform = true
+                                    avAssetGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: firstFrameTime)], completionHandler: { _, additionalCGImage, _, _, _ in
+                                        if let additionalCGImage {
+                                            subscriber.putNext((image, UIImage(cgImage: additionalCGImage)))
+                                            subscriber.putCompletion()
+                                        } else {
+                                            subscriber.putNext((image, nil))
+                                            subscriber.putCompletion()
+                                        }
+                                    })
+                                } else {
+                                    subscriber.putNext((image, nil))
+                                    subscriber.putCompletion()
+                                }
                             }
                         }
                     }
@@ -4916,7 +4957,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self {
                     var currentImage = mediaEditor.resultImage
                     if let image {
-                        mediaEditor.replaceSource(image, additionalImage: additionalImage, time: firstFrameTime)
+                        mediaEditor.replaceSource(image, additionalImage: additionalImage, time: firstFrameTime, mirror: true)
                         if let updatedImage = mediaEditor.getResultImage(mirror: videoIsMirrored) {
                             currentImage = updatedImage
                         }
