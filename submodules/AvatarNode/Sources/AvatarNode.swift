@@ -294,8 +294,6 @@ public final class AvatarNode: ASDisplayNode {
         private var theme: PresentationTheme?
         private var overrideImage: AvatarNodeImageOverride?
         public let imageNode: ImageNode
-        private var animationBackgroundNode: ImageNode?
-        private var animationNode: AnimationNode?
         public var editOverlayNode: AvatarEditOverlayNode?
         
         private let imageReadyDisposable = MetaDisposable()
@@ -436,6 +434,20 @@ public final class AvatarNode: ASDisplayNode {
                 animationNode.play()
             }
             self.imageNode.isHidden = true
+        }
+        
+        public func playRepostAnimation() {
+            let animationNode = AnimationNode(animation: "anim_storyrepost", colors: [:], scale: 0.11)
+            animationNode.isUserInteractionEnabled = false
+            self.addSubnode(animationNode)
+            
+            if var size = animationNode.preferredSize() {
+                size = CGSize(width: ceil(size.width), height: ceil(size.height))
+                animationNode.frame = CGRect(x: floor((self.bounds.width - size.width) / 2.0), y: floor((self.bounds.height - size.height) / 2.0) + 1.0, width: size.width, height: size.height)
+                Queue.mainQueue().after(0.15, {
+                    animationNode.play()
+                })
+            }
         }
         
         public func setPeer(
@@ -852,13 +864,15 @@ public final class AvatarNode: ASDisplayNode {
                         context.draw(savedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - savedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - savedMessagesIcon.size.height) / 2.0)), size: savedMessagesIcon.size))
                     }
                 } else if case .repostIcon = parameters.icon {
-                    let factor = bounds.size.width / 60.0
-                    context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
-                    context.scaleBy(x: factor, y: -factor)
-                    context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
-                    
-                    if let repostStoryIcon = repostStoryIcon {
-                        context.draw(repostStoryIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repostStoryIcon.size.width) / 2.0), y: floor((bounds.size.height - repostStoryIcon.size.height) / 2.0)), size: repostStoryIcon.size))
+                    if !"".isEmpty {
+                        let factor = bounds.size.width / 60.0
+                        context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                        context.scaleBy(x: factor, y: -factor)
+                        context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                        
+                        if let repostStoryIcon = repostStoryIcon {
+                            context.draw(repostStoryIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repostStoryIcon.size.width) / 2.0), y: floor((bounds.size.height - repostStoryIcon.size.height) / 2.0)), size: repostStoryIcon.size))
+                        }
                     }
                 } else if case .repliesIcon = parameters.icon {
                     let factor = bounds.size.width / 60.0
@@ -1029,6 +1043,10 @@ public final class AvatarNode: ASDisplayNode {
     
     public func playArchiveAnimation() {
         self.contentNode.playArchiveAnimation()
+    }
+    
+    public func playRepostAnimation() {
+        self.contentNode.playRepostAnimation()
     }
     
     public func setPeer(

@@ -730,7 +730,7 @@ final class StoryContentCaptionComponent: Component {
                                     if let self, case let .known(peer, _, _) = forwardInfo, let story = self.forwardInfoStory {
                                         self.component?.openStory(peer, story)
                                     } else if let controller = self?.component?.controller() as? StoryContainerScreen {
-                                        let tooltipController = TooltipController(content: .text(component.strings.Story_ForwardAuthorHiddenTooltip), baseFontSize: 17.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                                        let tooltipController = TooltipController(content: .text(component.strings.Story_ForwardAuthorHiddenTooltip), baseFontSize: 17.0, isBlurred: true, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                                         controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak controller] in
                                             if let self, let controller, let forwardInfoPanel = self.forwardInfoPanel?.view {
                                                 return (controller.node, forwardInfoPanel.convert(forwardInfoPanel.bounds, to: controller.view))

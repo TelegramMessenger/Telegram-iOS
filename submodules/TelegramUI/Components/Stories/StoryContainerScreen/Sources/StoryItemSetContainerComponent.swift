@@ -2941,7 +2941,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         },
                         timeoutAction: nil,
-                        forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
+                        forwardAction: component.slice.item.storyItem.isPublic && !component.slice.item.storyItem.isForwardingDisabled ? { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -2960,7 +2960,7 @@ public final class StoryItemSetContainerComponent: Component {
                             let rect = view.convert(view.bounds, to: nil)
                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                             let text = presentationData.strings.Conversation_VoiceMessagesRestricted(component.slice.peer.compactDisplayTitle).string
-                            let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, padding: 2.0)
+                            let controller = TooltipController(content: .text(text), baseFontSize: presentationData.listsFontSize.baseDisplaySize, isBlurred: true, padding: 2.0)
                             controller.dismissed = { [weak self] _ in
                                 if let self {
                                     self.voiceMessagesRestrictedTooltipController = nil
