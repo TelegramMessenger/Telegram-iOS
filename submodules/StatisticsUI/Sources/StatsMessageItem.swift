@@ -354,7 +354,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 text = foldLineBreaks(text)
             }
             
-            if let _ = contentImageMedia {
+            if contentImageMedia != nil || item.isPeer {
                 totalLeftInset += 46.0
             }
             
