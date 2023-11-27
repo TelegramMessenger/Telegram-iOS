@@ -592,6 +592,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             backgroundColor: .clear,
                             separatorColor: strongSelf.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
                             hideTopPanel: hideTopPanel,
+                            disableTopPanel: strongSelf.alwaysAllowPremiumReactions,
                             hideTopPanelUpdated: { hideTopPanel, transition in
                                 guard let strongSelf = self else {
                                     return
@@ -1217,6 +1218,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         backgroundColor: .clear,
                         separatorColor: self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
                         hideTopPanel: hideTopPanel,
+                        disableTopPanel: self.alwaysAllowPremiumReactions,
                         hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
                             guard let strongSelf = self else {
                                 return
