@@ -1182,7 +1182,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if case .background = self.mode, toolbarBottomInset.isZero {
             toolbarBottomInset = 16.0
         }
-        if case .peer = self.resultMode {
+        if case .peer = self.resultMode, !self.state.displayPatternPanel {
             toolbarBottomInset += 58.0
         }
         let toolbarHeight = 49.0 + toolbarBottomInset

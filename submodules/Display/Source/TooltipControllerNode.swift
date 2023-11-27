@@ -26,15 +26,17 @@ final class TooltipControllerNode: ASDisplayNode {
     private var dismissedByTouchOutside = false
     private var dismissByTapOutsideSource = false
     
-    init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
+    init(content: TooltipControllerContent, baseFontSize: CGFloat, balancedTextLayout: Bool, isBlurred: Bool, dismiss: @escaping (Bool) -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
         self.baseFontSize = baseFontSize
         self.balancedTextLayout = balancedTextLayout
         
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         
-        self.containerNode = ContextMenuContainerNode(isBlurred: false, isDark: true)
-        self.containerNode.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        self.containerNode = ContextMenuContainerNode(isBlurred: isBlurred, isDark: true)
+        if !isBlurred {
+            self.containerNode.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        }
         
         self.imageNode = ASImageNode()
         self.imageNode.image = content.image

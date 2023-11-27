@@ -288,7 +288,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
         }
         
         self.applyButton.updateTitle(applyTitle, theme: theme)
-        self.applyForBothButton.updateTitle(applyForBothTitle ?? "", theme: theme)
+        if let applyForBothTitle {
+            self.applyForBothButton.updateTitle(applyForBothTitle, theme: theme)
+        }
         self.applyForBothButton.isLocked = applyForBothLocked
     }
     
@@ -300,6 +302,12 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
         
         let applyFrame = CGRect(origin: CGPoint(x: inset, y: 2.0), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
         let applyForBothFrame = CGRect(origin: CGPoint(x: inset, y: applyFrame.maxY + spacing), size: CGSize(width: size.width - inset * 2.0, height: buttonHeight))
+        
+        var showApplyForBothButton = false
+        if case .setPeer = self.doneButtonType {
+            showApplyForBothButton = true
+        }
+        transition.updateAlpha(node: self.applyForBothButton, alpha: showApplyForBothButton ? 1.0 : 0.0)
         
         self.applyButton.frame = applyFrame
         self.applyButton.updateSize(applyFrame.size)
