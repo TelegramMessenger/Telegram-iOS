@@ -6095,7 +6095,8 @@ public final class StoryItemSetContainerComponent: Component {
                         updatedPresentationData: (presentationData, .single(presentationData)),
                         peerId: component.slice.peer.id,
                         storyId: component.slice.item.storyItem.id,
-                        storyItem: component.slice.item.storyItem
+                        storyItem: component.slice.item.storyItem,
+                        fromStory: true
                     )
                     component.controller()?.push(statsController)
                 })))
@@ -6497,7 +6498,8 @@ public final class StoryItemSetContainerComponent: Component {
                             updatedPresentationData: (presentationData, .single(presentationData)),
                             peerId: component.slice.peer.id,
                             storyId: component.slice.item.storyItem.id,
-                            storyItem: component.slice.item.storyItem
+                            storyItem: component.slice.item.storyItem,
+                            fromStory: true
                         )
                         component.controller()?.push(statsController)
                     })))

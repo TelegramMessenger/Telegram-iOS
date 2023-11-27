@@ -1314,7 +1314,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         case let .message(message):
             subject = .message(id: message.id)
         case let .story(story):
-            subject = .story(peerId: peerId, id: story.id, item: story)
+            subject = .story(peerId: peerId, id: story.id, item: story, fromStory: false)
         }
         controller?.push(messageStatsController(context: context, subject: subject))
     }
