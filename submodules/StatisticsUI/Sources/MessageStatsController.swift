@@ -166,17 +166,36 @@ private enum StatsEntry: ItemListNodeEntry {
                 }, sectionId: self.section, style: .blocks)
             case let .publicForward(_, _, _, _, message):
                 var views: Int32 = 0
+                var forwards: Int32 = 0
+                var reactions: Int32 = 0
                 for attribute in message.attributes {
                     if let viewsAttribute = attribute as? ViewCountMessageAttribute {
                         views = Int32(viewsAttribute.count)
-                        break
+                    } else if let forwardsAttribute = attribute as? ForwardCountMessageAttribute {
+                        forwards = Int32(forwardsAttribute.count)
+                    } else if let reactionsAttribute = attribute as? ReactionsMessageAttribute {
+                        reactions = reactionsAttribute.reactions.reduce(0, { partialResult, reaction in
+                            return partialResult + reaction.count
+                        })
                     }
                 }
-                
-                let text: String = presentationData.strings.Stats_MessageViews(views)
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(message.peers[message.id.peerId]!), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
+                let peer = message.peers[message.id.peerId]!
+                return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: .message(message._asMessage()), views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
                     arguments.openMessage(message.id)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
+                }, openStory: { _ in }, contextAction: nil)
+//                var views: Int32 = 0
+//                for attribute in message.attributes {
+//                    if let viewsAttribute = attribute as? ViewCountMessageAttribute {
+//                        views = Int32(viewsAttribute.count)
+//                        break
+//                    }
+//                }
+//                
+//
+//                let text: String = presentationData.strings.Stats_MessageViews(views)
+//                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(message.peers[message.id.peerId]!), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
+//                    arguments.openMessage(message.id)
+//                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
         }
     }
 }

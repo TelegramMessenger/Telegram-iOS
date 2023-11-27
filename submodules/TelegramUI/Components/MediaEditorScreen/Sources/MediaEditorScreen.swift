@@ -1743,7 +1743,7 @@ final class MediaEditorScreenComponent: Component {
                             controller.node.recording.togglePosition()
                         }
                     }
-                )),
+                ).withIsExclusive(false)),
                 environment: {},
                 containerSize: CGSize(width: 48.0, height: 48.0)
             )

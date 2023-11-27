@@ -106,6 +106,7 @@ final class MediaEditorRenderer {
     var needsDisplay = false
     
     var onNextRender: (() -> Void)?
+    var onNextAdditionalRender: (() -> Void)?
     
     public init() {
         
@@ -275,6 +276,15 @@ final class MediaEditorRenderer {
                     self.onNextRender = nil
                     Queue.mainQueue().after(0.016) {
                         onNextRender()
+                    }
+                }
+                
+                if let onNextAdditionalRender = self.onNextAdditionalRender {
+                    if self.currentAdditionalInput != nil {
+                        self.onNextAdditionalRender = nil
+                        Queue.mainQueue().after(0.016) {
+                            onNextAdditionalRender()
+                        }
                     }
                 }
             }

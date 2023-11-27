@@ -14,10 +14,13 @@ public final class EntityVideoRecorder {
     private let camera: Camera
     private let previewView: CameraSimplePreviewView
     private let entity: DrawingStickerEntity
+    private weak var entityView: DrawingStickerEntityView?
     
     private var recordingDisposable = MetaDisposable()
     private let durationPromise = ValuePromise<Double>()
     private let micLevelPromise = Promise<Float>()
+    
+    private var changingPositionDisposable: Disposable?
     
     public var duration: Signal<Double, NoError> {
         return self.durationPromise.get()
@@ -79,10 +82,23 @@ public final class EntityVideoRecorder {
         let start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
         mediaEditor.stop()
         mediaEditor.seek(start, andPlay: false)
+        
+        self.changingPositionDisposable = (camera.modeChange
+        |> deliverOnMainQueue).start(next: { [weak self] modeChange in
+            guard let self else {
+                return
+            }
+            if case .position = modeChange {
+                self.entityView?.beginCameraSwitch()
+            } else {
+                self.entityView?.commitCameraSwitch()
+            }
+        })
     }
     
     deinit {
         self.recordingDisposable.dispose()
+        self.changingPositionDisposable?.dispose()
     }
     
     public func setup(
@@ -105,6 +121,8 @@ public final class EntityVideoRecorder {
             )
             self.previewView.resetPlaceholder(front: true)
             entityView.animateInsertion()
+            
+            self.entityView = entityView
         }
         
         self.entitiesView?.selectEntity(nil)
@@ -160,8 +178,10 @@ public final class EntityVideoRecorder {
                 }
                 
                 if let entityView = entitiesView.getView(for: self.entity.uuid) as? DrawingStickerEntityView {
-                    entityView.invalidateCameraPreviewView()
-                    
+                    mediaEditor.onFirstAdditionalDisplay = { [weak entityView] in
+                        entityView?.invalidateCameraPreviewView()
+                    }
+                 
                     let entity = self.entity
                     let update = { [weak mediaEditor, weak entity] in
                         if let mediaEditor, let entity {

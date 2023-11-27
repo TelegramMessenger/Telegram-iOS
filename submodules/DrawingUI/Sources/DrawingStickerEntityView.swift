@@ -14,7 +14,50 @@ import UniversalMediaPlayer
 import TelegramPresentationData
 import TelegramUniversalVideoContent
 
-public class DrawingStickerEntityView: DrawingEntityView {    
+private class BlurView: UIVisualEffectView {
+    private func setup() {
+        for subview in self.subviews {
+            if subview.description.contains("VisualEffectSubview") {
+                subview.isHidden = true
+            }
+        }
+        
+        if let sublayer = self.layer.sublayers?[0], let filters = sublayer.filters {
+            sublayer.backgroundColor = nil
+            sublayer.isOpaque = false
+            let allowedKeys: [String] = [
+                "gaussianBlur"
+            ]
+            sublayer.filters = filters.filter { filter in
+                guard let filter = filter as? NSObject else {
+                    return true
+                }
+                let filterName = String(describing: filter)
+                if !allowedKeys.contains(filterName) {
+                    return false
+                }
+                return true
+            }
+        }
+    }
+    
+    override var effect: UIVisualEffect? {
+        get {
+            return super.effect
+        }
+        set {
+            super.effect = newValue
+            self.setup()
+        }
+    }
+    
+    override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        self.setup()
+    }
+}
+
+public class DrawingStickerEntityView: DrawingEntityView {
     var stickerEntity: DrawingStickerEntity {
         return self.entity as! DrawingStickerEntity
     }
@@ -342,13 +385,57 @@ public class DrawingStickerEntityView: DrawingEntityView {
         guard let cameraPreviewView = self.cameraPreviewView else {
             return
         }
-        Queue.mainQueue().after(0.5, {
+        Queue.mainQueue().after(0.3, {
             self.cameraPreviewView = nil
-            cameraPreviewView.removeFromSuperview()
+            cameraPreviewView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                cameraPreviewView.removeFromSuperview()
+            })
         })
         self.progressLayer.removeFromSuperlayer()
         self.progressLayer.path = nil
         self.progressDisposable.set(nil)
+    }
+    
+    private var cameraBlurView: BlurView?
+    private var cameraSnapshotView: UIView?
+    public func beginCameraSwitch() {
+        guard let cameraPreviewView = self.cameraPreviewView, self.cameraBlurView == nil else {
+            return
+        }
+        if let snapshot = cameraPreviewView.snapshotView(afterScreenUpdates: false) {
+            self.cameraSnapshotView = snapshot
+            self.addSubview(snapshot)
+        }
+        
+        let blurView = BlurView(effect: nil)
+        blurView.clipsToBounds = true
+        blurView.frame = self.bounds
+        blurView.layer.cornerRadius = self.bounds.width / 2.0
+        self.addSubview(blurView)
+        UIView.transition(with: self, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
+            blurView.effect = UIBlurEffect(style: .dark)
+        })
+        self.cameraBlurView = blurView
+    }
+    
+    public func commitCameraSwitch() {
+        if let cameraBlurView = self.cameraBlurView {
+            self.cameraBlurView = nil
+            UIView.animate(withDuration: 0.4, animations: {
+                cameraBlurView.effect = nil
+            }, completion: { _ in
+                cameraBlurView.removeFromSuperview()
+            })
+        }
+        
+        if let cameraSnapshotView = self.cameraSnapshotView {
+            self.cameraSnapshotView = nil
+            UIView.animate(withDuration: 0.25, animations: {
+                cameraSnapshotView.alpha = 0.0
+            }, completion: { _ in
+                cameraSnapshotView.removeFromSuperview()
+            })
+        }
     }
     
     private var didApplyVisibility = false
