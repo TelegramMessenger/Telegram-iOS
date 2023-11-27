@@ -363,6 +363,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
         self.addSubview(cameraPreviewView)
         self.cameraPreviewView = cameraPreviewView
         
+        self.progressLayer.opacity = 1.0
         self.progressLayer.transform = CATransform3DMakeRotation(-.pi / 2.0, 0.0, 0.0, 1.0)
         self.progressLayer.fillColor = UIColor.clear.cgColor
         self.progressLayer.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
@@ -385,15 +386,36 @@ public class DrawingStickerEntityView: DrawingEntityView {
         guard let cameraPreviewView = self.cameraPreviewView else {
             return
         }
-        Queue.mainQueue().after(0.3, {
+        Queue.mainQueue().after(0.1, {
             self.cameraPreviewView = nil
-            cameraPreviewView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                cameraPreviewView.removeFromSuperview()
-            })
+            cameraPreviewView.removeFromSuperview()
+            
+            if let cameraSnapshotView = self.cameraSnapshotView {
+                self.cameraSnapshotView = nil
+                UIView.animate(withDuration: 0.25, animations: {
+                    cameraSnapshotView.alpha = 0.0
+                }, completion: { _ in
+                    cameraSnapshotView.removeFromSuperview()
+                })
+            }
         })
-        self.progressLayer.removeFromSuperlayer()
-        self.progressLayer.path = nil
+        self.progressLayer.opacity = 0.0
+        self.progressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+            self.progressLayer.removeFromSuperlayer()
+            self.progressLayer.path = nil
+        })
         self.progressDisposable.set(nil)
+    }
+    
+    public func snapshotCameraPreviewView() {
+        guard let cameraPreviewView = self.cameraPreviewView else {
+            return
+        }
+        if let snapshot = cameraPreviewView.snapshotView(afterScreenUpdates: false) {
+            self.cameraSnapshotView = snapshot
+            self.addSubview(snapshot)
+        }
+        self.layer.addSublayer(self.progressLayer)
     }
     
     private var cameraBlurView: BlurView?

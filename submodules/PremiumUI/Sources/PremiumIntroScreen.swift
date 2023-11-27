@@ -630,6 +630,14 @@ struct PremiumIntroConfiguration {
             if perks.count < 4 {
                 perks = PremiumIntroConfiguration.defaultValue.perks
             }
+            #if DEBUG
+            if !perks.contains(.wallpapers) {
+                perks.append(.wallpapers)
+            }
+            if !perks.contains(.colors) {
+                perks.append(.colors)
+            }
+            #endif
             return PremiumIntroConfiguration(perks: perks)
         } else {
             return .defaultValue
@@ -1355,7 +1363,7 @@ final class PerkComponent: CombinedComponent {
                 let badgeWidth = badgeText.size.width + 7.0
                 let badgeBackground = badgeBackground.update(
                     component: RoundedRectangle(
-                        colors: [component.accentColor],
+                        colors: component.iconBackgroundColors,
                         cornerRadius: 5.0,
                         gradientDirection: .vertical),
                     availableSize: CGSize(width: badgeWidth, height: 16.0),
@@ -1566,12 +1574,21 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             })
             
             
-            self.newPerksDisposable = (ApplicationSpecificNotice.dismissedPremiumAppIconsBadge(accountManager: context.sharedContext.accountManager)
-            |> deliverOnMainQueue).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge in
+            self.newPerksDisposable = combineLatest(queue: Queue.mainQueue(),
+                ApplicationSpecificNotice.dismissedPremiumAppIconsBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedPremiumWallpapersBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager)
+            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge in
                 guard let self else {
                     return
                 }
-                let newPerks: [String] = []
+                var newPerks: [String] = []
+                if !dismissedPremiumWallpapersBadge {
+                    newPerks.append(PremiumPerk.wallpapers.identifier)
+                }
+                if !dismissedPremiumColorsBadge {
+                    newPerks.append(PremiumPerk.colors.identifier)
+                }
                 self.newPerks = newPerks
                 self.updated()
             })
@@ -1915,8 +1932,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .stories
                             case .colors:
                                 demoSubject = .colors
+                                let _ = ApplicationSpecificNotice.setDismissedPremiumColorsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .wallpapers:
                                 demoSubject = .wallpapers
+                                let _ = ApplicationSpecificNotice.setDismissedPremiumWallpapersBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             }
                             
                             let isPremium = state?.isPremium == true

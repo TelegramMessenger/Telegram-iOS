@@ -261,7 +261,6 @@ public final class MediaEditor {
     }
     
     public var onFirstDisplay: () -> Void = {}
-    public var onFirstAdditionalDisplay: () -> Void = {}
     
     public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
         func artistAndTitleForTrack(_ audioTrack: MediaAudioTrack) -> (artist: String?, title: String?) {
