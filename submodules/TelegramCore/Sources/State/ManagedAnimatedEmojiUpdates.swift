@@ -27,3 +27,5 @@ func managedGenericEmojiEffects(postbox: Postbox, network: Network) -> Signal<Vo
     }
     return (poll |> then(.complete() |> suspendAwareDelay(2.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+
+

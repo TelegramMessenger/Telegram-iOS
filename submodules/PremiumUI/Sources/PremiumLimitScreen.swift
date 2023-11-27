@@ -1191,7 +1191,10 @@ private final class LimitSheetContent: CombinedComponent {
                             }
                         case .nameColors:
                             titleText = strings.ChannelBoost_EnableColors
-                            string = strings.ChannelBoost_EnableColorsText(valueString).string
+                            string = strings.ChannelBoost_EnableColorsLevelText("\(premiumConfiguration.minChannelNameColorLevel)").string
+                        case let .channelReactions(reactionCount):
+                            titleText = strings.ChannelBoost_CustomReactions
+                            string = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
                         }
                     } else {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level)
@@ -1773,11 +1776,12 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case storiesWeekly
         case storiesMonthly
         
-        
-        public enum BoostSubject {
+        public enum BoostSubject: Equatable {
             case stories
             case nameColors
+            case channelReactions(reactionCount: Int)
         }
+        
         case storiesChannelBoost(peer: EnginePeer, boostSubject: BoostSubject, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32, canBoostAgain: Bool)
     }
     

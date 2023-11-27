@@ -646,11 +646,13 @@ public final class Message {
         public let title: String
         public let icon: Int64?
         public let iconColor: Int32
+        public let isClosed: Bool
         
-        public init(title: String, icon: Int64?, iconColor: Int32) {
+        public init(title: String, icon: Int64?, iconColor: Int32, isClosed: Bool) {
             self.title = title
             self.icon = icon
             self.iconColor = iconColor
+            self.isClosed = isClosed
         }
         
         public static func ==(lhs: AssociatedThreadInfo, rhs: AssociatedThreadInfo) -> Bool {
@@ -664,6 +666,9 @@ public final class Message {
                 return false
             }
             if lhs.iconColor != rhs.iconColor {
+                return false
+            }
+            if lhs.isClosed != rhs.isClosed {
                 return false
             }
             return true

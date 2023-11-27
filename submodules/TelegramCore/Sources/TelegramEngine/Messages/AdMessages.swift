@@ -15,6 +15,7 @@ private class AdMessagesHistoryContextImpl {
             case target
             case messageId
             case startParam
+            case buttonText
             case sponsorInfo
             case additionalInfo
         }
@@ -33,6 +34,7 @@ private class AdMessagesHistoryContextImpl {
                 case peer
                 case invite
                 case webPage
+                case botApp
             }
             
             struct Invite: Equatable, Codable {
@@ -78,11 +80,14 @@ private class AdMessagesHistoryContextImpl {
             case peer(PeerId)
             case invite(Invite)
             case webPage(WebPage)
+            case botApp(PeerId, BotApp)
             
             init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 
-                if let peer = try container.decodeIfPresent(Int64.self, forKey: .peer) {
+                if let botApp = try container.decodeIfPresent(BotApp.self, forKey: .botApp), let peer = try container.decodeIfPresent(Int64.self, forKey: .peer) {
+                    self = .botApp(PeerId(peer), botApp)
+                } else if let peer = try container.decodeIfPresent(Int64.self, forKey: .peer) {
                     self = .peer(PeerId(peer))
                 } else if let invite = try container.decodeIfPresent(Invite.self, forKey: .invite) {
                     self = .invite(invite)
@@ -103,6 +108,9 @@ private class AdMessagesHistoryContextImpl {
                     try container.encode(invite, forKey: .invite)
                 case let .webPage(webPage):
                     try container.encode(webPage, forKey: .webPage)
+                case let .botApp(peerId, botApp):
+                    try container.encode(peerId.toInt64(), forKey: .peer)
+                    try container.encode(botApp, forKey: .botApp)
                 }
             }
         }
@@ -116,6 +124,7 @@ private class AdMessagesHistoryContextImpl {
         public let target: Target
         public let messageId: MessageId?
         public let startParam: String?
+        public let buttonText: String?
         public let sponsorInfo: String?
         public let additionalInfo: String?
 
@@ -129,6 +138,7 @@ private class AdMessagesHistoryContextImpl {
             target: Target,
             messageId: MessageId?,
             startParam: String?,
+            buttonText: String?,
             sponsorInfo: String?,
             additionalInfo: String?
         ) {
@@ -141,6 +151,7 @@ private class AdMessagesHistoryContextImpl {
             self.target = target
             self.messageId = messageId
             self.startParam = startParam
+            self.buttonText = buttonText
             self.sponsorInfo = sponsorInfo
             self.additionalInfo = additionalInfo
         }
@@ -169,6 +180,7 @@ private class AdMessagesHistoryContextImpl {
             self.target = try container.decode(Target.self, forKey: .target)
             self.messageId = try container.decodeIfPresent(MessageId.self, forKey: .messageId)
             self.startParam = try container.decodeIfPresent(String.self, forKey: .startParam)
+            self.buttonText = try container.decodeIfPresent(String.self, forKey: .buttonText)
             
             self.sponsorInfo = try container.decodeIfPresent(String.self, forKey: .sponsorInfo)
             self.additionalInfo = try container.decodeIfPresent(String.self, forKey: .additionalInfo)
@@ -193,6 +205,7 @@ private class AdMessagesHistoryContextImpl {
             try container.encode(self.target, forKey: .target)
             try container.encodeIfPresent(self.messageId, forKey: .messageId)
             try container.encodeIfPresent(self.startParam, forKey: .startParam)
+            try container.encodeIfPresent(self.buttonText, forKey: .buttonText)
             
             try container.encodeIfPresent(self.sponsorInfo, forKey: .sponsorInfo)
             try container.encodeIfPresent(self.additionalInfo, forKey: .additionalInfo)
@@ -228,6 +241,9 @@ private class AdMessagesHistoryContextImpl {
             if lhs.startParam != rhs.startParam {
                 return false
             }
+            if lhs.buttonText != rhs.buttonText {
+                return false
+            }
             if lhs.sponsorInfo != rhs.sponsorInfo {
                 return false
             }
@@ -248,6 +264,8 @@ private class AdMessagesHistoryContextImpl {
                 target = .join(title: invite.title, joinHash: invite.joinHash)
             case let .webPage(webPage):
                 target = .webPage(title: webPage.title, url: webPage.url)
+            case let .botApp(peerId, botApp):
+                target = .botApp(peerId: peerId, app: botApp, startParam: self.startParam)
             }
             let mappedMessageType: AdMessageAttribute.MessageType
             switch self.messageType {
@@ -256,7 +274,7 @@ private class AdMessagesHistoryContextImpl {
             case .recommended:
                 mappedMessageType = .recommended
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target, buttonText: self.buttonText, sponsorInfo: self.sponsorInfo, additionalInfo: self.additionalInfo))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -270,7 +288,7 @@ private class AdMessagesHistoryContextImpl {
             
             let author: Peer
             switch self.target {
-            case let .peer(peerId):
+            case let .peer(peerId), let .botApp(peerId, _):
                 if let peer = transaction.getPeer(peerId) {
                     author = peer
                 } else {
@@ -295,7 +313,9 @@ private class AdMessagesHistoryContextImpl {
                     usernames: [],
                     storiesHidden: nil,
                     nameColor: invite.nameColor,
-                    backgroundEmojiId: nil
+                    backgroundEmojiId: nil,
+                    profileColor: nil,
+                    profileBackgroundEmojiId: nil
                 )
             case let .webPage(webPage):
                 author = TelegramChannel(
@@ -316,7 +336,9 @@ private class AdMessagesHistoryContextImpl {
                     usernames: [],
                     storiesHidden: nil,
                     nameColor: .blue,
-                    backgroundEmojiId: nil
+                    backgroundEmojiId: nil,
+                    profileColor: nil,
+                    profileBackgroundEmojiId: nil
                 )
             }
             
@@ -523,7 +545,7 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, webPage, message, entities, sponsorInfo, additionalInfo):
+                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, webPage, botApp, message, entities, buttonText, sponsorInfo, additionalInfo):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -534,7 +556,11 @@ private class AdMessagesHistoryContextImpl {
                                 
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
-                                    target = .peer(fromId.peerId)
+                                    if let botApp = botApp, let app = BotApp(apiBotApp: botApp) {
+                                        target = .botApp(fromId.peerId, app)
+                                    } else {
+                                        target = .peer(fromId.peerId)
+                                    }
                                 } else if let webPage = webPage {
                                     switch webPage {
                                     case let .sponsoredWebPage(_, url, siteName, photo):
@@ -574,7 +600,10 @@ private class AdMessagesHistoryContextImpl {
                                             ))
                                         }
                                     }
-                                }
+                                } 
+//                                else if let botApp = app.flatMap({ BotApp(apiBotApp: $0) }) {
+//                                    target = .botApp(botApp)
+//                                }
                                 
                                 var messageId: MessageId?
                                 if let fromId = fromId, let channelPost = channelPost {
@@ -592,6 +621,7 @@ private class AdMessagesHistoryContextImpl {
                                         target: target,
                                         messageId: messageId,
                                         startParam: startParam,
+                                        buttonText: buttonText,
                                         sponsorInfo: sponsorInfo,
                                         additionalInfo: additionalInfo
                                     ))

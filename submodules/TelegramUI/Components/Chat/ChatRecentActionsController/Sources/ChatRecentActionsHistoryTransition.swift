@@ -69,7 +69,7 @@ private func filterOriginalMessageFlags(_ message: Message) -> Message {
 
 private func filterMessageChannelPeer(_ peer: Peer) -> Peer {
     if let peer = peer as? TelegramChannel {
-        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId)
+        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId, profileColor: peer.profileColor, profileBackgroundEmojiId: peer.profileBackgroundEmojiId)
     }
     return peer
 }
@@ -117,7 +117,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let action = TelegramMediaActionType.titleUpdated(title: new)
                 let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+                return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
             case let .changeAbout(prev, new):
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var author: Peer?
@@ -1496,32 +1496,61 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString
                 switch updatedValue {
                 case .all:
-                    rawText = self.presentationData.strings.Channel_AdminLog_ReactionsEnabled(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
-                case let .limited(reactions):
-                    let emojiString = reactions.compactMap({ reaction -> String? in
-                        switch reaction {
-                        case let .builtin(value):
-                            return value
-                        case .custom:
-                            return nil
+                    let rawText = self.presentationData.strings.Channel_AdminLog_ReactionsEnabled(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    appendAttributedText(text: rawText, generateEntities: { index in
+                        if index == 0, let author = author {
+                            return [.TextMention(peerId: author.id)]
+                        } else if index == 1 {
+                            return [.Bold]
                         }
-                    }).joined(separator: ", ")
-                    rawText = self.presentationData.strings.Channel_AdminLog_AllowedReactionsUpdated(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", emojiString)
-                case .empty:
-                    rawText = self.presentationData.strings.Channel_AdminLog_ReactionsDisabled(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
-                }
-                
-                appendAttributedText(text: rawText, generateEntities: { index in
-                    if index == 0, let author = author {
-                        return [.TextMention(peerId: author.id)]
-                    } else if index == 1 {
-                        return [.Bold]
+                        return []
+                    }, to: &text, entities: &entities)
+                case let .limited(reactions):
+                    let authorTitle = author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
+                    let rawText = self.presentationData.strings.Channel_AdminLog_AllowedReactionsUpdated(authorTitle, "")
+                    var previousIndex = 0
+                    let nsText = rawText.string as NSString
+                    for range in rawText.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+                        if range.range.lowerBound > previousIndex {
+                            text.append(nsText.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))
+                        }
+                        if range.index == 0 {
+                            if let author {
+                                entities.append(MessageTextEntity(range: (text as NSString).length ..< (text as NSString).length + (authorTitle as NSString).length, type: .TextMention(peerId: author.id)))
+                            }
+                            text.append(authorTitle)
+                        } else if range.index == 1 {
+                            for reaction in reactions {
+                                let reactionText: String
+                                switch reaction {
+                                case let .builtin(value):
+                                    reactionText = value
+                                    text.append(reactionText)
+                                case let .custom(fileId):
+                                    reactionText = "."
+                                    entities.append(MessageTextEntity(range: (text as NSString).length ..< (text as NSString).length + (reactionText as NSString).length, type: .CustomEmoji(stickerPack: nil, fileId: fileId)))
+                                    text.append(reactionText)
+                                }
+                            }
+                        }
+                        previousIndex = range.range.upperBound
                     }
-                    return []
-                }, to: &text, entities: &entities)
+                    if nsText.length > previousIndex {
+                        text.append(nsText.substring(with: NSRange(location: previousIndex, length: nsText.length - previousIndex)))
+                    }
+                case .empty:
+                    let rawText = self.presentationData.strings.Channel_AdminLog_ReactionsDisabled(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    appendAttributedText(text: rawText, generateEntities: { index in
+                        if index == 0, let author = author {
+                            return [.TextMention(peerId: author.id)]
+                        } else if index == 1 {
+                            return [.Bold]
+                        }
+                        return []
+                    }, to: &text, entities: &entities)
+                }
                 
                 let action = TelegramMediaActionType.customText(text: text, entities: entities)
                 

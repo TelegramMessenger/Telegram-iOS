@@ -149,7 +149,12 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, netwo
         return
     }
     
-    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+    var displayAsRegularChat: Bool = false
+    if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
+        displayAsRegularChat = cachedData.viewForumAsMessages.knownValue ?? false
+    }
+    
+    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum), !displayAsRegularChat {
         for item in transaction.getMessageHistoryThreadIndex(peerId: peerId, limit: 20) {
             guard var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: item.threadId)?.data.get(MessageHistoryThreadData.self) else {
                 continue

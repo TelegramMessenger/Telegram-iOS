@@ -110,6 +110,34 @@ public extension CGRect {
     }
 }
 
+private extension CALayer {
+    func animate(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double, curve: ContainedViewLayoutTransitionCurve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil) {
+        let timingFunction: String
+        let mediaTimingFunction: CAMediaTimingFunction?
+        switch curve {
+        case .spring:
+            timingFunction = kCAMediaTimingFunctionSpring
+            mediaTimingFunction = nil
+        default:
+            timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+            mediaTimingFunction = curve.mediaTimingFunction
+        }
+        
+        self.animate(
+            from: from,
+            to: to,
+            keyPath: keyPath,
+            timingFunction: timingFunction,
+            duration: duration,
+            delay: delay,
+            mediaTimingFunction: mediaTimingFunction,
+            removeOnCompletion: removeOnCompletion,
+            additive: additive,
+            completion: completion
+        )
+    }
+}
+
 public extension ContainedViewLayoutTransition {
     func animation() -> CABasicAnimation? {
         switch self {
@@ -1222,7 +1250,11 @@ public extension ContainedViewLayoutTransition {
             completion?(true)
             return
         }
-        let t = node.layer.sublayerTransform
+        self.updateSublayerTransformScaleAdditive(layer: node.layer, scale: scale, completion: completion)
+    }
+    
+    func updateSublayerTransformScaleAdditive(layer: CALayer, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        let t = layer.sublayerTransform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         if currentScale.isEqual(to: scale) {
             if let completion = completion {
@@ -1233,16 +1265,16 @@ public extension ContainedViewLayoutTransition {
         
         switch self {
         case .immediate:
-            node.layer.removeAnimation(forKey: "sublayerTransform")
-            node.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.removeAnimation(forKey: "sublayerTransform")
+            layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
             if let completion = completion {
                 completion(true)
             }
         case let .animated(duration, curve):
-            let t = node.layer.sublayerTransform
+            let t = layer.sublayerTransform
             let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
-            node.layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
-            node.layer.animate(from: -(scale - currentScale) as NSNumber, to: 0.0 as NSNumber, keyPath: "sublayerTransform.scale", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: true, completion: {
+            layer.sublayerTransform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.animate(from: -(scale - currentScale) as NSNumber, to: 0.0 as NSNumber, keyPath: "sublayerTransform.scale", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: true, completion: {
                 result in
                 if let completion = completion {
                     completion(result)
@@ -1538,6 +1570,25 @@ public extension ContainedViewLayoutTransition {
                     completion(result)
                 }
             })
+        }
+    }
+    
+    func attachAnimation(view: UIView, id: String, completion: @escaping (Bool) -> Void) {
+        switch self {
+        case .immediate:
+            completion(true)
+        case let .animated(duration, curve):
+            view.layer.animate(
+                from: 0.0 as NSNumber,
+                to: 1.0 as NSNumber,
+                keyPath: id,
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
         }
     }
 }

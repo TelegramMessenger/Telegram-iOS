@@ -12,17 +12,104 @@ import ContextUI
 import ReactionButtonListComponent
 import TelegramCore
 
+private class ButtonIcon: Equatable {
+    enum IconType: Equatable {
+        case none
+        case send
+        case apply
+        case removeVideoInput
+        case delete
+        case attach
+        case forward
+        case like
+        case repost
+    }
+    
+    let icon: IconType
+    
+    init(icon: IconType) {
+        self.icon = icon
+    }
+    
+    var image: UIImage? {
+        switch icon {
+        case .delete:
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: .white)
+        case .attach:
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: .white)
+        case .forward:
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconForwardSend"), color: .white)
+        case .like:
+            return generateTintedImage(image: UIImage(bundleImageName: "Stories/InputLikeOff"), color: .white)
+        case .removeVideoInput:
+            return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/RemoveRecordedVideo"), color: .white)
+        case .repost:
+            return generateTintedImage(image: UIImage(bundleImageName: "Stories/InputRepost"), color: .white)
+        case .apply:
+            return generateImage(CGSize(width: 33.0, height: 33.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                
+                if let image = UIImage(bundleImageName: "Media Editor/Apply"), let cgImage = image.cgImage {
+                    context.setBlendMode(.copy)
+                    context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.35).cgColor)
+                    context.clip(to: CGRect(origin: CGPoint(x: -4.0 + UIScreenPixel, y: -3.0 - UIScreenPixel), size: CGSize(width: 40.0, height: 40.0)), mask: cgImage)
+                    context.fill(CGRect(origin: .zero, size: size))
+                }
+            })
+        case .send:
+            return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                context.setBlendMode(.copy)
+                context.setStrokeColor(UIColor.clear.cgColor)
+                context.setLineWidth(2.0)
+                context.setLineCap(.round)
+                context.setLineJoin(.round)
+                
+                context.translateBy(x: 5.45, y: 4.0)
+                
+                context.saveGState()
+                context.translateBy(x: 4.0, y: 4.0)
+                let _ = try? drawSvgPath(context, path: "M1,7 L7,1 L13,7 S ")
+                context.restoreGState()
+                
+                context.saveGState()
+                context.translateBy(x: 10.0, y: 4.0)
+                let _ = try? drawSvgPath(context, path: "M1,16 V1 S ")
+                context.restoreGState()
+            })
+        case .none:
+            return nil
+        }
+    }
+    
+    static func == (lhs: ButtonIcon, rhs: ButtonIcon) -> Bool {
+        return lhs.icon == rhs.icon
+    }
+}
+
 private extension MessageInputActionButtonComponent.Mode {
-    var iconName: String? {
+    var icon: ButtonIcon? {
         switch self {
         case .delete:
-            return "Chat/Context Menu/Delete"
+            return ButtonIcon(icon: .delete)
         case .attach:
-            return "Chat/Input/Text/IconAttachment"
+            return ButtonIcon(icon: .attach)
         case .forward:
-            return "Chat/Input/Text/IconForwardSend"
+            return ButtonIcon(icon: .forward)
         case .like:
-            return "Stories/InputLikeOff"
+            return ButtonIcon(icon: .like)
+        case .removeVideoInput:
+            return ButtonIcon(icon: .removeVideoInput)
+        case .repost:
+            return ButtonIcon(icon: .repost)
+        case .apply:
+            return ButtonIcon(icon: .apply)
+        case .send:
+            return ButtonIcon(icon: .send)
         default:
             return nil
         }
@@ -36,12 +123,14 @@ public final class MessageInputActionButtonComponent: Component {
         case apply
         case voiceInput
         case videoInput
+        case removeVideoInput
         case unavailableVoiceInput
         case delete
         case attach
         case forward
         case more
         case like(reaction: MessageReaction.Reaction?, file: TelegramMediaFile?, animationFileId: Int64?)
+        case repost
     }
     
     public enum Action {
@@ -64,6 +153,7 @@ public final class MessageInputActionButtonComponent: Component {
     public let presentController: (ViewController) -> Void
     public let audioRecorder: ManagedAudioRecorder?
     public let videoRecordingStatus: InstantVideoControllerRecordingStatus?
+    public let hasShadow: Bool
     
     public init(
         mode: Mode,
@@ -80,7 +170,8 @@ public final class MessageInputActionButtonComponent: Component {
         strings: PresentationStrings,
         presentController: @escaping (ViewController) -> Void,
         audioRecorder: ManagedAudioRecorder?,
-        videoRecordingStatus: InstantVideoControllerRecordingStatus?
+        videoRecordingStatus: InstantVideoControllerRecordingStatus?,
+        hasShadow: Bool = false
     ) {
         self.mode = mode
         self.storyId = storyId
@@ -97,6 +188,7 @@ public final class MessageInputActionButtonComponent: Component {
         self.presentController = presentController
         self.audioRecorder = audioRecorder
         self.videoRecordingStatus = videoRecordingStatus
+        self.hasShadow = hasShadow
     }
     
     public static func ==(lhs: MessageInputActionButtonComponent, rhs: MessageInputActionButtonComponent) -> Bool {
@@ -119,6 +211,9 @@ public final class MessageInputActionButtonComponent: Component {
             return false
         }
         if lhs.videoRecordingStatus !== rhs.videoRecordingStatus {
+            return false
+        }
+        if lhs.hasShadow != rhs.hasShadow {
             return false
         }
         return true
@@ -214,12 +309,7 @@ public final class MessageInputActionButtonComponent: Component {
             }
             component.action(component.mode, .up, false)
         }
-                
-//        public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-//            let result = super.hitTest(point, with: event)
-//            return result
-//        }
-        
+                        
         func update(component: MessageInputActionButtonComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let previousComponent = self.component
             self.component = component
@@ -333,7 +423,7 @@ public final class MessageInputActionButtonComponent: Component {
             switch component.mode {
             case .none:
                 break
-            case .send, .apply, .attach, .delete, .forward:
+            case .send, .apply, .attach, .delete, .forward, .removeVideoInput, .repost:
                 sendAlpha = 1.0
             case let .like(reaction, _, _):
                 if reaction != nil {
@@ -349,63 +439,37 @@ public final class MessageInputActionButtonComponent: Component {
                 microphoneAlpha = 0.4
             }
             
-            if self.sendIconView.image == nil || previousComponent?.mode.iconName != component.mode.iconName {
-                if let iconName = component.mode.iconName {
-                    let tintColor: UIColor = .white
-                    self.sendIconView.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: tintColor)
-                } else if case .apply = component.mode {
-                    self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), contextGenerator: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        context.setFillColor(UIColor.white.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                        
-                        if let image = UIImage(bundleImageName: "Media Editor/Apply"), let cgImage = image.cgImage {
-                            context.setBlendMode(.copy)
-                            context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.35).cgColor)
-                            context.clip(to: CGRect(origin: CGPoint(x: -4.0 + UIScreenPixel, y: -3.0 - UIScreenPixel), size: CGSize(width: 40.0, height: 40.0)), mask: cgImage)
-                            context.fill(CGRect(origin: .zero, size: size))
-                        }
-                    })
-                } else if case .none = component.mode {
-                    self.sendIconView.image = nil
-                } else {
-                    if !transition.animation.isImmediate {
-                        if let snapshotView = self.sendIconView.snapshotView(afterScreenUpdates: false) {
-                            snapshotView.frame = self.sendIconView.frame
-                            self.addSubview(snapshotView)
-                            
-                            transition.setAlpha(view: snapshotView, alpha: 0.0, completion: { [weak snapshotView] _ in
-                                snapshotView?.removeFromSuperview()
-                            })
-                            transition.setScale(view: snapshotView, scale: 0.01)
-                            
-                            self.sendIconView.alpha = 0.0
-                            transition.animateAlpha(view: self.sendIconView, from: 0.0, to: sendAlpha)
-                            transition.animateScale(view: self.sendIconView, from: 0.01, to: 1.0)
+            if self.sendIconView.image == nil || previousComponent?.mode.icon != component.mode.icon {
+                if let image = component.mode.icon?.image {
+                    if case .send = component.mode {
+                        if !transition.animation.isImmediate {
+                            if let snapshotView = self.sendIconView.snapshotView(afterScreenUpdates: false) {
+                                snapshotView.frame = self.sendIconView.frame
+                                self.addSubview(snapshotView)
+                                
+                                transition.setAlpha(view: snapshotView, alpha: 0.0, completion: { [weak snapshotView] _ in
+                                    snapshotView?.removeFromSuperview()
+                                })
+                                transition.setScale(view: snapshotView, scale: 0.01)
+                                
+                                self.sendIconView.alpha = 0.0
+                                transition.animateAlpha(view: self.sendIconView, from: 0.0, to: sendAlpha)
+                                transition.animateScale(view: self.sendIconView, from: 0.01, to: 1.0)
+                            }
                         }
                     }
-                    self.sendIconView.image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        context.setFillColor(UIColor.white.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                        context.setBlendMode(.copy)
-                        context.setStrokeColor(UIColor.clear.cgColor)
-                        context.setLineWidth(2.0)
-                        context.setLineCap(.round)
-                        context.setLineJoin(.round)
-                        
-                        context.translateBy(x: 5.45, y: 4.0)
-                        
-                        context.saveGState()
-                        context.translateBy(x: 4.0, y: 4.0)
-                        let _ = try? drawSvgPath(context, path: "M1,7 L7,1 L13,7 S ")
-                        context.restoreGState()
-                        
-                        context.saveGState()
-                        context.translateBy(x: 10.0, y: 4.0)
-                        let _ = try? drawSvgPath(context, path: "M1,16 V1 S ")
-                        context.restoreGState()
-                    })
+                    self.sendIconView.image = image
+                } else {
+                    self.sendIconView.image = nil
+                }
+                if case .removeVideoInput = component.mode, component.hasShadow {
+                    self.sendIconView.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                    self.sendIconView.layer.shadowRadius = 2.0
+                    self.sendIconView.layer.shadowColor = UIColor.black.cgColor
+                    self.sendIconView.layer.shadowOpacity = 0.35
+                } else {
+                    self.sendIconView.layer.shadowColor = UIColor.clear.cgColor
+                    self.sendIconView.layer.shadowOpacity = 0.0
                 }
             }
             
@@ -534,6 +598,9 @@ public final class MessageInputActionButtonComponent: Component {
             }
             
             if let micButton = self.micButton {
+                micButton.hasShadow = component.hasShadow
+                micButton.hidesOnLock = component.hasShadow
+                
                 if themeUpdated {
                     micButton.updateTheme(theme: defaultDarkPresentationTheme)
                 }
@@ -548,9 +615,9 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like, .repost:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
-                    case .videoInput:
+                    case .videoInput, .removeVideoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)
                     }
                 }

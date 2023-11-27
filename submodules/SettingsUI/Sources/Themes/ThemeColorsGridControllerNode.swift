@@ -157,9 +157,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
                     }
                     
                     controller.navigationPresentation = .modal
-                    controller.apply = { [weak self] wallpaper, _, _, _, _ in
+                    controller.apply = { [weak self] wallpaper, _, _, _, _, forBoth in
                         if let strongSelf = self, let mode = strongSelf.controller?.mode, case let .peer(peer) = mode, case let .wallpaper(wallpaperValue, _) = wallpaper {
-                            let _ = (strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: wallpaperValue)
+                            let _ = (strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: wallpaperValue, forBoth: forBoth)
                             |> deliverOnMainQueue).start(completed: {
                                 dismissControllers()
                             })

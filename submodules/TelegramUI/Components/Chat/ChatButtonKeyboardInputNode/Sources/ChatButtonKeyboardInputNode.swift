@@ -430,7 +430,7 @@ public final class ChatButtonKeyboardInputNode: ChatInputNode {
                         guard let self, let peer else {
                             return
                         }
-                        self.controllerInteraction.openPeer(peer, .info, nil, .default)
+                        self.controllerInteraction.openPeer(peer, .info(nil), nil, .default)
                     })
                 case let .openWebView(url, simple):
                     self.controllerInteraction.openWebView(markupButton.title, url, simple, .generic)

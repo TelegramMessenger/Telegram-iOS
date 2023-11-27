@@ -20,96 +20,141 @@ import MediaEditorScreen
 import ChatControllerInteraction
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
-    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-        for controller in params.navigationController.viewControllers.reversed() {
-            var chatListController: ChatListControllerImpl?
-            if let controller = controller as? ChatListControllerImpl {
-                chatListController = controller
-            } else if let controller = controller as? TabBarController {
-                chatListController = controller.currentController as? ChatListControllerImpl
-            }
-            
-            if let chatListController = chatListController {
-                var matches = false
-                if case let .forum(peerId) = chatListController.location, peer.id == peerId {
-                    matches = true
-                } else if case let .forum(peerId) = chatListController.effectiveLocation, peer.id == peerId {
-                    matches = true
-                }
-                
-                if matches {
-                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                    if let activateMessageSearch = params.activateMessageSearch {
-                        chatListController.activateSearch(query: activateMessageSearch.1)
-                    }
-                    return
-                }
-            }
-        }
-        
-        let controller = ChatListControllerImpl(context: params.context, location: .forum(peerId: peer.id), controlsHistoryPreload: false, enableDebugActions: false)
-        
-        let activateMessageSearch = params.activateMessageSearch
-        params.navigationController.pushViewController(controller, completion: { [weak controller] in
-            guard let controller, let activateMessageSearch else {
-                return
-            }
-            controller.activateSearch(query: activateMessageSearch.1)
-        })
-        
-        return
+    if case let .peer(peer) = params.chatLocation {
+        let _ = params.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer).startStandalone()
     }
     
-    var found = false
-    var isFirst = true
-    if params.useExisting {
-        for controller in params.navigationController.viewControllers.reversed() {
-            guard let controller = controller as? ChatControllerImpl else {
-                isFirst = false
-                continue
+    var viewForumAsMessages: Signal<Bool, NoError> = .single(false)
+    if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+        viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])
+        |> take(1)
+        |> map { combinedView in
+            guard let cachedDataView = combinedView.views[.cachedPeerData(peerId: peer.id)] as? CachedPeerDataView else {
+                return false
             }
-            if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
-                if let updateTextInputState = params.updateTextInputState {
-                    controller.updateTextInputState(updateTextInputState)
+            if let cachedData = cachedDataView.cachedPeerData as? CachedChannelData, case let .known(viewForumAsMessages) = cachedData.viewForumAsMessages, viewForumAsMessages {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    let _ = (viewForumAsMessages
+    |> take(1)
+    |> deliverOnMainQueue).start(next: { viewForumAsMessages in
+        if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum), !viewForumAsMessages {
+            for controller in params.navigationController.viewControllers.reversed() {
+                var chatListController: ChatListControllerImpl?
+                if let controller = controller as? ChatListControllerImpl {
+                    chatListController = controller
+                } else if let controller = controller as? TabBarController {
+                    chatListController = controller.currentController as? ChatListControllerImpl
                 }
-                var popAndComplete = true
-                if let subject = params.subject, case let .message(messageSubject, highlight, timecode) = subject {
-                    if case let .id(messageId) = messageSubject {
-                        let navigationController = params.navigationController
-                        let animated = params.animated
-                        controller.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: highlight?.quote)), animated: isFirst, completion: { [weak navigationController, weak controller] in
-                            if let navigationController = navigationController, let controller = controller {
-                                let _ = navigationController.popToViewController(controller, animated: animated)
-                            }
-                        }, customPresentProgress: { [weak navigationController] c, a in
-                            (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
+                
+                if let chatListController = chatListController {
+                    var matches = false
+                    if case let .forum(peerId) = chatListController.location, peer.id == peerId {
+                        matches = true
+                    } else if case let .forum(peerId) = chatListController.effectiveLocation, peer.id == peerId {
+                        matches = true
+                    }
+                    
+                    if matches {
+                        let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                        if let activateMessageSearch = params.activateMessageSearch {
+                            chatListController.activateSearch(query: activateMessageSearch.1)
+                        }
+                        return
+                    }
+                }
+            }
+            
+            let controller = ChatListControllerImpl(context: params.context, location: .forum(peerId: peer.id), controlsHistoryPreload: false, enableDebugActions: false)
+            
+            let activateMessageSearch = params.activateMessageSearch
+            params.navigationController.pushViewController(controller, completion: { [weak controller] in
+                guard let controller, let activateMessageSearch else {
+                    return
+                }
+                controller.activateSearch(query: activateMessageSearch.1)
+            })
+            
+            return
+        }
+        
+        var found = false
+        var isFirst = true
+        if params.useExisting {
+            for controller in params.navigationController.viewControllers.reversed() {
+                guard let controller = controller as? ChatControllerImpl else {
+                    isFirst = false
+                    continue
+                }
+                if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
+                    if let updateTextInputState = params.updateTextInputState {
+                        controller.updateTextInputState(updateTextInputState)
+                    }
+                    var popAndComplete = true
+                    if let subject = params.subject, case let .message(messageSubject, highlight, timecode) = subject {
+                        if case let .id(messageId) = messageSubject {
+                            let navigationController = params.navigationController
+                            let animated = params.animated
+                            controller.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: (highlight?.quote).flatMap { quote in NavigateToMessageParams.Quote(string: quote.string, offset: quote.offset) })), animated: isFirst, completion: { [weak navigationController, weak controller] in
+                                if let navigationController = navigationController, let controller = controller {
+                                    let _ = navigationController.popToViewController(controller, animated: animated)
+                                }
+                            }, customPresentProgress: { [weak navigationController] c, a in
+                                (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
+                            })
+                        }
+                        popAndComplete = false
+                    } else if params.scrollToEndIfExists && isFirst {
+                        controller.scrollToEndOfHistory()
+                    } else if let search = params.activateMessageSearch {
+                        controller.activateSearch(domain: search.0, query: search.1)
+                    } else if let reportReason = params.reportReason {
+                        controller.beginReportSelection(reason: reportReason)
+                    }
+                    
+                    if popAndComplete {
+                        if let _ = params.navigationController.viewControllers.last as? AttachmentController, let controller = params.navigationController.viewControllers[params.navigationController.viewControllers.count - 2] as? ChatControllerImpl, controller.chatLocation == params.chatLocation.asChatLocation {
+                            
+                        } else {
+                            let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                        }
+                        params.completion(controller)
+                    }
+                    
+                    controller.purposefulAction = params.purposefulAction
+                    if let activateInput = params.activateInput {
+                        controller.activateInput(type: activateInput)
+                    }
+                    if params.changeColors {
+                        controller.presentThemeSelection()
+                    }
+                    if let botStart = params.botStart {
+                        controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
+                            return state.updatedBotStartPayload(botStart.payload)
                         })
                     }
-                    popAndComplete = false
-                } else if params.scrollToEndIfExists && isFirst {
-                    controller.scrollToEndOfHistory()
-                } else if let search = params.activateMessageSearch {
-                    controller.activateSearch(domain: search.0, query: search.1)
-                } else if let reportReason = params.reportReason {
-                    controller.beginReportSelection(reason: reportReason)
-                }
-                
-                if popAndComplete {
-                    if let _ = params.navigationController.viewControllers.last as? AttachmentController, let controller = params.navigationController.viewControllers[params.navigationController.viewControllers.count - 2] as? ChatControllerImpl, controller.chatLocation == params.chatLocation.asChatLocation {
-                        
-                    } else {
-                        let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    if let attachBotStart = params.attachBotStart {
+                        controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
                     }
-                    params.completion(controller)
+                    if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
+                        controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
+                    }
+                    params.setupController(controller)
+                    found = true
+                    break
                 }
-                
-                controller.purposefulAction = params.purposefulAction
-                if let activateInput = params.activateInput {
-                    controller.activateInput(type: activateInput)
-                }
-                if params.changeColors {
-                    controller.presentThemeSelection()
-                }
+                isFirst = false
+            }
+        }
+        if !found {
+            let controller: ChatControllerImpl
+            if let chatController = params.chatController as? ChatControllerImpl {
+                controller = chatController
                 if let botStart = params.botStart {
                     controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                         return state.updatedBotStartPayload(botStart.payload)
@@ -119,133 +164,112 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
                 }
                 if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
-                    controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
-                }
-                params.setupController(controller)
-                found = true
-                break
-            }
-            isFirst = false
-        }
-    }
-    if !found {
-        let controller: ChatControllerImpl
-        if let chatController = params.chatController as? ChatControllerImpl {
-            controller = chatController
-            if let botStart = params.botStart {
-                controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
-                    return state.updatedBotStartPayload(botStart.payload)
-                })
-            }
-            if let attachBotStart = params.attachBotStart {
-                controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload, justInstalled: attachBotStart.justInstalled)
-            }
-            if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
-                Queue.mainQueue().after(0.1) {
-                    controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
-                }
-            }
-        } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation.asChatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, botAppStart: params.botAppStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
-            
-            if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
-                Queue.mainQueue().after(0.1) {
-                    controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
-                }
-            }
-        }
-        controller.purposefulAction = params.purposefulAction
-        if let search = params.activateMessageSearch {
-            controller.activateSearch(domain: search.0, query: search.1)
-        }
-        let resolvedKeepStack: Bool
-        switch params.keepStack {
-        case .default:
-            if params.navigationController.viewControllers.contains(where: { $0 is StoryContainerScreen }) {
-                resolvedKeepStack = true
-            } else {
-                resolvedKeepStack = params.context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
-            }
-        case .always:
-            resolvedKeepStack = true
-        case .never:
-            resolvedKeepStack = false
-        }
-        if resolvedKeepStack {
-            if let pushController = params.pushController {
-                pushController(controller, params.animated, {
-                    params.completion(controller)
-                })
-            } else {
-                params.navigationController.pushViewController(controller, animated: params.animated, completion: {
-                    params.completion(controller)
-                })
-            }
-        } else {
-            let viewControllers = params.navigationController.viewControllers.filter({ controller in
-                if controller is ForumCreateTopicScreen {
-                    return false
-                }
-                if controller is ChatListController {
-                    if let parentGroupId = params.parentGroupId {
-                        return parentGroupId != .root
-                    } else {
-                        return true
+                    Queue.mainQueue().after(0.1) {
+                        controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
                     }
-                } else if controller is TabBarController {
-                    return true
-                } else {
-                    return false
                 }
-            })
-            if viewControllers.isEmpty {
-                params.navigationController.replaceAllButRootController(controller, animated: params.animated, animationOptions: params.options, completion: {
-                    params.completion(controller)
-                })
             } else {
-                if params.useBackAnimation {
-                    params.navigationController.viewControllers = [controller] + params.navigationController.viewControllers
-                    params.navigationController.replaceControllers(controllers: viewControllers + [controller], animated: params.animated, options: params.options, completion: {
+                controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation.asChatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, botAppStart: params.botAppStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
+                
+                if let botAppStart = params.botAppStart, case let .peer(peer) = params.chatLocation {
+                    Queue.mainQueue().after(0.1) {
+                        controller.presentBotApp(botApp: botAppStart.botApp, botPeer: peer, payload: botAppStart.payload)
+                    }
+                }
+            }
+            controller.purposefulAction = params.purposefulAction
+            if let search = params.activateMessageSearch {
+                controller.activateSearch(domain: search.0, query: search.1)
+            }
+            let resolvedKeepStack: Bool
+            switch params.keepStack {
+            case .default:
+                if params.navigationController.viewControllers.contains(where: { $0 is StoryContainerScreen }) {
+                    resolvedKeepStack = true
+                } else {
+                    resolvedKeepStack = params.context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
+                }
+            case .always:
+                resolvedKeepStack = true
+            case .never:
+                resolvedKeepStack = false
+            }
+            if resolvedKeepStack {
+                if let pushController = params.pushController {
+                    pushController(controller, params.animated, {
                         params.completion(controller)
                     })
                 } else {
-                    params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
+                    params.navigationController.pushViewController(controller, animated: params.animated, completion: {
                         params.completion(controller)
                     })
                 }
+            } else {
+                let viewControllers = params.navigationController.viewControllers.filter({ controller in
+                    if controller is ForumCreateTopicScreen {
+                        return false
+                    }
+                    if controller is ChatListController {
+                        if let parentGroupId = params.parentGroupId {
+                            return parentGroupId != .root
+                        } else {
+                            return true
+                        }
+                    } else if controller is TabBarController {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                if viewControllers.isEmpty {
+                    params.navigationController.replaceAllButRootController(controller, animated: params.animated, animationOptions: params.options, completion: {
+                        params.completion(controller)
+                    })
+                } else {
+                    if params.useBackAnimation {
+                        params.navigationController.viewControllers = [controller] + params.navigationController.viewControllers
+                        params.navigationController.replaceControllers(controllers: viewControllers + [controller], animated: params.animated, options: params.options, completion: {
+                            params.completion(controller)
+                        })
+                    } else {
+                        params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
+                            params.completion(controller)
+                        })
+                    }
+                }
+            }
+            if let activateInput = params.activateInput {
+                controller.activateInput(type: activateInput)
+            }
+            if params.changeColors {
+                Queue.mainQueue().after(0.1) {
+                    controller.presentThemeSelection()
+                }
             }
         }
-        if let activateInput = params.activateInput {
-            controller.activateInput(type: activateInput)
-        }
-        if params.changeColors {
-            Queue.mainQueue().after(0.1) {
-                controller.presentThemeSelection()
-            }
-        }
-    }
-    
-    params.navigationController.currentWindow?.forEachController { controller in
-        if let controller = controller as? NotificationContainerController {
-            controller.removeItems { item in
-                if let item = item as? ChatMessageNotificationItem {
-                    for message in item.messages {
-                        switch params.chatLocation {
-                        case let .peer(peer):
-                            if message.id.peerId == peer.id {
-                                return true
-                            }
-                        case let .replyThread(replyThreadMessage):
-                            if message.id.peerId == replyThreadMessage.messageId.peerId {
-                                return true
+        
+        params.navigationController.currentWindow?.forEachController { controller in
+            if let controller = controller as? NotificationContainerController {
+                controller.removeItems { item in
+                    if let item = item as? ChatMessageNotificationItem {
+                        for message in item.messages {
+                            switch params.chatLocation {
+                            case let .peer(peer):
+                                if message.id.peerId == peer.id {
+                                    return true
+                                }
+                            case let .replyThread(replyThreadMessage):
+                                if message.id.peerId == replyThreadMessage.messageId.peerId {
+                                    return true
+                                }
                             }
                         }
                     }
+                    return false
                 }
-                return false
             }
         }
-    }
+    })
 }
 
 private func findOpaqueLayer(rootLayer: CALayer, layer: CALayer) -> Bool {

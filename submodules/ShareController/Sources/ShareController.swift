@@ -19,6 +19,9 @@ import WallpaperBackgroundNode
 import TelegramIntents
 import AnimationCache
 import MultiAnimationRenderer
+import ObjectiveC
+
+private var ObjCKey_DeinitWatcher: Int?
 
 public struct ShareControllerAction {
     let title: String
@@ -462,6 +465,8 @@ public final class ShareController: ViewController {
     }
     
     public var openShareAsImage: (([Message]) -> Void)?
+    
+    public var shareStory: (() -> Void)?
 
     public var debugAction: (() -> Void)?
     
@@ -697,7 +702,7 @@ public final class ShareController: ViewController {
                 return
             }
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues)
+        }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues, shareStory: self.shareStory)
         self.controllerNode.completed = self.completed
         self.controllerNode.present = { [weak self] c in
             self?.presentInGlobalOverlay(c)
@@ -992,7 +997,6 @@ public final class ShareController: ViewController {
                     subject = selectedValue.subject
                 }
                 var messageUrl: String?
-//                var messagesToShare: [Message]?
                 switch subject {
                     case let .url(text):
                         collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", author: nil, timestamp: nil, mediaReference: nil))
@@ -1009,7 +1013,6 @@ public final class ShareController: ViewController {
                         let latLong = "\(media.latitude),\(media.longitude)"
                         collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .messages(messages):
-//                        messagesToShare = messages
                         for message in messages {
                             var url: String?
                             var selectedMedia: Media?
@@ -1099,16 +1102,52 @@ public final class ShareController: ViewController {
                                 |> filter { $0 }
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] _ in
-//                                    if asImage, let messages = messagesToShare {
-//                                        self?.openShareAsImage?(messages)
-//                                    } else {
-                                        let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
-                                        if let strongSelf = self, let window = strongSelf.view.window, let rootViewController = window.rootViewController {
-                                            activityController.popoverPresentationController?.sourceView = window
-                                            activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                                            rootViewController.present(activityController, animated: true, completion: nil)
+                                    let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
+                                    if let strongSelf = self, let window = strongSelf.view.window, let rootViewController = window.rootViewController {
+                                        activityController.popoverPresentationController?.sourceView = window
+                                        activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                        rootViewController.present(activityController, animated: true, completion: nil)
+                                        
+                                        final class DeinitWatcher: NSObject {
+                                            let f: () -> Void
+                                            
+                                            init(_ f: @escaping () -> Void) {
+                                                self.f = f
+                                            }
+                                            
+                                            deinit {
+                                                f()
+                                            }
                                         }
-//                                    }
+                                        
+                                        let watchDisposable = MetaDisposable()
+                                        objc_setAssociatedObject(activityController, &ObjCKey_DeinitWatcher, DeinitWatcher {
+                                            watchDisposable.dispose()
+                                        }, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                                        
+                                        if case let .messages(messages) = subject {
+                                            watchDisposable.set((currentContext.context.engine.data.subscribe(
+                                                EngineDataMap(messages.map { TelegramEngine.EngineData.Item.Messages.Message(id: $0.id) })
+                                            )
+                                            |> deliverOnMainQueue).start(next: { [weak activityController] currentMessages in
+                                                guard let activityController else {
+                                                    return
+                                                }
+                                                var allFound = true
+                                                for message in messages {
+                                                    if let value = currentMessages[message.id], value != nil {
+                                                    } else {
+                                                        allFound = false
+                                                        break
+                                                    }
+                                                }
+                                                
+                                                if !allFound {
+                                                    activityController.presentingViewController?.dismiss(animated: true)
+                                                }
+                                            }))
+                                        }
+                                    }
                                 })
                             }
                             return .done
@@ -2431,134 +2470,6 @@ public final class ShareController: ViewController {
                 }
             }
         }))
-    }
-}
-
-
-final class MessageStoryRenderer {
-    private let context: AccountContext
-    private let presentationData: PresentationData
-    private let messages: [Message]
-    
-    let containerNode: ASDisplayNode
-    private let instantChatBackgroundNode: WallpaperBackgroundNode
-    private let messagesContainerNode: ASDisplayNode
-    private var dateHeaderNode: ListViewItemHeaderNode?
-    private var messageNodes: [ListViewItemNode]?
-    private let addressNode: ImmediateTextNode
-    
-    init(context: AccountContext, messages: [Message]) {
-        self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.messages = messages
-
-        self.containerNode = ASDisplayNode()
-        
-        self.instantChatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
-        self.instantChatBackgroundNode.displaysAsynchronously = false
-        
-        self.messagesContainerNode = ASDisplayNode()
-        self.messagesContainerNode.clipsToBounds = true
-        self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
-        
-        let message = messages.first!
-        let addressName = message.peers[message.id.peerId]?.addressName ?? ""
-
-        self.addressNode = ImmediateTextNode()
-        self.addressNode.displaysAsynchronously = false
-        self.addressNode.attributedText = NSAttributedString(string: "t.me/\(addressName)/\(message.id.id)", font: Font.medium(14.0), textColor: UIColor(rgb: 0xffffff))
-        self.addressNode.textShadowColor = UIColor(rgb: 0x929292, alpha: 0.8)
-        
-        self.containerNode.addSubnode(self.instantChatBackgroundNode)
-        self.containerNode.addSubnode(self.messagesContainerNode)
-        self.containerNode.addSubnode(self.addressNode)
-    }
-    
-    func update(layout: ContainerViewLayout, completion: @escaping (UIImage?) -> Void) {
-        self.updateMessagesLayout(layout: layout)
-        
-        Queue.mainQueue().after(0.01) {
-            UIGraphicsBeginImageContextWithOptions(layout.size, false, 3.0)
-            self.containerNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: layout.size), afterScreenUpdates: true)
-            let img = UIGraphicsGetImageFromCurrentImageContext()
-            UIGraphicsEndImageContext()
-            completion(img)
-        }
-    }
-    
-    private func updateMessagesLayout(layout: ContainerViewLayout) {
-        let size = layout.size
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.instantChatBackgroundNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.instantChatBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: .immediate)
-        self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        
-        let addressLayout = self.addressNode.updateLayout(size)
-        
-        let theme = self.presentationData.theme.withUpdated(preview: true)
-        let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
-    
-        let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, isCentered: false)]
-    
-        let inset: CGFloat = 16.0
-        let width = layout.size.width - inset * 2.0
-        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
-        if let messageNodes = self.messageNodes {
-            for i in 0 ..< items.count {
-                let itemNode = messageNodes[i]
-                items[i].updateNode(async: { $0() }, node: {
-                    return itemNode
-                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
-                    let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - layout.size.height) / 2.0)), size: CGSize(width: width, height: layout.size.height))
-                    
-                    itemNode.contentSize = layout.contentSize
-                    itemNode.insets = layout.insets
-                    itemNode.frame = nodeFrame
-                    itemNode.isUserInteractionEnabled = false
-                    
-                    apply(ListViewItemApply(isOnScreen: true))
-                })
-            }
-        } else {
-            var messageNodes: [ListViewItemNode] = []
-            for i in 0 ..< items.count {
-                var itemNode: ListViewItemNode?
-                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
-                    itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
-                })
-                itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-                itemNode!.isUserInteractionEnabled = false
-                messageNodes.append(itemNode!)
-                self.messagesContainerNode.addSubnode(itemNode!)
-            }
-            self.messageNodes = messageNodes
-        }
-        
-        var bottomOffset: CGFloat = 0.0
-        if let messageNodes = self.messageNodes {
-            for itemNode in messageNodes {
-                itemNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((size.height - itemNode.frame.height) / 2.0)), size: itemNode.frame.size)
-                bottomOffset += itemNode.frame.maxY
-                itemNode.updateFrame(itemNode.frame, within: layout.size)
-            }
-        }
-        
-        self.addressNode.frame = CGRect(origin: CGPoint(x: inset + 16.0, y: bottomOffset + 3.0), size: CGSize(width: addressLayout.width, height: addressLayout.height + 3.0))
-        
-        let dateHeaderNode: ListViewItemHeaderNode
-        if let currentDateHeaderNode = self.dateHeaderNode {
-            dateHeaderNode = currentDateHeaderNode
-            headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
-        } else {
-            dateHeaderNode = headerItem.node(synchronousLoad: true)
-            dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-            self.messagesContainerNode.addSubnode(dateHeaderNode)
-            self.dateHeaderNode = dateHeaderNode
-        }
-        
-        dateHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: CGSize(width: layout.size.width, height: headerItem.height))
-        dateHeaderNode.updateLayout(size: self.containerNode.frame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
     }
 }
 

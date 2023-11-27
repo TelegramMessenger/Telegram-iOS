@@ -36,8 +36,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     private let historyBackgroundNode: ASDisplayNode
     private let historyBackgroundContentNode: ASDisplayNode
     private var floatingHeaderOffset: CGFloat?
-    private var historyNode: ChatHistoryListNode
-    private var replacementHistoryNode: ChatHistoryListNode?
+    private var historyNode: ChatHistoryListNodeImpl
+    private var replacementHistoryNode: ChatHistoryListNodeImpl?
     private var replacementHistoryNodeFloatingOffset: CGFloat?
     
     private var validLayout: ContainerViewLayout?
@@ -171,6 +171,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openNoAdsDemo: {
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
+        }, openRecommendedChannelContextMenu: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -216,7 +217,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             self.isGlobalSearch = false
         }
         
-        self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, source: source,  subject: .message(id: .id(initialMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, source: source, subject: .message(id: .id(initialMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch), messageTransitionNode: { return nil })
         self.historyNode.clipsToBounds = true
         
         super.init()
@@ -558,7 +559,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
-        let historyNode = ChatHistoryListNode(context: self.context, updatedPresentationData: (self.context.sharedContext.currentPresentationData.with({ $0 }), self.context.sharedContext.presentationData), chatLocation: self.chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
+        let historyNode = ChatHistoryListNodeImpl(context: self.context, updatedPresentationData: (self.context.sharedContext.currentPresentationData.with({ $0 }), self.context.sharedContext.presentationData), chatLocation: self.chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, source: .default, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, reverseGroups: !self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch), messageTransitionNode: { return nil })
         historyNode.clipsToBounds = true
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true

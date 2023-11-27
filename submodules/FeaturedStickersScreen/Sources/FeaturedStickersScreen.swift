@@ -319,7 +319,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                     strongSelf.view.window?.endEditing(true)
                     let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { fileReference, sourceNode, sourceRect in
+                    let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: strongSelf.controller?.stickerActionTitle, parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { fileReference, sourceNode, sourceRect in
                         if let strongSelf = self {
                             return strongSelf.sendSticker?(fileReference, sourceNode, sourceRect) ?? false
                         } else {
@@ -442,6 +442,15 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         self.loadMoreDisposable.dispose()
     }
     
+    var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? {
+        if let forceTheme = self.controller?.forceTheme {
+            let presentationData = self.presentationData.withUpdated(theme: forceTheme)
+            return (presentationData, .single(presentationData))
+        } else {
+            return nil
+        }
+    }
+    
     func updatePresentationData(presentationData: PresentationData) {
         self.presentationData = presentationData
         
@@ -543,7 +552,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                 switch attribute {
                                                 case let .Sticker(_, packReference, _):
                                                     if let packReference = packReference {
-                                                        let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
+                                                        let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: strongSelf.controller?.stickerActionTitle, parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self {
                                                                 return strongSelf.sendSticker?(file, sourceNode, sourceRect) ?? false
                                                             } else {
@@ -631,7 +640,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         switch attribute {
                                         case let .Sticker(_, packReference, _):
                                             if let packReference = packReference {
-                                                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
+                                                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: strongSelf.controller?.stickerActionTitle, parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
                                                     if let strongSelf = self {
                                                         return strongSelf.sendSticker?(file, sourceNode, sourceRect) ?? false
                                                     } else {
@@ -804,6 +813,7 @@ public final class FeaturedStickersScreen: ViewController {
     private let context: AccountContext
     fileprivate let highlightedPackId: ItemCollectionId?
     private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    fileprivate var stickerActionTitle: String?
     
     private var controllerNode: FeaturedStickersScreenNode {
         return self.displayNode as! FeaturedStickersScreenNode
@@ -820,10 +830,11 @@ public final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, forceTheme: PresentationTheme? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, forceTheme: PresentationTheme? = nil, stickerActionTitle: String? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
         self.context = context
         self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
+        self.stickerActionTitle = stickerActionTitle
         
         var presentationData = context.sharedContext.currentPresentationData.with { $0 }
         if let forceTheme {
@@ -1181,7 +1192,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
+                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: strongSelf.controller?.stickerActionTitle, parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
                         return strongSelf.sendSticker?(fileReference, sourceNode, sourceRect) ?? false
                     } else {
@@ -1217,6 +1228,11 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     deinit {
         self.searchDisposable.dispose()
         self.installDisposable.dispose()
+    }
+    
+    var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: self.theme)
+        return (presentationData, .single(presentationData))
     }
     
     func updateText(_ text: String, languageCode: String?) {

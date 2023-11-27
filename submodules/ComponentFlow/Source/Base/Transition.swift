@@ -476,6 +476,10 @@ public struct Transition {
         self.setScale(layer: view.layer, scale: scale, delay: delay, completion: completion)
     }
     
+    public func setScaleWithSpring(view: UIView, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        self.setScaleWithSpring(layer: view.layer, scale: scale, delay: delay, completion: completion)
+    }
+    
     public func setScale(layer: CALayer, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         let t = layer.presentation()?.transform ?? layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
@@ -504,6 +508,40 @@ public struct Transition {
                 duration: duration,
                 delay: delay,
                 curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setScaleWithSpring(layer: CALayer, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        let t = layer.presentation()?.transform ?? layer.transform
+        let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+        if currentScale == scale {
+            if let animation = layer.animation(forKey: "transform.scale") as? CABasicAnimation, let toValue = animation.toValue as? NSNumber {
+                if toValue.doubleValue == scale {
+                    completion?(true)
+                    return
+                }
+            } else {
+                completion?(true)
+                return
+            }
+        }
+        switch self.animation {
+        case .none:
+            layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            completion?(true)
+        case let .curve(duration, _):
+            let previousScale = currentScale
+            layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.animateSpring(
+                from: previousScale as NSNumber,
+                to: scale as NSNumber,
+                keyPath: "transform.scale",
+                duration: duration,
+                delay: delay,
                 removeOnCompletion: true,
                 additive: false,
                 completion: completion

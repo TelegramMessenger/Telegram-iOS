@@ -32,7 +32,7 @@ class ChartVisibilityItemView: UIView {
     func setupView() {
         checkButton.frame = bounds
         checkButton.titleLabel?.font = ChartVisibilityItemView.textFont
-        checkButton.layer.cornerRadius = 6
+        checkButton.layer.cornerRadius = 15
         checkButton.layer.masksToBounds = true
         checkButton.addTarget(self, action: #selector(didTapButton), for: .touchUpInside)
         let pressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(didRecognizedLongPress(recognizer:)))

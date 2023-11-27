@@ -567,6 +567,15 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                         transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
                     } else {
                         transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width - 18.0, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
+                        
+                        if let labelIconNode = strongSelf.labelIconNode {
+                            strongSelf.labelIconNode = nil
+                            labelIconNode.removeFromSupernode()
+                        }
+                        if let labelBackgroundNode = strongSelf.labelBackgroundNode {
+                            strongSelf.labelBackgroundNode = nil
+                            labelBackgroundNode.removeFromSupernode()
+                        }
                     }
                     
                     if item.subtitleActive {

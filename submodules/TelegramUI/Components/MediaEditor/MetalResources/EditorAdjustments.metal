@@ -88,10 +88,10 @@ half3 applyRGBCurve(half3 pixel, constant float redCurve[200], constant float gr
 fragment half4 adjustmentsFragmentShader(RasterizerData in [[stage_in]],
                                           texture2d<half, access::sample> sourceImage [[texture(0)]],
                                           constant MediaEditorAdjustments& adjustments [[buffer(0)]],
-                                         constant float allCurve [[buffer(1)]][200],
-                                         constant float redCurve [[buffer(2)]][200],
-                                         constant float greenCurve [[buffer(3)]][200],
-                                         constant float blueCurve [[buffer(4)]][200]
+                                          constant float allCurve [[buffer(1)]][200],
+                                          constant float redCurve [[buffer(2)]][200],
+                                          constant float greenCurve [[buffer(3)]][200],
+                                          constant float blueCurve [[buffer(4)]][200]
                                          ) {
     constexpr sampler samplr(filter::linear, mag_filter::linear, min_filter::linear);
     const float epsilon = 0.005;

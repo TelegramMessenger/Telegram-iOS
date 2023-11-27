@@ -122,10 +122,10 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     }
                 case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
-                    if let giftCodeSlug = giftCodeSlug {
-                        status = .won(slug: giftCodeSlug)
-                    } else if (flags & (1 << 1)) != 0 {
+                    if (flags & (1 << 1)) != 0 {
                         status = .refunded
+                    } else if let giftCodeSlug = giftCodeSlug {
+                        status = .won(slug: giftCodeSlug)
                     } else {
                         status = .notWon
                     }
@@ -182,23 +182,27 @@ func _internal_checkPremiumGiftCode(account: Account, slug: String) -> Signal<Pr
     }
 }
 
-func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Never, NoError> {
+public enum ApplyPremiumGiftCodeError {
+    case generic
+}
+
+func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Never, ApplyPremiumGiftCodeError> {
     return account.network.request(Api.functions.payments.applyGiftCode(slug: slug))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-        return .single(nil)
+    |> mapError { _ -> ApplyPremiumGiftCodeError in
+        return .generic
     }
-    |> mapToSignal { updates -> Signal<Never, NoError> in
-        if let updates = updates {
-            account.stateManager.addUpdates(updates)
-        }
-        
+    |> mapToSignal { updates -> Signal<Never, ApplyPremiumGiftCodeError> in
+        account.stateManager.addUpdates(updates)
         return .complete()
     }
 }
 
-func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+public enum LaunchPrepaidGiveawayError {
+    case generic
+}
+
+func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
+    return account.postbox.transaction { transaction -> Signal<Never, LaunchPrepaidGiveawayError> in
         var flags: Int32 = 0
         if onlyNewSubscribers {
             flags |= (1 << 0)
@@ -227,17 +231,15 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
             return .complete()
         }
         return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-            return .single(nil)
+        |> mapError { _ -> LaunchPrepaidGiveawayError in
+            return .generic
         }
-        |> mapToSignal { updates -> Signal<Never, NoError> in
-            if let updates = updates {
-                account.stateManager.addUpdates(updates)
-            }
+        |> mapToSignal { updates -> Signal<Never, LaunchPrepaidGiveawayError> in
+            account.stateManager.addUpdates(updates)
             return .complete()
         }
     }
+    |> castError(LaunchPrepaidGiveawayError.self)
     |> switchToLatest
 }
 

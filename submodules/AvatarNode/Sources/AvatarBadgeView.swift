@@ -29,6 +29,9 @@ public final class AvatarBadgeView: UIImageView {
     private struct Parameters: Equatable {
         var size: CGSize
         var text: String
+        var hasTimeoutIcon: Bool
+        var useSolidColor: Bool
+        var strokeColor: UIColor?
     }
     
     private var originalContent: OriginalContent?
@@ -50,8 +53,8 @@ public final class AvatarBadgeView: UIImageView {
         }
     }
     
-    public func update(size: CGSize, text: String) {
-        let parameters = Parameters(size: size, text: text)
+    public func update(size: CGSize, text: String, hasTimeoutIcon: Bool = true, useSolidColor: Bool = false, strokeColor: UIColor? = nil) {
+        let parameters = Parameters(size: size, text: text, hasTimeoutIcon: hasTimeoutIcon, useSolidColor: useSolidColor, strokeColor: strokeColor)
         if self.parameters != parameters || !self.hasContent {
             self.parameters = parameters
             self.update()
@@ -192,24 +195,95 @@ public final class AvatarBadgeView: UIImageView {
             return
         }
         
-        self.image = generateImage(parameters.size, rotatedContext: { size, context in
+        var solidColor: UIColor?
+        if parameters.useSolidColor {
+            let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, clear: false)!
+            context.withFlippedContext({ context in
+                if let cgImage = blurredImage.cgImage {
+                    context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))
+                }
+            })
+            solidColor = context.colorAt(.zero)
+        }
+        
+        var badgeSize = parameters.size
+        
+        let strokeWidth: CGFloat = 1.0 + UIScreenPixel
+        var size = parameters.size
+        var offset: CGPoint = .zero
+        if parameters.strokeColor != nil {
+            offset = CGPoint(x: strokeWidth / 2.0, y: strokeWidth / 2.0)
+            badgeSize.width += strokeWidth
+            badgeSize.height += strokeWidth
+            size.width += strokeWidth * 2.0
+            size.height += strokeWidth * 2.0
+        }
+        
+        self.image = generateImage(size, rotatedContext: { size, context in
             UIGraphicsPushContext(context)
             
             context.clear(CGRect(origin: CGPoint(), size: size))
             
-            context.setBlendMode(.copy)
-            context.setFillColor(UIColor.black.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            
-            blurredImage.draw(in: CGRect(origin: CGPoint(), size: size), blendMode: .sourceIn, alpha: 1.0)
-            
-            context.setBlendMode(.normal)
-            
             let textColor: UIColor
-            if isLightImage {
-                textColor = UIColor(white: 0.7, alpha: 1.0)
-            } else {
+            if parameters.useSolidColor {
                 textColor = .white
+            } else {
+                if isLightImage {
+                    textColor = UIColor(white: 0.7, alpha: 1.0)
+                } else {
+                    textColor = .white
+                }
+            }
+            
+            if var solidColor {
+                func adjustedBackgroundColor(backgroundColor: UIColor, textColor: UIColor) -> UIColor {
+                    let minContrastRatio: CGFloat = 4.5
+                    if backgroundColor.contrastRatio(with: textColor) < minContrastRatio {
+                        var hue: CGFloat = 0
+                        var saturation: CGFloat = 0
+                        var brightness: CGFloat = 0
+                        var alpha: CGFloat = 0
+                        backgroundColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+                        
+                        if brightness > 0.7 {
+                            brightness = brightness * 0.9
+                            saturation = min(saturation + 0.1, 1)
+                        }
+                        
+                        return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
+                    } else {
+                        return backgroundColor
+                    }
+                }
+                solidColor = adjustedBackgroundColor(backgroundColor: solidColor, textColor: textColor)
+                
+                if let strokeColor = parameters.strokeColor {
+                    context.setStrokeColor(strokeColor.cgColor)
+                    context.setLineWidth(strokeWidth)
+                }
+                
+                context.setFillColor(solidColor.cgColor)
+            } else {
+                context.setBlendMode(.copy)
+                context.setFillColor(UIColor.black.cgColor)
+            }
+            if badgeSize.width != badgeSize.height {
+                let path = UIBezierPath(roundedRect: CGRect(origin: offset, size: badgeSize), cornerRadius: badgeSize.height / 2.0)
+                context.addPath(path.cgPath)
+                if let _ = parameters.strokeColor {
+                    context.drawPath(using: .fillStroke)
+                } else {
+                    context.fillPath()
+                }
+            } else {
+                context.fillEllipse(in: CGRect(origin: offset, size: badgeSize))
+            }
+            
+            if let _ = solidColor {
+                
+            } else {
+                blurredImage.draw(in: CGRect(origin: CGPoint(), size: badgeSize), blendMode: .sourceIn, alpha: 1.0)
+                context.setBlendMode(.normal)
             }
             
             var fontSize: CGFloat = floor(parameters.size.height * 0.48)
@@ -225,28 +299,30 @@ public final class AvatarBadgeView: UIImageView {
                 }
             }
             
-            let lineWidth: CGFloat = 1.5
-            let lineInset: CGFloat = 2.0
-            let lineRadius: CGFloat = size.width * 0.5 - lineInset - lineWidth * 0.5
-            context.setLineWidth(lineWidth)
-            context.setStrokeColor(textColor.cgColor)
-            context.setLineCap(.round)
-            
-            context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: CGFloat.pi * 0.5, endAngle: -CGFloat.pi * 0.5, clockwise: false)
-            context.strokePath()
-            
-            let sectionAngle: CGFloat = CGFloat.pi / 11.0
-            
-            for i in 0 ..< 10 {
-                if i % 2 == 0 {
-                    continue
-                }
+            if parameters.hasTimeoutIcon {
+                let lineWidth: CGFloat = 1.5
+                let lineInset: CGFloat = 2.0
+                let lineRadius: CGFloat = size.width * 0.5 - lineInset - lineWidth * 0.5
+                context.setLineWidth(lineWidth)
+                context.setStrokeColor(textColor.cgColor)
+                context.setLineCap(.round)
                 
-                let startAngle = CGFloat.pi * 0.5 - CGFloat(i) * sectionAngle - sectionAngle * 0.15
-                let endAngle = startAngle - sectionAngle * 0.75
-                
-                context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+                context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: CGFloat.pi * 0.5, endAngle: -CGFloat.pi * 0.5, clockwise: false)
                 context.strokePath()
+                
+                let sectionAngle: CGFloat = CGFloat.pi / 11.0
+                
+                for i in 0 ..< 10 {
+                    if i % 2 == 0 {
+                        continue
+                    }
+                    
+                    let startAngle = CGFloat.pi * 0.5 - CGFloat(i) * sectionAngle - sectionAngle * 0.15
+                    let endAngle = startAngle - sectionAngle * 0.75
+                    
+                    context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+                    context.strokePath()
+                }
             }
             
             /*if isLightImage {

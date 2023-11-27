@@ -57,7 +57,7 @@ final class CameraDeviceContext {
         self.output = CameraOutput(exclusive: exclusive)
     }
     
-    func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool) {
+    func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false) {
         guard let session = self.session else {
             return
         }
@@ -65,7 +65,7 @@ final class CameraDeviceContext {
         self.previewView = previewView
         
         self.device.configure(for: session, position: position, dual: !exclusive || additional)
-        self.device.configureDeviceFormat(maxDimensions: self.preferredMaxDimensions, maxFramerate: self.preferredMaxFrameRate)
+        self.device.configureDeviceFormat(maxDimensions: self.maxDimensions(additional: self.additional, preferWide: preferWide), maxFramerate: self.preferredMaxFrameRate)
         self.input.configure(for: session, device: self.device, audio: audio)
         self.output.configure(for: session, device: self.device, input: self.input, previewView: previewView, audio: audio, photo: photo, metadata: metadata)
         
@@ -82,8 +82,8 @@ final class CameraDeviceContext {
         self.input.invalidate(for: session)
     }
     
-    private var preferredMaxDimensions: CMVideoDimensions {
-        if self.additional {
+    private func maxDimensions(additional: Bool, preferWide: Bool) -> CMVideoDimensions {
+        if additional || preferWide {
             return CMVideoDimensions(width: 1920, height: 1440)
         } else {
             return CMVideoDimensions(width: 1920, height: 1080)
@@ -117,6 +117,7 @@ private final class CameraContext {
     private var invalidated = false
     
     private let detectedCodesPipe = ValuePipe<[CameraCode]>()
+    private let audioLevelPipe = ValuePipe<Float>()
     fileprivate let modeChangePromise = ValuePromise<Camera.ModeChange>(.none)
     
     var previewView: CameraPreviewView?
@@ -256,7 +257,7 @@ private final class CameraContext {
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
-                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide)
                 
                 self.queue.after(0.5) {
                     self.modeChange = .none
@@ -280,6 +281,10 @@ private final class CameraContext {
             }
         }
     }
+    
+    private var micLevelPeak: Int16 = 0
+    private var micLevelPeakCount = 0
+
     
     private var isDualCameraEnabled: Bool?
     public func setDualCameraEnabled(_ enabled: Bool, change: Bool = true) {
@@ -336,7 +341,7 @@ private final class CameraContext {
                 self.additionalDeviceContext = nil
                 
                 self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false)
-                self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+                self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self, let mainDeviceContext = self.mainDeviceContext else {
@@ -350,6 +355,48 @@ private final class CameraContext {
                     }
                     self.savePreviewSnapshot(pixelBuffer: pixelBuffer, front: front)
                     self.lastSnapshotTimestamp = timestamp
+                }
+            }
+            if self.initialConfiguration.reportAudioLevel {
+                self.mainDeviceContext?.output.processAudioBuffer = { [weak self] sampleBuffer in
+                    guard let self else {
+                        return
+                    }
+                    var blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer)
+                    let numSamplesInBuffer = CMSampleBufferGetNumSamples(sampleBuffer)
+                    var audioBufferList = AudioBufferList()
+
+                    CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(sampleBuffer, bufferListSizeNeededOut: nil, bufferListOut: &audioBufferList, bufferListSize: MemoryLayout<AudioBufferList>.size, blockBufferAllocator: nil, blockBufferMemoryAllocator: nil, flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, blockBufferOut: &blockBuffer)
+
+//                    for bufferCount in 0..<Int(audioBufferList.mNumberBuffers) {
+                        let buffer = audioBufferList.mBuffers.mData
+                        let size = audioBufferList.mBuffers.mDataByteSize
+                        if let data = buffer?.bindMemory(to: Int16.self, capacity: Int(size)) {
+                            processWaveformPreview(samples: data, count: numSamplesInBuffer)
+                        }
+//                    }
+                    
+                    func processWaveformPreview(samples: UnsafePointer<Int16>, count: Int) {
+                        for i in 0..<count {
+                            var sample = samples[i]
+                            if sample < 0 {
+                                sample = -sample
+                            }
+
+                            if self.micLevelPeak < sample {
+                                self.micLevelPeak = sample
+                            }
+                            self.micLevelPeakCount += 1
+
+                            if self.micLevelPeakCount >= 1200 {
+                                let level = Float(self.micLevelPeak) / 4000.0
+                                self.audioLevelPipe.putNext(level)
+                     
+                                self.micLevelPeak = 0
+                                self.micLevelPeakCount = 0
+                            }
+                        }
+                    }
                 }
             }
             self.mainDeviceContext?.output.processCodes = { [weak self] codes in
@@ -481,25 +528,40 @@ private final class CameraContext {
                 additionalDeviceContext.output.stopRecording()
             ) |> mapToSignal { main, additional in
                 if case let .finished(mainResult, _, duration, positionChangeTimestamps, _) = main, case let .finished(additionalResult, _, _, _, _) = additional {
-                    var additionalTransitionImage = additionalResult.1
-                    if let cgImage = additionalResult.1.cgImage {
-                        additionalTransitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
+                    var additionalThumbnailImage = additionalResult.thumbnail
+                    if let cgImage = additionalResult.thumbnail.cgImage {
+                        additionalThumbnailImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
                     }
-                    return .single(.finished(mainResult, (additionalResult.0, additionalTransitionImage, true, additionalResult.3), duration, positionChangeTimestamps, CACurrentMediaTime()))
+                  
+                    return .single(
+                        .finished(
+                            main: mainResult,
+                            additional: VideoCaptureResult.Result(path: additionalResult.path, thumbnail: additionalThumbnailImage, isMirrored: true, dimensions: additionalResult.dimensions),
+                            duration: duration,
+                            positionChangeTimestamps: positionChangeTimestamps,
+                            captureTimestamp: CACurrentMediaTime()
+                        )
+                    )
                 } else {
                     return .complete()
                 }
             }
         } else {
-            let mirror = self.positionValue == .front
+            let isMirrored = self.positionValue == .front
             return mainDeviceContext.output.stopRecording()
             |> map { result -> VideoCaptureResult in
-                if case let .finished(mainResult, _, duration, positionChangeTimestamps, time) = result {
-                    var transitionImage = mainResult.1
-                    if mirror, let cgImage = transitionImage.cgImage {
-                        transitionImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
+                if case let .finished(mainResult, _, duration, positionChangeTimestamps, captureTimestamp) = result {
+                    var thumbnailImage = mainResult.thumbnail
+                    if isMirrored, let cgImage = thumbnailImage.cgImage {
+                        thumbnailImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .leftMirrored)
                     }
-                    return .finished((mainResult.0, transitionImage, mirror, mainResult.3), nil, duration, positionChangeTimestamps, time)
+                    return .finished(
+                        main: VideoCaptureResult.Result(path: mainResult.path, thumbnail: thumbnailImage, isMirrored: isMirrored, dimensions: mainResult.dimensions),
+                        additional: nil,
+                        duration: duration,
+                        positionChangeTimestamps: positionChangeTimestamps,
+                        captureTimestamp: captureTimestamp
+                    )
                 } else {
                     return result
                 }
@@ -509,6 +571,10 @@ private final class CameraContext {
     
     var detectedCodes: Signal<[CameraCode], NoError> {
         return self.detectedCodesPipe.signal()
+    }
+    
+    var audioLevel: Signal<Float, NoError> {
+        return self.audioLevelPipe.signal()
     }
     
     @objc private func sessionInterruptionEnded(notification: NSNotification) {
@@ -548,8 +614,10 @@ public final class Camera {
         let photo: Bool
         let metadata: Bool
         let preferredFps: Double
+        let preferWide: Bool
+        let reportAudioLevel: Bool
         
-        public init(preset: Preset, position: Position, isDualEnabled: Bool = false, audio: Bool, photo: Bool, metadata: Bool, preferredFps: Double) {
+        public init(preset: Preset, position: Position, isDualEnabled: Bool = false, audio: Bool, photo: Bool, metadata: Bool, preferredFps: Double, preferWide: Bool = false, reportAudioLevel: Bool = false) {
             self.preset = preset
             self.position = position
             self.isDualEnabled = isDualEnabled
@@ -557,6 +625,8 @@ public final class Camera {
             self.photo = photo
             self.metadata = metadata
             self.preferredFps = preferredFps
+            self.preferWide = preferWide
+            self.reportAudioLevel = reportAudioLevel
         }
     }
     
@@ -840,6 +910,20 @@ public final class Camera {
             self.queue.async {
                 if let context = self.contextRef?.takeUnretainedValue() {
                     disposable.set(context.detectedCodes.start(next: { codes in
+                        subscriber.putNext(codes)
+                    }))
+                }
+            }
+            return disposable
+        }
+    }
+    
+    public var audioLevel: Signal<Float, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    disposable.set(context.audioLevel.start(next: { codes in
                         subscriber.putNext(codes)
                     }))
                 }

@@ -59,6 +59,7 @@ public enum EngineConfiguration {
         public let maxGiveawayChannelsCount: Int32
         public let maxGiveawayCountriesCount: Int32
         public let maxGiveawayPeriodSeconds: Int32
+        public let maxChannelRecommendationsCount: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -87,7 +88,8 @@ public enum EngineConfiguration {
             maxStoriesSuggestedReactions: Int32,
             maxGiveawayChannelsCount: Int32,
             maxGiveawayCountriesCount: Int32,
-            maxGiveawayPeriodSeconds: Int32
+            maxGiveawayPeriodSeconds: Int32,
+            maxChannelRecommendationsCount: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -112,6 +114,7 @@ public enum EngineConfiguration {
             self.maxGiveawayChannelsCount = maxGiveawayChannelsCount
             self.maxGiveawayCountriesCount = maxGiveawayCountriesCount
             self.maxGiveawayPeriodSeconds = maxGiveawayPeriodSeconds
+            self.maxChannelRecommendationsCount = maxChannelRecommendationsCount
         }
     }
 }
@@ -171,7 +174,8 @@ public extension EngineConfiguration.UserLimits {
             maxStoriesSuggestedReactions: userLimitsConfiguration.maxStoriesSuggestedReactions,
             maxGiveawayChannelsCount: userLimitsConfiguration.maxGiveawayChannelsCount,
             maxGiveawayCountriesCount: userLimitsConfiguration.maxGiveawayCountriesCount,
-            maxGiveawayPeriodSeconds: userLimitsConfiguration.maxGiveawayPeriodSeconds
+            maxGiveawayPeriodSeconds: userLimitsConfiguration.maxGiveawayPeriodSeconds,
+            maxChannelRecommendationsCount: userLimitsConfiguration.maxChannelRecommendationsCount
         )
     }
 }
@@ -498,6 +502,59 @@ public extension TelegramEngine.EngineData.Item {
                 }
                 guard let value = view.values[PreferencesKeys.storiesConfiguration]?.get(Stories.ConfigurationState.self) else {
                     return Stories.ConfigurationState.default
+                }
+                return value
+            }
+        }
+        
+        public struct AudioTranscriptionTrial: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = AudioTranscription.TrialState
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.audioTranscriptionTrialState]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.audioTranscriptionTrialState]?.get(AudioTranscription.TrialState.self) else {
+                    return AudioTranscription.TrialState.defaultValue
+                }
+                return value
+            }
+        }
+        
+        public struct AvailableColorOptions: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineAvailableColorOptions
+            
+            public let scope: PeerColorsScope
+            
+            public init(scope: PeerColorsScope) {
+                self.scope = scope
+            }
+            
+            var key: PostboxViewKey {
+                let key = ValueBoxKey(length: 8)
+                switch scope {
+                case .replies:
+                    key.setInt64(0, value: 0)
+                case .profile:
+                    key.setInt64(0, value: 1)
+                }
+                let viewKey: PostboxViewKey = .cachedItem(ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.peerColorOptions, key: key))
+                return viewKey
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedItemView else {
+                    preconditionFailure()
+                }
+                guard let value = view.value?.get(EngineAvailableColorOptions.self) else {
+                    return EngineAvailableColorOptions(hash: 0, options: [])
                 }
                 return value
             }

@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import AVFoundation
+import UIKitRuntimeUtils
 
 public struct TransformImageNodeContentAnimations: OptionSet {
     public var rawValue: Int32
@@ -28,49 +29,12 @@ open class TransformImageNode: ASDisplayNode {
     private var overlayColor: UIColor?
     private var overlayNode: ASDisplayNode?
 
-    private var captureProtectedContentLayer: CaptureProtectedContentLayer?
-
     public var captureProtected: Bool = false {
         didSet {
             if self.captureProtected != oldValue {
-                if self.captureProtected {
-                    if self.captureProtectedContentLayer == nil {
-                        let captureProtectedContentLayer = CaptureProtectedContentLayer()
-                        self.captureProtectedContentLayer = captureProtectedContentLayer
-                        if #available(iOS 13.0, *) {
-                            captureProtectedContentLayer.preventsCapture = true
-                            captureProtectedContentLayer.preventsDisplaySleepDuringVideoPlayback = false
-                        }
-                        captureProtectedContentLayer.frame = self.bounds
-                        self.layer.addSublayer(captureProtectedContentLayer)
-                        var hasImage = false
-                        if let image = self.image {
-                            hasImage = true
-                            if let cmSampleBuffer = image.cmSampleBuffer {
-                                captureProtectedContentLayer.enqueue(cmSampleBuffer)
-                            }
-                        }
-                        if hasImage {
-                            Queue.mainQueue().after(0.1) {
-                                self.contents = nil
-                            }
-                        } else {
-                            self.contents = nil
-                        }
-                    }
-                } else if let captureProtectedContentLayer = self.captureProtectedContentLayer {
-                    self.captureProtectedContentLayer = nil
-                    captureProtectedContentLayer.removeFromSuperlayer()
-                    self.contents = self.image?.cgImage
+                if self.isNodeLoaded {
+                    setLayerDisableScreenshots(self.layer, self.captureProtected)
                 }
-            }
-        }
-    }
-
-    open override var bounds: CGRect {
-        didSet {
-            if let captureProtectedContentLayer = self.captureProtectedContentLayer, super.bounds.size != oldValue.size {
-                captureProtectedContentLayer.frame = super.bounds
             }
         }
     }
@@ -79,9 +43,6 @@ open class TransformImageNode: ASDisplayNode {
         didSet {
             if let overlayNode = self.overlayNode {
                 overlayNode.frame = self.bounds
-            }
-            if let captureProtectedContentLayer = self.captureProtectedContentLayer, super.bounds.size != oldValue.size {
-                captureProtectedContentLayer.frame = super.bounds
             }
         }
     }
@@ -95,6 +56,9 @@ open class TransformImageNode: ASDisplayNode {
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *), !self.isLayerBacked {
             self.view.accessibilityIgnoresInvertColors = true
+        }
+        if self.captureProtected {
+            setLayerDisableScreenshots(self.layer, self.captureProtected)
         }
     }
     
@@ -138,30 +102,24 @@ open class TransformImageNode: ASDisplayNode {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                         }
                     } else if strongSelf.contentAnimations.contains(.subsequentUpdates) {
-                        if let _ = strongSelf.captureProtectedContentLayer {
-                        } else {
-                            let tempLayer = CALayer()
-                            tempLayer.frame = strongSelf.bounds
-                            tempLayer.contentsGravity = strongSelf.layer.contentsGravity
-                            tempLayer.contents = strongSelf.contents
-                            strongSelf.layer.addSublayer(tempLayer)
-                            tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
-                                tempLayer?.removeFromSuperlayer()
-                            })
+                        let tempLayer = CALayer()
+                        if strongSelf.captureProtected {
+                            setLayerDisableScreenshots(tempLayer, strongSelf.captureProtected)
                         }
+                        tempLayer.frame = strongSelf.bounds
+                        tempLayer.contentsGravity = strongSelf.layer.contentsGravity
+                        tempLayer.contents = strongSelf.contents
+                        strongSelf.layer.addSublayer(tempLayer)
+                        tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
+                            tempLayer?.removeFromSuperlayer()
+                        })
                     }
                     
                     var imageUpdate: UIImage?
                     if let (transform, arguments, image) = next {
                         strongSelf.currentTransform = transform
                         strongSelf.currentArguments = arguments
-                        if let captureProtectedContentLayer = strongSelf.captureProtectedContentLayer {
-                            if let cmSampleBuffer = image?.cmSampleBuffer {
-                                captureProtectedContentLayer.enqueue(cmSampleBuffer)
-                            }
-                        } else {
-                            strongSelf.contents = image?.cgImage
-                        }
+                        strongSelf.contents = image?.cgImage
                         strongSelf.image = image
                         imageUpdate = image
                     }
@@ -198,13 +156,7 @@ open class TransformImageNode: ASDisplayNode {
                     return
                 }
                 if let image = updatedImage {
-                    if let captureProtectedContentLayer = strongSelf.captureProtectedContentLayer {
-                        if let cmSampleBuffer = image.cmSampleBuffer {
-                            captureProtectedContentLayer.enqueue(cmSampleBuffer)
-                        }
-                    } else {
-                        strongSelf.contents = image.cgImage
-                    }
+                    strongSelf.contents = image.cgImage
                     strongSelf.image = image
                     strongSelf.currentArguments = arguments
                     if let _ = strongSelf.overlayColor {
@@ -277,24 +229,6 @@ open class TransformImageNode: ASDisplayNode {
     }
 }
 
-public class CaptureProtectedContentLayer: AVSampleBufferDisplayLayer {
-    override public func action(forKey event: String) -> CAAction? {
-        return nullAction
-    }
-    
-    override public init() {
-        super.init()
-    }
-    
-    override public init(layer: Any) {
-        super.init(layer: layer)
-    }
-    
-    required public init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
 open class TransformImageView: UIView {
     public var imageUpdated: ((UIImage?) -> Void)?
     public var contentAnimations: TransformImageNodeContentAnimations = []
@@ -305,26 +239,13 @@ open class TransformImageView: UIView {
     private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
     public private(set) var image: UIImage?
 
-    private var captureProtectedContentLayer: CaptureProtectedContentLayer?
-
     private var overlayColor: UIColor?
     private var overlayView: UIView?
-    
-    open override var bounds: CGRect {
-        didSet {
-            if let captureProtectedContentLayer = self.captureProtectedContentLayer, super.bounds.size != oldValue.size {
-                captureProtectedContentLayer.frame = super.bounds
-            }
-        }
-    }
 
     open override var frame: CGRect {
         didSet {
             if let overlayView = self.overlayView {
                 overlayView.frame = self.bounds
-            }
-            if let captureProtectedContentLayer = self.captureProtectedContentLayer, super.bounds.size != oldValue.size {
-                captureProtectedContentLayer.frame = super.bounds
             }
         }
     }
@@ -332,23 +253,7 @@ open class TransformImageView: UIView {
     public var captureProtected: Bool = false {
         didSet {
             if self.captureProtected != oldValue {
-                if self.captureProtected {
-                    if self.captureProtectedContentLayer == nil {
-                        let captureProtectedContentLayer = CaptureProtectedContentLayer()
-                        captureProtectedContentLayer.frame = self.bounds
-                        self.layer.addSublayer(captureProtectedContentLayer)
-                        if let image = self.image {
-                            if let cmSampleBuffer = image.cmSampleBuffer {
-                                captureProtectedContentLayer.enqueue(cmSampleBuffer)
-                            }
-                        }
-                        self.layer.contents = nil
-                    }
-                } else if let captureProtectedContentLayer = self.captureProtectedContentLayer {
-                    self.captureProtectedContentLayer = nil
-                    captureProtectedContentLayer.removeFromSuperlayer()
-                    self.layer.contents = self.image?.cgImage
-                }
+                setLayerDisableScreenshots(self.layer, self.captureProtected)
             }
         }
     }
@@ -375,7 +280,6 @@ open class TransformImageView: UIView {
         self.currentTransform = nil
         self.layer.contents = nil
         self.image = nil
-        self.captureProtectedContentLayer?.flushAndRemoveImage()
     }
 
     public func setSignal(_ signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, attemptSynchronously: Bool = false, dispatchOnDisplayLink: Bool = true) {
@@ -410,30 +314,24 @@ open class TransformImageView: UIView {
                             strongSelf.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                         }
                     } else if strongSelf.contentAnimations.contains(.subsequentUpdates) {
-                        if let _ = strongSelf.captureProtectedContentLayer {
-                        } else {
-                            let tempLayer = CALayer()
-                            tempLayer.frame = strongSelf.bounds
-                            tempLayer.contentsGravity = strongSelf.layer.contentsGravity
-                            tempLayer.contents = strongSelf.layer.contents
-                            strongSelf.layer.addSublayer(tempLayer)
-                            tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
-                                tempLayer?.removeFromSuperlayer()
-                            })
+                        let tempLayer = CALayer()
+                        if strongSelf.captureProtected {
+                            setLayerDisableScreenshots(tempLayer, strongSelf.captureProtected)
                         }
+                        tempLayer.frame = strongSelf.bounds
+                        tempLayer.contentsGravity = strongSelf.layer.contentsGravity
+                        tempLayer.contents = strongSelf.layer.contents
+                        strongSelf.layer.addSublayer(tempLayer)
+                        tempLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak tempLayer] _ in
+                            tempLayer?.removeFromSuperlayer()
+                        })
                     }
 
                     var imageUpdate: UIImage?
                     if let (transform, arguments, image) = next {
                         strongSelf.currentTransform = transform
                         strongSelf.currentArguments = arguments
-                        if let captureProtectedContentLayer = strongSelf.captureProtectedContentLayer {
-                            if let cmSampleBuffer = image?.cmSampleBuffer {
-                                captureProtectedContentLayer.enqueue(cmSampleBuffer)
-                            }
-                        } else {
-                            strongSelf.layer.contents = image?.cgImage
-                        }
+                        strongSelf.layer.contents = image?.cgImage
                         strongSelf.image = image
                         imageUpdate = image
                     }

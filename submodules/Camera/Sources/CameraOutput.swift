@@ -8,7 +8,14 @@ import VideoToolbox
 import TelegramCore
 
 public enum VideoCaptureResult: Equatable {
-    case finished((String, UIImage, Bool, CGSize), (String, UIImage, Bool, CGSize)?, Double, [(Bool, Double)], Double)
+    public struct Result {
+        public let path: String
+        public let thumbnail: UIImage
+        public let isMirrored: Bool
+        public let dimensions: CGSize
+    }
+    
+    case finished(main: Result, additional: Result?, duration: Double, positionChangeTimestamps: [(Bool, Double)], captureTimestamp: Double)
     case failed
     
     public static func == (lhs: VideoCaptureResult, rhs: VideoCaptureResult) -> Bool {
@@ -19,8 +26,8 @@ public enum VideoCaptureResult: Equatable {
             } else {
                 return false
             }
-        case let .finished(_, _, lhsDuration, lhsChangeTimestamps, lhsTime):
-            if case let .finished(_, _, rhsDuration, rhsChangeTimestamps, rhsTime) = rhs, lhsDuration == rhsDuration, lhsTime == rhsTime {
+        case let .finished(_, _, lhsDuration, lhsChangeTimestamps, lhsTimestamp):
+            if case let .finished(_, _, rhsDuration, rhsChangeTimestamps, rhsTimestamp) = rhs, lhsDuration == rhsDuration, lhsTimestamp == rhsTimestamp {
                 if lhsChangeTimestamps.count != rhsChangeTimestamps.count {
                     return false
                 }
@@ -89,6 +96,7 @@ final class CameraOutput: NSObject {
     private var videoRecorder: VideoRecorder?
         
     var processSampleBuffer: ((CMSampleBuffer, CVImageBuffer, AVCaptureConnection) -> Void)?
+    var processAudioBuffer: ((CMSampleBuffer) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
     
     init(exclusive: Bool) {
@@ -302,10 +310,26 @@ final class CameraOutput: NSObject {
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         
         let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), orientation: orientation, fileUrl: outputFileURL, completion: { [weak self] result in
+            guard let self else {
+                return
+            }
             if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
-                self?.recordingCompletionPipe.putNext(.finished((outputFilePath, transitionImage ?? UIImage(), false, dimensions), nil, duration, positionChangeTimestamps.map { ($0 == .front, $1) }, CACurrentMediaTime()))
+                self.recordingCompletionPipe.putNext(
+                    .finished(
+                        main: VideoCaptureResult.Result(
+                            path: outputFilePath,
+                            thumbnail: transitionImage ?? UIImage(),
+                            isMirrored: false,
+                            dimensions: dimensions
+                        ),
+                        additional: nil,
+                        duration: duration,
+                        positionChangeTimestamps: positionChangeTimestamps.map { ($0 == .front, $1) },
+                        captureTimestamp: CACurrentMediaTime()
+                    )
+                )
             } else {
-                self?.recordingCompletionPipe.putNext(.failed)
+                self.recordingCompletionPipe.putNext(.failed)
             }
         })
         
@@ -356,6 +380,8 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
             self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
+        } else {
+            self.processAudioBuffer?(sampleBuffer)
         }
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {

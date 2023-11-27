@@ -140,15 +140,18 @@ public final class StoryContentContextState {
         public let isMuted: Bool
         public let areVoiceMessagesAvailable: Bool
         public let presence: EnginePeer.Presence?
+        public let canViewStats: Bool
         
         public init(
             isMuted: Bool,
             areVoiceMessagesAvailable: Bool,
-            presence: EnginePeer.Presence?
+            presence: EnginePeer.Presence?,
+            canViewStats: Bool
         ) {
             self.isMuted = isMuted
             self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
             self.presence = presence
+            self.canViewStats = canViewStats
         }
         
         public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
@@ -159,6 +162,9 @@ public final class StoryContentContextState {
                 return false
             }
             if lhs.presence != rhs.presence {
+                return false
+            }
+            if lhs.canViewStats != rhs.canViewStats {
                 return false
             }
             return true
@@ -173,6 +179,7 @@ public final class StoryContentContextState {
         public let previousItemId: Int32?
         public let nextItemId: Int32?
         public let allItems: [StoryContentItem]
+        public let forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
         
         public init(
             peer: EnginePeer,
@@ -181,7 +188,8 @@ public final class StoryContentContextState {
             totalCount: Int,
             previousItemId: Int32?,
             nextItemId: Int32?,
-            allItems: [StoryContentItem]
+            allItems: [StoryContentItem],
+            forwardInfoStories: [StoryId: Promise<EngineStoryItem?>]
         ) {
             self.peer = peer
             self.additionalPeerData = additionalPeerData
@@ -190,6 +198,7 @@ public final class StoryContentContextState {
             self.previousItemId = previousItemId
             self.nextItemId = nextItemId
             self.allItems = allItems
+            self.forwardInfoStories = forwardInfoStories
         }
         
         public static func ==(lhs: FocusedSlice, rhs: FocusedSlice) -> Bool {

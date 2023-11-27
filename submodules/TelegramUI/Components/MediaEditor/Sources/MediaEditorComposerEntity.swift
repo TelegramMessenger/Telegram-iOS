@@ -65,7 +65,6 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
     if let entity = entity as? DrawingStickerEntity {
         if case let .file(_, type) = entity.content, case .reaction = type {
             return []
-//            return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false)]
         } else {
             let content: MediaEditorComposerStickerEntity.Content
             switch entity.content {

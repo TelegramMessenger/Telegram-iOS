@@ -15,8 +15,8 @@ public extension TelegramEngine {
 		    return _internal_acceptTermsOfService(account: self.account, id: id)
 		}
 
-        public func requestChangeAccountPhoneNumberVerification(phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-            return _internal_requestChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: phoneNumber)
+        public func requestChangeAccountPhoneNumberVerification(phoneNumber: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
+            return _internal_requestChangeAccountPhoneNumberVerification(account: self.account, phoneNumber: phoneNumber, pushNotificationConfiguration: pushNotificationConfiguration, firebaseSecretStream: firebaseSecretStream)
         }
 
         public func requestNextChangeAccountPhoneNumberVerification(phoneNumber: String, phoneCodeHash: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
@@ -35,8 +35,12 @@ public extension TelegramEngine {
             return _internal_updateAbout(account: self.account, about: about)
         }
         
-        public func updateNameColorAndEmoji(nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
-            return _internal_updateNameColorAndEmoji(account: self.account, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId)
+        public func observeAvailableColorOptions(scope: PeerColorsScope) -> Signal<EngineAvailableColorOptions, NoError> {
+            return _internal_observeAvailableColorOptions(postbox: self.account.postbox, scope: scope)
+        }
+        
+        public func updateNameColorAndEmoji(nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
+            return _internal_updateNameColorAndEmoji(account: self.account, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
         }
 
         public func unregisterNotificationToken(token: Data, type: NotificationTokenType, otherAccountUserIds: [PeerId.Id]) -> Signal<Never, NoError> {

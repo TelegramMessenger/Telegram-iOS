@@ -14,14 +14,17 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         case text = "t"
         case entities = "e"
         case media = "m"
+        case offset = "o"
     }
     
     public var text: String
+    public var offset: Int?
     public var entities: [MessageTextEntity]
     public var media: Media?
     
-    public init(text: String, entities: [MessageTextEntity], media: Media?) {
+    public init(text: String, offset: Int?, entities: [MessageTextEntity], media: Media?) {
         self.text = text
+        self.offset = offset
         self.entities = entities
         self.media = media
     }
@@ -30,6 +33,7 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         self.text = try container.decode(String.self, forKey: .text)
+        self.offset = (try container.decodeIfPresent(Int32.self, forKey: .offset)).flatMap(Int.init)
         self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
         
         if let mediaData = try container.decodeIfPresent(Data.self, forKey: .media) {
@@ -43,6 +47,7 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encode(self.text, forKey: .text)
+        try container.encodeIfPresent(self.offset.flatMap(Int32.init(clamping:)), forKey: .offset)
         try container.encode(self.entities, forKey: .entities)
         if let media = self.media {
             let mediaEncoder = PostboxEncoder()
@@ -53,6 +58,9 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
     
     public static func ==(lhs: EngineMessageReplyQuote, rhs: EngineMessageReplyQuote) -> Bool {
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.offset != rhs.offset {
             return false
         }
         if lhs.entities != rhs.entities {
@@ -577,7 +585,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                         break
                                     }
                                 }
-                                quote = EngineMessageReplyQuote(text: replyMessage.text, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
+                                quote = EngineMessageReplyQuote(text: replyMessage.text, offset: nil, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: quote, isQuote: isQuote))

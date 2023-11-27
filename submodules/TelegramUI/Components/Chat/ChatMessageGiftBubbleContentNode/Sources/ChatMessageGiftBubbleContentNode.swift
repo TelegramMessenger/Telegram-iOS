@@ -310,7 +310,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-                giftSize.height = titleLayout.size.height + subtitleLayout.size.height + 225.0
+                giftSize.height = titleLayout.size.height + textSpacing + subtitleLayout.size.height + 212.0
                 
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {

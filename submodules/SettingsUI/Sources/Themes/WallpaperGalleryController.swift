@@ -192,7 +192,7 @@ public class WallpaperGalleryController: ViewController {
     private let context: AccountContext
     private let source: WallpaperListSource
     private let mode: Mode
-    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, UIImage?, CGRect?, CGFloat?) -> Void)?
+    public var apply: ((WallpaperGalleryEntry, WallpaperPresentationOptions, UIImage?, CGRect?, CGFloat?, Bool) -> Void)?
     
     private var interaction: WallpaperGalleryInteraction?
     
@@ -497,8 +497,8 @@ public class WallpaperGalleryController: ViewController {
         default:
             break
         }
-        if case .peer = self.mode {
-            doneButtonType = .setPeer
+        if case let .peer(peer, _) = self.mode {
+            doneButtonType = .setPeer(peer.compactDisplayTitle, self.context.isPremium)
         }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
@@ -515,8 +515,23 @@ public class WallpaperGalleryController: ViewController {
             self?.dismiss(forceAway: true)
         }
         var dismissed = false
-        toolbarNode.done = { [weak self] in
+        toolbarNode.done = { [weak self] forBoth in
             if let strongSelf = self, !dismissed {
+                if forBoth && !strongSelf.context.isPremium {
+                    let context = strongSelf.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .wallpapers, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .wallpapers, forceDark: false, dismissed: nil)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    strongSelf.push(controller)
+                    
+                    return
+                }
+                
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     if centralItemNode.cropNode.scrollNode.view.isDecelerating {
                         return
@@ -554,12 +569,12 @@ public class WallpaperGalleryController: ViewController {
                                         |> filter({ $0.complete })
                                         |> take(1)
                                         |> deliverOnMainQueue).start(next: { _ in
-                                            apply?(entry, options, nil, nil, centralItemNode.brightness)
+                                            apply?(entry, options, nil, nil, centralItemNode.brightness, forBoth)
                                         })
                                     }
                                 }
                             } else {
-                                apply?(entry, options, centralItemNode.editedFullSizeImage, centralItemNode.editedCropRect, centralItemNode.brightness)
+                                apply?(entry, options, centralItemNode.editedFullSizeImage, centralItemNode.editedCropRect, centralItemNode.brightness, forBoth)
                             }
                             return
                         }
@@ -717,7 +732,7 @@ public class WallpaperGalleryController: ViewController {
                                 break
                         }
 
-                        strongSelf.apply?(entry, options, nil, centralItemNode.cropRect, centralItemNode.brightness)
+                        strongSelf.apply?(entry, options, nil, centralItemNode.cropRect, centralItemNode.brightness, forBoth)
                     }
                 }
             }
@@ -953,7 +968,10 @@ public class WallpaperGalleryController: ViewController {
         self.galleryNode.containerLayoutUpdated(pagerLayout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         self.overlayNode?.frame = self.galleryNode.bounds
         
-        let toolbarHeight: CGFloat = 66.0
+        var toolbarHeight: CGFloat = 66.0
+        if case .peer = self.mode {
+            toolbarHeight += 58.0
+        }
         transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))
         self.toolbarNode!.updateLayout(size: CGSize(width: layout.size.width, height: toolbarHeight), layout: layout, transition: transition)
         
@@ -1051,7 +1069,7 @@ public class WallpaperGalleryController: ViewController {
         
         self.toolbarNode?.setDoneIsSolid(self.patternPanelEnabled || self.colorsPanelEnabled, transition: transition)
 
-        bottomInset += 66.0
+        bottomInset += toolbarHeight
         
         self.validLayout = (layout, bottomInset)
         if !hadLayout {

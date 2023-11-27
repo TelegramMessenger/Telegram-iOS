@@ -115,6 +115,8 @@ swift_library(
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",
         "//submodules/TelegramUI/Components/Settings/PeerNameColorScreen",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/TelegramUI/Components/Settings/QuickReactionSetupController",
     ],
     visibility = [
         "//visibility:public",

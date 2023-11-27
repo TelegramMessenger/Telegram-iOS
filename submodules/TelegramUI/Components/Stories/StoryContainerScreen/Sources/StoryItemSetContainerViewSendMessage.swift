@@ -1041,7 +1041,14 @@ final class StoryItemSetContainerSendMessage {
                 immediateExternalShare: false,
                 forceTheme: defaultDarkColorPresentationTheme
             )
-            
+            if !component.slice.peer.isService {
+                shareController.shareStory = { [weak view] in
+                    guard let view else {
+                        return
+                    }
+                    view.openStoryEditing(repost: true)
+                }
+            }
             shareController.completed = { [weak view] peerIds in
                 guard let view, let component = view.component else {
                     return
@@ -1052,7 +1059,7 @@ final class StoryItemSetContainerSendMessage {
                         peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                     )
                 )
-                         |> deliverOnMainQueue).start(next: { [weak view] peerList in
+                |> deliverOnMainQueue).start(next: { [weak view] peerList in
                     guard let view, let component = view.component else {
                         return
                     }
@@ -2616,7 +2623,7 @@ final class StoryItemSetContainerSendMessage {
         |> deliverOnMainQueue).start()
     }
     
-    func openResolved(view: StoryItemSetContainerComponent.View, result: ResolvedUrl, forceExternal: Bool = false, concealed: Bool = false) {
+    func openResolved(view: StoryItemSetContainerComponent.View, result: ResolvedUrl, forceExternal: Bool = false, concealed: Bool = false, completion: (() -> Void)? = nil) {
         guard let component = view.component, let navigationController = component.controller()?.navigationController as? NavigationController else {
             return
         }
@@ -2710,7 +2717,8 @@ final class StoryItemSetContainerSendMessage {
                 view.endEditing(true)
             },
             contentContext: self.progressPauseContext,
-            progress: nil
+            progress: nil,
+            completion: completion
         )
     }
     
@@ -2790,7 +2798,7 @@ final class StoryItemSetContainerSendMessage {
             if let peer = peer {
                 var navigation: ChatControllerInteractionNavigateToPeer
                 if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                    navigation = .info
+                    navigation = .info(nil)
                 } else {
                     navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
                 }

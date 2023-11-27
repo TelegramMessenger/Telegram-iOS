@@ -87,7 +87,7 @@ public final class MatrixView: MTKView, MTKViewDelegate, PhoneDemoDecorationView
 
         self.framebufferOnly = true
         
-        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
             self?.tick()
         }
         self.displayLink?.isPaused = true

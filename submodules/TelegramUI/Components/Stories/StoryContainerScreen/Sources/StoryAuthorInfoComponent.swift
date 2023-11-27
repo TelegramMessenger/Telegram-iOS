@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramStringFormatting
 import MultilineTextComponent
 import TelegramPresentationData
+import AvatarNode
 
 final class StoryAuthorInfoComponent: Component {
     struct Counters: Equatable {
@@ -17,14 +18,16 @@ final class StoryAuthorInfoComponent: Component {
 	let context: AccountContext
     let strings: PresentationStrings
 	let peer: EnginePeer?
+    let forwardInfo: EngineStoryItem.ForwardInfo?
     let timestamp: Int32
     let counters: Counters?
     let isEdited: Bool
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer?, forwardInfo: EngineStoryItem.ForwardInfo?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
         self.context = context
         self.strings = strings
         self.peer = peer
+        self.forwardInfo = forwardInfo
         self.timestamp = timestamp
         self.counters = counters
         self.isEdited = isEdited
@@ -40,6 +43,9 @@ final class StoryAuthorInfoComponent: Component {
 		if lhs.peer != rhs.peer {
 			return false
 		}
+        if lhs.forwardInfo != rhs.forwardInfo {
+            return false
+        }
         if lhs.timestamp != rhs.timestamp {
             return false
         }
@@ -54,6 +60,8 @@ final class StoryAuthorInfoComponent: Component {
 
 	final class View: UIView {
 		private let title = ComponentView<Empty>()
+        private var repostIconView: UIImageView?
+        private var avatarNode: AvatarNode?
 		private let subtitle = ComponentView<Empty>()
         private var counterLabel: ComponentView<Empty>?
 
@@ -92,11 +100,35 @@ final class StoryAuthorInfoComponent: Component {
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            var subtitle = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
             
-            if component.isEdited {
-                subtitle.append(" • ")
-                subtitle.append(component.strings.Story_HeaderEdited)
+            let titleColor = UIColor.white
+            let subtitleColor = UIColor(white: 1.0, alpha: 0.8)
+            let subtitle: NSAttributedString
+            let subtitleTruncationType: CTLineTruncationType
+            if let forwardInfo = component.forwardInfo {
+                let authorName: String
+                switch forwardInfo {
+                case let .known(peer, _, _):
+                    authorName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                case let .unknown(name, _):
+                    authorName = name
+                }
+                let timeString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp, short: true)
+                let combinedString = NSMutableAttributedString()
+                combinedString.append(NSAttributedString(string: authorName, font: Font.medium(11.0), textColor: titleColor))
+                if timeString.count < 6 {
+                    combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
+                }
+                subtitle = combinedString
+                subtitleTruncationType = .middle
+            } else {
+                var subtitleString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
+                if component.isEdited {
+                    subtitleString.append(" • ")
+                    subtitleString.append(component.strings.Story_HeaderEdited)
+                }
+                subtitle = NSAttributedString(string: subtitleString, font: Font.regular(11.0), textColor: subtitleColor)
+                subtitleTruncationType = .end
             }
             
             let titleSize = self.title.update(
@@ -112,8 +144,8 @@ final class StoryAuthorInfoComponent: Component {
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: subtitle, font: Font.regular(11.0), textColor: UIColor(white: 1.0, alpha: 0.8))),
-                    truncationType: .end,
+                    text: .plain(subtitle),
+                    truncationType: subtitleTruncationType,
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
@@ -122,7 +154,52 @@ final class StoryAuthorInfoComponent: Component {
             
             let contentHeight: CGFloat = titleSize.height + spacing + subtitleSize.height
             let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: 2.0 + floor((availableSize.height - contentHeight) * 0.5)), size: titleSize)
-            let subtitleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + spacing + UIScreenPixel), size: subtitleSize)
+            
+            var subtitleOffset: CGFloat = 0.0
+            if let _ = component.forwardInfo {
+                let iconView: UIImageView
+                if let current = self.repostIconView {
+                    iconView = current
+                } else {
+                    iconView = UIImageView(image: UIImage(bundleImageName: "Stories/HeaderRepost")?.withRenderingMode(.alwaysTemplate))
+                    iconView.tintColor = .white
+                    self.addSubview(iconView)
+                    self.repostIconView = iconView
+                }
+                
+                let iconSize = CGSize(width: 13.0, height: 13.0)
+                let iconFrame = CGRect(origin: CGPoint(x: leftInset + subtitleOffset - 2.0 + UIScreenPixel, y: titleFrame.minY + contentHeight - iconSize.height + 1.0), size: iconSize)
+                transition.setFrame(view: iconView, frame: iconFrame)
+                
+                subtitleOffset += iconSize.width + 1.0
+            } else if let repostIconView = self.repostIconView {
+                self.repostIconView = nil
+                repostIconView.removeFromSuperview()
+            }
+            if let forwardInfo = component.forwardInfo, case let .known(peer, _, _) = forwardInfo {
+                let avatarNode: AvatarNode
+                if let current = self.avatarNode {
+                    avatarNode = current
+                } else {
+                    avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 8.0))
+                    self.addSubview(avatarNode.view)
+                    self.avatarNode = avatarNode
+                }
+                
+                let avatarSize = CGSize(width: 16.0, height: 16.0)
+                let theme = component.context.sharedContext.currentPresentationData.with { $0 }.theme
+                avatarNode.setPeer(context: component.context, theme: theme, peer: peer, synchronousLoad: true, displayDimensions: avatarSize)
+                
+                let avatarFrame = CGRect(origin: CGPoint(x: leftInset + subtitleOffset, y: titleFrame.minY + contentHeight - avatarSize.height + 3.0 - UIScreenPixel), size: avatarSize)
+                avatarNode.frame = avatarFrame
+                
+                subtitleOffset += avatarSize.width + 4.0
+            } else if let avatarNode = self.avatarNode {
+                self.avatarNode = nil
+                avatarNode.view.removeFromSuperview()
+            }
+            
+            let subtitleFrame = CGRect(origin: CGPoint(x: leftInset + subtitleOffset, y: titleFrame.maxY + spacing + UIScreenPixel), size: subtitleSize)
             
             if let titleView = self.title.view {
                 if titleView.superview == nil {

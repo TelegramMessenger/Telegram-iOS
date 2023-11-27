@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import AsyncDisplayKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -13,34 +15,41 @@ import AccountContext
 import PresentationDataUtils
 import AppBundle
 import GraphUI
+import StoryContainerScreen
 
 private final class MessageStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openMessage: (EngineMessage.Id) -> Void
+    let openStory: (EnginePeer.Id, EngineStoryItem, UIView) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void, openStory: @escaping (EnginePeer.Id, EngineStoryItem, UIView) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessage = openMessage
+        self.openStory = openStory
     }
 }
 
 private enum StatsSection: Int32 {
     case overview
     case interactions
+    case reactions
     case publicForwards
 }
 
 private enum StatsEntry: ItemListNodeEntry {
     case overviewTitle(PresentationTheme, String)
-    case overview(PresentationTheme, MessageStats, Int32?)
+    case overview(PresentationTheme, PostStats, EngineStoryItem.Views?, Int32?)
     
     case interactionsTitle(PresentationTheme, String)
-    case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+    case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Bool)
+    
+    case reactionsTitle(PresentationTheme, String)
+    case reactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Bool)
     
     case publicForwardsTitle(PresentationTheme, String)
-    case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EngineMessage)
+    case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsPostItem)
     
     var section: ItemListSectionId {
         switch self {
@@ -48,6 +57,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.overview.rawValue
             case .interactionsTitle, .interactionsGraph:
                 return StatsSection.interactions.rawValue
+            case .reactionsTitle, .reactionsGraph:
+                return StatsSection.reactions.rawValue
             case .publicForwardsTitle, .publicForward:
                 return StatsSection.publicForwards.rawValue
         }
@@ -63,10 +74,14 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2
             case .interactionsGraph:
                 return 3
-            case .publicForwardsTitle:
+            case .reactionsTitle:
                 return 4
+            case .reactionsGraph:
+                return 5
+            case .publicForwardsTitle:
+                return 6
             case let .publicForward(index, _, _, _, _):
-                return 5 + index
+                return 7 + index
         }
     }
     
@@ -78,9 +93,15 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .overview(lhsTheme, lhsStats, lhsPublicShares):
-                if case let .overview(rhsTheme, rhsStats, rhsPublicShares) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsPublicShares == rhsPublicShares {
-                    return true
+            case let .overview(lhsTheme, lhsStats, lhsViews, lhsPublicShares):
+                if case let .overview(rhsTheme, rhsStats, rhsViews, rhsPublicShares) = rhs, lhsTheme === rhsTheme, lhsViews == rhsViews, lhsPublicShares == rhsPublicShares {
+                    if let lhsMessageStats = lhsStats as? MessageStats, let rhsMessageStats = rhsStats as? MessageStats {
+                        return lhsMessageStats == rhsMessageStats
+                    } else if let lhsStoryStats = lhsStats as? StoryStats, let rhsStoryStats = rhsStats as? StoryStats {
+                        return lhsStoryStats == rhsStoryStats
+                    } else {
+                        return false
+                    }
                 } else {
                     return false
                 }
@@ -90,8 +111,20 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .interactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
-                if case let .interactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+            case let .interactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsNoInitialZoom):
+                if case let .interactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsNoInitialZoom) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType, lhsNoInitialZoom == rhsNoInitialZoom {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reactionsTitle(lhsTheme, lhsText):
+                if case let .reactionsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsNoInitialZoom):
+                if case let .reactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsNoInitialZoom) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType, lhsNoInitialZoom == rhsNoInitialZoom {
                     return true
                 } else {
                     return false
@@ -102,8 +135,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .publicForward(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsMessage):
-                if case let .publicForward(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsMessage.id == rhsMessage.id {
+            case let .publicForward(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPost):
+                if case let .publicForward(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPost) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsPost == rhsPost {
                     return true
                 } else {
                     return false
@@ -120,41 +153,79 @@ private enum StatsEntry: ItemListNodeEntry {
         switch self {
             case let .overviewTitle(_, text),
                  let .interactionsTitle(_, text),
+                 let .reactionsTitle(_, text),
                  let .publicForwardsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .overview(_, stats, publicShares):
-                return MessageStatsOverviewItem(presentationData: presentationData, stats: stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
-            case let .interactionsGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
+            case let .overview(_, stats, storyViews, publicShares):
+                return StatsOverviewItem(presentationData: presentationData, stats: stats as! Stats, storyViews: storyViews, publicShares: publicShares, sectionId: self.section, style: .blocks)
+            case let .interactionsGraph(_, _, _, graph, type, noInitialZoom), let .reactionsGraph(_, _, _, graph, type, noInitialZoom):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, noInitialZoom: noInitialZoom, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
                             completion(data)
                         }
                     })
                 }, sectionId: self.section, style: .blocks)
-            case let .publicForward(_, _, _, _, message):
+            case let .publicForward(_, _, _, _, item):
                 var views: Int32 = 0
-                for attribute in message.attributes {
-                    if let viewsAttribute = attribute as? ViewCountMessageAttribute {
-                        views = Int32(viewsAttribute.count)
+                var forwards: Int32 = 0
+                var reactions: Int32 = 0
+            
+                let peer: Peer
+                switch item {
+                case let .message(message):
+                    peer = message.peers[message.id.peerId]!
+                    for attribute in message.attributes {
+                        if let viewsAttribute = attribute as? ViewCountMessageAttribute {
+                            views = Int32(viewsAttribute.count)
+                        } else if let forwardsAttribute = attribute as? ForwardCountMessageAttribute {
+                            forwards = Int32(forwardsAttribute.count)
+                        } else if let reactionsAttribute = attribute as? ReactionsMessageAttribute {
+                            reactions = reactionsAttribute.reactions.reduce(0, { partialResult, reaction in
+                                return partialResult + reaction.count
+                            })
+                        }
+                    }
+                case let .story(peerValue, story):
+                    peer = peerValue._asPeer()
+                    views = Int32(story.views?.seenCount ?? 0)
+                    forwards = Int32(story.views?.forwardCount ?? 0)
+                    reactions = Int32(story.views?.reactedCount ?? 0)
+                }
+                return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: item, views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
+                    switch item {
+                    case let .message(message):
+                        arguments.openMessage(message.id)
+                    case .story:
                         break
                     }
-                }
-                
-                let text: String = presentationData.strings.Stats_MessageViews(views)
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(message.peers[message.id.peerId]!), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
-                    arguments.openMessage(message.id)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
+                }, openStory: { view in
+                    if case let .story(peer, story) = item {
+                        arguments.openStory(peer.id, story, view)
+                    }
+                }, contextAction: nil)
         }
     }
 }
 
-private func messageStatsControllerEntries(data: MessageStats?, messages: SearchMessagesResult?, presentationData: PresentationData) -> [StatsEntry] {
+private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineStoryItem.Views?, messages: SearchMessagesResult?, forwards: StoryStatsPublicForwardsContext.State?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
         entries.append(.overviewTitle(presentationData.theme, presentationData.strings.Stats_MessageOverview.uppercased()))
-        entries.append(.overview(presentationData.theme, data, messages?.totalCount))
+        
+        var publicShares: Int32?
+        if let messages {
+            publicShares = messages.totalCount
+        } else if let forwards {
+            publicShares = forwards.count
+        }
+        entries.append(.overview(presentationData.theme, data, storyViews, publicShares))
+        
+        var isStories = false
+        if let _ = data as? StoryStats {
+            isStories = true
+        }
     
         if !data.interactionsGraph.isEmpty {
             entries.append(.interactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageInteractionsTitle.uppercased()))
@@ -168,14 +239,33 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
                 chartType = .twoAxisStep
             }
             
-            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, chartType))
+            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, chartType, isStories))
+        }
+        
+        if !data.reactionsGraph.isEmpty {
+            entries.append(.reactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageReactionsTitle.uppercased()))
+            entries.append(.reactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsGraph, .bars, isStories))
         }
 
-        if let messages = messages, !messages.messages.isEmpty {
+        if let messages, !messages.messages.isEmpty {
             entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
             var index: Int32 = 0
             for message in messages.messages {
-                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, EngineMessage(message)))
+                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .message(message)))
+                index += 1
+            }
+        }
+        
+        if let forwards, !forwards.forwards.isEmpty {
+            entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
+            var index: Int32 = 0
+            for forward in forwards.forwards {
+                switch forward {
+                case let .message(message):
+                    entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .message(message._asMessage())))
+                case let .story(peer, story):
+                    entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .story(peer, story)))
+                }
                 index += 1
             }
         }
@@ -184,48 +274,142 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
     return entries
 }
 
-public func messageStatsController(context: AccountContext, messageId: EngineMessage.Id, statsDatacenterId: Int32?) -> ViewController {
+public enum StatsSubject {
+    case message(id: EngineMessage.Id)
+    case story(peerId: EnginePeer.Id, id: Int32, item: EngineStoryItem, fromStory: Bool)
+}
+
+protocol PostStats {
+    var interactionsGraph: StatsGraph { get }
+    var interactionsGraphDelta: Int64 { get }
+    var reactionsGraph: StatsGraph { get }
+}
+
+extension MessageStats: PostStats {
+    
+}
+
+extension StoryStats: PostStats {
+    
+}
+
+public func messageStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: StatsSubject) -> ViewController {
     var navigateToMessageImpl: ((EngineMessage.Id) -> Void)?
     
     let actionsDisposable = DisposableSet()
-    let dataPromise = Promise<MessageStats?>(nil)
+    let dataPromise = Promise<PostStats?>(nil)
     let messagesPromise = Promise<(SearchMessagesResult, SearchMessagesState)?>(nil)
+    let forwardsPromise = Promise<StoryStatsPublicForwardsContext.State?>(nil)
     
-    let datacenterId: Int32 = statsDatacenterId ?? 0
+    let anyStatsContext: Any
+    let dataSignal: Signal<PostStats?, NoError>
+    var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
+    var openStoryImpl: ((EnginePeer.Id, EngineStoryItem, UIView) -> Void)?
+    
+    var forwardsContext: StoryStatsPublicForwardsContext?
+    let peerId: EnginePeer.Id
+    var storyItem: EngineStoryItem?
+    switch subject {
+    case let .message(id):
+        peerId = id.peerId
+        let statsContext = MessageStatsContext(account: context.account, messageId: id)
+        loadDetailedGraphImpl = { [weak statsContext] graph, x in
+            return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
+        }
+        dataSignal = statsContext.state
+        |> map { state in
+            return state.stats
+        }
+        dataPromise.set(.single(nil) |> then(dataSignal))
+        anyStatsContext = statsContext
         
-    let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, messageId: messageId)
-    let dataSignal: Signal<MessageStats?, NoError> = statsContext.state
-    |> map { state in
-        return state.stats
+        let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: id), query: "", state: nil)
+        |> map(Optional.init)
+        |> afterNext { result in
+            if let result = result {
+                for message in result.0.messages {
+                    if let peer = message.peers[message.id.peerId], let peerReference = PeerReference(peer) {
+                        let _ = context.engine.peers.updatedRemotePeer(peer: peerReference).start()
+                    }
+                }
+            }
+        }
+        messagesPromise.set(.single(nil) |> then(searchSignal))
+        forwardsPromise.set(.single(nil))
+    case let .story(peerIdValue, id, item, _):
+        peerId = peerIdValue
+        storyItem = item
+        
+        let statsContext = StoryStatsContext(account: context.account, peerId: peerId, storyId: id)
+        loadDetailedGraphImpl = { [weak statsContext] graph, x in
+            return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
+        }
+        dataSignal = statsContext.state
+        |> map { state in
+            return state.stats
+        }
+        dataPromise.set(.single(nil) |> then(dataSignal))
+        anyStatsContext = statsContext
+        
+        messagesPromise.set(.single(nil))
+        
+        forwardsContext = StoryStatsPublicForwardsContext(account: context.account, peerId: peerId, storyId: id)
+        if let forwardsContext {
+            forwardsPromise.set(
+                .single(nil)
+                |> then(
+                    forwardsContext.state
+                    |> map(Optional.init)
+                )
+            )
+        } else {
+            forwardsPromise.set(.single(nil))
+        }
     }
-    dataPromise.set(.single(nil) |> then(dataSignal))
     
     let arguments = MessageStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
-        return statsContext.loadDetailedGraph(graph, x: x)
+        return loadDetailedGraphImpl?(graph, x) ?? .single(nil)
     }, openMessage: { messageId in
         navigateToMessageImpl?(messageId)
+    }, openStory: { peerId, story, view in
+        openStoryImpl?(peerId, story, view)
     })
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
     
-    let previousData = Atomic<MessageStats?>(value: nil)
+    let previousData = Atomic<PostStats?>(value: nil)
     
-    let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil)
-    |> map(Optional.init)
-    |> afterNext { result in
-        if let result = result {
-            for message in result.0.messages {
-                if let peer = message.peers[message.id.peerId], let peerReference = PeerReference(peer) {
-                    let _ = context.engine.peers.updatedRemotePeer(peer: peerReference).start()
+    let iconNodePromise = Promise<ASDisplayNode?>()
+    if case let .story(peerId, id, storyItem, fromStory) = subject, !fromStory {
+        let _ = id
+        iconNodePromise.set(
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue
+            |> map { peer -> ASDisplayNode? in
+                if let peer = peer?._asPeer() {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    return StoryIconNode(context: context, theme: presentationData.theme, peer: peer, storyItem: storyItem)
+                } else {
+                    return nil
                 }
             }
-        }
+        )
+
+    } else {
+        iconNodePromise.set(.single(nil))
     }
-    messagesPromise.set(.single(nil) |> then(searchSignal))
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(
+        presentationData,
+        dataPromise.get(), 
+        messagesPromise.get(),
+        forwardsPromise.get(),
+        longLoadingSignal,
+        iconNodePromise.get()
+    )
     |> deliverOnMainQueue
-    |> map { presentationData, data, search, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, search, forwards, longLoading, iconNode -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
@@ -236,14 +420,29 @@ public func messageStatsController(context: AccountContext, messageId: EngineMes
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Stats_MessageTitle), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, messages: search?.0, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let title: String
+        var storyViews: EngineStoryItem.Views?
+        switch subject {
+        case .message:
+            title = presentationData.strings.Stats_MessageTitle
+        case let .story(_, _, storyItem, _):
+            title = presentationData.strings.Stats_StoryTitle
+            storyViews = storyItem.views
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { [weak iconNode] in
+            if let iconNode, let storyItem {
+                openStoryImpl?(peerId, storyItem, iconNode.view)
+            }
+        }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, storyViews: storyViews, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
         actionsDisposable.dispose()
-        let _ = statsContext.state
+        let _ = anyStatsContext
+        let _ = forwardsContext
     }
     
     let controller = ItemListController(context: context, state: signal)
@@ -253,6 +452,11 @@ public func messageStatsController(context: AccountContext, messageId: EngineMes
                 itemNode.resetInteraction()
             }
         })
+    }
+    controller.visibleBottomContentOffsetChanged = { [weak forwardsContext] offset in
+        if case let .known(value) = offset, value < 100.0, case .story = subject {
+            forwardsContext?.loadMore()
+        }
     }
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
@@ -268,6 +472,66 @@ public func messageStatsController(context: AccountContext, messageId: EngineMes
             if let navigationController = controller?.navigationController as? NavigationController {
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
             }
+        })
+    }
+    openStoryImpl = { [weak controller] peerId, story, sourceView in
+        let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: story.id), storyItem: story, readGlobally: false)
+        let _ = (storyContent.state
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak sourceView] _ in
+            guard let controller, let sourceView else {
+                return
+            }
+            let transitionIn = StoryContainerScreen.TransitionIn(
+                sourceView: sourceView,
+                sourceRect: sourceView.bounds,
+                sourceCornerRadius: sourceView.bounds.width * 0.5,
+                sourceIsAvatar: false
+            )
+        
+            let storyContainerScreen = StoryContainerScreen(
+                context: context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { [weak sourceView] peerId, storyIdValue in
+                    if let sourceView {
+                        let destinationView = sourceView
+                        return StoryContainerScreen.TransitionOut(
+                            destinationView: destinationView,
+                            transitionView: StoryContainerScreen.TransitionView(
+                                makeView: { [weak destinationView] in
+                                    let parentView = UIView()
+                                    if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                        parentView.addSubview(copyView)
+                                    }
+                                    return parentView
+                                },
+                                updateView: { copyView, state, transition in
+                                    guard let view = copyView.subviews.first else {
+                                        return
+                                    }
+                                    let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                    transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                    transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                },
+                                insertCloneTransitionView: nil
+                            ),
+                            destinationRect: destinationView.bounds,
+                            destinationCornerRadius: destinationView.bounds.width * 0.5,
+                            destinationIsAvatar: false,
+                            completed: { [weak sourceView] in
+                                guard let sourceView else {
+                                    return
+                                }
+                                sourceView.isHidden = false
+                            }
+                        )
+                    } else {
+                        return nil
+                    }
+                }
+            )
+            controller.push(storyContainerScreen)
         })
     }
     return controller

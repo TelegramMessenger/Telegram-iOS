@@ -14,17 +14,20 @@ public final class PlainButtonComponent: Component {
     public let effectAlignment: EffectAlignment
     public let minSize: CGSize?
     public let action: () -> Void
+    public let isEnabled: Bool
     
     public init(
         content: AnyComponent<Empty>,
         effectAlignment: EffectAlignment,
         minSize: CGSize? = nil,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        isEnabled: Bool = true
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
         self.minSize = minSize
         self.action = action
+        self.isEnabled = isEnabled
     }
 
     public static func ==(lhs: PlainButtonComponent, rhs: PlainButtonComponent) -> Bool {
@@ -35,6 +38,9 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.minSize != rhs.minSize {
+            return false
+        }
+        if lhs.isEnabled != rhs.isEnabled {
             return false
         }
         return true
@@ -72,7 +78,7 @@ public final class PlainButtonComponent: Component {
                         transition.setScale(layer: self.contentContainer.layer, scale: topScale)
                     } else {
                         self.contentContainer.alpha = 1.0
-                        self.contentContainer.layer.animateAlpha(from: 7, to: 1.0, duration: 0.2)
+                        self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                         
                         let transition = Transition(animation: .none)
                         transition.setScale(layer: self.contentContainer.layer, scale: 1.0)
@@ -121,7 +127,7 @@ public final class PlainButtonComponent: Component {
             self.component = component
             self.componentState = state
             
-            self.isEnabled = true
+            self.isEnabled = component.isEnabled
             
             let contentAlpha: CGFloat = 1.0
 

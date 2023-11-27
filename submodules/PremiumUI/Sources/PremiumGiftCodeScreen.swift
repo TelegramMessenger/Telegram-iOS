@@ -228,7 +228,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     additionalText = ""
                 }
                 buttonText = strings.Common_OK
-                if boost.flags.contains(.isUnclaimed), let slug = boost.slug {
+                if let slug = boost.slug {
                     link = "https://t.me/giftcode/\(slug)"
                 } else {
                     link = nil

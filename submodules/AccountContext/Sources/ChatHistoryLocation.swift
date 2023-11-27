@@ -8,20 +8,40 @@ public enum ChatHistoryInitialSearchLocation: Equatable {
 }
 
 public struct MessageHistoryScrollToSubject: Equatable {
-    public var index: MessageHistoryAnchorIndex
-    public var quote: String?
+    public struct Quote: Equatable {
+        public var string: String
+        public var offset: Int?
+        
+        public init(string: String, offset: Int?) {
+            self.string = string
+            self.offset = offset
+        }
+    }
     
-    public init(index: MessageHistoryAnchorIndex, quote: String?) {
+    public var index: MessageHistoryAnchorIndex
+    public var quote: Quote?
+    
+    public init(index: MessageHistoryAnchorIndex, quote: Quote?) {
         self.index = index
         self.quote = quote
     }
 }
 
 public struct MessageHistoryInitialSearchSubject: Equatable {
-    public var location: ChatHistoryInitialSearchLocation
-    public var quote: String?
+    public struct Quote: Equatable {
+        public var string: String
+        public var offset: Int?
+        
+        public init(string: String, offset: Int?) {
+            self.string = string
+            self.offset = offset
+        }
+    }
     
-    public init(location: ChatHistoryInitialSearchLocation, quote: String?) {
+    public var location: ChatHistoryInitialSearchLocation
+    public var quote: Quote?
+    
+    public init(location: ChatHistoryInitialSearchLocation, quote: Quote?) {
         self.location = location
         self.quote = quote
     }

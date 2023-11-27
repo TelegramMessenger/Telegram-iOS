@@ -7,6 +7,7 @@ public final class Button: Component {
     public let tag: AnyObject?
     public let automaticHighlight: Bool
     public let isEnabled: Bool
+    public let isExclusive: Bool
     public let action: () -> Void
     public let holdAction: (() -> Void)?
     public let highlightedAction: ActionSlot<Bool>?
@@ -36,6 +37,7 @@ public final class Button: Component {
         tag: AnyObject? = nil,
         automaticHighlight: Bool = true,
         isEnabled: Bool = true,
+        isExclusive: Bool = true,
         action: @escaping () -> Void,
         holdAction: (() -> Void)?,
         highlightedAction: ActionSlot<Bool>?
@@ -45,6 +47,7 @@ public final class Button: Component {
         self.tag = tag
         self.automaticHighlight = automaticHighlight
         self.isEnabled = isEnabled
+        self.isExclusive = isExclusive
         self.action = action
         self.holdAction = holdAction
         self.highlightedAction = highlightedAction
@@ -57,11 +60,27 @@ public final class Button: Component {
             tag: self.tag,
             automaticHighlight: self.automaticHighlight,
             isEnabled: self.isEnabled,
+            isExclusive: self.isExclusive,
             action: self.action,
             holdAction: self.holdAction,
             highlightedAction: self.highlightedAction
         )
     }
+    
+    public func withIsExclusive(_ isExclusive: Bool) -> Button {
+        return Button(
+            content: self.content,
+            minSize: self.minSize,
+            tag: self.tag,
+            automaticHighlight: self.automaticHighlight,
+            isEnabled: self.isEnabled,
+            isExclusive: isExclusive,
+            action: self.action,
+            holdAction: self.holdAction,
+            highlightedAction: self.highlightedAction
+        )
+    }
+    
     
     public func withHoldAction(_ holdAction: (() -> Void)?) -> Button {
         return Button(
@@ -70,6 +89,7 @@ public final class Button: Component {
             tag: self.tag,
             automaticHighlight: self.automaticHighlight,
             isEnabled: self.isEnabled,
+            isExclusive: self.isExclusive,
             action: self.action,
             holdAction: holdAction,
             highlightedAction: self.highlightedAction
@@ -83,6 +103,7 @@ public final class Button: Component {
             tag: tag,
             automaticHighlight: self.automaticHighlight,
             isEnabled: self.isEnabled,
+            isExclusive: self.isExclusive,
             action: self.action,
             holdAction: self.holdAction,
             highlightedAction: self.highlightedAction
@@ -103,6 +124,9 @@ public final class Button: Component {
             return false
         }
         if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
+        if lhs.isExclusive != rhs.isExclusive {
             return false
         }
         return true
@@ -156,8 +180,6 @@ public final class Button: Component {
             self.contentView.layer.allowsGroupOpacity = true
             
             super.init(frame: frame)
-            
-            self.isExclusiveTouch = true
             
             self.addSubview(self.contentView)
             
@@ -267,6 +289,7 @@ public final class Button: Component {
             
             self.updateAlpha(transition: transition)
             self.isEnabled = component.isEnabled
+            self.isExclusiveTouch = component.isExclusive
             
             transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize), completion: nil)
             

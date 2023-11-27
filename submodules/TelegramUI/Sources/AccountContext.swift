@@ -247,11 +247,14 @@ public final class AccountContextImpl: AccountContext {
     private var peerNameColorsConfigurationDisposable: Disposable?
     public private(set) var peerNameColors: PeerNameColors
     
+    private var audioTranscriptionTrialDisposable: Disposable?
+    public private(set) var audioTranscriptionTrial: AudioTranscription.TrialState
+    
     public private(set) var isPremium: Bool
     
     public let imageCache: AnyObject?
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
+    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
@@ -260,7 +263,8 @@ public final class AccountContextImpl: AccountContext {
         self.imageCache = DirectMediaImageCache(account: account)
         
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
-        self.peerNameColors = PeerNameColors.defaultValue
+        self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
+        self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
         self.isPremium = false
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
@@ -407,12 +411,31 @@ public final class AccountContextImpl: AccountContext {
             self.userLimits = userLimits
         })
         
-        self.peerNameColorsConfigurationDisposable = (self._appConfiguration.get()
-        |> deliverOnMainQueue).startStrict(next: { [weak self] appConfiguration in
+        self.peerNameColorsConfigurationDisposable = (combineLatest(
+            self.engine.accountData.observeAvailableColorOptions(scope: .replies),
+            self.engine.accountData.observeAvailableColorOptions(scope: .profile)
+        )
+        |> deliverOnMainQueue).startStrict(next: { [weak self] availableReplyColors, availableProfileColors in
             guard let self = self else {
                 return
             }
-            self.peerNameColors = PeerNameColors.with(appConfiguration: appConfiguration)
+            self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
+        })
+        
+        self.audioTranscriptionTrialDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
+        |> mapToSignal { peer -> Signal<AudioTranscription.TrialState, NoError> in
+            let isPremium = peer?.isPremium ?? false
+            if isPremium {
+                return .single(AudioTranscription.TrialState(cooldownUntilTime: nil, remainingCount: 1))
+            } else {
+                return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.AudioTranscriptionTrial())
+            }
+        }
+        |> deliverOnMainQueue).startStrict(next: { [weak self] audioTranscriptionTrial in
+            guard let self = self else {
+                return
+            }
+            self.audioTranscriptionTrial = audioTranscriptionTrial
         })
     }
     
@@ -701,11 +724,6 @@ private final class ChatLocationReplyContextHolderImpl: ChatLocationContextHolde
     init(account: Account, data: ChatReplyThreadMessage) {
         self.context = ReplyThreadHistoryContext(account: account, peerId: data.messageId.peerId, data: data)
     }
-}
-
-func getAppConfiguration(transaction: Transaction) -> AppConfiguration {
-    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-    return appConfiguration
 }
 
 func getAppConfiguration(postbox: Postbox) -> Signal<AppConfiguration, NoError> {

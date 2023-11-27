@@ -4,6 +4,7 @@ import Display
 import ComponentFlow
 import MultilineTextComponent
 import AccountContext
+import Postbox
 import TelegramCore
 import TextNodeWithEntities
 import TextFormat
@@ -11,6 +12,9 @@ import InvisibleInkDustNode
 import UrlEscaping
 import TelegramPresentationData
 import TextSelectionNode
+import SwiftSignalKit
+import ForwardInfoPanelComponent
+import PlainButtonComponent
 
 final class StoryContentCaptionComponent: Component {
     enum Action {
@@ -55,12 +59,16 @@ final class StoryContentCaptionComponent: Component {
     let strings: PresentationStrings
     let theme: PresentationTheme
     let text: String
+    let author: EnginePeer
+    let forwardInfo: EngineStoryItem.ForwardInfo?
+    let forwardInfoStory: Signal<EngineStoryItem?, NoError>?
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
     let longTapAction: (Action) -> Void
     let textSelectionAction: (NSAttributedString, TextSelectionAction) -> Void
     let controller: () -> ViewController?
+    let openStory: (EnginePeer, EngineStoryItem) -> Void
     
     init(
         externalState: ExternalState,
@@ -68,17 +76,24 @@ final class StoryContentCaptionComponent: Component {
         strings: PresentationStrings,
         theme: PresentationTheme,
         text: String,
+        author: EnginePeer,
+        forwardInfo: EngineStoryItem.ForwardInfo?,
+        forwardInfoStory: Signal<EngineStoryItem?, NoError>?,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void,
         longTapAction: @escaping (Action) -> Void,
         textSelectionAction: @escaping (NSAttributedString, TextSelectionAction) -> Void,
-        controller: @escaping () -> ViewController?
+        controller: @escaping () -> ViewController?,
+        openStory: @escaping (EnginePeer, EngineStoryItem) -> Void
     ) {
         self.externalState = externalState
         self.context = context
         self.strings = strings
         self.theme = theme
+        self.author = author
+        self.forwardInfo = forwardInfo
+        self.forwardInfoStory = forwardInfoStory
         self.text = text
         self.entities = entities
         self.entityFiles = entityFiles
@@ -86,6 +101,7 @@ final class StoryContentCaptionComponent: Component {
         self.longTapAction = longTapAction
         self.textSelectionAction = textSelectionAction
         self.controller = controller
+        self.openStory = openStory
     }
 
     static func ==(lhs: StoryContentCaptionComponent, rhs: StoryContentCaptionComponent) -> Bool {
@@ -99,6 +115,12 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.author != rhs.author {
+            return false
+        }
+        if lhs.forwardInfo != rhs.forwardInfo {
             return false
         }
         if lhs.text != rhs.text {
@@ -161,10 +183,15 @@ final class StoryContentCaptionComponent: Component {
         private let scrollBottomFullMaskView: UIView
         private let scrollTopMaskView: UIImageView
         
+        private var forwardInfoPanel: ComponentView<Empty>?
+        private var forwardInfoDisposable: Disposable?
+        private var forwardInfoStory: EngineStoryItem?
+        
         private let shadowGradientView: UIImageView
 
         private var component: StoryContentCaptionComponent?
         private weak var state: EmptyComponentState?
+        private var isUpdating: Bool = false
         
         private var itemLayout: ItemLayout?
         
@@ -173,6 +200,9 @@ final class StoryContentCaptionComponent: Component {
         
         private var isExpanded: Bool = false
         
+        private var codeHighlight: CachedMessageSyntaxHighlight?
+        private var codeHighlightState: (specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
+                
         private static let shadowImage: UIImage? = {
             UIImage(named: "Stories/PanelGradient")
         }()
@@ -245,6 +275,11 @@ final class StoryContentCaptionComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.codeHighlightState?.disposable.dispose()
+            self.forwardInfoDisposable?.dispose()
+        }
+        
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             if !self.bounds.contains(point) {
                 return nil
@@ -256,6 +291,13 @@ final class StoryContentCaptionComponent: Component {
                 let textLocalPoint = self.convert(point, to: textView)
                 if textLocalPoint.y >= -7.0 {
                     return self.textSelectionNode?.view ?? textView
+                }
+            }
+            
+            if let forwardView = self.forwardInfoPanel?.view {
+                let forwardLocalPoint = self.convert(point, to: forwardView)
+                if let result = forwardView.hitTest(forwardLocalPoint, with: nil) {
+                    return result
                 }
             }
             
@@ -518,6 +560,11 @@ final class StoryContentCaptionComponent: Component {
         }
         
         func update(component: StoryContentCaptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.ignoreExternalState = true
             
             self.component = component
@@ -527,11 +574,47 @@ final class StoryContentCaptionComponent: Component {
             let verticalInset: CGFloat = 7.0
             let textContainerSize = CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height - verticalInset * 2.0)
             
+            var baseQuoteSecondaryTintColor: UIColor?
+            var baseQuoteTertiaryTintColor: UIColor?
+            if let nameColor = component.author.nameColor {
+                let resolvedColor = component.context.peerNameColors.get(nameColor)
+                if resolvedColor.secondary != nil {
+                    baseQuoteSecondaryTintColor = .clear
+                }
+                if resolvedColor.tertiary != nil {
+                    baseQuoteTertiaryTintColor = .clear
+                }
+            }
+            
+            let codeSpec = extractMessageSyntaxHighlightSpecs(text: component.text, entities: component.entities)
+            if self.codeHighlightState?.specs != codeSpec {
+                let disposable = MetaDisposable()
+                self.codeHighlightState = (codeSpec, disposable)
+                disposable.set((asyncStanaloneSyntaxHighlight(current: self.codeHighlight, specs: codeSpec)
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    if self.codeHighlight != result {
+                        self.codeHighlight = result
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                }))
+            }
+            
             let attributedText = stringWithAppliedEntities(
                 component.text,
                 entities: component.entities,
                 baseColor: .white,
                 linkColor: .white,
+                baseQuoteTintColor: .white,
+                baseQuoteSecondaryTintColor: baseQuoteSecondaryTintColor,
+                baseQuoteTertiaryTintColor: baseQuoteTertiaryTintColor,
+                codeBlockTitleColor: .white,
+                codeBlockAccentColor: .white,
+                codeBlockBackgroundColor: UIColor(white: 1.0, alpha: 0.2),
                 baseFont: Font.regular(16.0),
                 linkFont: Font.regular(16.0),
                 boldFont: Font.semibold(16.0),
@@ -541,7 +624,8 @@ final class StoryContentCaptionComponent: Component {
                 blockQuoteFont: Font.monospace(16.0),
                 message: nil,
                 entityFiles: component.entityFiles,
-                adjustQuoteFontSize: true
+                adjustQuoteFontSize: true,
+                cachedMessageSyntaxHighlight: self.codeHighlight
             )
             
             let truncationToken = NSMutableAttributedString()
@@ -585,6 +669,94 @@ final class StoryContentCaptionComponent: Component {
             let visibleTextHeight = collapsedTextLayout.0.size.height
             let textOverflowHeight: CGFloat = expandedTextLayout.0.size.height - visibleTextHeight
             let scrollContentSize = CGSize(width: availableSize.width, height: availableSize.height + textOverflowHeight)
+            
+            if let forwardInfo = component.forwardInfo {
+                let authorName: String
+                let isChannel: Bool
+                let text: String?
+                
+                switch forwardInfo {
+                case let .known(peer, _, _):
+                    authorName = peer.displayTitle(strings: component.strings, displayOrder: .firstLast)
+                    isChannel = peer.id.isGroupOrChannel
+                    
+                    if let story = self.forwardInfoStory {
+                        text = story.text
+                    } else if self.forwardInfoDisposable == nil, let forwardInfoStory = component.forwardInfoStory {
+                        self.forwardInfoDisposable = (forwardInfoStory
+                        |> deliverOnMainQueue).start(next: { story in
+                            if let story {
+                                self.forwardInfoStory = story
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                                }
+                            }
+                        })
+                        text = nil
+                    } else {
+                        text = nil
+                    }
+                case let .unknown(name, _):
+                    authorName = name
+                    isChannel = false
+                    text = ""
+                }
+                
+                if let text {
+                    let forwardInfoPanel: ComponentView<Empty>
+                    if let current = self.forwardInfoPanel {
+                        forwardInfoPanel = current
+                    } else {
+                        forwardInfoPanel = ComponentView<Empty>()
+                        self.forwardInfoPanel = forwardInfoPanel
+                    }
+                    
+                    let forwardInfoPanelSize = forwardInfoPanel.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            PlainButtonComponent(
+                                content: AnyComponent(
+                                    ForwardInfoPanelComponent(
+                                        authorName: authorName,
+                                        text: text,
+                                        isChannel: isChannel,
+                                        isVibrant: false,
+                                        fillsWidth: false
+                                    )
+                                ),
+                                effectAlignment: .center,
+                                minSize: nil,
+                                action: { [weak self] in
+                                    if let self, case let .known(peer, _, _) = forwardInfo, let story = self.forwardInfoStory {
+                                        self.component?.openStory(peer, story)
+                                    } else if let controller = self?.component?.controller() as? StoryContainerScreen {
+                                        let tooltipController = TooltipController(content: .text(component.strings.Story_ForwardAuthorHiddenTooltip), baseFontSize: 17.0, isBlurred: true, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                                        controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak controller] in
+                                            if let self, let controller, let forwardInfoPanel = self.forwardInfoPanel?.view {
+                                                return (controller.node, forwardInfoPanel.convert(forwardInfoPanel.bounds, to: controller.view))
+                                            }
+                                            return nil
+                                        }))
+                                    }
+                                }
+                            )
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                    )
+                    let forwardInfoPanelFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset - forwardInfoPanelSize.height - 10.0), size: forwardInfoPanelSize)
+                    if let view = forwardInfoPanel.view {
+                        if view.superview == nil {
+                            self.scrollView.addSubview(view)
+                            transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                        }
+                        view.frame = forwardInfoPanelFrame
+                    }
+                }
+            } else if let forwardInfoPanel = self.forwardInfoPanel {
+                self.forwardInfoPanel = nil
+                forwardInfoPanel.view?.removeFromSuperview()
+            }
             
             do {
                 let collapsedTextNode = collapsedTextLayout.1(TextNodeWithEntities.Arguments(

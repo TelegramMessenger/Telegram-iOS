@@ -483,3 +483,7 @@ void applyKeyboardAutocorrection(UITextView * _Nonnull textView) {
 }
 
 @end
+
+void snapshotViewByDrawingInContext(UIView * _Nonnull view) {
+    [view drawViewHierarchyInRect:view.bounds afterScreenUpdates:false];
+}

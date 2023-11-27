@@ -263,23 +263,23 @@ public final class LottieComponent: Component {
                     
                     self.currentFrameStartTime = CACurrentMediaTime()
                     if self.displayLink == nil {
-                        self.displayLink = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: false, { [weak self] in
+                        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                             guard let self else {
                                 return
                             }
                             self.advanceIfNeeded()
-                        })
+                        }
                     }
                 })
             } else {
                 self.currentFrameStartTime = CACurrentMediaTime()
                 if self.displayLink == nil {
-                    self.displayLink = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: false, { [weak self] in
+                    self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                         guard let self else {
                             return
                         }
                         self.advanceIfNeeded()
-                    })
+                    }
                 }
             }
         }

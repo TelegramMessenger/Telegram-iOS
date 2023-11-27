@@ -41,7 +41,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
                 return .chat(textInputState: nil, subject: nil, peekData: nil)
             }
         } else {
-            return .info
+            return .info(nil)
         }
     } else {
         return navigation
@@ -62,7 +62,8 @@ func openResolvedUrlImpl(
     present: @escaping (ViewController, Any?) -> Void,
     dismissInput: @escaping () -> Void,
     contentContext: Any?,
-    progress: Promise<Bool>?
+    progress: Promise<Bool>?,
+    completion: (() -> Void)?
 ) {
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     if case let .chat(_, maybeUpdatedPresentationData) = urlContext {
@@ -845,6 +846,7 @@ func openResolvedUrlImpl(
                             }
                         )
                         navigationController?.pushViewController(storyContainerScreen)
+                        completion?()
                     })
                 } else {
                     var elevatedLayout = true

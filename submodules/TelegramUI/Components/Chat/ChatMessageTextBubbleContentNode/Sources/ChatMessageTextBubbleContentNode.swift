@@ -53,6 +53,34 @@ private final class CachedChatMessageText {
     }
 }
 
+private func findQuoteRange(string: String, quoteText: String, offset: Int?) -> NSRange? {
+    let nsString = string as NSString
+    var currentRange: NSRange?
+    while true {
+        let startOffset = currentRange?.upperBound ?? 0
+        let range = nsString.range(of: quoteText, range: NSRange(location: startOffset, length: nsString.length - startOffset))
+        if range.location != NSNotFound {
+            if let offset {
+                if let currentRangeValue = currentRange {
+                    if abs(range.location - offset) > abs(currentRangeValue.location - offset) {
+                        break
+                    } else {
+                        currentRange = range
+                    }
+                } else {
+                    currentRange = range
+                }
+            } else {
+                currentRange = range
+                break
+            }
+        } else {
+            break
+        }
+    }
+    return currentRange
+}
+
 public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let containerNode: ASDisplayNode
     private let textNode: TextNodeWithEntities
@@ -407,7 +435,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         if item.presentationData.theme.theme.overallDarkAppearance {
                             codeBlockTitleColor = .white
                             codeBlockAccentColor = UIColor(white: 1.0, alpha: 0.5)
-                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.65)
+                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.25)
                         } else {
                             codeBlockTitleColor = mainColor
                             codeBlockAccentColor = mainColor
@@ -1109,15 +1137,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    public func getQuoteRect(quote: String) -> CGRect? {
+    public func getQuoteRect(quote: String, offset: Int?) -> CGRect? {
         var rectsSet: [CGRect] = []
         if !quote.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
-            let nsString = string as NSString
-            let range = nsString.range(of: quote)
-            if range.location != NSNotFound {
-                if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
-                    rectsSet = rects
-                }
+            
+            let range = findQuoteRange(string: string, quoteText: quote, offset: offset)
+            if let range, let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
+                rectsSet = rects
             }
         }
         if !rectsSet.isEmpty {
@@ -1136,15 +1162,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    public func updateQuoteTextHighlightState(text: String?, color: UIColor, animated: Bool) {
+    public func updateQuoteTextHighlightState(text: String?, offset: Int?, color: UIColor, animated: Bool) {
         var rectsSet: [CGRect] = []
         if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
-            let nsString = string as NSString
-            let range = nsString.range(of: text)
-            if range.location != NSNotFound {
-                if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
-                    rectsSet = rects
-                }
+            
+            let quoteRange = findQuoteRange(string: string, quoteText: text, offset: offset)
+            if let quoteRange, let rects = cachedLayout.rangeRects(in: quoteRange)?.rects, !rects.isEmpty {
+                rectsSet = rects
             }
         }
         if !rectsSet.isEmpty {
@@ -1339,12 +1363,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private func getSelectionState(range: NSRange?) -> ChatControllerSubject.MessageOptionsInfo.SelectionState {
         var quote: ChatControllerSubject.MessageOptionsInfo.Quote?
         if let item = self.item, let range, let selection = self.getCurrentTextSelection(customRange: range) {
-            quote = ChatControllerSubject.MessageOptionsInfo.Quote(messageId: item.message.id, text: selection.text)
+            quote = ChatControllerSubject.MessageOptionsInfo.Quote(messageId: item.message.id, text: selection.text, offset: selection.offset)
         }
         return ChatControllerSubject.MessageOptionsInfo.SelectionState(canQuote: true, quote: quote)
     }
     
-    public func getCurrentTextSelection(customRange: NSRange? = nil) -> (text: String, entities: [MessageTextEntity])? {
+    public func getCurrentTextSelection(customRange: NSRange? = nil) -> (text: String, entities: [MessageTextEntity], offset: Int)? {
         guard let textSelectionNode = self.textSelectionNode else {
             return nil
         }
@@ -1359,13 +1383,14 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
         let nsString = string.string as NSString
         let substring = nsString.substring(with: range)
+        let offset = range.location
         
         var entities: [MessageTextEntity] = []
         if let textEntitiesAttribute = item.message.textEntitiesAttribute {
             entities = messageTextEntitiesInRange(entities: textEntitiesAttribute.entities, range: range, onlyQuoteable: true)
         }
         
-        return (substring, entities)
+        return (substring, entities, offset)
     }
     
     public func animateClippingTransition(offset: CGFloat, animation: ListViewItemUpdateAnimation) {

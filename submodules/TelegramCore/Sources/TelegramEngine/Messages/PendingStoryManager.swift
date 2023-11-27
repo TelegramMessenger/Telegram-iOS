@@ -39,6 +39,40 @@ public extension Stories {
         }
     }
     
+    struct PendingForwardInfo: Codable, Equatable {
+        private enum CodingKeys: String, CodingKey {
+            case peerId = "peerId"
+            case storyId = "storyId"
+            case isModified = "isModified"
+        }
+        
+        public let peerId: EnginePeer.Id
+        public let storyId: Int32
+        public let isModified: Bool
+        
+        public init(peerId: EnginePeer.Id, storyId: Int32, isModified: Bool) {
+            self.peerId = peerId
+            self.storyId = storyId
+            self.isModified = isModified
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            self.peerId = EnginePeer.Id(try container.decode(Int64.self, forKey: .peerId))
+            self.storyId = try container.decode(Int32.self, forKey: .storyId)
+            self.isModified = try container.decodeIfPresent(Bool.self, forKey: .isModified) ?? false
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.peerId.toInt64(), forKey: .peerId)
+            try container.encode(self.storyId, forKey: .storyId)
+            try container.encode(self.isModified, forKey: .isModified)
+        }
+    }
+    
     final class PendingItem: Equatable, Codable {
         private enum CodingKeys: CodingKey {
             case target
@@ -54,6 +88,7 @@ public extension Stories {
             case isForwardingDisabled
             case period
             case randomId
+            case forwardInfo
         }
         
         public let target: PendingTarget
@@ -69,6 +104,7 @@ public extension Stories {
         public let isForwardingDisabled: Bool
         public let period: Int32
         public let randomId: Int64
+        public let forwardInfo: PendingForwardInfo?
         
         public init(
             target: PendingTarget,
@@ -83,7 +119,8 @@ public extension Stories {
             privacy: EngineStoryPrivacy,
             isForwardingDisabled: Bool,
             period: Int32,
-            randomId: Int64
+            randomId: Int64,
+            forwardInfo: PendingForwardInfo?
         ) {
             self.target = target
             self.stableId = stableId
@@ -98,6 +135,7 @@ public extension Stories {
             self.isForwardingDisabled = isForwardingDisabled
             self.period = period
             self.randomId = randomId
+            self.forwardInfo = forwardInfo
         }
         
         public init(from decoder: Decoder) throws {
@@ -123,6 +161,8 @@ public extension Stories {
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
             self.period = try container.decode(Int32.self, forKey: .period)
             self.randomId = try container.decode(Int64.self, forKey: .randomId)
+            
+            self.forwardInfo = try container.decodeIfPresent(PendingForwardInfo.self, forKey: .forwardInfo)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -150,6 +190,7 @@ public extension Stories {
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
             try container.encode(self.period, forKey: .period)
             try container.encode(self.randomId, forKey: .randomId)
+            try container.encodeIfPresent(self.forwardInfo, forKey: .forwardInfo)
         }
         
         public static func ==(lhs: PendingItem, rhs: PendingItem) -> Bool {
@@ -184,6 +225,9 @@ public extension Stories {
                 return false
             }
             if lhs.randomId != rhs.randomId {
+                return false
+            }
+            if lhs.forwardInfo != rhs.forwardInfo {
                 return false
             }
             return true
@@ -359,8 +403,9 @@ final class PendingStoryManager {
                 case let .peer(peerId):
                     toPeerId = peerId
                 }
+                                
                 let stableId = firstItem.stableId
-                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
+                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId, forwardInfo: firstItem.forwardInfo)
                 |> deliverOn(self.queue)).start(next: { [weak self] event in
                     guard let `self` = self else {
                         return

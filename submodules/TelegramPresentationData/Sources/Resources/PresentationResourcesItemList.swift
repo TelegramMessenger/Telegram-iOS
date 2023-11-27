@@ -329,4 +329,16 @@ public struct PresentationResourcesItemList {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/TopicArrowIcon"), color: theme.list.itemSecondaryTextColor)
         })
     }
+    
+    public static func statsReactionsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.statsReactionsIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chart/Reactions"), color: theme.list.itemSecondaryTextColor)
+        })
+    }
+    
+    public static func statsForwardsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.statsForwardsIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chart/Forwards"), color: theme.list.itemSecondaryTextColor)
+        })
+    }
 }

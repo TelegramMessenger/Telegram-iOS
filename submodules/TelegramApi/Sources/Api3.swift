@@ -522,7 +522,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum Chat: TypeConstructorDescription {
-        case channel(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, restrictionReason: [Api.RestrictionReason]?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Int32?, backgroundEmojiId: Int64?)
+        case channel(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, restrictionReason: [Api.RestrictionReason]?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Api.PeerColor?)
         case channelForbidden(flags: Int32, id: Int64, accessHash: Int64, title: String, untilDate: Int32?)
         case chat(flags: Int32, id: Int64, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?)
         case chatEmpty(id: Int64)
@@ -530,9 +530,9 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .channel(let flags, let flags2, let id, let accessHash, let title, let username, let photo, let date, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount, let usernames, let storiesMaxId, let color, let backgroundEmojiId):
+                case .channel(let flags, let flags2, let id, let accessHash, let title, let username, let photo, let date, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount, let usernames, let storiesMaxId, let color):
                     if boxed {
-                        buffer.appendInt32(427944574)
+                        buffer.appendInt32(-1903702824)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -557,8 +557,7 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags2) & Int(1 << 4) != 0 {serializeInt32(storiesMaxId!, buffer: buffer, boxed: false)}
-                    if Int(flags2) & Int(1 << 6) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
-                    if Int(flags2) & Int(1 << 5) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
+                    if Int(flags2) & Int(1 << 7) != 0 {color!.serialize(buffer, true)}
                     break
                 case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
                     if boxed {
@@ -603,8 +602,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .channel(let flags, let flags2, let id, let accessHash, let title, let username, let photo, let date, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount, let usernames, let storiesMaxId, let color, let backgroundEmojiId):
-                return ("channel", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("title", title as Any), ("username", username as Any), ("photo", photo as Any), ("date", date as Any), ("restrictionReason", restrictionReason as Any), ("adminRights", adminRights as Any), ("bannedRights", bannedRights as Any), ("defaultBannedRights", defaultBannedRights as Any), ("participantsCount", participantsCount as Any), ("usernames", usernames as Any), ("storiesMaxId", storiesMaxId as Any), ("color", color as Any), ("backgroundEmojiId", backgroundEmojiId as Any)])
+                case .channel(let flags, let flags2, let id, let accessHash, let title, let username, let photo, let date, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount, let usernames, let storiesMaxId, let color):
+                return ("channel", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("title", title as Any), ("username", username as Any), ("photo", photo as Any), ("date", date as Any), ("restrictionReason", restrictionReason as Any), ("adminRights", adminRights as Any), ("bannedRights", bannedRights as Any), ("defaultBannedRights", defaultBannedRights as Any), ("participantsCount", participantsCount as Any), ("usernames", usernames as Any), ("storiesMaxId", storiesMaxId as Any), ("color", color as Any)])
                 case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
                 return ("channelForbidden", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("title", title as Any), ("untilDate", untilDate as Any)])
                 case .chat(let flags, let id, let title, let photo, let participantsCount, let date, let version, let migratedTo, let adminRights, let defaultBannedRights):
@@ -659,10 +658,10 @@ public extension Api {
             } }
             var _15: Int32?
             if Int(_2!) & Int(1 << 4) != 0 {_15 = reader.readInt32() }
-            var _16: Int32?
-            if Int(_2!) & Int(1 << 6) != 0 {_16 = reader.readInt32() }
-            var _17: Int64?
-            if Int(_2!) & Int(1 << 5) != 0 {_17 = reader.readInt64() }
+            var _16: Api.PeerColor?
+            if Int(_2!) & Int(1 << 7) != 0 {if let signature = reader.readInt32() {
+                _16 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -678,10 +677,9 @@ public extension Api {
             let _c13 = (Int(_1!) & Int(1 << 17) == 0) || _13 != nil
             let _c14 = (Int(_2!) & Int(1 << 0) == 0) || _14 != nil
             let _c15 = (Int(_2!) & Int(1 << 4) == 0) || _15 != nil
-            let _c16 = (Int(_2!) & Int(1 << 6) == 0) || _16 != nil
-            let _c17 = (Int(_2!) & Int(1 << 5) == 0) || _17 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
-                return Api.Chat.channel(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, title: _5!, username: _6, photo: _7!, date: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, defaultBannedRights: _12, participantsCount: _13, usernames: _14, storiesMaxId: _15, color: _16, backgroundEmojiId: _17)
+            let _c16 = (Int(_2!) & Int(1 << 7) == 0) || _16 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 {
+                return Api.Chat.channel(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, title: _5!, username: _6, photo: _7!, date: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, defaultBannedRights: _12, participantsCount: _13, usernames: _14, storiesMaxId: _15, color: _16)
             }
             else {
                 return nil

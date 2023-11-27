@@ -27,6 +27,7 @@ import InvisibleInkDustNode
 import MediaPickerUI
 import StoryContainerScreen
 import EmptyStateIndicatorComponent
+import UIKitRuntimeUtils
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -483,213 +484,6 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     }
 }
 
-private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemLayer {
-    var item: VisualMediaItem?
-    var viewCountLayer: DurationLayer?
-    var durationLayer: DurationLayer?
-    var leftShadowLayer: SimpleLayer?
-    var rightShadowLayer: SimpleLayer?
-    var minFactor: CGFloat = 1.0
-    var selectionLayer: GridMessageSelectionLayer?
-    var dustLayer: MediaDustLayer?
-    var disposable: Disposable?
-
-    var hasContents: Bool = false
-
-    override init() {
-        super.init()
-        
-        self.contentsGravity = .resize
-        if #available(iOS 13.0, *) {
-            self.preventsCapture = true
-            self.preventsDisplaySleepDuringVideoPlayback = false
-        }
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    deinit {
-        self.disposable?.dispose()
-    }
-
-    override func action(forKey event: String) -> CAAction? {
-        return nullAction
-    }
-    
-    private var layerContents: Any?
-    func getContents() -> Any? {
-        return self.layerContents
-    }
-    
-    func setContents(_ contents: Any?) {
-        self.layerContents = contents
-        
-        if let image = contents as? UIImage {
-            self.layerContents = image.cgImage
-            if let cmSampleBuffer = image.cmSampleBuffer {
-                self.enqueue(cmSampleBuffer)
-            }
-        }
-    }
-    
-    func setSpoilerContents(_ contents: Any?) {
-        if let image = contents as? UIImage {
-            self.dustLayer?.contents = image.cgImage
-        }
-    }
-
-    func bind(item: VisualMediaItem) {
-        self.item = item
-    }
-    
-    func updateDuration(viewCount: Int32?, duration: Int32?, isMin: Bool, minFactor: CGFloat) {
-        self.minFactor = minFactor
-
-        if let viewCount {
-            if let viewCountLayer = self.viewCountLayer {
-                viewCountLayer.update(viewCount: viewCount, isMin: isMin)
-            } else {
-                let viewCountLayer = DurationLayer()
-                viewCountLayer.contentsGravity = .topLeft
-                viewCountLayer.update(viewCount: viewCount, isMin: isMin)
-                self.addSublayer(viewCountLayer)
-                viewCountLayer.frame = CGRect(origin: CGPoint(x: 7.0, y: self.bounds.height - 4.0), size: CGSize())
-                viewCountLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
-                self.viewCountLayer = viewCountLayer
-            }
-        } else if let viewCountLayer = self.viewCountLayer {
-            self.viewCountLayer = nil
-            viewCountLayer.removeFromSuperlayer()
-        }
-
-        if let duration {
-            if let durationLayer = self.durationLayer {
-                durationLayer.update(duration: duration, isMin: isMin)
-            } else {
-                let durationLayer = DurationLayer()
-                durationLayer.update(duration: duration, isMin: isMin)
-                self.addSublayer(durationLayer)
-                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 4.0), size: CGSize())
-                durationLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
-                self.durationLayer = durationLayer
-            }
-        } else if let durationLayer = self.durationLayer {
-            self.durationLayer = nil
-            durationLayer.removeFromSuperlayer()
-        }
-        
-        let size = self.bounds.size
-        
-        if self.viewCountLayer != nil {
-            if self.leftShadowLayer == nil {
-                let leftShadowLayer = SimpleLayer()
-                self.leftShadowLayer = leftShadowLayer
-                self.insertSublayer(leftShadowLayer, at: 0)
-                leftShadowLayer.contents = leftShadowImage.cgImage
-                let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
-                leftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - shadowSize.height), size: shadowSize)
-            }
-        } else {
-            if let leftShadowLayer = self.leftShadowLayer {
-                self.leftShadowLayer = nil
-                leftShadowLayer.removeFromSuperlayer()
-            }
-        }
-        
-        if self.durationLayer != nil {
-            if self.rightShadowLayer == nil {
-                let rightShadowLayer = SimpleLayer()
-                self.rightShadowLayer = rightShadowLayer
-                self.insertSublayer(rightShadowLayer, at: 0)
-                rightShadowLayer.contents = rightShadowImage.cgImage
-                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
-                rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
-            }
-        } else {
-            if let rightShadowLayer = self.rightShadowLayer {
-                self.rightShadowLayer = nil
-                rightShadowLayer.removeFromSuperlayer()
-            }
-        }
-    }
-
-    func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool) {
-        if let isSelected = isSelected {
-            if let selectionLayer = self.selectionLayer {
-                selectionLayer.updateSelected(isSelected, animated: animated)
-            } else {
-                let selectionLayer = GridMessageSelectionLayer(theme: theme)
-                selectionLayer.updateSelected(isSelected, animated: false)
-                self.selectionLayer = selectionLayer
-                self.addSublayer(selectionLayer)
-                if !self.bounds.isEmpty {
-                    selectionLayer.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
-                    selectionLayer.updateLayout(size: self.bounds.size)
-                    if animated {
-                        selectionLayer.animateIn()
-                    }
-                }
-            }
-        } else if let selectionLayer = self.selectionLayer {
-            self.selectionLayer = nil
-            if animated {
-                selectionLayer.animateOut { [weak selectionLayer] in
-                    selectionLayer?.removeFromSuperlayer()
-                }
-            } else {
-                selectionLayer.removeFromSuperlayer()
-            }
-        }
-    }
-    
-    func updateHasSpoiler(hasSpoiler: Bool) {
-        if hasSpoiler {
-            if let _ = self.dustLayer {
-            } else {
-                let dustLayer = MediaDustLayer()
-                self.dustLayer = dustLayer
-                self.addSublayer(dustLayer)
-                if !self.bounds.isEmpty {
-                    dustLayer.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
-                    dustLayer.updateLayout(size: self.bounds.size)
-                }
-            }
-        } else if let dustLayer = self.dustLayer {
-            self.dustLayer = nil
-            dustLayer.removeFromSuperlayer()
-        }
-    }
-
-    func unbind() {
-        self.item = nil
-    }
-
-    func needsShimmer() -> Bool {
-        return !self.hasContents
-    }
-
-    func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
-        if let viewCountLayer = self.viewCountLayer {
-            viewCountLayer.frame = CGRect(origin: CGPoint(x: 7.0, y: size.height - 4.0), size: CGSize())
-        }
-        if let durationLayer = self.durationLayer {
-            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 4.0), size: CGSize())
-        }
-        
-        if let leftShadowLayer = self.leftShadowLayer {
-            let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
-            leftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - shadowSize.height), size: shadowSize)
-        }
-        
-        if let rightShadowLayer = self.rightShadowLayer {
-            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
-            rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
-        }
-    }
-}
-
 private final class ItemTransitionView: UIView {
     private weak var itemLayer: CALayer?
     private var copyDurationLayer: SimpleLayer?
@@ -712,11 +506,7 @@ private final class ItemTransitionView: UIView {
             var durationLayer: CALayer?
             var leftShadowLayer: CALayer?
             var rightShadowLayer: CALayer?
-            if let itemLayer = itemLayer as? CaptureProtectedItemLayer {
-                viewCountLayer = itemLayer.viewCountLayer
-                durationLayer = itemLayer.durationLayer
-                self.layer.contents = itemLayer.getContents()
-            } else if let itemLayer = itemLayer as? GenericItemLayer {
+            if let itemLayer = itemLayer as? GenericItemLayer {
                 viewCountLayer = itemLayer.viewCountLayer
                 durationLayer = itemLayer.durationLayer
                 leftShadowLayer = itemLayer.leftShadowLayer
@@ -852,7 +642,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
 
     func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer? {
         if let item = item as? VisualMediaItem, item.story.isForwardingDisabled {
-            return CaptureProtectedItemLayer()
+            let layer = GenericItemLayer()
+            setLayerDisableScreenshots(layer, true)
+            return layer
         } else {
             return GenericItemLayer()
         }

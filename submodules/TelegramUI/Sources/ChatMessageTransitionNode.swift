@@ -889,7 +889,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         }
     }
 
-    private let listNode: ChatHistoryListNode
+    private let listNode: ChatHistoryListNodeImpl
     private let getContentAreaInScreenSpace: () -> CGRect
     private let onTransitionEvent: (ContainedViewLayoutTransition) -> Void
 
@@ -907,7 +907,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         return !self.animatingItemNodes.isEmpty
     }
 
-    init(listNode: ChatHistoryListNode, getContentAreaInScreenSpace: @escaping () -> CGRect, onTransitionEvent: @escaping (ContainedViewLayoutTransition) -> Void) {
+    init(listNode: ChatHistoryListNodeImpl, getContentAreaInScreenSpace: @escaping () -> CGRect, onTransitionEvent: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.listNode = listNode
         self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
         self.onTransitionEvent = onTransitionEvent

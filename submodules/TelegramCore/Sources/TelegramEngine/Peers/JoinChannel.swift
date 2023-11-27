@@ -77,6 +77,11 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
                     |> castError(JoinChannelError.self)
                 }
             }
+            |> afterCompleted {
+                if hash == nil {
+                    let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId, forceUpdate: true).startStandalone()
+                }
+            }
         } else {
             return .fail(.generic)
         }

@@ -884,9 +884,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 let botName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                 let peerName = message.peers[peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                 attributedString = addAttributesToStringWithRanges(strings.Notification_RequestedPeer(peerName, botName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId), (1, message.id.peerId)]))
-            case .setChatWallpaper:
+            case let .setChatWallpaper(_, forBoth):
                 if message.author?.id == accountPeerId {
-                    attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                    if forBoth {
+                        let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
+                        let resultTitleString = strings.Notification_YouChangedWallpaperBoth(peerName)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else {
+                        attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                    }
                 } else {
                     let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
@@ -903,6 +909,21 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .giveawayLaunched:
                 let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+            case .joinedChannel:
+                attributedString = NSAttributedString(string: strings.Notification_ChannelJoinedByYou, font: titleBoldFont, textColor: primaryTextColor)
+            case let .giveawayResults(winners, unclaimed):
+                if winners == 0 {
+                    attributedString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResultsNoWinners(unclaimed), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+                } else if unclaimed > 0 {
+                    let winnersString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResultsMixedWinners(winners), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+                    let unclaimedString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResultsMixedUnclaimed(unclaimed), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+                    let combinedString = NSMutableAttributedString(attributedString: winnersString)
+                    combinedString.append(NSAttributedString(string: "\n"))
+                    combinedString.append(unclaimedString)
+                    attributedString = combinedString
+                } else {
+                    attributedString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResults(winners), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
+                }
             case .unknown:
                 attributedString = nil
             }

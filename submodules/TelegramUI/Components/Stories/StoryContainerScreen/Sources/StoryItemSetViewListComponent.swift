@@ -231,8 +231,9 @@ final class StoryItemSetViewListComponent: Component {
     }
     
     private enum SortMode: Int {
-        case reactionsFirst = 0
-        case recentFirst = 1
+        case repostsFirst = 0
+        case reactionsFirst = 1
+        case recentFirst = 2
     }
     
     private struct ContentConfigurationKey: Equatable {
@@ -688,6 +689,8 @@ final class StoryItemSetViewListComponent: Component {
                             }
                             let mappedSortMode: EngineStoryViewListContext.SortMode
                             switch self.configuration.sortMode {
+                            case .repostsFirst:
+                                mappedSortMode = .repostsFirst
                             case .reactionsFirst:
                                 mappedSortMode = .reactionsFirst
                             case .recentFirst:
@@ -725,6 +728,8 @@ final class StoryItemSetViewListComponent: Component {
                         }
                         let mappedSortMode: EngineStoryViewListContext.SortMode
                         switch self.configuration.sortMode {
+                        case .repostsFirst:
+                            mappedSortMode = .repostsFirst
                         case .reactionsFirst:
                             mappedSortMode = .reactionsFirst
                         case .recentFirst:
@@ -1288,6 +1293,24 @@ final class StoryItemSetViewListComponent: Component {
             
             let sortMode = self.sortMode
             
+//            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReposts, icon: { theme in
+//                return generateTintedImage(image: UIImage(bundleImageName: "Stories/Context Menu/Repost"), color: theme.contextMenu.primaryColor)
+//            }, additionalLeftIcon: { theme in
+//                if sortMode != .repostsFirst {
+//                    return nil
+//                }
+//                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+//            }, action: { [weak self] _, a in
+//                a(.default)
+//                
+//                guard let self else {
+//                    return
+//                }
+//                if self.sortMode != .repostsFirst {
+//                    self.sortMode = .repostsFirst
+//                    self.state?.updated(transition: .immediate)
+//                }
+//            })))
             items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReactions, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
             }, additionalLeftIcon: { theme in
@@ -1525,6 +1548,15 @@ final class StoryItemSetViewListComponent: Component {
                 containerSize: CGSize(width: 260.0, height: 100.0)
             )
             
+            let orderSelectorIconName: String
+            switch self.sortMode {
+            case .repostsFirst:
+                orderSelectorIconName = "Stories/Context Menu/Repost"
+            case .reactionsFirst:
+                orderSelectorIconName = "Chat/Context Menu/Reactions"
+            case .recentFirst:
+                orderSelectorIconName = "Chat/Context Menu/Time"
+            }
             let orderSelectorSize = self.orderSelector.update(
                 transition: transition,
                 component: AnyComponent(OptionButtonComponent(
@@ -1532,7 +1564,7 @@ final class StoryItemSetViewListComponent: Component {
                         background: UIColor(rgb: 0xffffff, alpha: 0.09),
                         foreground: .white
                     ),
-                    icon: self.sortMode == .recentFirst ? "Chat/Context Menu/Time" : "Chat/Context Menu/Reactions",
+                    icon: orderSelectorIconName,
                     action: { [weak self] in
                         guard let self else {
                             return

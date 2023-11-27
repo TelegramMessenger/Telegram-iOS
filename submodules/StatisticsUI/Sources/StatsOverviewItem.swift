@@ -8,31 +8,43 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 
-protocol PeerStats {
+protocol Stats {
     
 }
 
-extension ChannelStats: PeerStats {
+extension ChannelStats: Stats {
     
 }
 
-extension GroupStats: PeerStats {
+extension GroupStats: Stats {
     
 }
 
-extension ChannelBoostStatus: PeerStats {
+extension ChannelBoostStatus: Stats {
+    
+}
+
+extension MessageStats: Stats {
+    
+}
+
+extension StoryStats: Stats {
     
 }
 
 class StatsOverviewItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let stats: PeerStats
+    let stats: Stats
+    let storyViews: EngineStoryItem.Views?
+    let publicShares: Int32?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, stats: PeerStats, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, stats: Stats, storyViews: EngineStoryItem.Views? = nil, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.stats = stats
+        self.storyViews = storyViews
+        self.publicShares = publicShares
         self.sectionId = sectionId
         self.style = style
     }
@@ -73,26 +85,133 @@ class StatsOverviewItem: ListViewItem, ItemListItem {
     var selectable: Bool = false
 }
 
+private final class ValueItemNode: ASDisplayNode {
+    enum DeltaColor {
+        case generic
+        case positive
+        case negative
+    }
+    
+    private let valueNode: TextNode
+    private let titleNode: TextNode
+    private let deltaNode: TextNode
+    
+    var currentBackgroundColor: UIColor?
+    var pressed: (() -> Void)?
+      
+    override init() {
+        self.valueNode = TextNode()
+        self.titleNode = TextNode()
+        self.deltaNode = TextNode()
+      
+        super.init()
+        
+        self.isUserInteractionEnabled = false
+        
+        self.addSubnode(self.valueNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.deltaNode)
+    }
+            
+    static func asyncLayout(_ current: ValueItemNode?) -> (_ width: CGFloat, _ presentationData: ItemListPresentationData, _ value: String, _ title: String, _ delta: (String, DeltaColor)?) -> (CGSize, () -> ValueItemNode) {
+        
+        let maybeMakeValueLayout = (current?.valueNode).flatMap(TextNode.asyncLayout)
+        let maybeMakeTitleLayout = (current?.titleNode).flatMap(TextNode.asyncLayout)
+        let maybeMakeDeltaLayout = (current?.deltaNode).flatMap(TextNode.asyncLayout)
+        
+        return { width, presentationData, value, title, delta in
+            let targetNode: ValueItemNode
+            if let current = current {
+                targetNode = current
+            } else {
+                targetNode = ValueItemNode()
+            }
+            
+            let makeValueLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)
+            if let maybeMakeValueLayout {
+                makeValueLayout = maybeMakeValueLayout
+            } else {
+                makeValueLayout = TextNode.asyncLayout(targetNode.valueNode)
+            }
+            
+            let makeTitleLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)
+            if let maybeMakeTitleLayout {
+                makeTitleLayout = maybeMakeTitleLayout
+            } else {
+                makeTitleLayout = TextNode.asyncLayout(targetNode.titleNode)
+            }
+            
+            let makeDeltaLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)
+            if let maybeMakeDeltaLayout {
+                makeDeltaLayout = maybeMakeDeltaLayout
+            } else {
+                makeDeltaLayout = TextNode.asyncLayout(targetNode.deltaNode)
+            }
+                        
+            let valueFont = Font.semibold(presentationData.fontSize.itemListBaseFontSize)
+            let titleFont = Font.regular(presentationData.fontSize.itemListBaseHeaderFontSize)
+            let deltaFont = Font.regular(presentationData.fontSize.itemListBaseHeaderFontSize)
+        
+            let valueColor = presentationData.theme.list.itemPrimaryTextColor
+            let titleColor = presentationData.theme.list.sectionHeaderTextColor
+            
+            let deltaColor: UIColor
+            if let (_, color) = delta {
+                switch color {
+                case .generic:
+                    deltaColor = titleColor
+                case .positive:
+                    deltaColor = presentationData.theme.list.freeTextSuccessColor
+                case .negative:
+                    deltaColor = presentationData.theme.list.freeTextErrorColor
+                }
+            } else {
+                deltaColor = presentationData.theme.list.freeTextErrorColor
+            }
+            
+            let constrainedSize = CGSize(width: width, height: CGFloat.greatestFiniteMagnitude)
+            let (valueLayout, valueApply) = makeValueLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: value, font: valueFont, textColor: valueColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (deltaLayout, deltaApply) = makeDeltaLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: delta?.0 ?? "", font: deltaFont, textColor: deltaColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let horizontalSpacing: CGFloat = 4.0
+            let size = CGSize(width: valueLayout.size.width + horizontalSpacing + deltaLayout.size.width, height: valueLayout.size.height + titleLayout.size.height)
+            return (size, {
+                let _ = valueApply()
+                let _ = titleApply()
+                let _ = deltaApply()
+                
+                let valueFrame = CGRect(origin: .zero, size: valueLayout.size)
+                let titleFrame = CGRect(origin: CGPoint(x: 0.0, y: valueFrame.maxY), size: titleLayout.size)
+                let deltaFrame = CGRect(origin: CGPoint(x: valueFrame.maxX + horizontalSpacing, y: valueFrame.maxY - deltaLayout.size.height - 2.0), size: deltaLayout.size)
+                
+                targetNode.valueNode.frame = valueFrame
+                targetNode.titleNode.frame = titleFrame
+                targetNode.deltaNode.frame = deltaFrame
+                
+                return targetNode
+            })
+        }
+    }
+}
+
+
 class StatsOverviewItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let topLeftValueLabel: ImmediateTextNode
-    private let bottomLeftValueLabel: ImmediateTextNode
-    private let bottomRightValueLabel: ImmediateTextNode
-    private let topRightValueLabel: ImmediateTextNode
-    
-    private let topLeftTitleLabel: ImmediateTextNode
-    private let bottomLeftTitleLabel: ImmediateTextNode
-    private let bottomRightTitleLabel: ImmediateTextNode
-    private let topRightTitleLabel: ImmediateTextNode
-    
-    private let topLeftDeltaLabel: ImmediateTextNode
-    private let bottomLeftDeltaLabel: ImmediateTextNode
-    private let bottomRightDeltaLabel: ImmediateTextNode
-    private let topRightDeltaLabel: ImmediateTextNode
+    private let topLeftItem: ValueItemNode
+    private let topRightItem: ValueItemNode
+    private let middle1LeftItem: ValueItemNode
+    private let middle1RightItem: ValueItemNode
+    private let middle2LeftItem: ValueItemNode
+    private let middle2RightItem: ValueItemNode
+    private let bottomLeftItem: ValueItemNode
+    private let bottomRightItem: ValueItemNode
     
     private var item: StatsOverviewItem?
         
@@ -109,56 +228,38 @@ class StatsOverviewItemNode: ListViewItemNode {
         
         self.maskNode = ASImageNode()
       
-        self.topLeftValueLabel = ImmediateTextNode()
-        self.bottomLeftValueLabel = ImmediateTextNode()
-        self.bottomRightValueLabel = ImmediateTextNode()
-        self.topRightValueLabel = ImmediateTextNode()
-        
-        self.topLeftTitleLabel = ImmediateTextNode()
-        self.bottomLeftTitleLabel = ImmediateTextNode()
-        self.bottomRightTitleLabel = ImmediateTextNode()
-        self.topRightTitleLabel = ImmediateTextNode()
-        
-        self.topLeftDeltaLabel = ImmediateTextNode()
-        self.bottomLeftDeltaLabel = ImmediateTextNode()
-        self.bottomRightDeltaLabel = ImmediateTextNode()
-        self.topRightDeltaLabel = ImmediateTextNode()
+        self.topLeftItem = ValueItemNode()
+        self.topRightItem = ValueItemNode()
+        self.middle1LeftItem = ValueItemNode()
+        self.middle1RightItem = ValueItemNode()
+        self.middle2LeftItem = ValueItemNode()
+        self.middle2RightItem = ValueItemNode()
+        self.bottomLeftItem = ValueItemNode()
+        self.bottomRightItem = ValueItemNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.clipsToBounds = true
         
-        self.addSubnode(self.topLeftValueLabel)
-        self.addSubnode(self.bottomLeftValueLabel)
-        self.addSubnode(self.bottomRightValueLabel)
-        self.addSubnode(self.topRightValueLabel)
-        
-        self.addSubnode(self.topLeftTitleLabel)
-        self.addSubnode(self.bottomLeftTitleLabel)
-        self.addSubnode(self.bottomRightTitleLabel)
-        self.addSubnode(self.topRightTitleLabel)
-        
-        self.addSubnode(self.topLeftDeltaLabel)
-        self.addSubnode(self.bottomLeftDeltaLabel)
-        self.addSubnode(self.bottomRightDeltaLabel)
-        self.addSubnode(self.topRightDeltaLabel)
+        self.addSubnode(self.topLeftItem)
+        self.addSubnode(self.topRightItem)
+        self.addSubnode(self.middle1LeftItem)
+        self.addSubnode(self.middle1RightItem)
+        self.addSubnode(self.middle2LeftItem)
+        self.addSubnode(self.middle2RightItem)
+        self.addSubnode(self.bottomLeftItem)
+        self.addSubnode(self.bottomRightItem)
     }
     
     func asyncLayout() -> (_ item: StatsOverviewItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTopLeftValueLabelLayout = TextNode.asyncLayout(self.topLeftValueLabel)
-        let makeTopRightValueLabelLayout = TextNode.asyncLayout(self.topRightValueLabel)
-        let makeBottomLeftValueLabelLayout = TextNode.asyncLayout(self.bottomLeftValueLabel)
-        let makeBottomRightValueLabelLayout = TextNode.asyncLayout(self.bottomRightValueLabel)
-        
-        let makeTopLeftTitleLabelLayout = TextNode.asyncLayout(self.topLeftTitleLabel)
-        let makeTopRightTitleLabelLayout = TextNode.asyncLayout(self.topRightTitleLabel)
-        let makeBottomLeftTitleLabelLayout = TextNode.asyncLayout(self.bottomLeftTitleLabel)
-        let makeBottomRightTitleLabelLayout = TextNode.asyncLayout(self.bottomRightTitleLabel)
-        
-        let makeTopLeftDeltaLabelLayout = TextNode.asyncLayout(self.topLeftDeltaLabel)
-        let makeTopRightDeltaLabelLayout = TextNode.asyncLayout(self.topRightDeltaLabel)
-        let makeBottomLeftDeltaLabelLayout = TextNode.asyncLayout(self.bottomLeftDeltaLabel)
-        let makeBottomRightDeltaLabelLayout = TextNode.asyncLayout(self.bottomRightDeltaLabel)
+        let makeTopLeftItemLayout = ValueItemNode.asyncLayout(self.topLeftItem)
+        let makeTopRightItemLayout = ValueItemNode.asyncLayout(self.topRightItem)
+        let makeMiddle1LeftItemLayout = ValueItemNode.asyncLayout(self.middle1LeftItem)
+        let makeMiddle1RightItemLayout = ValueItemNode.asyncLayout(self.middle1RightItem)
+        let makeMiddle2LeftItemLayout = ValueItemNode.asyncLayout(self.middle2LeftItem)
+        let makeMiddle2RightItemLayout = ValueItemNode.asyncLayout(self.middle2RightItem)
+        let makeBottomLeftItemLayout = ValueItemNode.asyncLayout(self.bottomLeftItem)
+        let makeBottomRightItemLayout = ValueItemNode.asyncLayout(self.bottomRightItem)
         
         let currentItem = self.item
         
@@ -176,7 +277,6 @@ class StatsOverviewItemNode: ListViewItemNode {
             var height: CGFloat = topInset * 2.0
             
             let leftInset = params.leftInset
-            let rightInset: CGFloat = params.rightInset
             var updatedTheme: PresentationTheme?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -194,28 +294,18 @@ class StatsOverviewItemNode: ListViewItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
-            let valueFont = Font.semibold(item.presentationData.fontSize.itemListBaseFontSize)
-            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
-            let deltaFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            let twoColumnLayout = "".isEmpty
             
-            let topLeftValueLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let topRightValueLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let bottomLeftValueLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let bottomRightValueLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-
-            let topLeftTitleLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let topRightTitleLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let bottomLeftTitleLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let bottomRightTitleLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
+            var topLeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var topRightItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var middle1LeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var middle1RightItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var middle2LeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var middle2RightItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var bottomLeftItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
+            var bottomRightItemLayoutAndApply: (CGSize, () -> ValueItemNode)?
             
-            let topLeftDeltaLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let topRightDeltaLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let bottomLeftDeltaLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            let bottomRightDeltaLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
-            
-            var twoColumnLayout = true
-            
-            func deltaText(_ value: StatsValue) -> (String, Bool, Bool) {
+            func deltaText(_ value: StatsValue) -> (text: String, positive: Bool, hasValue: Bool) {
                 let deltaValue = value.current - value.previous
                 let deltaCompact = compactNumericCountString(abs(Int(deltaValue)))
                 let delta = deltaValue > 0 ? "+\(deltaCompact)" : "-\(deltaCompact)"
@@ -227,12 +317,103 @@ class StatsOverviewItemNode: ListViewItemNode {
                 return (abs(deltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", delta, deltaPercentage * 100.0) : "", deltaValue > 0.0, abs(deltaValue) > 0.0)
             }
             
-            if let stats = item.stats as? ChannelBoostStatus {
-                topLeftValueLabelLayoutAndApply = makeTopLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.level)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                                 
-                topRightValueLabelLayoutAndApply = makeTopRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "≈\(Int(stats.premiumAudience?.value ?? 0))", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            if let stats = item.stats as? MessageStats {
+                topLeftItemLayoutAndApply = makeTopLeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(stats.views),
+                    item.presentationData.strings.Stats_Message_Views,
+                    nil
+                )
                 
-                bottomLeftValueLabelLayoutAndApply = makeBottomLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.boosts)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                topRightItemLayoutAndApply = makeTopRightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–",
+                    item.presentationData.strings.Stats_Message_PublicShares,
+                    nil
+                )
+                
+                middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(stats.reactions),
+                    item.presentationData.strings.Stats_Message_Reactions,
+                    nil
+                )
+                
+                middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    item.publicShares.flatMap { "≈\( compactNumericCountString(max(0, stats.forwards - Int($0))))" } ?? "–",
+                    item.presentationData.strings.Stats_Message_PrivateShares,
+                    nil
+                )
+                
+                height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
+            } else if let _ = item.stats as? StoryStats, let views = item.storyViews {
+                topLeftItemLayoutAndApply = makeTopLeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(views.seenCount),
+                    item.presentationData.strings.Stats_Message_Views,
+                    nil
+                )
+                
+                topRightItemLayoutAndApply = makeTopRightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–",
+                    item.presentationData.strings.Stats_Message_PublicShares,
+                    nil
+                )
+                
+                middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(views.reactedCount),
+                    item.presentationData.strings.Stats_Message_Reactions,
+                    nil
+                )
+                
+                middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(views.forwardCount),
+                    item.presentationData.strings.Stats_Message_PrivateShares,
+                    nil
+                )
+                
+                height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
+            } else if let stats = item.stats as? ChannelBoostStatus {
+                topLeftItemLayoutAndApply = makeTopLeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    "\(stats.level)",
+                    item.presentationData.strings.Stats_Boosts_Level,
+                    nil
+                )
+                
+                var premiumSubscribers: Double = 0.0
+                if let premiumAudience = stats.premiumAudience, premiumAudience.total > 0 {
+                    premiumSubscribers = premiumAudience.value / premiumAudience.total
+                }
+                
+                topRightItemLayoutAndApply = makeTopRightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    "≈\(Int(stats.premiumAudience?.value ?? 0))",
+                    item.presentationData.strings.Stats_Boosts_PremiumSubscribers,
+                    (String(format: "%.02f%%", premiumSubscribers * 100.0), .generic)
+                )
+                
+                middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    "\(stats.boosts)",
+                    item.presentationData.strings.Stats_Boosts_ExistingBoosts,
+                    nil
+                )
                 
                 let boostsLeft: Int32
                 if let nextLevelBoosts = stats.nextLevelBoosts {
@@ -240,162 +421,202 @@ class StatsOverviewItemNode: ListViewItemNode {
                 } else {
                     boostsLeft = 0
                 }
+                middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    "\(boostsLeft)",
+                    item.presentationData.strings.Stats_Boosts_BoostsToLevelUp,
+                    nil
+                )
                 
-                bottomRightValueLabelLayoutAndApply = makeBottomRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(boostsLeft)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                topLeftTitleLabelLayoutAndApply = makeTopLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Boosts_Level, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                                
-                topRightTitleLabelLayoutAndApply = makeTopRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Boosts_PremiumSubscribers, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomLeftTitleLabelLayoutAndApply = makeBottomLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Boosts_ExistingBoosts, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightTitleLabelLayoutAndApply = makeBottomRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Boosts_BoostsToLevelUp, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                             
-                
-                topLeftDeltaLabelLayoutAndApply = nil
-                
-                var premiumSubscribers: Double = 0.0
-                if let premiumAudience = stats.premiumAudience, premiumAudience.total > 0 {
-                    premiumSubscribers = premiumAudience.value / premiumAudience.total
+                if twoColumnLayout {
+                    height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
+                } else {
+                    height += topLeftItemLayoutAndApply!.0.height * 4.0 + verticalSpacing * 3.0
                 }
-                
-                topRightDeltaLabelLayoutAndApply = makeTopRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%.02f%%", premiumSubscribers * 100.0), font: deltaFont, textColor: item.presentationData.theme.list.freeTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomLeftDeltaLabelLayoutAndApply = nil
-                bottomRightDeltaLabelLayoutAndApply = nil
-                
-                height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                                
-                height += verticalSpacing
-                height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
             } else if let stats = item.stats as? ChannelStats {
                 let viewsPerPostDelta = deltaText(stats.viewsPerPost)
                 let sharesPerPostDelta = deltaText(stats.sharesPerPost)
+                let reactionsPerPostDelta = deltaText(stats.reactionsPerPost)
+
+                let viewsPerStoryDelta = deltaText(stats.viewsPerStory)
+                let sharesPerStoryDelta = deltaText(stats.sharesPerStory)
+                let reactionsPerStoryDelta = deltaText(stats.reactionsPerStory)
                 
-                let displayBottomRow = stats.sharesPerPost.current > 0 || viewsPerPostDelta.2 || stats.viewsPerPost.current > 0 || sharesPerPostDelta.2
+                let followersDelta = deltaText(stats.followers)
+                topLeftItemLayoutAndApply = makeTopLeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(Int(stats.followers.current)),
+                    item.presentationData.strings.Stats_Followers,
+                    (followersDelta.text, followersDelta.positive ? .positive : .negative)
+                )
                 
-                topLeftValueLabelLayoutAndApply = makeTopLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(stats.followers.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                                 
                 var enabledNotifications: Double = 0.0
                 if stats.enabledNotifications.total > 0 {
                     enabledNotifications = stats.enabledNotifications.value / stats.enabledNotifications.total
                 }
+                topRightItemLayoutAndApply = makeTopRightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    String(format: "%.02f%%", enabledNotifications * 100.0),
+                    item.presentationData.strings.Stats_EnabledNotifications,
+                    nil
+                )
                 
-                topRightValueLabelLayoutAndApply = makeTopRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%.02f%%", enabledNotifications * 100.0), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let hasMessages = stats.viewsPerPost.current > 0
+                let hasStories = stats.viewsPerStory.current > 0 || viewsPerStoryDelta.hasValue
                 
-                bottomLeftValueLabelLayoutAndApply = makeBottomLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? compactNumericCountString(Int(stats.viewsPerPost.current)) : "", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightValueLabelLayoutAndApply = makeBottomRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? compactNumericCountString(Int(stats.sharesPerPost.current)) : "", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                topLeftTitleLabelLayoutAndApply = makeTopLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Followers, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                                
-                topRightTitleLabelLayoutAndApply = makeTopRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_EnabledNotifications, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomLeftTitleLabelLayoutAndApply = makeBottomLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? item.presentationData.strings.Stats_ViewsPerPost : "", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightTitleLabelLayoutAndApply = makeBottomRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? item.presentationData.strings.Stats_SharesPerPost : "", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                             
-                let followersDelta = deltaText(stats.followers)
-                topLeftDeltaLabelLayoutAndApply = makeTopLeftDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: followersDelta.0, font: deltaFont, textColor: followersDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                topRightDeltaLabelLayoutAndApply = nil
-                
-                bottomLeftDeltaLabelLayoutAndApply = makeBottomLeftDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewsPerPostDelta.0, font: deltaFont, textColor: viewsPerPostDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightDeltaLabelLayoutAndApply = makeBottomRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: sharesPerPostDelta.0, font: deltaFont, textColor: sharesPerPostDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                
-                height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                
-                if max(topLeftValueLabelLayoutAndApply!.0.size.width + topLeftDeltaLabelLayoutAndApply!.0.size.width + horizontalSpacing + topRightValueLabelLayoutAndApply!.0.size.width, bottomLeftValueLabelLayoutAndApply!.0.size.width + bottomLeftDeltaLabelLayoutAndApply!.0.size.width + horizontalSpacing + bottomRightValueLabelLayoutAndApply!.0.size.width + bottomRightDeltaLabelLayoutAndApply!.0.size.width) > params.width - leftInset - rightInset {
-                    twoColumnLayout = false
+                var items: [Int: (String, String, (String, ValueItemNode.DeltaColor)?)] = [:]
+                if hasMessages {
+                    items[0] = (
+                        compactNumericCountString(Int(stats.viewsPerPost.current)),
+                        item.presentationData.strings.Stats_ViewsPerPost,
+                        (viewsPerPostDelta.text, viewsPerPostDelta.positive ? .positive : .negative)
+                    )
+                }
+                if hasMessages {
+                    let index = hasStories ? 2 : 1
+                    items[index] = (
+                        compactNumericCountString(Int(stats.sharesPerPost.current)),
+                        item.presentationData.strings.Stats_SharesPerPost,
+                        (sharesPerPostDelta.text, sharesPerPostDelta.positive ? .positive : .negative)
+                    )
+                }
+                if stats.reactionsPerPost.current > 0 || reactionsPerStoryDelta.hasValue {
+                    let index = hasStories ? 4 : 2
+                    items[index] = (
+                        compactNumericCountString(Int(stats.reactionsPerPost.current)),
+                        item.presentationData.strings.Stats_ReactionsPerPost,
+                        (reactionsPerPostDelta.text, reactionsPerPostDelta.positive ? .positive : .negative)
+                    )
+                }
+                if hasStories {
+                    items[1] = (
+                        compactNumericCountString(Int(stats.viewsPerStory.current)),
+                        item.presentationData.strings.Stats_ViewsPerStory,
+                        (viewsPerStoryDelta.text, viewsPerStoryDelta.positive ? .positive : .negative)
+                    )
+                    items[3] = (
+                        compactNumericCountString(Int(stats.sharesPerStory.current)),
+                        item.presentationData.strings.Stats_SharesPerStory,
+                        (sharesPerStoryDelta.text, sharesPerStoryDelta.positive ? .positive : .negative)
+                    )
+                    items[5] = (
+                        compactNumericCountString(Int(stats.reactionsPerStory.current)),
+                        item.presentationData.strings.Stats_ReactionsPerStory,
+                        (reactionsPerStoryDelta.text, reactionsPerStoryDelta.positive ? .positive : .negative)
+                    )
                 }
                 
+                if let (value, title, delta) = items[0] {
+                    middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
+                        params.width,
+                        item.presentationData,
+                        value,
+                        title,
+                        delta
+                    )
+                }
+                if let (value, title, delta) = items[1] {
+                    middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
+                        params.width,
+                        item.presentationData,
+                        value,
+                        title,
+                        delta
+                    )
+                }
+                if let (value, title, delta) = items[2] {
+                    middle2LeftItemLayoutAndApply = makeMiddle2LeftItemLayout(
+                        params.width,
+                        item.presentationData,
+                        value,
+                        title,
+                        delta
+                    )
+                }
+                if let (value, title, delta) = items[3] {
+                    middle2RightItemLayoutAndApply = makeMiddle2RightItemLayout(
+                        params.width,
+                        item.presentationData,
+                        value,
+                        title,
+                        delta
+                    )
+                }
+                if let (value, title, delta) = items[4] {
+                    bottomLeftItemLayoutAndApply = makeBottomLeftItemLayout(
+                        params.width,
+                        item.presentationData,
+                        value,
+                        title,
+                        delta
+                    )
+                }
+                if let (value, title, delta) = items[5] {
+                    bottomRightItemLayoutAndApply = makeBottomRightItemLayout(
+                        params.width,
+                        item.presentationData,
+                        value,
+                        title,
+                        delta
+                    )
+                }
+
+                let valuesCount = CGFloat(2 + items.count)
                 if twoColumnLayout {
-                    if displayBottomRow {
-                        height += verticalSpacing
-                        height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
-                    }
+                    let rowsCount = ceil(valuesCount / 2.0)
+                    height += topLeftItemLayoutAndApply!.0.height * rowsCount + (verticalSpacing * (rowsCount - 1.0))
                 } else {
-                    height += verticalSpacing
-                    height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                    if !stats.viewsPerPost.current.isZero || viewsPerPostDelta.2 {
-                        height += verticalSpacing
-                        height += bottomLeftValueLabelLayoutAndApply!.0.size.height + bottomLeftTitleLabelLayoutAndApply!.0.size.height
-                    }
-                    if !stats.sharesPerPost.current.isZero || sharesPerPostDelta.2 {
-                        height += verticalSpacing
-                        height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
-                    }
+                    height += topLeftItemLayoutAndApply!.0.height * valuesCount + (verticalSpacing * (valuesCount - 1.0))
                 }
             } else if let stats = item.stats as? GroupStats {
                 let viewersDelta = deltaText(stats.viewers)
                 let postersDelta = deltaText(stats.posters)
                 let displayBottomRow = stats.viewers.current > 0 || viewersDelta.2 || stats.posters.current > 0 || postersDelta.2
-                   
-                topLeftValueLabelLayoutAndApply = makeTopLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(stats.members.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                topRightValueLabelLayoutAndApply = makeTopRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(Int(stats.messages.current)), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomLeftValueLabelLayoutAndApply = makeBottomLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? compactNumericCountString(Int(stats.viewers.current)) : "", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightValueLabelLayoutAndApply = makeBottomRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? compactNumericCountString(Int(stats.posters.current)) : "", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                topLeftTitleLabelLayoutAndApply = makeTopLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_GroupMembers, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                topRightTitleLabelLayoutAndApply = makeTopRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_GroupMessages, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomLeftTitleLabelLayoutAndApply = makeBottomLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? item.presentationData.strings.Stats_GroupViewers : "", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightTitleLabelLayoutAndApply = makeBottomRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: displayBottomRow ? item.presentationData.strings.Stats_GroupPosters : "", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
+
                 let membersDelta = deltaText(stats.members)
-                topLeftDeltaLabelLayoutAndApply = makeTopLeftDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: membersDelta.0, font: deltaFont, textColor: membersDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                topLeftItemLayoutAndApply = makeTopLeftItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(Int(stats.members.current)),
+                    item.presentationData.strings.Stats_GroupMembers,
+                    (membersDelta.text, membersDelta.positive ? .positive : .negative)
+                )
                 
                 let messagesDelta = deltaText(stats.messages)
-                topRightDeltaLabelLayoutAndApply = makeTopRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: messagesDelta.0, font: deltaFont, textColor: messagesDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                topRightItemLayoutAndApply = makeTopRightItemLayout(
+                    params.width,
+                    item.presentationData,
+                    compactNumericCountString(Int(stats.messages.current)),
+                    item.presentationData.strings.Stats_GroupMessages,
+                    (messagesDelta.text, messagesDelta.positive ? .positive : .negative)
+                )
                 
-                bottomLeftDeltaLabelLayoutAndApply = makeBottomLeftDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewersDelta.0, font: deltaFont, textColor: viewersDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                bottomRightDeltaLabelLayoutAndApply = makeBottomRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: postersDelta.0, font: deltaFont, textColor: postersDelta.1 ? item.presentationData.theme.list.freeTextSuccessColor : item.presentationData.theme.list.freeTextErrorColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                
-                
-                height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                
-                if max(topLeftValueLabelLayoutAndApply!.0.size.width + topLeftDeltaLabelLayoutAndApply!.0.size.width + horizontalSpacing + topRightValueLabelLayoutAndApply!.0.size.width, bottomLeftValueLabelLayoutAndApply!.0.size.width + bottomLeftDeltaLabelLayoutAndApply!.0.size.width + horizontalSpacing + bottomRightValueLabelLayoutAndApply!.0.size.width + bottomRightDeltaLabelLayoutAndApply!.0.size.width) > params.width - leftInset - rightInset {
-                    twoColumnLayout = false
+                if displayBottomRow {
+                    middle1LeftItemLayoutAndApply = makeMiddle1LeftItemLayout(
+                        params.width,
+                        item.presentationData,
+                        compactNumericCountString(Int(stats.viewers.current)),
+                        item.presentationData.strings.Stats_GroupViewers,
+                        (viewersDelta.text, viewersDelta.positive ? .positive : .negative)
+                    )
+                    
+                    middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
+                        params.width,
+                        item.presentationData,
+                        compactNumericCountString(Int(stats.posters.current)),
+                        item.presentationData.strings.Stats_GroupPosters,
+                        (postersDelta.text, postersDelta.positive ? .positive : .negative)
+                    )
                 }
                 
-                if twoColumnLayout {
-                    if !stats.viewers.current.isZero || viewersDelta.2 || !stats.posters.current.isZero || postersDelta.2 {
-                        height += verticalSpacing
-                        height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
-                    }
+                if twoColumnLayout || !displayBottomRow {
+                    height += topRightItemLayoutAndApply!.0.height * 2.0 + verticalSpacing
                 } else {
-                    height += verticalSpacing
-                    height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
-                    if !stats.viewers.current.isZero || viewersDelta.2 {
-                        height += verticalSpacing
-                        height += bottomLeftValueLabelLayoutAndApply!.0.size.height + bottomLeftTitleLabelLayoutAndApply!.0.size.height
-                    }
-                    if !stats.posters.current.isZero || postersDelta.2 {
-                        height += verticalSpacing
-                        height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
-                    }
+                    height += topLeftItemLayoutAndApply!.0.height * 4.0 + verticalSpacing * 3.0
                 }
-            } else {
-                topLeftValueLabelLayoutAndApply = nil
-                topRightValueLabelLayoutAndApply = nil
-                bottomLeftValueLabelLayoutAndApply = nil
-                bottomRightValueLabelLayoutAndApply = nil
-                topLeftTitleLabelLayoutAndApply = nil
-                topRightTitleLabelLayoutAndApply = nil
-                bottomLeftTitleLabelLayoutAndApply = nil
-                bottomRightTitleLabelLayoutAndApply = nil
-                topLeftDeltaLabelLayoutAndApply = nil
-                topRightDeltaLabelLayoutAndApply = nil
-                bottomLeftDeltaLabelLayoutAndApply = nil
-                bottomRightDeltaLabelLayoutAndApply = nil
             }
         
             let contentSize = CGSize(width: params.width, height: height)
@@ -405,18 +626,14 @@ class StatsOverviewItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                                      
-                    let _ = topLeftValueLabelLayoutAndApply?.1()
-                    let _ = topRightValueLabelLayoutAndApply?.1()
-                    let _ = bottomLeftValueLabelLayoutAndApply?.1()
-                    let _ = bottomRightValueLabelLayoutAndApply?.1()
-                    let _ = topLeftTitleLabelLayoutAndApply?.1()
-                    let _ = topRightTitleLabelLayoutAndApply?.1()
-                    let _ = bottomLeftTitleLabelLayoutAndApply?.1()
-                    let _ = bottomRightTitleLabelLayoutAndApply?.1()
-                    let _ = topLeftDeltaLabelLayoutAndApply?.1()
-                    let _ = topRightDeltaLabelLayoutAndApply?.1()
-                    let _ = bottomLeftDeltaLabelLayoutAndApply?.1()
-                    let _ = bottomRightDeltaLabelLayoutAndApply?.1()
+                    let _ = topLeftItemLayoutAndApply?.1()
+                    let _ = topRightItemLayoutAndApply?.1()
+                    let _ = middle1LeftItemLayoutAndApply?.1()
+                    let _ = middle1RightItemLayoutAndApply?.1()
+                    let _ = middle2LeftItemLayoutAndApply?.1()
+                    let _ = middle2RightItemLayoutAndApply?.1()
+                    let _ = bottomLeftItemLayoutAndApply?.1()
+                    let _ = bottomRightItemLayoutAndApply?.1()
                     
                     if let _ = updatedTheme {
                         strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
@@ -482,47 +699,63 @@ class StatsOverviewItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    var secondColumnX = sideInset + leftInset
+                    let firstColumnX = sideInset + leftInset
+                    var secondColumnX = firstColumnX
                     
-                    if let topLeftValueLabelLayout = topLeftValueLabelLayoutAndApply?.0, let topLeftTitleLabelLayout = topLeftTitleLabelLayoutAndApply?.0 {
-                        strongSelf.topLeftValueLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: topInset), size: topLeftValueLabelLayout.size)
-                        strongSelf.topLeftTitleLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: strongSelf.topLeftValueLabel.frame.maxY), size: topLeftTitleLabelLayout.size)
-                        
-                        if twoColumnLayout {
-                            let topWidth = topLeftValueLabelLayout.size.width + (topLeftDeltaLabelLayoutAndApply?.0.size.width ?? 0)
-                            let bottomWidth = (bottomLeftValueLabelLayoutAndApply?.0.size.width ?? 0.0) + (bottomLeftDeltaLabelLayoutAndApply?.0.size.width ?? 0.0)
-                            secondColumnX = max(layout.size.width / 2.0, sideInset + leftInset + max(topWidth, bottomWidth) + horizontalSpacing)
+                    if twoColumnLayout {
+                        var maxLeftWidth: CGFloat = 0.0
+                        if let topLeftItemLayout = topLeftItemLayoutAndApply?.0 {
+                            maxLeftWidth = max(maxLeftWidth, topLeftItemLayout.width)
                         }
-                    }
-                    if let topLeftDeltaLabelLayout = topLeftDeltaLabelLayoutAndApply?.0 {
-                        strongSelf.topLeftDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.topLeftValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.topLeftValueLabel.frame.maxY - topLeftDeltaLabelLayout.size.height - 2.0), size: topLeftDeltaLabelLayout.size)
+                        if let middle1LeftItemLayout = middle1LeftItemLayoutAndApply?.0 {
+                            maxLeftWidth = max(maxLeftWidth, middle1LeftItemLayout.width)
+                        }
+                        if let middle2LeftItemLayout = middle2LeftItemLayoutAndApply?.0 {
+                            maxLeftWidth = max(maxLeftWidth, middle2LeftItemLayout.width)
+                        }
+                        if let bottomLeftItemLayout = bottomLeftItemLayoutAndApply?.0 {
+                            maxLeftWidth = max(maxLeftWidth, bottomLeftItemLayout.width)
+                        }
+                        secondColumnX = max(layout.size.width / 2.0, firstColumnX + maxLeftWidth + horizontalSpacing)
                     }
                                         
-                    if let topRightValueLabelLayout = topRightValueLabelLayoutAndApply?.0, let topRightTitleLabelLayout = topRightTitleLabelLayoutAndApply?.0 {
-                        let topRightY = twoColumnLayout ? topInset : strongSelf.topLeftTitleLabel.frame.maxY + verticalSpacing
-                        strongSelf.topRightValueLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: topRightY), size: topRightValueLabelLayout.size)
-                        strongSelf.topRightTitleLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: strongSelf.topRightValueLabel.frame.maxY), size: topRightTitleLabelLayout.size)
-                    }
-                    if let topRightDeltaLabelLayout = topRightDeltaLabelLayoutAndApply?.0 {
-                        strongSelf.topRightDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.topRightValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.topRightValueLabel.frame.maxY - topRightDeltaLabelLayout.size.height - 2.0), size: topRightDeltaLabelLayout.size)
+                    if let topLeftItemLayout = topLeftItemLayoutAndApply?.0 {
+                        strongSelf.topLeftItem.frame = CGRect(origin: CGPoint(x: firstColumnX, y: topInset), size: topLeftItemLayout)
                     }
                     
-                    if let bottomLeftValueLabelLayout = bottomLeftValueLabelLayoutAndApply?.0, let bottomLeftTitleLabelLayout = bottomLeftTitleLabelLayoutAndApply?.0 {
-                        let bottomLeftY = twoColumnLayout ? strongSelf.topLeftTitleLabel.frame.maxY + verticalSpacing : strongSelf.topRightTitleLabel.frame.maxY + verticalSpacing
-                        strongSelf.bottomLeftValueLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: bottomLeftY), size: bottomLeftValueLabelLayout.size)
-                        strongSelf.bottomLeftTitleLabel.frame = CGRect(origin: CGPoint(x: sideInset + leftInset, y: strongSelf.bottomLeftValueLabel.frame.maxY), size: bottomLeftTitleLabelLayout.size)
-                    }
-                    if let bottomLeftDeltaLabelLayout = bottomLeftDeltaLabelLayoutAndApply?.0 {
-                        strongSelf.bottomLeftDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.bottomLeftValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.bottomLeftValueLabel.frame.maxY - bottomLeftDeltaLabelLayout.size.height - 2.0), size: bottomLeftDeltaLabelLayout.size)
+                    if let topRightItemLayout = topRightItemLayoutAndApply?.0 {
+                        let originY = twoColumnLayout ? topInset : strongSelf.topLeftItem.frame.maxY + verticalSpacing
+                        strongSelf.topRightItem.frame = CGRect(origin: CGPoint(x: secondColumnX, y: originY), size: topRightItemLayout)
                     }
                     
-                    if let bottomRightValueLabelLayout = bottomRightValueLabelLayoutAndApply?.0, let bottomRightTitleLabelLayout = bottomRightTitleLabelLayoutAndApply?.0 {
-                        let bottomRightY = twoColumnLayout ? strongSelf.topRightTitleLabel.frame.maxY + verticalSpacing : strongSelf.bottomLeftTitleLabel.frame.maxY + verticalSpacing
-                        strongSelf.bottomRightValueLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: bottomRightY), size: bottomRightValueLabelLayout.size)
-                        strongSelf.bottomRightTitleLabel.frame = CGRect(origin: CGPoint(x: secondColumnX, y: strongSelf.bottomRightValueLabel.frame.maxY), size: bottomRightTitleLabelLayout.size)
+                    if let middle1LeftItemLayout = middle1LeftItemLayoutAndApply?.0 {
+                        let originY = (twoColumnLayout ? strongSelf.topLeftItem.frame.maxY : strongSelf.topRightItem.frame.maxY) + verticalSpacing
+                        strongSelf.middle1LeftItem.frame = CGRect(origin: CGPoint(x: firstColumnX, y: originY), size: middle1LeftItemLayout)
                     }
-                    if let bottomRightDeltaLabelLayout = bottomRightDeltaLabelLayoutAndApply?.0 {
-                        strongSelf.bottomRightDeltaLabel.frame = CGRect(origin: CGPoint(x: strongSelf.bottomRightValueLabel.frame.maxX + horizontalSpacing, y: strongSelf.bottomRightValueLabel.frame.maxY - bottomRightDeltaLabelLayout.size.height - 2.0), size: bottomRightDeltaLabelLayout.size)
+                    
+                    if let middle1RightItemLayout = middle1RightItemLayoutAndApply?.0 {
+                        let originY = (twoColumnLayout ? strongSelf.topRightItem.frame.maxY : strongSelf.middle1LeftItem.frame.maxY) + verticalSpacing
+                        strongSelf.middle1RightItem.frame = CGRect(origin: CGPoint(x: secondColumnX, y: originY), size: middle1RightItemLayout)
+                    }
+                    
+                    if let middle2LeftItemLayout = middle2LeftItemLayoutAndApply?.0 {
+                        let originY = (twoColumnLayout ? strongSelf.middle1LeftItem.frame.maxY : strongSelf.middle1RightItem.frame.maxY) + verticalSpacing
+                        strongSelf.middle2LeftItem.frame = CGRect(origin: CGPoint(x: firstColumnX, y: originY), size: middle2LeftItemLayout)
+                    }
+                    
+                    if let middle2RightItemLayout = middle2RightItemLayoutAndApply?.0 {
+                        let originY = (twoColumnLayout ? strongSelf.middle1RightItem.frame.maxY : strongSelf.middle2LeftItem.frame.maxY) + verticalSpacing
+                        strongSelf.middle2RightItem.frame = CGRect(origin: CGPoint(x: secondColumnX, y: originY), size: middle2RightItemLayout)
+                    }
+                    
+                    if let bottomLeftItemLayout = bottomLeftItemLayoutAndApply?.0 {
+                        let originY = (twoColumnLayout ? strongSelf.middle2LeftItem.frame.maxY : strongSelf.middle2RightItem.frame.maxY) + verticalSpacing
+                        strongSelf.bottomLeftItem.frame = CGRect(origin: CGPoint(x: firstColumnX, y: originY), size: bottomLeftItemLayout)
+                    }
+                    
+                    if let bottomRightItemLayout = bottomRightItemLayoutAndApply?.0 {
+                        let originY = (twoColumnLayout ? strongSelf.middle2RightItem.frame.maxY : strongSelf.bottomLeftItem.frame.maxY) + verticalSpacing
+                        strongSelf.bottomRightItem.frame = CGRect(origin: CGPoint(x: secondColumnX, y: originY), size: bottomRightItemLayout)
                     }
                 }
             })

@@ -639,6 +639,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     presentationData: presentationData,
                     items: reactionItems.reactionItems,
                     selectedItems: reactionItems.selectedReactionItems,
+                    alwaysAllowPremiumReactions: reactionItems.alwaysAllowPremiumReactions,
                     getEmojiContent: reactionItems.getEmojiContent,
                     isExpandedUpdated: { [weak self] transition in
                         guard let strongSelf = self else {
@@ -916,7 +917,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 
                 reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: reactionAnchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
                 
-                self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight - (46.0 + 54.0 - 4.0)
+                if reactionContextNode.alwaysAllowPremiumReactions {
+                    self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight
+                } else {
+                    self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight - (46.0 + 54.0 - 4.0)
+                }
             } else {
                 self.proposedReactionsPositionLock = nil
             }

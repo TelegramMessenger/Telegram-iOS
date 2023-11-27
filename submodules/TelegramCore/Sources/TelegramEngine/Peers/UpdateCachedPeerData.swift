@@ -604,6 +604,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 }
                                                 
                                                 let membersHidden = (flags2 & (1 << 2)) != 0
+                                                let forumViewAsMessages = (flags2 & (1 << 6)) != 0
                                                 
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
@@ -632,6 +633,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedSendAsPeerId(sendAsPeerId)
                                                     .withUpdatedAllowedReactions(.known(mappedAllowedReactions))
                                                     .withUpdatedMembersHidden(.known(PeerMembersHidden(value: membersHidden)))
+                                                    .withUpdatedViewForumAsMessages(.known(forumViewAsMessages))
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

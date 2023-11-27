@@ -383,6 +383,8 @@ public final class StoryPeerListComponent: Component {
             
             super.init(frame: frame)
             
+            self.disablesInteractiveTransitionGestureRecognizer = true
+            
             self.scrollView.delegate = self
             self.scrollView.alpha = 0.0
             self.scrollContainerView.addGestureRecognizer(self.scrollView.panGestureRecognizer)

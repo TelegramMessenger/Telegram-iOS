@@ -54,32 +54,62 @@ func chatHistoryEntriesForView(
     }
     
     var joinMessage: Message?
-    if case let .peer(peerId) = location, case let cachedData = cachedData as? CachedChannelData, let invitedOn = cachedData?.invitedOn  {
-        joinMessage = Message(
-            stableId: UInt32.max - 1000,
-            stableVersion: 0,
-            id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
-            globallyUniqueId: nil,
-            groupingKey: nil,
-            groupInfo: nil,
-            threadId: nil,
-            timestamp: invitedOn,
-            flags: [.Incoming],
-            tags: [],
-            globalTags: [],
-            localTags: [],
-            forwardInfo: nil,
-            author: channelPeer,
-            text: "",
-            attributes: [],
-            media: [TelegramMediaAction(action: .joinedByRequest)],
-            peers: SimpleDictionary<PeerId, Peer>(),
-            associatedMessages: SimpleDictionary<MessageId, Message>(),
-            associatedMessageIds: [],
-            associatedMedia: [:],
-            associatedThreadInfo: nil,
-            associatedStories: [:]
-        )
+    if (associatedData.subject?.isService ?? false) {
+        
+    } else {
+        if case let .peer(peerId) = location, case let cachedData = cachedData as? CachedChannelData, let invitedOn = cachedData?.invitedOn {
+            joinMessage = Message(
+                stableId: UInt32.max - 1000,
+                stableVersion: 0,
+                id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
+                globallyUniqueId: nil,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: invitedOn,
+                flags: [.Incoming],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                forwardInfo: nil,
+                author: channelPeer,
+                text: "",
+                attributes: [],
+                media: [TelegramMediaAction(action: .joinedByRequest)],
+                peers: SimpleDictionary<PeerId, Peer>(),
+                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                associatedMessageIds: [],
+                associatedMedia: [:],
+                associatedThreadInfo: nil,
+                associatedStories: [:]
+            )
+        } else if let peer = channelPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus, !peer.flags.contains(.isCreator) {
+            joinMessage = Message(
+                stableId: UInt32.max - 1000,
+                stableVersion: 0,
+                id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Local, id: 0),
+                globallyUniqueId: nil,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: peer.creationDate,
+                flags: [.Incoming],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                forwardInfo: nil,
+                author: channelPeer,
+                text: "",
+                attributes: [],
+                media: [TelegramMediaAction(action: .joinedChannel)],
+                peers: SimpleDictionary<PeerId, Peer>(),
+                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                associatedMessageIds: [],
+                associatedMedia: [:],
+                associatedThreadInfo: nil,
+                associatedStories: [:]
+            )
+        }
     }
     
     var existingGroupStableIds: [UInt32] = []
@@ -101,12 +131,6 @@ func chatHistoryEntriesForView(
             }
         }
         
-        if let maybeJoinMessage = joinMessage {
-            if message.timestamp > maybeJoinMessage.timestamp, (!view.holeEarlier || count > 0) {
-                entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)))
-                joinMessage = nil
-            }
-        }
         count += 1
         
         if let customThreadOutgoingReadState = customThreadOutgoingReadState {
@@ -204,7 +228,7 @@ func chatHistoryEntriesForView(
             entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] })))
         }
     }
-    
+        
     if !groupBucket.isEmpty {
         assert(groupMessages || reverseGroupedMessages)
         if reverseGroupedMessages {
@@ -223,11 +247,25 @@ func chatHistoryEntriesForView(
         }
     }
     
-    if let maybeJoinMessage = joinMessage, !view.holeLater {
-        entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)))
-        joinMessage = nil
+    if let lowerTimestamp = view.entries.last?.message.timestamp, let upperTimestamp = view.entries.first?.message.timestamp {
+        if let joinMessage {
+            var insertAtPosition: Int?
+            if joinMessage.timestamp >= lowerTimestamp && view.laterId == nil {
+                insertAtPosition = entries.count
+            } else if joinMessage.timestamp < lowerTimestamp && joinMessage.timestamp > upperTimestamp {
+                for i in 0 ..< entries.count {
+                    if let timestamp = entries[i].timestamp, timestamp > joinMessage.timestamp {
+                        insertAtPosition = i
+                        break
+                    }
+                }
+            }
+            if let insertAtPosition {
+                entries.insert(.MessageEntry(joinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)), at: insertAtPosition)
+            }
+        }
     }
-    
+        
     if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {
         var i = 0
         let unreadEntry: ChatHistoryEntry = .UnreadEntry(maxReadIndex, presentationData)
@@ -373,7 +411,7 @@ func chatHistoryEntriesForView(
             if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], let message = adMessage {
                 var nextAdMessageId: Int32 = 10000
                 let updatedMessage = Message(
-                    stableId: ChatHistoryListNode.fixedAdMessageStableId,
+                    stableId: ChatHistoryListNodeImpl.fixedAdMessageStableId,
                     stableVersion: message.stableVersion,
                     id: MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: nextAdMessageId),
                     globallyUniqueId: nil,

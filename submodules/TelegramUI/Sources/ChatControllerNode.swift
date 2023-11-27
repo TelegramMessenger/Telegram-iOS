@@ -38,6 +38,7 @@ import ManagedDiceAnimationNode
 import ChatMessageTransitionNode
 import ChatLoadingNode
 import ChatRecentActionsController
+import UIKitRuntimeUtils
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -82,13 +83,10 @@ private struct ChatControllerNodeDerivedLayoutState {
 }
 
 class HistoryNodeContainer: ASDisplayNode {
-    private(set) var secretContainer: UIView?
-    public var isSecret: Bool = false {
+    var isSecret: Bool {
         didSet {
             if self.isSecret != oldValue {
-                if self.isNodeLoaded {
-                    (self.view as? UITextField)?.isSecureTextEntry = self.isSecret
-                }
+                setLayerDisableScreenshots(self.layer, self.isSecret)
             }
         }
     }
@@ -98,35 +96,9 @@ class HistoryNodeContainer: ASDisplayNode {
         
         super.init()
         
-        self.setViewBlock {
-            let captureProtectedView = UITextField(frame: CGRect())
-            captureProtectedView.isSecureTextEntry = self.isSecret
-            self.secretContainer = captureProtectedView.subviews.first
-            return captureProtectedView
+        if self.isSecret {
+            setLayerDisableScreenshots(self.layer, self.isSecret)
         }
-        
-        let _ = self.view
-    }
-    
-    override func addSubnode(_ subnode: ASDisplayNode) {
-        if let secretContainer = self.secretContainer {
-            secretContainer.addSubnode(subnode)
-        } else {
-            super.addSubnode(subnode)
-        }
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let secretContainer = self.secretContainer {
-            return secretContainer.hitTest(point, with: event)
-        } else {
-            return super.hitTest(point, with: event)
-        }
-    }
-    
-    func updateSize(size: CGSize, transition: ContainedViewLayoutTransition) {
-        /*if let secretContainer = self.secretContainer {
-        }*/
     }
 }
 
@@ -154,7 +126,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let contentContainerNode: ASDisplayNode
     let contentDimNode: ASDisplayNode
     let backgroundNode: WallpaperBackgroundNode
-    let historyNode: ChatHistoryListNode
+    let historyNode: ChatHistoryListNodeImpl
     var blurredHistoryNode: ASImageNode?
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
@@ -291,7 +263,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var isLoadingValue: Bool = false
     private var isLoadingEarlier: Bool = false
     private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
-        let useLoadingPlaceholder = "".isEmpty
+        let useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
         
         let updated = isLoading != self.isLoadingValue || (isLoading && earlier && !self.isLoadingEarlier)
         
@@ -504,7 +476,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     return (messages, Int32(messages.count), false)
                 }
-                source = .custom(messages: messages, messageId: messageIds.first ?? MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: reply.quote?.text, loadMore: nil)
+                source = .custom(messages: messages, messageId: messageIds.first ?? MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: reply.quote.flatMap { quote in ChatHistoryListSource.Quote(text: quote.text, offset: quote.offset) }, loadMore: nil)
             case let .link(link):
                 let messages = link.options
                 |> mapToSignal { options -> Signal<(ChatControllerSubject.LinkOptions, Peer, Message?, [StoryId: CodableEntry]), NoError> in
@@ -563,7 +535,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         
                         var mappedQuote: EngineMessageReplyQuote?
                         if let quote = options.replyQuote {
-                            mappedQuote = EngineMessageReplyQuote(text: quote, entities: [], media: nil)
+                            mappedQuote = EngineMessageReplyQuote(text: quote, offset: nil, entities: [], media: nil)
                         }
                         
                         attributes.append(ReplyMessageAttribute(messageId: replyMessage.id, threadMessageId: nil, quote: mappedQuote, isQuote: mappedQuote != nil))
@@ -604,7 +576,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
-        self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
             return getMessageTransitionNode?()
         })
         self.historyNode.rotated = true
@@ -612,8 +584,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         //self.historyScrollingArea = SparseDiscreteScrollingArea()
         //self.historyNode.historyScrollingArea = self.historyScrollingArea
 
-        //self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
-        self.historyNodeContainer = ASDisplayNode()
+        self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
         
         self.historyNodeContainer.addSubnode(self.historyNode)
 
@@ -1671,10 +1642,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
         
-        if let historyNodeContainer = self.historyNodeContainer as? HistoryNodeContainer {
-            historyNodeContainer.updateSize(size: contentBounds.size, transition: transition)
-        }
-        
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
         if let blurredHistoryNode = self.blurredHistoryNode {
@@ -2502,7 +2469,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let themeUpdated = presentationReadyUpdated || (self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme)
             
-            self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
+            self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper, animated: true)
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
             self.loadingPlaceholderNode?.updatePresentationInterfaceState(chatPresentationInterfaceState)
@@ -3725,7 +3692,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     final class SnapshotState {
         let backgroundNode: WallpaperBackgroundNode
-        fileprivate let historySnapshotState: ChatHistoryListNode.SnapshotState
+        fileprivate let historySnapshotState: ChatHistoryListNodeImpl.SnapshotState
         let titleViewSnapshotState: ChatTitleView.SnapshotState?
         let avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
         let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
@@ -3736,7 +3703,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         fileprivate init(
             backgroundNode: WallpaperBackgroundNode,
-            historySnapshotState: ChatHistoryListNode.SnapshotState,
+            historySnapshotState: ChatHistoryListNodeImpl.SnapshotState,
             titleViewSnapshotState: ChatTitleView.SnapshotState?,
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
             navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,

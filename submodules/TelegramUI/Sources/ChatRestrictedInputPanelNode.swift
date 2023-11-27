@@ -50,7 +50,11 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             iconImage = PresentationResourcesChat.chatPanelLockIcon(interfaceState.theme)
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelTopicClosedText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case .peer = interfaceState.chatLocation {
-            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelForumModeReplyText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
+                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_TopicIsClosedLabel(threadInfo.title).string, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            } else {
+                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelForumModeReplyText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            }
         } else if let (untilDate, personal) = bannedPermission {
             if personal && untilDate != 0 && untilDate != Int32.max {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedTextTimed(stringForFullDate(timestamp: untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).string, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)

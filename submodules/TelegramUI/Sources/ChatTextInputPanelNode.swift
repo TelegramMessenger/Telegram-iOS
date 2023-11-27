@@ -803,6 +803,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.textInputBackgroundNode.displaysAsynchronously = false
         self.textInputBackgroundNode.displayWithoutProcessing = true
         self.textPlaceholderNode = ImmediateTextNode()
+        self.textPlaceholderNode.contentMode = .topLeft
+        self.textPlaceholderNode.contentsScale = UIScreenScale
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
         
@@ -1587,6 +1589,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
         }
         
+        var updatedPlaceholder: String?
+        
+        let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme
+        
         var buttonTitleUpdated = false
         var menuTextSize = self.menuButtonTextNode.frame.size
         if self.presentationInterfaceState != interfaceState {
@@ -1598,7 +1604,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             } else if case .commands = interfaceState.botMenuButton, self.menuButtonIconNode.iconState == .app {
                 self.menuButtonIconNode.enqueueState(.menu, animated: false)
             }
-            let themeUpdated = previousState?.theme !== interfaceState.theme
             if themeUpdated {
                 self.menuButtonIconNode.customColor = interfaceState.theme.chat.inputPanel.actionControlForegroundColor
                 self.startButton.updateTheme(SolidRoundedButtonTheme(theme: interfaceState.theme))
@@ -1744,7 +1749,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             let dismissedButtonMessageUpdated = interfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != previousState?.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId
             let replyMessageUpdated = interfaceState.interfaceState.replyMessageSubject != previousState?.interfaceState.replyMessageSubject
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated || (previousState?.interfaceState.editMessage == nil) != (interfaceState.interfaceState.editMessage == nil) {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated || (previousState?.interfaceState.editMessage == nil) != (interfaceState.interfaceState.editMessage == nil) || previousState?.forumTopicData != interfaceState.forumTopicData || previousState?.replyMessage?.id != interfaceState.replyMessage?.id {
                 self.initializedPlaceholder = true
                 
                 var placeholder: String
@@ -1767,6 +1772,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                             } else {
                                 placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
                             }
+                        } else if let channel = peer as? TelegramChannel, channel.isForum, let forumTopicData = interfaceState.forumTopicData {
+                            if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
+                                placeholder = interfaceState.strings.Chat_InputPlaceholderReplyInTopic(threadInfo.title).string
+                            } else {
+                                placeholder = interfaceState.strings.Chat_InputPlaceholderMessageInTopic(forumTopicData.title).string
+                            }
                         } else {
                             placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
                         }
@@ -1781,22 +1792,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         }
                     }
                 }
-
-                if self.currentPlaceholder != placeholder || themeUpdated {
-                    self.currentPlaceholder = placeholder
-                    let baseFontSize = max(minInputFontSize, interfaceState.fontSize.baseDisplaySize)
-                    self.textPlaceholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor)
-                    self.textInputNode?.textView.accessibilityHint = placeholder
-                    let placeholderSize = self.textPlaceholderNode.updateLayout(CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude))
-                    if transition.isAnimated, let snapshotLayer = self.textPlaceholderNode.layer.snapshotContentTree() {
-                        self.textPlaceholderNode.supernode?.layer.insertSublayer(snapshotLayer, above: self.textPlaceholderNode.layer)
-                        snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.22, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
-                            snapshotLayer?.removeFromSuperlayer()
-                        })
-                        self.textPlaceholderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
-                    }
-                    self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
-                }
+                
+                updatedPlaceholder = placeholder
                 
                 self.actionButtons.sendButtonLongPressEnabled = !isScheduledMessages
             }
@@ -2415,9 +2412,31 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: textInputBackgroundFrame)
         transition.updateAlpha(node: self.textInputBackgroundNode, alpha: audioRecordingItemsAlpha)
         
+        let textPlaceholderSize: CGSize
+        let textPlaceholderMaxWidth: CGFloat = max(1.0, (nextButtonTopRight.x - textInputBackgroundFrame.minX) - 12.0)
+        
+        if (updatedPlaceholder != nil && self.currentPlaceholder != updatedPlaceholder) || themeUpdated {
+            let currentPlaceholder = updatedPlaceholder ?? self.currentPlaceholder ?? ""
+            self.currentPlaceholder = currentPlaceholder
+            let baseFontSize = max(minInputFontSize, interfaceState.fontSize.baseDisplaySize)
+            self.textPlaceholderNode.attributedText = NSAttributedString(string: currentPlaceholder, font: Font.regular(baseFontSize), textColor: interfaceState.theme.chat.inputPanel.inputPlaceholderColor)
+            self.textInputNode?.textView.accessibilityHint = currentPlaceholder
+            let placeholderSize = self.textPlaceholderNode.updateLayout(CGSize(width: textPlaceholderMaxWidth, height: CGFloat.greatestFiniteMagnitude))
+            if transition.isAnimated, let snapshotLayer = self.textPlaceholderNode.layer.snapshotContentTree() {
+                self.textPlaceholderNode.supernode?.layer.insertSublayer(snapshotLayer, above: self.textPlaceholderNode.layer)
+                snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.22, removeOnCompletion: false, completion: { [weak snapshotLayer] _ in
+                    snapshotLayer?.removeFromSuperlayer()
+                })
+                self.textPlaceholderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+            }
+            textPlaceholderSize = placeholderSize
+        } else {
+            textPlaceholderSize = self.textPlaceholderNode.bounds.size
+        }
+        
         let textPlaceholderFrame: CGRect
         if sendingTextDisabled {
-            textPlaceholderFrame = CGRect(origin: CGPoint(x: textInputBackgroundFrame.minX + floor((textInputBackgroundFrame.width - self.textPlaceholderNode.bounds.width) / 2.0), y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
+            textPlaceholderFrame = CGRect(origin: CGPoint(x: textInputBackgroundFrame.minX + floor((textInputBackgroundFrame.width - textPlaceholderSize.width) / 2.0), y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: textPlaceholderSize)
             
             let textLockIconNode: ASImageNode
             var textLockIconTransition = transition
@@ -2436,7 +2455,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 textLockIconTransition.updateFrame(node: textLockIconNode, frame: CGRect(origin: CGPoint(x: -image.size.width - 4.0, y: floor((textPlaceholderFrame.height - image.size.height) / 2.0)), size: image.size))
             }
         } else {
-            textPlaceholderFrame = CGRect(origin: CGPoint(x: hideOffset.x + leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
+            textPlaceholderFrame = CGRect(origin: CGPoint(x: hideOffset.x + leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: hideOffset.y + textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: textPlaceholderSize)
             
             if let textLockIconNode = self.textLockIconNode {
                 self.textLockIconNode = nil
@@ -2445,10 +2464,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         transition.updateFrame(node: self.textPlaceholderNode, frame: textPlaceholderFrame)
         
-        var textPlaceholderAlpha: CGFloat = audioRecordingItemsAlpha
-        if self.textPlaceholderNode.frame.width > (nextButtonTopRight.x - textInputBackgroundFrame.minX) - 32.0 {
-            textPlaceholderAlpha = 0.0
-        }
+        let textPlaceholderAlpha: CGFloat = audioRecordingItemsAlpha
         transition.updateAlpha(node: self.textPlaceholderNode, alpha: textPlaceholderAlpha)
         
         if let removeAccessoryButtons = removeAccessoryButtons {

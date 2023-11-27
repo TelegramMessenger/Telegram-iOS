@@ -240,6 +240,8 @@ public final class EmojiStatusComponent: Component {
             var emojiLoopMode: LoopMode?
             var emojiSize = CGSize()
             
+            var iconTintColor: UIColor?
+            
             self.isUserInteractionEnabled = component.action != nil
             
             //let previousContent = self.component?.content
@@ -248,19 +250,25 @@ public final class EmojiStatusComponent: Component {
                 case .none:
                     iconImage = nil
                 case let .premium(color):
-                    if let sourceImage = UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon") {
-                        iconImage = generateImage(sourceImage.size, contextGenerator: { size, context in
-                            if let cgImage = sourceImage.cgImage {
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                let imageSize = CGSize(width: sourceImage.size.width - 8.0, height: sourceImage.size.height - 8.0)
-                                context.clip(to: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize), mask: cgImage)
-                                
-                                context.setFillColor(color.cgColor)
-                                context.fill(CGRect(origin: CGPoint(), size: size))
-                            }
-                        }, opaque: false)
+                    iconTintColor = color
+                    
+                    if case .premium = self.component?.content, let image = self.iconView?.image {
+                        iconImage = image
                     } else {
-                        iconImage = nil
+                        if let sourceImage = UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon") {
+                            iconImage = generateImage(sourceImage.size, contextGenerator: { size, context in
+                                if let cgImage = sourceImage.cgImage {
+                                    context.clear(CGRect(origin: CGPoint(), size: size))
+                                    let imageSize = CGSize(width: sourceImage.size.width - 8.0, height: sourceImage.size.height - 8.0)
+                                    context.clip(to: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize), mask: cgImage)
+                                    
+                                    context.setFillColor(UIColor.white.cgColor)
+                                    context.fill(CGRect(origin: CGPoint(), size: size))
+                                }
+                            }, opaque: false)?.withRenderingMode(.alwaysTemplate)
+                        } else {
+                            iconImage = nil
+                        }
                     }
                 case let .topic(title, color, realSize):
                     let colors = topicIconColors(for: color)
@@ -402,7 +410,19 @@ public final class EmojiStatusComponent: Component {
                         iconView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                     }
                 }
-                iconView.image = iconImage
+                if iconView.image !== iconImage {
+                    iconView.image = iconImage
+                }
+                
+                if let iconTintColor {
+                    if transition.animation.isImmediate {
+                        iconView.tintColor = iconTintColor
+                    } else {
+                        transition.setTintColor(view: iconView, color: iconTintColor)
+                    }
+                } else {
+                    iconView.tintColor = nil
+                }
                 
                 var useFit = false
                 switch component.content {
@@ -504,12 +524,11 @@ public final class EmojiStatusComponent: Component {
                             }
                         }
                     }
+                    
                     if accentTint {
-                        animationLayer.contentTintColor = emojiThemeColor
-                        animationLayer.dynamicColor = emojiThemeColor
+                        animationLayer.updateTintColor(contentTintColor: emojiThemeColor, dynamicColor: emojiThemeColor, transition: transition)
                     } else {
-                        animationLayer.contentTintColor = nil
-                        animationLayer.dynamicColor = nil
+                        animationLayer.updateTintColor(contentTintColor: nil, dynamicColor: nil, transition: transition)
                     }
                     
                     animationLayer.frame = CGRect(origin: CGPoint(), size: size)

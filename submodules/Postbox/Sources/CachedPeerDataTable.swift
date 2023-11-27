@@ -9,7 +9,7 @@ final class CachedPeerDataTable: Table {
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedDatas: [PeerId: CachedPeerData] = [:]
-    private var updatedPeerIds = Set<PeerId>()
+    private var updatedPeers: [PeerId: (CachedPeerData?, CachedPeerData)] = [:]
     
     override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
         super.init(valueBox: valueBox, table: table, useCaches: useCaches)
@@ -21,8 +21,15 @@ final class CachedPeerDataTable: Table {
     }
     
     func set(id: PeerId, data: CachedPeerData) {
+        var previousValue: CachedPeerData?
+        if let currentUpdate = self.updatedPeers[id] {
+            previousValue = currentUpdate.0
+        } else {
+            previousValue = self.get(id)
+        }
+        
         self.cachedDatas[id] = data
-        self.updatedPeerIds.insert(id)
+        self.updatedPeers[id] = (previousValue, data)
     }
     
     func get(_ id: PeerId) -> CachedPeerData? {
@@ -40,11 +47,15 @@ final class CachedPeerDataTable: Table {
     
     override func clearMemoryCache() {
         self.cachedDatas.removeAll()
-        self.updatedPeerIds.removeAll()
+        self.updatedPeers.removeAll()
+    }
+    
+    func transactionUpdatedPeers() -> [PeerId: (CachedPeerData?, CachedPeerData)] {
+        return self.updatedPeers
     }
     
     override func beforeCommit() {
-        for peerId in self.updatedPeerIds {
+        for peerId in self.updatedPeers.keys {
             if let data = self.cachedDatas[peerId] {
                 self.sharedEncoder.reset()
                 self.sharedEncoder.encodeRootObject(data)
@@ -53,7 +64,7 @@ final class CachedPeerDataTable: Table {
             }
         }
         
-        self.updatedPeerIds.removeAll()
+        self.updatedPeers.removeAll()
         if !self.useCaches {
             self.cachedDatas.removeAll()
         }

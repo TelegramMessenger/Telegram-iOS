@@ -7,6 +7,7 @@ import ChatPresentationInterfaceState
 import ChatInputPanelNode
 import ChatBotStartInputPanelNode
 import ChatChannelSubscriberInputPanelNode
+import ChatMessageSelectionInputPanelNode
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
@@ -195,6 +196,15 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             panel.interfaceInteraction = interfaceInteraction
                             return (panel, nil)
                         }
+                    }
+                } else if let replyMessage = chatPresentationInterfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo, threadInfo.isClosed {
+                    if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                        return (currentPanel, nil)
+                    } else {
+                        let panel = ChatRestrictedInputPanelNode()
+                        panel.context = context
+                        panel.interfaceInteraction = interfaceInteraction
+                        return (panel, nil)
                     }
                 }
             }

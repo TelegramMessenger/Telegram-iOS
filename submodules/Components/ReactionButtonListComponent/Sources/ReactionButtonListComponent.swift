@@ -218,6 +218,12 @@ public final class ReactionIconView: PortalSourceView {
             disposable.dispose()
         }
         
+        if !self.subviews.isEmpty {
+            for subview in Array(self.subviews) {
+                subview.removeFromSuperview()
+            }
+        }
+        
         self.context = nil
         self.fileId = nil
         self.file = nil

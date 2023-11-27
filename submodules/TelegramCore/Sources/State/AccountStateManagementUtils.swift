@@ -1121,7 +1121,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     if updatedState.peers[peerId] == nil {
                         updatedState.updatePeer(peerId, { peer in
                             if peer == nil {
-                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil)
+                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
                             } else {
                                 return peer
                             }
@@ -1538,13 +1538,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities):
+                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset):
                                 let _ = topMsgId
                                 
                                 var quote: EngineMessageReplyQuote?
                                 if let quoteText = quoteText {
                                     quote = EngineMessageReplyQuote(
                                         text: quoteText,
+                                        offset: quoteOffset.flatMap(Int.init),
                                         entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []),
                                         media: nil
                                     )
@@ -1738,6 +1739,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateNewAuthorization(flags, hash, date, device, location):
                 let isUnconfirmed = (flags & (1 << 0)) != 0
                 updatedState.updateNewAuthorization(isUnconfirmed: isUnconfirmed, hash: hash, date: date ?? 0, device: device ?? "", location: location ?? "")
+            case let .updatePeerWallpaper(_, peer, wallpaper):
+                updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
             default:
                 break
         }
@@ -3228,7 +3231,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3341,6 +3344,7 @@ func replayFinalState(
     var langPackDifferences: [String: [Api.LangPackDifference]] = [:]
     var pollLangPacks = Set<String>()
     var updatedThemes: [Int64: TelegramTheme] = [:]
+    var updatedWallpapers: [PeerId: TelegramWallpaper?] = [:]
     var delayNotificatonsUntil: Int32?
     var peerActivityTimestamps: [PeerId: Int32] = [:]
     var syncChatListFilters = false
@@ -3617,34 +3621,34 @@ func replayFinalState(
                                         })
                                     }
                                     switch action.action {
-                                        case let .setChatTheme(emoticon):
-                                            transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
-                                                var current = current
-                                                if current == nil {
-                                                    if peerId.namespace == Namespaces.Peer.CloudUser {
-                                                        current = CachedUserData()
-                                                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-                                                        current = CachedGroupData()
-                                                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                                        current = CachedChannelData()
-                                                    }
+                                    case let .setChatTheme(emoticon):
+                                        transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
+                                            var current = current
+                                            if current == nil {
+                                                if peerId.namespace == Namespaces.Peer.CloudUser {
+                                                    current = CachedUserData()
+                                                } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                                    current = CachedGroupData()
+                                                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                                    current = CachedChannelData()
                                                 }
-                                                if let cachedData = current as? CachedUserData {
-                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
-                                                } else if let cachedData = current as? CachedGroupData {
-                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
-                                                } else if let cachedData = current as? CachedChannelData {
-                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
-                                                } else {
-                                                    return current
-                                                }
-                                            })
-                                        case .groupCreated, .channelMigratedFromGroup:
-                                            let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
-                                            for (space, _) in holesAtHistoryStart {
-                                                transaction.removeHole(peerId: chatPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
                                             }
-                                    case let .setChatWallpaper(wallpaper), let .setSameChatWallpaper(wallpaper):
+                                            if let cachedData = current as? CachedUserData {
+                                                return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
+                                            } else if let cachedData = current as? CachedGroupData {
+                                                return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
+                                            } else if let cachedData = current as? CachedChannelData {
+                                                return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
+                                            } else {
+                                                return current
+                                            }
+                                        })
+                                    case .groupCreated, .channelMigratedFromGroup:
+                                        let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
+                                        for (space, _) in holesAtHistoryStart {
+                                            transaction.removeHole(peerId: chatPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
+                                        }
+                                    case let .setChatWallpaper(wallpaper, _):
                                         if message.authorId == accountPeerId {
                                             transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
                                                 var current = current
@@ -3660,8 +3664,8 @@ func replayFinalState(
                                                 }
                                             })
                                         }
-                                        default:
-                                            break
+                                    default:
+                                        break
                                     }
                                 }
                             }
@@ -4377,6 +4381,8 @@ func replayFinalState(
                 updatedPeersNearby = peersNearby
             case let .UpdateTheme(theme):
                 updatedThemes[theme.id] = theme
+            case let .UpdateWallpaper(peerId, wallpaper):
+                updatedWallpapers.updateValue(wallpaper, forKey: peerId)
             case .SyncChatListFilters:
                 syncChatListFilters = true
             case let .UpdateChatListFilterOrder(order):
@@ -4646,7 +4652,8 @@ func replayFinalState(
                             isForwardingDisabled: item.isForwardingDisabled,
                             isEdited: item.isEdited,
                             isMy: item.isMy,
-                            myReaction: updatedReaction
+                            myReaction: updatedReaction,
+                            forwardInfo: item.forwardInfo
                         ))
                         if let entry = CodableEntry(updatedItem) {
                             updatedPeerEntries[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: item.expirationTimestamp, isCloseFriends: item.isCloseFriends)
@@ -4677,7 +4684,8 @@ func replayFinalState(
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
                         isMy: item.isMy,
-                        myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                        myReaction: MessageReaction.Reaction(apiReaction: reaction),
+                        forwardInfo: item.forwardInfo
                     ))
                     if let entry = CodableEntry(updatedItem) {
                         transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
@@ -5137,6 +5145,20 @@ func replayFinalState(
                 return current
             })
         }.start()
+    }
+    
+    if !updatedWallpapers.isEmpty {
+        for (peerId, wallpaper) in updatedWallpapers {
+            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                if let current = current as? CachedUserData {
+                    return current.withUpdatedWallpaper(wallpaper)
+                } else {
+                    var cachedData = CachedUserData()
+                    cachedData = cachedData.withUpdatedWallpaper(wallpaper)
+                    return cachedData
+                }
+            })
+        }
     }
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)

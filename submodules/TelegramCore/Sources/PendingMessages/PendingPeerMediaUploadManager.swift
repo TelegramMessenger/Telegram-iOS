@@ -15,7 +15,7 @@ public final class PeerMediaUploadingItem: Equatable {
     }
     
     public enum Content: Equatable  {
-        case wallpaper(TelegramWallpaper)
+        case wallpaper(wallpaper: TelegramWallpaper, forBoth: Bool)
     }
 
     public let content: Content
@@ -52,7 +52,7 @@ public final class PeerMediaUploadingItem: Equatable {
 
 private func uploadPeerMedia(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: EnginePeer.Id, content: PeerMediaUploadingItem.Content) -> Signal<PeerMediaUploadingItem.ProgressValue, PeerMediaUploadingItem.Error> {
     switch content {
-    case let .wallpaper(wallpaper):
+    case let .wallpaper(wallpaper, forBoth):
         if case let .image(representations, settings) = wallpaper, let resource = representations.last?.resource as? LocalFileMediaResource {
             return _internal_uploadWallpaper(postbox: postbox, network: network, resource: resource, settings: settings, forChat: true)
             |> mapError { error -> PeerMediaUploadingItem.Error in
@@ -69,7 +69,7 @@ private func uploadPeerMedia(postbox: Postbox, network: Network, stateManager: A
                             postbox.mediaBox.copyResourceData(from: resource.id, to: representation.resource.id, synchronous: true)
                         }
                     }
-                    return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: result, applyUpdates: false)
+                    return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: result, forBoth: forBoth, applyUpdates: false)
                     |> mapError { error -> PeerMediaUploadingItem.Error in
                         switch error {
                         case .generic:
@@ -85,7 +85,7 @@ private func uploadPeerMedia(postbox: Postbox, network: Network, stateManager: A
                 
             }
         } else {
-            return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: wallpaper, applyUpdates: false)
+            return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: wallpaper, forBoth: forBoth, applyUpdates: false)
             |> mapError { error -> PeerMediaUploadingItem.Error in
                 switch error {
                 case .generic:
@@ -124,8 +124,8 @@ private func generatePeerMediaMessage(network: Network, accountPeerId: EnginePee
     
     var media: [Media] = []
     switch content {
-    case let .wallpaper(wallpaper):
-        media.append(TelegramMediaAction(action: .setChatWallpaper(wallpaper: wallpaper)))
+    case let .wallpaper(wallpaper, forBoth):
+        media.append(TelegramMediaAction(action: .setChatWallpaper(wallpaper: wallpaper, forBoth: forBoth)))
     }
     
     return StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: randomId, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: accountPeerId, text: "", attributes: attributes, media: media)

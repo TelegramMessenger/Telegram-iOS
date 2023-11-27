@@ -169,9 +169,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 case .none:
                     break
                 case .primary:
-                    itemLayer.layerTintColor = component.theme.list.itemPrimaryTextColor.cgColor
+                    itemLayer.layerTintColor = component.customTintColor?.cgColor ?? component.theme.list.itemPrimaryTextColor.cgColor
                 case .accent:
-                    itemLayer.layerTintColor = component.theme.list.itemAccentColor.cgColor
+                    itemLayer.layerTintColor = component.customTintColor?.cgColor ?? component.theme.list.itemAccentColor.cgColor
                 case let .custom(color):
                     itemLayer.layerTintColor = component.customTintColor?.cgColor ?? color.cgColor
                 }
@@ -276,6 +276,7 @@ final class EntityKeyboardIconTopPanelComponent: Component {
         case recent
         case saved
         case premium
+        case liked
     }
     
     let icon: Icon
@@ -360,6 +361,8 @@ final class EntityKeyboardIconTopPanelComponent: Component {
                     image = UIImage(bundleImageName: "Chat/Input/Media/PanelRecentIcon")
                 case .saved:
                     image = UIImage(bundleImageName: "Chat/Input/Media/PanelSavedIcon")
+                case .liked:
+                    image = UIImage(bundleImageName: "Chat/Input/Media/PanelHeartIcon")?.withRenderingMode(.alwaysTemplate)
                 case .premium:
                     image = generateImage(CGSize(width: 44.0, height: 44.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -2078,7 +2081,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
                     }
                     
                     let isRound: Bool
-                    if let string = activeContentItemId.base as? String, (string == "featuredTop" || string == "recent" || string == "static" || string == "trending") {
+                    if let string = activeContentItemId.base as? String, (string == "featuredTop" || string == "recent" || string == "static" || string == "trending" || string == "liked") {
                         isRound = true
                     } else {
                         isRound = false

@@ -94,7 +94,7 @@ public enum UpdatePeerNameColorAndEmojiError {
     case channelBoostRequired
 }
 
-func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
     return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {

@@ -18,6 +18,7 @@ import DirectMediaImageCache
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let phoneIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/PhoneIcon"), color: .white)
 public let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
+public let repostStoryIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepostStoryIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
 
@@ -87,6 +88,8 @@ private func calculateColors(context: AccountContext?, explicitColorIndex: Int?,
             colors = AvatarNode.grayscaleColors
         } else if case .savedMessagesIcon = icon {
             colors = AvatarNode.savedMessagesColors
+        } else if case .repostIcon = icon {
+            colors = AvatarNode.repostColors
         } else if case .repliesIcon = icon {
             colors = AvatarNode.savedMessagesColors
         } else if case .editAvatarIcon = icon, let theme {
@@ -173,6 +176,7 @@ private enum AvatarNodeIcon: Equatable {
     case editAvatarIcon
     case deletedIcon
     case phoneIcon
+    case repostIcon
 }
 
 public enum AvatarNodeImageOverride: Equatable {
@@ -184,6 +188,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case editAvatarIcon(forceNone: Bool)
     case deletedIcon
     case phoneIcon
+    case repostIcon
 }
 
 public enum AvatarNodeColorOverride {
@@ -254,6 +259,10 @@ public final class AvatarNode: ASDisplayNode {
         UIColor(rgb: 0x2a9ef1), UIColor(rgb: 0x72d5fd)
     ]
     
+    static let repostColors: [UIColor] = [
+        UIColor(rgb: 0x34C76F), UIColor(rgb: 0x3DA1FD)
+    ]
+    
     public final class ContentNode: ASDisplayNode {
         private struct Params: Equatable {
             let peerId: EnginePeer.Id?
@@ -285,8 +294,6 @@ public final class AvatarNode: ASDisplayNode {
         private var theme: PresentationTheme?
         private var overrideImage: AvatarNodeImageOverride?
         public let imageNode: ImageNode
-        private var animationBackgroundNode: ImageNode?
-        private var animationNode: AnimationNode?
         public var editOverlayNode: AvatarEditOverlayNode?
         
         private let imageReadyDisposable = MetaDisposable()
@@ -429,6 +436,20 @@ public final class AvatarNode: ASDisplayNode {
             self.imageNode.isHidden = true
         }
         
+        public func playRepostAnimation() {
+            let animationNode = AnimationNode(animation: "anim_storyrepost", colors: [:], scale: 0.11)
+            animationNode.isUserInteractionEnabled = false
+            self.addSubnode(animationNode)
+            
+            if var size = animationNode.preferredSize() {
+                size = CGSize(width: ceil(size.width), height: ceil(size.height))
+                animationNode.frame = CGRect(x: floor((self.bounds.width - size.width) / 2.0), y: floor((self.bounds.height - size.height) / 2.0) + 1.0, width: size.width, height: size.height)
+                Queue.mainQueue().after(0.15, {
+                    animationNode.play()
+                })
+            }
+        }
+        
         public func setPeer(
             accountPeerId: EnginePeer.Id,
             postbox: Postbox,
@@ -457,6 +478,9 @@ public final class AvatarNode: ASDisplayNode {
                     case .savedMessagesIcon:
                         representation = nil
                         icon = .savedMessagesIcon
+                    case .repostIcon:
+                        representation = nil
+                        icon = .repostIcon
                     case .repliesIcon:
                         representation = nil
                         icon = .repliesIcon
@@ -621,6 +645,9 @@ public final class AvatarNode: ASDisplayNode {
                     case .savedMessagesIcon:
                         representation = nil
                         icon = .savedMessagesIcon
+                    case .repostIcon:
+                        representation = nil
+                        icon = .repostIcon
                     case .repliesIcon:
                         representation = nil
                         icon = .repliesIcon
@@ -781,7 +808,11 @@ public final class AvatarNode: ASDisplayNode {
             let colorsArray: NSArray = colors.map(\.cgColor) as NSArray
             
             var iconColor = UIColor.white
+            var diagonal = false
             if let parameters = parameters as? AvatarNodeParameters, parameters.icon != .none {
+                if case .repostIcon = parameters.icon {
+                    diagonal = true
+                }
                 if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
                     if hiddenByDefault {
                         iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
@@ -796,7 +827,11 @@ public final class AvatarNode: ASDisplayNode {
             let colorSpace = CGColorSpaceCreateDeviceRGB()
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colorsArray, locations: &locations)!
             
-            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
+            if diagonal {
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: bounds.size.height), end: CGPoint(x: bounds.size.width, y: 0.0), options: CGGradientDrawingOptions())
+            } else {
+                context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
+            }
             
             context.setBlendMode(.normal)
             
@@ -827,6 +862,17 @@ public final class AvatarNode: ASDisplayNode {
                     
                     if let savedMessagesIcon = savedMessagesIcon {
                         context.draw(savedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - savedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - savedMessagesIcon.size.height) / 2.0)), size: savedMessagesIcon.size))
+                    }
+                } else if case .repostIcon = parameters.icon {
+                    if !"".isEmpty {
+                        let factor = bounds.size.width / 60.0
+                        context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                        context.scaleBy(x: factor, y: -factor)
+                        context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                        
+                        if let repostStoryIcon = repostStoryIcon {
+                            context.draw(repostStoryIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repostStoryIcon.size.width) / 2.0), y: floor((bounds.size.height - repostStoryIcon.size.height) / 2.0)), size: repostStoryIcon.size))
+                        }
                     }
                 } else if case .repliesIcon = parameters.icon {
                     let factor = bounds.size.width / 60.0
@@ -997,6 +1043,10 @@ public final class AvatarNode: ASDisplayNode {
     
     public func playArchiveAnimation() {
         self.contentNode.playArchiveAnimation()
+    }
+    
+    public func playRepostAnimation() {
+        self.contentNode.playRepostAnimation()
     }
     
     public func setPeer(

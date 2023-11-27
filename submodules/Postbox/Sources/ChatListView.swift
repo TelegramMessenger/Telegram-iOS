@@ -297,6 +297,7 @@ enum MutableChatListEntry: Equatable {
         var readState: ChatListViewReadState?
         var notificationSettings: PeerNotificationSettings?
         var isRemovedFromTotalUnreadCount: Bool
+        var displayAsRegularChat: Bool
         var embeddedInterfaceState: StoredPeerChatInterfaceState?
         var renderedPeer: RenderedPeer
         var presence: PeerPresence?
@@ -314,6 +315,7 @@ enum MutableChatListEntry: Equatable {
             readState: ChatListViewReadState?,
             notificationSettings: PeerNotificationSettings?,
             isRemovedFromTotalUnreadCount: Bool,
+            displayAsRegularChat: Bool,
             embeddedInterfaceState: StoredPeerChatInterfaceState?,
             renderedPeer: RenderedPeer,
             presence: PeerPresence?,
@@ -330,6 +332,7 @@ enum MutableChatListEntry: Equatable {
             self.readState = readState
             self.notificationSettings = notificationSettings
             self.isRemovedFromTotalUnreadCount = isRemovedFromTotalUnreadCount
+            self.displayAsRegularChat = displayAsRegularChat
             self.embeddedInterfaceState = embeddedInterfaceState
             self.renderedPeer = renderedPeer
             self.presence = presence
@@ -759,7 +762,13 @@ final class MutableChatListView {
                             if transaction.alteredInitialPeerCombinedReadStates[groupEntries[i].renderedPeers[j].peer.peerId] != nil {
                                 
                                 let isUnread: Bool
-                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                                
+                                var displayAsRegularChat: Bool = false
+                                if let cachedData = postbox.cachedPeerDataTable.get(groupEntries[i].renderedPeers[j].peer.peerId) {
+                                    displayAsRegularChat = postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData)
+                                }
+                                
+                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer), !displayAsRegularChat {
                                     isUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
                                 } else {
                                     isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
@@ -864,7 +873,14 @@ final class MutableChatListView {
             }
             
             let readState: ChatListViewReadState?
-            if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            var displayAsRegularChat: Bool = false
+            var autoremoveTimeout: Int32?
+            if let cachedData = postbox.cachedPeerDataTable.get(index.messageIndex.id.peerId) {
+                autoremoveTimeout = postbox.seedConfiguration.decodeAutoremoveTimeout(cachedData)
+                displayAsRegularChat = postbox.seedConfiguration.decodeDisplayPeerAsRegularChat(cachedData)
+            }
+            
+            if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer), !displayAsRegularChat {
                 let summary = postbox.peerThreadsSummaryTable.get(peerId: index.messageIndex.id.peerId)
                 var count: Int32 = 0
                 var isMuted: Bool = false
@@ -881,11 +897,6 @@ final class MutableChatListView {
                 }
             }
             
-            var autoremoveTimeout: Int32?
-            if let cachedData = postbox.cachedPeerDataTable.get(index.messageIndex.id.peerId) {
-                autoremoveTimeout = postbox.seedConfiguration.decodeAutoremoveTimeout(cachedData)
-            }
-            
             let storyStats = fetchPeerStoryStats(postbox: postbox, peerId: index.messageIndex.id.peerId)
             
             return .MessageEntry(MutableChatListEntry.MessageEntryData(
@@ -894,6 +905,7 @@ final class MutableChatListView {
                 readState: readState,
                 notificationSettings: notificationSettings,
                 isRemovedFromTotalUnreadCount: false,
+                displayAsRegularChat: displayAsRegularChat,
                 embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId),
                 renderedPeer: renderedPeer,
                 presence: presence,
@@ -943,8 +955,8 @@ public final class ChatListView {
                     renderedPeer: entryData.renderedPeer,
                     presence: entryData.presence,
                     summaryInfo: entryData.tagSummaryInfo,
-                    forumTopicData: entryData.forumTopicData,
-                    topForumTopics: entryData.topForumTopics,
+                    forumTopicData: entryData.displayAsRegularChat ? nil : entryData.forumTopicData,
+                    topForumTopics: entryData.displayAsRegularChat ? [] : entryData.topForumTopics,
                     hasFailed: entryData.hasFailedMessages,
                     isContact: entryData.isContact,
                     autoremoveTimeout: entryData.autoremoveTimeout,
@@ -977,8 +989,8 @@ public final class ChatListView {
                         renderedPeer: entryData.renderedPeer,
                         presence: entryData.presence,
                         summaryInfo: entryData.tagSummaryInfo,
-                        forumTopicData: entryData.forumTopicData,
-                        topForumTopics: entryData.topForumTopics,
+                        forumTopicData: entryData.displayAsRegularChat ? nil : entryData.forumTopicData,
+                        topForumTopics: entryData.displayAsRegularChat ? [] : entryData.topForumTopics,
                         hasFailed: entryData.hasFailedMessages,
                         isContact: entryData.isContact,
                         autoremoveTimeout: entryData.autoremoveTimeout,

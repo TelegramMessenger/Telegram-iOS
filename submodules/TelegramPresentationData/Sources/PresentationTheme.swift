@@ -17,6 +17,10 @@ public final class PresentationThemeGradientColors {
         return (self.topColor, self.bottomColor)
     }
     
+    public var array: [UIColor] {
+        return [self.topColor, self.bottomColor]
+    }
+    
     public func withUpdated(topColor: UIColor? = nil, bottomColor: UIColor? = nil) -> PresentationThemeGradientColors {
         return PresentationThemeGradientColors(topColor: topColor ?? self.topColor, bottomColor: bottomColor ?? self.bottomColor)
     }

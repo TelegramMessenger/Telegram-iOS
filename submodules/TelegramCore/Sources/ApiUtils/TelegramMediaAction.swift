@@ -123,14 +123,18 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .suggestedProfilePhoto(image: telegramMediaImageFromApiPhoto(photo)))
     case let .messageActionRequestedPeer(buttonId, peer):
         return TelegramMediaAction(action: .requestedPeer(buttonId: buttonId, peerId: peer.peerId))
-    case let .messageActionSetChatWallPaper(wallpaper):
-        return TelegramMediaAction(action: .setChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
-    case let .messageActionSetSameChatWallPaper(wallpaper):
-        return TelegramMediaAction(action: .setSameChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
+    case let .messageActionSetChatWallPaper(flags, wallpaper):
+        if (flags & (1 << 0)) != 0 {
+            return TelegramMediaAction(action: .setSameChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
+        } else {
+            return TelegramMediaAction(action: .setChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper), forBoth: (flags & (1 << 1)) != 0))
+        }
     case let .messageActionGiftCode(flags, boostPeer, months, slug):
         return TelegramMediaAction(action: .giftCode(slug: slug, fromGiveaway: (flags & (1 << 0)) != 0, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer?.peerId, months: months))
     case .messageActionGiveawayLaunch:
         return TelegramMediaAction(action: .giveawayLaunched)
+    case let .messageActionGiveawayResults(winners, unclaimed):
+        return TelegramMediaAction(action: .giveawayResults(winners: winners, unclaimed: unclaimed))
     }
 }
 

@@ -37,6 +37,10 @@ public extension TelegramEngine {
         public func searchStickerSetsRemotely(query: String) -> Signal<FoundStickerSets, NoError> {
             return _internal_searchStickerSetsRemotely(network: self.account.network, query: query)
         }
+        
+        public func searchEmojiSetsRemotely(query: String) -> Signal<FoundStickerSets, NoError> {
+            return _internal_searchEmojiSetsRemotely(postbox: self.account.postbox, network: self.account.network, query: query)
+        }
 
         public func searchStickerSets(query: String) -> Signal<FoundStickerSets, NoError> {
             return _internal_searchStickerSets(postbox: self.account.postbox, query: query)
@@ -194,6 +198,10 @@ public extension TelegramEngine {
 }
 
 public func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+    if fileIds.isEmpty {
+        return .single([:])
+    }
+    
     return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
         var cachedFiles: [Int64: TelegramMediaFile] = [:]
         for fileId in fileIds {

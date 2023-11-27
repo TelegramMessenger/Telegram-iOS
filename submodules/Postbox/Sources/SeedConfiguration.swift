@@ -76,6 +76,7 @@ public final class SeedConfiguration {
     public let mergeMessageAttributes: ([MessageAttribute], inout [MessageAttribute]) -> Void
     public let decodeMessageThreadInfo: (CodableEntry) -> Message.AssociatedThreadInfo?
     public let decodeAutoremoveTimeout: (CachedPeerData) -> Int32?
+    public let decodeDisplayPeerAsRegularChat: (CachedPeerData) -> Bool
     public let isPeerUpgradeMessage: (Message) -> Bool
     
     public init(
@@ -103,6 +104,7 @@ public final class SeedConfiguration {
         mergeMessageAttributes: @escaping ([MessageAttribute], inout [MessageAttribute]) -> Void,
         decodeMessageThreadInfo: @escaping (CodableEntry) -> Message.AssociatedThreadInfo?,
         decodeAutoremoveTimeout: @escaping (CachedPeerData) -> Int32?,
+        decodeDisplayPeerAsRegularChat: @escaping (CachedPeerData) -> Bool,
         isPeerUpgradeMessage: @escaping (Message) -> Bool
     ) {
         self.globalMessageIdsPeerIdNamespaces = globalMessageIdsPeerIdNamespaces
@@ -125,6 +127,7 @@ public final class SeedConfiguration {
         self.mergeMessageAttributes = mergeMessageAttributes
         self.decodeMessageThreadInfo = decodeMessageThreadInfo
         self.decodeAutoremoveTimeout = decodeAutoremoveTimeout
+        self.decodeDisplayPeerAsRegularChat = decodeDisplayPeerAsRegularChat
         self.isPeerUpgradeMessage = isPeerUpgradeMessage
     }
 }

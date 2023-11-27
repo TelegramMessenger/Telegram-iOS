@@ -687,6 +687,50 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PeerColor: TypeConstructorDescription {
+        case peerColor(flags: Int32, color: Int32?, backgroundEmojiId: Int64?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .peerColor(let flags, let color, let backgroundEmojiId):
+                    if boxed {
+                        buffer.appendInt32(-1253352753)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerColor(let flags, let color, let backgroundEmojiId):
+                return ("peerColor", [("flags", flags as Any), ("color", color as Any), ("backgroundEmojiId", backgroundEmojiId as Any)])
+    }
+    }
+    
+        public static func parse_peerColor(_ reader: BufferReader) -> PeerColor? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Int64?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt64() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.PeerColor.peerColor(flags: _1!, color: _2, backgroundEmojiId: _3)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PeerLocated: TypeConstructorDescription {
         case peerLocated(peer: Api.Peer, expires: Int32, distance: Int32)
         case peerSelfLocated(expires: Int32)

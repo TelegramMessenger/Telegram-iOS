@@ -19,9 +19,11 @@ public final class TabSelectorComponent: Component {
     }
     
     public struct CustomLayout: Equatable {
+        public var font: UIFont
         public var spacing: CGFloat
         
-        public init(spacing: CGFloat) {
+        public init(font: UIFont, spacing: CGFloat) {
+            self.font = font
             self.spacing = spacing
         }
     }
@@ -113,8 +115,8 @@ public final class TabSelectorComponent: Component {
             let spacing: CGFloat = component.customLayout?.spacing ?? 2.0
             
             let itemFont: UIFont
-            if component.customLayout != nil {
-                itemFont = Font.medium(14.0)
+            if let customLayout = component.customLayout {
+                itemFont = customLayout.font
             } else {
                 itemFont = Font.semibold(14.0)
             }

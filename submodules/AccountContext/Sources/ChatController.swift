@@ -50,8 +50,35 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let hasBots: Bool
     public let translateToLanguage: String?
     public let maxReadStoryId: Int32?
+    public let recommendedChannels: RecommendedChannels?
+    public let audioTranscriptionTrial: AudioTranscription.TrialState
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadPeerId: EnginePeer.Id?, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil, hasBots: Bool = false, translateToLanguage: String? = nil, maxReadStoryId: Int32? = nil) {
+    public init(
+        automaticDownloadPeerType: MediaAutoDownloadPeerType,
+        automaticDownloadPeerId: EnginePeer.Id?,
+        automaticDownloadNetworkType: MediaAutoDownloadNetworkType,
+        isRecentActions: Bool = false,
+        subject: ChatControllerSubject? = nil,
+        contactsPeerIds: Set<EnginePeer.Id> = Set(),
+        channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown,
+        animatedEmojiStickers: [String: [StickerPackItem]] = [:],
+        additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:],
+        forcedResourceStatus: FileMediaResourceStatus? = nil,
+        currentlyPlayingMessageId: EngineMessage.Index? = nil,
+        isCopyProtectionEnabled: Bool = false,
+        availableReactions: AvailableReactions?,
+        defaultReaction: MessageReaction.Reaction?,
+        isPremium: Bool,
+        accountPeer: EnginePeer?,
+        forceInlineReactions: Bool = false,
+        alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false),
+        topicAuthorId: EnginePeer.Id? = nil,
+        hasBots: Bool = false,
+        translateToLanguage: String? = nil,
+        maxReadStoryId: Int32? = nil,
+        recommendedChannels: RecommendedChannels? = nil,
+        audioTranscriptionTrial: AudioTranscription.TrialState = .defaultValue
+    ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
@@ -74,6 +101,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.hasBots = hasBots
         self.translateToLanguage = translateToLanguage
         self.maxReadStoryId = maxReadStoryId
+        self.recommendedChannels = recommendedChannels
+        self.audioTranscriptionTrial = audioTranscriptionTrial
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -138,6 +167,12 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.maxReadStoryId != rhs.maxReadStoryId {
+            return false
+        }
+        if lhs.recommendedChannels != rhs.recommendedChannels {
+            return false
+        }
+        if lhs.audioTranscriptionTrial != rhs.audioTranscriptionTrial {
             return false
         }
         return true
@@ -226,9 +261,17 @@ public struct ChatControllerInitialBotAppStart {
 }
 
 public enum ChatControllerInteractionNavigateToPeer {
+    public struct InfoParams {
+        public let switchToRecommendedChannels: Bool
+        
+        public init(switchToRecommendedChannels: Bool) {
+            self.switchToRecommendedChannels = switchToRecommendedChannels
+        }
+    }
+    
     case `default`
     case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?, peekData: ChatPeekTimeout?)
-    case info
+    case info(InfoParams?)
     case withBotStartPayload(ChatControllerInitialBotStart)
     case withAttachBot(ChatControllerInitialAttachBotStart)
     case withBotApp(ChatControllerInitialBotAppStart)
@@ -578,10 +621,12 @@ public enum ChatControllerSubject: Equatable {
         public struct Quote: Equatable {
             public let messageId: EngineMessage.Id
             public let text: String
+            public let offset: Int?
             
-            public init(messageId: EngineMessage.Id, text: String) {
+            public init(messageId: EngineMessage.Id, text: String, offset: Int?) {
                 self.messageId = messageId
                 self.text = text
+                self.offset = offset
             }
         }
         
@@ -645,9 +690,19 @@ public enum ChatControllerSubject: Equatable {
     }
     
     public struct MessageHighlight: Equatable {
-        public var quote: String?
+        public struct Quote: Equatable {
+            public var string: String
+            public var offset: Int?
+            
+            public init(string: String, offset: Int?) {
+                self.string = string
+                self.offset = offset
+            }
+        }
         
-        public init(quote: String? = nil) {
+        public var quote: Quote?
+        
+        public init(quote: Quote? = nil) {
             self.quote = quote
         }
     }
@@ -683,6 +738,15 @@ public enum ChatControllerSubject: Equatable {
             } else {
                 return false
             }
+        }
+    }
+    
+    public var isService: Bool {
+        switch self {
+        case .message:
+            return false
+        default:
+            return true
         }
     }
 }
@@ -834,6 +898,8 @@ public protocol ChatController: ViewController {
     
     var isSelectingMessagesUpdated: ((Bool) -> Void)? { get set }
     func cancelSelectingMessages()
+    func activateSearch(domain: ChatSearchDomain, query: String)
+    func beginClearHistory(type: InteractiveHistoryClearingType)
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {
@@ -864,4 +930,81 @@ public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
     func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect
+}
+
+public final class ChatControllerNavigationData: CustomViewControllerNavigationData {
+    public let peerId: PeerId
+    public let threadId: Int64?
+    
+    public init(peerId: PeerId, threadId: Int64?) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
+    
+    public func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary? {
+        if let summary = summary as? ChatControllerNavigationDataSummary {
+            return summary.adding(peerNavigationItem: ChatNavigationStackItem(peerId: self.peerId, threadId: threadId))
+        } else {
+            return ChatControllerNavigationDataSummary(peerNavigationItems: [ChatNavigationStackItem(peerId: self.peerId, threadId: threadId)])
+        }
+    }
+}
+
+public final class ChatControllerNavigationDataSummary: CustomViewControllerNavigationDataSummary {
+    public let peerNavigationItems: [ChatNavigationStackItem]
+    
+    public init(peerNavigationItems: [ChatNavigationStackItem]) {
+        self.peerNavigationItems = peerNavigationItems
+    }
+    
+    public func adding(peerNavigationItem: ChatNavigationStackItem) -> ChatControllerNavigationDataSummary {
+        var peerNavigationItems = self.peerNavigationItems
+        if let index = peerNavigationItems.firstIndex(of: peerNavigationItem) {
+            peerNavigationItems.removeSubrange(0 ... index)
+        }
+        peerNavigationItems.insert(peerNavigationItem, at: 0)
+        return ChatControllerNavigationDataSummary(peerNavigationItems: peerNavigationItems)
+    }
+}
+
+public enum ChatHistoryListSource {
+    public struct Quote {
+        public var text: String
+        public var offset: Int?
+        
+        public init(text: String, offset: Int?) {
+            self.text = text
+            self.offset = offset
+        }
+    }
+    
+    case `default`
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, quote: Quote?, loadMore: (() -> Void)?)
+}
+
+public enum ChatHistoryListDisplayHeaders {
+    case none
+    case all
+    case allButLast
+}
+
+public enum ChatHistoryListMode: Equatable {
+    case bubbles
+    case list(search: Bool, reversed: Bool, reverseGroups: Bool, displayHeaders: ChatHistoryListDisplayHeaders, hintLinks: Bool, isGlobalSearch: Bool)
+}
+
+public protocol ChatControllerInteractionProtocol: AnyObject {
+}
+
+public enum ChatHistoryNodeHistoryState: Equatable {
+    case loading
+    case loaded(isEmpty: Bool)
+}
+
+public protocol ChatHistoryListNode: ListView {
+    var historyState: ValuePromise<ChatHistoryNodeHistoryState> { get }
+    
+    func scrollToEndOfHistory()
+    func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)
+    func messageInCurrentHistoryView(_ id: MessageId) -> Message?
 }
