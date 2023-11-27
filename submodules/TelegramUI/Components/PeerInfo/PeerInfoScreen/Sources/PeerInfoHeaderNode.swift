@@ -512,11 +512,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let regularContentButtonBackgroundColor: UIColor
         let collapsedHeaderContentButtonBackgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        let expandedAvatarContentButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.3)
+        let expandedAvatarContentButtonBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.1)
         
         let regularHeaderButtonBackgroundColor: UIColor
         let collapsedHeaderButtonBackgroundColor: UIColor = .clear
-        let expandedAvatarHeaderButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.3)
+        let expandedAvatarHeaderButtonBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.1)
         
         let regularContentButtonForegroundColor: UIColor = peer?.profileColor != nil ? UIColor.white : presentationData.theme.list.itemAccentColor
         let collapsedHeaderContentButtonForegroundColor = presentationData.theme.list.itemAccentColor
@@ -847,6 +847,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             isFake = peer.isFake || peer.isScam
         }
         
+        let titleShadowColor = UIColor(white: 0.0, alpha: 0.1)
+        
         if let peer = peer {
             var title: String
             if peer.id == self.context.account.peerId && !self.isSettings {
@@ -871,7 +873,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
 
             titleStringText = title
             titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
-            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white, shadowColor: titleShadowColor)
             
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
@@ -881,7 +883,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 subtitleStringText = subtitle
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
             } else if let _ = threadData {
@@ -893,7 +895,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 subtitleStringText = statusText
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(16.0), color: subtitleColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
                 
@@ -919,7 +921,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 subtitleStringText = statusData.text
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
 
@@ -936,18 +938,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else {
                 subtitleStringText = " "
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
                 
                 usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
             }
         } else {
             titleStringText = " "
             titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
-            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white, shadowColor: titleShadowColor)
             
             subtitleStringText = " "
             subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
-            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white, shadowColor: titleShadowColor)
             
             usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
         }

@@ -1059,7 +1059,7 @@ public final class TextFieldComponent: Component {
                 availableSize.width += 32.0
             }
             
-            let textHeight = self.textView.textHeightForWidth(availableSize.width - textLeftInset, rightInset: innerTextInsets.right)
+            let textHeight = self.textView.textHeightForWidth(availableSize.width - component.insets.left, rightInset: innerTextInsets.right)
             let size = CGSize(width: availableSize.width, height: min(textHeight, availableSize.height))
             
             let textFrame = CGRect(origin: CGPoint(x: textLeftInset, y: 0.0), size: CGSize(width: size.width - component.insets.left, height: size.height))
