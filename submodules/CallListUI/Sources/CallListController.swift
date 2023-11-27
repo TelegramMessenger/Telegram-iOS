@@ -122,6 +122,7 @@ public final class CallListController: TelegramBaseController {
         
         self.segmentedTitleView.indexUpdated = { [weak self] index in
             if let strongSelf = self {
+                strongSelf.segmentedTitleView.index = index
                 strongSelf.controllerNode.updateType(index == 0 ? .all : .missed)
             }
         }

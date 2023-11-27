@@ -4,17 +4,24 @@ import AsyncDisplayKit
 import Display
 
 private final class MultiScaleTextStateNode: ASDisplayNode {
-    let textNode: ImmediateTextNode
+    let tintTextNode: ImmediateTextNode
+    let noTintTextNode: ImmediateTextNode
     
     var currentLayout: MultiScaleTextLayout?
     
     override init() {
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
+        self.tintTextNode = ImmediateTextNode()
+        self.tintTextNode.displaysAsynchronously = false
+        self.tintTextNode.renderContentTypes = TextNode.RenderContentTypes.all.subtracting(TextNode.RenderContentTypes.emoji)
+        
+        self.noTintTextNode = ImmediateTextNode()
+        self.noTintTextNode.displaysAsynchronously = false
+        self.noTintTextNode.renderContentTypes = .emoji
         
         super.init()
         
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.tintTextNode)
+        self.addSubnode(self.noTintTextNode)
     }
 }
 
@@ -60,12 +67,12 @@ public final class MultiScaleTextNode: ASDisplayNode {
     }
     
     public func stateNode(forKey key: AnyHashable) -> ASDisplayNode? {
-        return self.stateNodes[key]?.textNode
+        return self.stateNodes[key]?.tintTextNode
     }
     
     public func updateTintColor(color: UIColor, transition: ContainedViewLayoutTransition) {
         for (_, node) in self.stateNodes {
-            transition.updateTintColor(layer: node.textNode.layer, color: color)
+            transition.updateTintColor(layer: node.tintTextNode.layer, color: color)
         }
     }
     
@@ -77,10 +84,13 @@ public final class MultiScaleTextNode: ASDisplayNode {
         var mainLayout: MultiScaleTextLayout?
         for (key, state) in states {
             if let node = self.stateNodes[key] {
-                node.textNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
-                node.textNode.isAccessibilityElement = true
-                node.textNode.accessibilityLabel = text
-                let nodeSize = node.textNode.updateLayout(state.constrainedSize)
+                node.tintTextNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
+                node.noTintTextNode.attributedText = NSAttributedString(string: text, font: state.attributes.font, textColor: state.attributes.color)
+                node.tintTextNode.isAccessibilityElement = true
+                node.tintTextNode.accessibilityLabel = text
+                node.noTintTextNode.isAccessibilityElement = false
+                let nodeSize = node.tintTextNode.updateLayout(state.constrainedSize)
+                let _ = node.noTintTextNode.updateLayout(state.constrainedSize)
                 let nodeLayout = MultiScaleTextLayout(size: nodeSize)
                 if key == mainState {
                     mainLayout = nodeLayout
@@ -93,7 +103,9 @@ public final class MultiScaleTextNode: ASDisplayNode {
             let mainBounds = CGRect(origin: CGPoint(x: -mainLayout.size.width / 2.0, y: -mainLayout.size.height / 2.0), size: mainLayout.size)
             for (key, _) in states {
                 if let node = self.stateNodes[key], let nodeLayout = result[key] {
-                    node.textNode.frame = CGRect(origin: CGPoint(x: mainBounds.minX, y: mainBounds.minY + floor((mainBounds.height - nodeLayout.size.height) / 2.0)), size: nodeLayout.size)
+                    let textFrame = CGRect(origin: CGPoint(x: mainBounds.minX, y: mainBounds.minY + floor((mainBounds.height - nodeLayout.size.height) / 2.0)), size: nodeLayout.size)
+                    node.tintTextNode.frame = textFrame
+                    node.noTintTextNode.frame = textFrame
                 }
             }
         }

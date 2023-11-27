@@ -600,7 +600,8 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
                 return UIColor(white: 1.0, alpha: 1.0).cgColor
             } else {
                 let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
-                return UIColor(white: 1.0, alpha: baseGradientAlpha * (1.0 - pow(step, 3.0))).cgColor
+                let value: CGFloat = 1.0 - bezierPoint(0.42, 0.0, 0.58, 1.0, step)
+                return UIColor(white: 1.0, alpha: baseGradientAlpha * value).cgColor
             }
         }
         self.backgroundGradientMaskLayer.locations = (0 ..< numSteps).map { i -> NSNumber in
@@ -662,6 +663,7 @@ public final class AvatarListContentNode: ASDisplayNode {
             
             if value {
                 replicatorLayer.instanceAlphaOffset = -1.0
+                replicatorLayer.animate(from: 0.0 as NSNumber, to: -1.0 as NSNumber, keyPath: "instanceAlphaOffset", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
             } else {
                 replicatorLayer.instanceAlphaOffset = 0.0
                 replicatorLayer.animate(from: -1.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "instanceAlphaOffset", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)

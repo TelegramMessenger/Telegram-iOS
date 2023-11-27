@@ -1106,7 +1106,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         var bottomShadowHeight: CGFloat = 88.0
         if !self.isSettings {
-            bottomShadowHeight += 90.0
+            bottomShadowHeight += 110.0
         }
         let bottomShadowFrame = CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - bottomShadowHeight), size: CGSize(width: width, height: bottomShadowHeight))
         transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: bottomShadowFrame, beginWithCurrentState: true)
