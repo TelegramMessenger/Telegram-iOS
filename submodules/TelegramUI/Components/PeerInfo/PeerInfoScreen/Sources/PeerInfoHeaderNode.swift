@@ -1781,6 +1781,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             component: AnyComponent(PeerInfoCoverComponent(
                 context: self.context,
                 peer: peer.flatMap(EnginePeer.init),
+                files: [:],
                 isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center,
                 avatarScale: avatarScale,

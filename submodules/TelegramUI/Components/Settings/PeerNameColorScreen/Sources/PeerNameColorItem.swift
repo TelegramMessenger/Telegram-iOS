@@ -183,6 +183,10 @@ public func generateSettingsMenuPeerColorsLabelIcon(colors: [PeerNameColors.Colo
     let iconWidth: CGFloat = 24.0
     let iconSpacing: CGFloat = 18.0
     let borderWidth: CGFloat = 2.0
+    
+    if colors.isEmpty {
+        return generateSingleColorImage(size: CGSize(width: iconWidth, height: iconWidth), color: .clear)!
+    }
 
     return generateImage(CGSize(width: CGFloat(max(0, colors.count - 1)) * iconSpacing + CGFloat(colors.count == 0 ? 0 : 1) * iconWidth, height: 24.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))

@@ -22,15 +22,17 @@ final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem {
     let strings: PresentationStrings
     let sectionId: ItemListSectionId
     let peer: EnginePeer?
+    let files: [Int64: TelegramMediaFile]
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, peer: EnginePeer?, nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, peer: EnginePeer?, files: [Int64: TelegramMediaFile], nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.theme = theme
         self.componentTheme = componentTheme
         self.strings = strings
         self.sectionId = sectionId
         self.peer = peer
+        self.files = files
         self.nameDisplayOrder = nameDisplayOrder
     }
     
@@ -176,6 +178,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                     component: AnyComponent(PeerInfoCoverComponent(
                         context: item.context,
                         peer: item.peer,
+                        files: item.files,
                         isDark: item.theme.overallDarkAppearance,
                         avatarCenter: avatarFrame.center,
                         avatarScale: 1.0,

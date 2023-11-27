@@ -12,9 +12,9 @@ import EmojiTextAttachmentView
 import LokiRng
 
 private final class PatternContentsTarget: MultiAnimationRenderTarget {
-    private let imageUpdated: () -> Void
+    private let imageUpdated: (Bool) -> Void
     
-    init(imageUpdated: @escaping () -> Void) {
+    init(imageUpdated: @escaping (Bool) -> Void) {
         self.imageUpdated = imageUpdated
         
         super.init()
@@ -25,8 +25,9 @@ private final class PatternContentsTarget: MultiAnimationRenderTarget {
     }
     
     override func transitionToContents(_ contents: AnyObject, didLoop: Bool) {
+        let hadContents = self.contents != nil
         self.contents = contents
-        self.imageUpdated()
+        self.imageUpdated(hadContents)
     }
 }
 
@@ -60,6 +61,7 @@ private func patternScaleValueAt(fraction: CGFloat, t: CGFloat, reverse: Bool) -
 public final class PeerInfoCoverComponent: Component {
     public let context: AccountContext
     public let peer: EnginePeer?
+    public let files: [Int64: TelegramMediaFile]
     public let isDark: Bool
     public let avatarCenter: CGPoint
     public let avatarScale: CGFloat
@@ -70,6 +72,7 @@ public final class PeerInfoCoverComponent: Component {
     public init(
         context: AccountContext,
         peer: EnginePeer?,
+        files: [Int64: TelegramMediaFile],
         isDark: Bool,
         avatarCenter: CGPoint,
         avatarScale: CGFloat,
@@ -79,6 +82,7 @@ public final class PeerInfoCoverComponent: Component {
     ) {
         self.context = context
         self.peer = peer
+        self.files = files
         self.isDark = isDark
         self.avatarCenter = avatarCenter
         self.avatarScale = avatarScale
@@ -92,6 +96,9 @@ public final class PeerInfoCoverComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.files != rhs.files {
             return false
         }
         if lhs.isDark != rhs.isDark {
@@ -130,7 +137,6 @@ public final class PeerInfoCoverComponent: Component {
         private var avatarPatternContentLayers: [SimpleLayer] = []
         private var patternFile: TelegramMediaFile?
         private var patternFileDisposable: Disposable?
-        private var patternImage: UIImage?
         private var patternImageDisposable: Disposable?
         
         override public init(frame: CGRect) {
@@ -190,14 +196,15 @@ public final class PeerInfoCoverComponent: Component {
                 return
             }
             
-            if component.context.animationRenderer.loadFirstFrameSynchronously(target: patternContentsTarget, cache: component.context.animationCache, itemId: "reply-pattern-\(patternFile.fileId)", size: CGSize(width: 64, height: 64)) {
+            if component.context.animationRenderer.loadFirstFrameSynchronously(target: patternContentsTarget, cache: component.context.animationCache, itemId: patternFile.resource.id.stringRepresentation, size: CGSize(width: 96, height: 96)) {
                 self.updatePatternLayerImages(animated: false)
             } else {
+                let animated = self.patternContentsTarget?.contents == nil
                 self.patternImageDisposable = component.context.animationRenderer.loadFirstFrame(
                     target: patternContentsTarget,
                     cache: component.context.animationCache,
-                    itemId: "reply-pattern-\(patternFile.fileId)",
-                    size: CGSize(width: 64, height: 64),
+                    itemId: patternFile.resource.id.stringRepresentation,
+                    size: CGSize(width: 96, height: 96),
                     fetch: animationCacheFetchFile(
                         postbox: component.context.account.postbox,
                         userLocation: .other,
@@ -211,7 +218,7 @@ public final class PeerInfoCoverComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.updatePatternLayerImages(animated: true)
+                        self.updatePatternLayerImages(animated: animated)
                     }
                 )
             }
@@ -232,11 +239,11 @@ public final class PeerInfoCoverComponent: Component {
             if self.component?.peer?.profileBackgroundEmojiId != component.peer?.profileBackgroundEmojiId {
                 if let profileBackgroundEmojiId = component.peer?.profileBackgroundEmojiId, profileBackgroundEmojiId != 0 {
                     if self.patternContentsTarget == nil {
-                        self.patternContentsTarget = PatternContentsTarget(imageUpdated: { [weak self] in
+                        self.patternContentsTarget = PatternContentsTarget(imageUpdated: { [weak self] hadContents in
                             guard let self else {
                                 return
                             }
-                            self.updatePatternLayerImages(animated: true)
+                            self.updatePatternLayerImages(animated: !hadContents)
                         })
                     }
                     
@@ -246,16 +253,21 @@ public final class PeerInfoCoverComponent: Component {
                     self.patternImageDisposable?.dispose()
                     
                     let fileId = profileBackgroundEmojiId
-                    self.patternFileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
-                    |> deliverOnMainQueue).startStrict(next: { [weak self] files in
-                        guard let self else {
-                            return
-                        }
-                        if let file = files[fileId] {
-                            self.patternFile = file
-                            self.loadPatternFromFile()
-                        }
-                    })
+                    if let file = component.files[fileId] {
+                        self.patternFile = file
+                        self.loadPatternFromFile()
+                    } else {
+                        self.patternFileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] files in
+                            guard let self else {
+                                return
+                            }
+                            if let file = files[fileId] {
+                                self.patternFile = file
+                                self.loadPatternFromFile()
+                            }
+                        })
+                    }
                 } else {
                     self.patternContentsTarget = nil
                     self.patternFileDisposable?.dispose()

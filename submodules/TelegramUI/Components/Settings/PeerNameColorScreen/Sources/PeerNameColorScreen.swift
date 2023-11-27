@@ -17,13 +17,13 @@ import PremiumUI
 private final class PeerNameColorScreenArguments {
     let context: AccountContext
     let updateNameColor: (PeerNameColor?) -> Void
-    let updateBackgroundEmojiId: (Int64?) -> Void
+    let updateBackgroundEmojiId: (Int64?, TelegramMediaFile?) -> Void
     let resetColor: () -> Void
     
     init(
         context: AccountContext,
         updateNameColor: @escaping (PeerNameColor?) -> Void,
-        updateBackgroundEmojiId: @escaping (Int64?) -> Void,
+        updateBackgroundEmojiId: @escaping (Int64?, TelegramMediaFile?) -> Void,
         resetColor: @escaping () -> Void
     ) {
         self.context = context
@@ -52,7 +52,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
     
     case colorHeader(String)
     case colorMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, items: [PeerNameColorChatPreviewItem.MessageItem])
-    case colorProfile(peer: EnginePeer?, nameDisplayOrder: PresentationPersonNameOrder)
+    case colorProfile(peer: EnginePeer?, files: [Int64: TelegramMediaFile], nameDisplayOrder: PresentationPersonNameOrder)
     case colorPicker(colors: PeerNameColors, currentColor: PeerNameColor?, isProfile: Bool)
     case removeColor
     case colorDescription(String)
@@ -124,9 +124,12 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .colorProfile(lhsPeer, lhsNameDisplayOrder):
-            if case let .colorProfile(rhsPeer, rhsNameDisplayOrder) = rhs {
+        case let .colorProfile(lhsPeer, lhsFiles, lhsNameDisplayOrder):
+            if case let .colorProfile(rhsPeer, rhsFiles, rhsNameDisplayOrder) = rhs {
                 if lhsPeer != rhsPeer {
+                    return false
+                }
+                if lhsFiles != rhsFiles {
                     return false
                 }
                 if lhsNameDisplayOrder != rhsNameDisplayOrder {
@@ -192,7 +195,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
                 nameDisplayOrder: nameDisplayOrder,
                 messageItems: items
             )
-        case let .colorProfile(peer, nameDisplayOrder):
+        case let .colorProfile(peer, files, nameDisplayOrder):
             return PeerNameColorProfilePreviewItem(
                 context: arguments.context,
                 theme: presentationData.theme,
@@ -200,6 +203,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
                 strings: presentationData.strings,
                 sectionId: self.section,
                 peer: peer,
+                files: files,
                 nameDisplayOrder: nameDisplayOrder
             )
         case let .colorPicker(colors, currentColor, isProfile):
@@ -222,7 +226,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .backgroundEmojiHeader(text, action):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, actionText: action, action: action != nil ? {
-                arguments.updateBackgroundEmojiId(0)
+                arguments.updateBackgroundEmojiId(0, nil)
             } : nil, sectionId: self.section)
         case let .backgroundEmoji(emojiContent, backgroundIconColor, isProfileColor, hasRemoveButton):
             return EmojiPickerItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, emojiContent: emojiContent, backgroundIconColor: backgroundIconColor, isProfileColor: isProfileColor, hasRemoveButton: hasRemoveButton, sectionId: self.section)
@@ -242,6 +246,8 @@ private struct PeerNameColorScreenState: Equatable {
     var hasUpdatedProfileBackgroundEmojiId: Bool = false
     
     var selectedTabIndex: Int = 0
+    
+    var files: [Int64: TelegramMediaFile] = [:]
 }
 
 private func peerNameColorScreenEntries(
@@ -332,8 +338,13 @@ private func peerNameColorScreenEntries(
             default:
                 break
             }
+            var files: [Int64: TelegramMediaFile] = [:]
+            if let fileId = updatedPeer.profileBackgroundEmojiId, let file = state.files[fileId] {
+                files[fileId] = file
+            }
             entries.append(.colorProfile(
                 peer: updatedPeer,
+                files: files,
                 nameDisplayOrder: presentationData.nameDisplayOrder
             ))
         }
@@ -439,7 +450,7 @@ public func PeerNameColorScreen(
                 return updatedState
             }
         },
-        updateBackgroundEmojiId: { emojiId in
+        updateBackgroundEmojiId: { emojiId, file in
             updateState { state in
                 var updatedState = state
                 if state.selectedTabIndex == 0 {
@@ -447,6 +458,9 @@ public func PeerNameColorScreen(
                 } else {
                     updatedState.hasUpdatedProfileBackgroundEmojiId = true
                     updatedState.updatedProfileBackgroundEmojiId = emojiId
+                }
+                if let file {
+                    updatedState.files[file.fileId.id] = file
                 }
                 return updatedState
             }
@@ -608,12 +622,14 @@ public func PeerNameColorScreen(
         emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { _, item, _, _, _, _ in
                 var selectedFileId: Int64?
+                var selectedFile: TelegramMediaFile?
                 if let fileId = item.itemFile?.fileId.id {
                     selectedFileId = fileId
+                    selectedFile = item.itemFile
                 } else {
                     selectedFileId = 0
                 }
-                arguments.updateBackgroundEmojiId(selectedFileId)
+                arguments.updateBackgroundEmojiId(selectedFileId, selectedFile)
             },
             deleteBackwards: {
             },
