@@ -109,6 +109,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
             context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
             
             strongSelf.listContainerNode.bottomShadowNode.alpha = 0.0
+            strongSelf.listContainerNode.contentNode.updateIsInPinchMode(true)
         }
 
         self.pinchSourceNode.animatedOut = { [weak self] in
@@ -116,6 +117,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
                 return
             }
             strongSelf.animateOverlaysFadeIn?()
+            strongSelf.listContainerNode.contentNode.updateIsInPinchMode(false)
         }
         
         self.listContainerNode.openStories = { [weak self] in

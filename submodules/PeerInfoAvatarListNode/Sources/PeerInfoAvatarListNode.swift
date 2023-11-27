@@ -639,6 +639,9 @@ public final class AvatarListContentNode: ASDisplayNode {
             
             let replicatorLayer = self.layer as! CAReplicatorLayer
             replicatorLayer.instanceCount = 2
+            
+            self.backgroundColor = nil
+            self.isOpaque = false
         }
         
         required init?(coder: NSCoder) {
@@ -653,6 +656,17 @@ public final class AvatarListContentNode: ASDisplayNode {
             let replicatorLayer = self.layer as! CAReplicatorLayer
             replicatorLayer.instanceTransform = instanceTransform
         }
+        
+        func updateIsInPinchMode(_ value: Bool) {
+            let replicatorLayer = self.layer as! CAReplicatorLayer
+            
+            if value {
+                replicatorLayer.instanceAlphaOffset = -1.0
+            } else {
+                replicatorLayer.instanceAlphaOffset = 0.0
+                replicatorLayer.animate(from: -1.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "instanceAlphaOffset", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
+            }
+        }
     }
     
     override public init() {
@@ -665,6 +679,10 @@ public final class AvatarListContentNode: ASDisplayNode {
     
     public func update(size: CGSize) {
         (self.view as? View)?.update(size: size)
+    }
+    
+    public func updateIsInPinchMode(_ value: Bool) {
+        (self.view as? View)?.updateIsInPinchMode(value)
     }
 }
 
@@ -933,7 +951,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = .black
+        //self.backgroundColor = .black
         
         self.addSubnode(self.contentNode)
         
