@@ -2941,7 +2941,7 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         },
                         timeoutAction: nil,
-                        forwardAction: component.slice.item.storyItem.isPublic ? { [weak self] in
+                        forwardAction: component.slice.item.storyItem.isPublic && !component.slice.item.storyItem.isForwardingDisabled ? { [weak self] in
                             guard let self else {
                                 return
                             }
