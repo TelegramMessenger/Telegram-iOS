@@ -570,15 +570,101 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
 
 private let fadeWidth: CGFloat = 70.0
 
+private final class VariableBlurView: UIVisualEffectView {
+    let maxBlurRadius: CGFloat
+    
+    var gradientMask: UIImage {
+        didSet {
+            if self.gradientMask !== oldValue {
+                self.resetEffect()
+            }
+        }
+    }
+    
+    init(gradientMask: UIImage, maxBlurRadius: CGFloat = 20) {
+        self.gradientMask = gradientMask
+        self.maxBlurRadius = maxBlurRadius
+        
+        super.init(effect: UIBlurEffect(style: .regular))
+
+        self.resetEffect()
+
+        if self.subviews.indices.contains(1) {
+            let tintOverlayView = subviews[1]
+            tintOverlayView.alpha = 0
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func resetEffect() {
+        let filterClassStringEncoded = "Q0FGaWx0ZXI="
+        let filterClassString: String = {
+            if
+                let data = Data(base64Encoded: filterClassStringEncoded),
+                let string = String(data: data, encoding: .utf8)
+            {
+                return string
+            }
+
+            return ""
+        }()
+        let filterWithTypeStringEncoded = "ZmlsdGVyV2l0aFR5cGU6"
+        let filterWithTypeString: String = {
+            if
+                let data = Data(base64Encoded: filterWithTypeStringEncoded),
+                let string = String(data: data, encoding: .utf8)
+            {
+                return string
+            }
+
+            return ""
+        }()
+
+        let filterWithTypeSelector = Selector(filterWithTypeString)
+
+        guard let filterClass = NSClassFromString(filterClassString) as AnyObject as? NSObjectProtocol else {
+            return
+        }
+
+        guard filterClass.responds(to: filterWithTypeSelector) else {
+            return
+        }
+
+        let variableBlur = filterClass.perform(filterWithTypeSelector, with: "variableBlur").takeUnretainedValue()
+
+        guard let variableBlur = variableBlur as? NSObject else {
+            return
+        }
+        
+        guard let gradientImageRef = self.gradientMask.cgImage else {
+            return
+        }
+
+        variableBlur.setValue(self.maxBlurRadius, forKey: "inputRadius")
+        variableBlur.setValue(gradientImageRef, forKey: "inputMaskImage")
+        variableBlur.setValue(true, forKey: "inputNormalizeEdges")
+        
+        let backdropLayer = self.subviews.first?.layer
+        backdropLayer?.filters = [variableBlur]
+    }
+}
+
 public final class PeerAvatarBottomShadowNode: ASDisplayNode {
     let backgroundNode: NavigationBackgroundNode
-    let backgroundGradientMaskLayer: SimpleGradientLayer
-    let imageView: UIImageView
+    private var backgroundView: VariableBlurView?
+    private var currentBackgroundBlurImage: UIImage?
+    
+    private let backgroundGradientMaskLayer: SimpleGradientLayer
+    public let imageView: UIImageView
     
     override init() {
         self.backgroundNode = NavigationBackgroundNode(color: .black, enableBlur: true)
+        
         self.backgroundGradientMaskLayer = SimpleGradientLayer()
-        self.backgroundNode.layer.mask = self.backgroundGradientMaskLayer
+        //self.backgroundNode.layer.mask = self.backgroundGradientMaskLayer
         
         self.imageView = UIImageView()
         self.imageView.contentMode = .scaleToFill
@@ -594,7 +680,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         let baseGradientAlpha: CGFloat = 1.0
         let numSteps = 8
         let firstStep = 1
-        let firstLocation = 0.7
+        let firstLocation = 0.8
         self.backgroundGradientMaskLayer.colors = (0 ..< numSteps).map { i in
             if i < firstStep {
                 return UIColor(white: 1.0, alpha: 1.0).cgColor
@@ -615,9 +701,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         
         self.backgroundNode.updateColor(color: UIColor(white: 0.0, alpha: 0.1), enableSaturation: false, forceKeepBlur: true, transition: .immediate)
         
-        self.addSubnode(self.backgroundNode)
-        //self.layer.addSublayer(self.backgroundGradientMaskLayer)
-        //self.view.addSubview(self.imageView)
+        //self.addSubnode(self.backgroundNode)
     }
     
     public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -626,6 +710,48 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
         transition.updateFrame(layer: self.backgroundGradientMaskLayer, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
         self.backgroundNode.update(size: size, transition: transition)
+        
+        let backgroundBlurImage: UIImage
+        if let currentBackgroundBlurImage = self.currentBackgroundBlurImage, currentBackgroundBlurImage.size.height == size.height {
+            backgroundBlurImage = currentBackgroundBlurImage
+        } else {
+            let baseGradientAlpha: CGFloat = 0.5
+            let numSteps = 8
+            let firstStep = 1
+            let firstLocation = 0.5
+            let colors = (0 ..< numSteps).map { i -> UIColor in
+                if i < firstStep {
+                    return UIColor(white: 1.0, alpha: 1.0)
+                } else {
+                    let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
+                    let value: CGFloat = 1.0 - bezierPoint(0.42, 0.0, 0.58, 1.0, step)
+                    return UIColor(white: 1.0, alpha: baseGradientAlpha * value)
+                }
+            }
+            let locations = (0 ..< numSteps).map { i -> CGFloat in
+                if i < firstStep {
+                    return 0.0
+                } else {
+                    let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
+                    return (firstLocation + (1.0 - firstLocation) * step)
+                }
+            }
+            
+            backgroundBlurImage = generateGradientImage(size: CGSize(width: 8.0, height: size.height), colors: colors.reversed(), locations: locations.reversed().map { 1.0 - $0 })!
+        }
+        if let backgroundView = self.backgroundView {
+            if self.currentBackgroundBlurImage !== backgroundBlurImage {
+                backgroundView.gradientMask = backgroundBlurImage
+            }
+            backgroundView.frame = CGRect(origin: CGPoint(), size: size)
+        } else {
+            self.currentBackgroundBlurImage = backgroundBlurImage
+            let backgroundView = VariableBlurView(gradientMask: backgroundBlurImage, maxBlurRadius: 15.0)
+            backgroundView.layer.mask = self.backgroundGradientMaskLayer
+            self.backgroundView = backgroundView
+            self.view.addSubview(backgroundView)
+            backgroundView.frame = CGRect(origin: CGPoint(), size: size)
+        }
     }
 }
 
@@ -651,8 +777,8 @@ public final class AvatarListContentNode: ASDisplayNode {
         
         func update(size: CGSize) {
             var instanceTransform = CATransform3DIdentity
-            instanceTransform = CATransform3DTranslate(instanceTransform, 0.0, (size.width - (size.height - size.width)) * 1.5 - 4.0, 0.0)
-            instanceTransform = CATransform3DScale(instanceTransform, 1.0, -2.0, 1.0)
+            instanceTransform = CATransform3DTranslate(instanceTransform, 0.0, (size.width - (size.height - size.width)) * 2.0 - 4.0, 0.0)
+            instanceTransform = CATransform3DScale(instanceTransform, 1.0, -3.0, 1.0)
             
             let replicatorLayer = self.layer as! CAReplicatorLayer
             replicatorLayer.instanceTransform = instanceTransform
