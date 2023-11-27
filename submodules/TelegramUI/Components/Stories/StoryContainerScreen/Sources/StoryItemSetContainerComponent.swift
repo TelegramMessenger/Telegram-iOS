@@ -1660,6 +1660,9 @@ public final class StoryItemSetContainerComponent: Component {
                         } else if component.slice.item.storyItem.isPending {
                             displayFooter = true
                         }
+                        if component.slice.item.storyItem.isForwardingDisabled {
+                            canShare = false
+                        }
                         
                         if displayFooter {
                             let contentViewsShadowView: UIImageView
