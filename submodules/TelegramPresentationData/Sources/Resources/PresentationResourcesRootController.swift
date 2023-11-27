@@ -172,7 +172,7 @@ public struct PresentationResourcesRootController {
     
     public static func navigationPostStoryIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationPostStoryIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddStoryIcon"), color: theme.rootController.navigationBar.accentTextColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddStoryIcon"), color: .white)
         })
     }
 }
