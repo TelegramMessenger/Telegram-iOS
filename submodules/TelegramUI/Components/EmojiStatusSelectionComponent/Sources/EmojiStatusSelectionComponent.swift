@@ -65,6 +65,7 @@ public final class EmojiStatusSelectionComponent: Component {
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
     public let hideTopPanel: Bool
+    public let disableTopPanel: Bool
     public let hideTopPanelUpdated: (Bool, Transition) -> Void
     
     public init(
@@ -75,6 +76,7 @@ public final class EmojiStatusSelectionComponent: Component {
         backgroundColor: UIColor,
         separatorColor: UIColor,
         hideTopPanel: Bool,
+        disableTopPanel: Bool,
         hideTopPanelUpdated: @escaping (Bool, Transition) -> Void
     ) {
         self.theme = theme
@@ -84,6 +86,7 @@ public final class EmojiStatusSelectionComponent: Component {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.hideTopPanel = hideTopPanel
+        self.disableTopPanel = disableTopPanel
         self.hideTopPanelUpdated = hideTopPanelUpdated
     }
     
@@ -107,6 +110,9 @@ public final class EmojiStatusSelectionComponent: Component {
             return false
         }
         if lhs.hideTopPanel != rhs.hideTopPanel {
+            return false
+        }
+        if lhs.disableTopPanel != rhs.disableTopPanel {
             return false
         }
         return true
@@ -193,7 +199,8 @@ public final class EmojiStatusSelectionComponent: Component {
                     displayBottomPanel: false,
                     isExpanded: false,
                     clipContentToTopPanel: false,
-                    useExternalSearchContainer: false
+                    useExternalSearchContainer: false,
+                    hidePanels: component.disableTopPanel
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -984,6 +991,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     backgroundColor: listBackgroundColor,
                     separatorColor: separatorColor,
                     hideTopPanel: self.isReactionSearchActive,
+                    disableTopPanel: false,
                     hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
                         guard let strongSelf = self else {
                             return

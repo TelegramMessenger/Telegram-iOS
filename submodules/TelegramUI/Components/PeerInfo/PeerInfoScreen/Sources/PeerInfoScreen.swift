@@ -1020,8 +1020,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
         }
         let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
         
-        //TODO:localize
-        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: "Your Color", icon: nil, action: {
+        items[.info]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: presentationData.strings.Settings_YourColor, icon: nil, action: {
             interaction.editingOpenNameColorSetup()
         }))
     }

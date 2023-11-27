@@ -24,10 +24,12 @@ import AudioToolbox
 private final class ButtonSubtitleComponent: CombinedComponent {
     let count: Int
     let theme: PresentationTheme
+    let strings: PresentationStrings
     
-    init(count: Int, theme: PresentationTheme) {
+    init(count: Int, theme: PresentationTheme, strings: PresentationStrings) {
         self.count = count
         self.theme = theme
+        self.strings = strings
     }
     
     static func ==(lhs: ButtonSubtitleComponent, rhs: ButtonSubtitleComponent) -> Bool {
@@ -35,6 +37,9 @@ private final class ButtonSubtitleComponent: CombinedComponent {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         return true
@@ -54,11 +59,24 @@ private final class ButtonSubtitleComponent: CombinedComponent {
                 availableSize: CGSize(width: 100.0, height: 100.0),
                 transition: context.transition
             )
-            //TODO:localize
             var textItems: [AnimatedTextComponent.Item] = []
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .text("Level ")))
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1 as Int), content: .number(context.component.count, minDigits: 1)))
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(2 as Int), content: .text(" Required")))
+            
+            let levelString = context.component.strings.ChannelReactions_LevelRequiredLabel("")
+            var previousIndex = 0
+            let nsLevelString = levelString.string as NSString
+            for range in levelString.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+                if range.range.lowerBound > previousIndex {
+                    textItems.append(AnimatedTextComponent.Item(id: AnyHashable(range.index), content: .text(nsLevelString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
+                }
+                if range.index == 0 {
+                    textItems.append(AnimatedTextComponent.Item(id: AnyHashable(range.index), content: .number(context.component.count, minDigits: 1)))
+                }
+                previousIndex = range.range.upperBound
+            }
+            if nsLevelString.length > previousIndex {
+                textItems.append(AnimatedTextComponent.Item(id: AnyHashable(100), content: .text(nsLevelString.substring(with: NSRange(location: previousIndex, length: nsLevelString.length - previousIndex)))))
+            }
+            
             let text = text.update(
                 component: AnimatedTextComponent(font: Font.medium(11.0), color: context.component.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7), items: textItems),
                 availableSize: CGSize(width: context.availableSize.width - 20.0, height: 100.0),
@@ -210,15 +228,14 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     self.applySettings(standalone: true)
                 } else {
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Unsaved Changes", text: "You have changed the list of reactions. Apply changes?", actions: [
-                        TextAlertAction(type: .genericAction, title: "Discard", action: { [weak self] in
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.ChannelReactions_UnsavedChangesAlertTitle, text: presentationData.strings.ChannelReactions_UnsavedChangesAlertText, actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.ChannelReactions_UnsavedChangesAlertDiscard, action: { [weak self] in
                             guard let self else {
                                 return
                             }
                             self.environment?.controller()?.dismiss()
                         }),
-                        TextAlertAction(type: .defaultAction, title: "Apply", action: { [weak self] in
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.ChannelReactions_UnsavedChangesAlertApply, action: { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -309,8 +326,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         self.displayPremiumScreen(reactionCount: customReactions.count)
                     case .generic:
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        //TODO:localize
-                        self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 }
             }, completed: { [weak self] in
@@ -457,7 +473,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 }
                             } else {
                                 if enabledReactions.count >= 100 {
-                                    //TODO:localize
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                     
                                     var animateAsReplacement = false
@@ -466,7 +481,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                         animateAsReplacement = true
                                     }
                                     
-                                    let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select at most 100 reactions.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
+                                    let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChannelReactions_ToastMaxReactionsReached, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
                                     self.currentUndoController = undoController
                                     self.environment?.controller()?.present(undoController, in: .current)
                                     return
@@ -490,7 +505,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                         
                                         let nextCustomReactionCount = enabledCustomReactions.count + 1
                                         if nextCustomReactionCount > boostStatus.level {
-                                            //TODO:localize
                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                             
                                             var animateAsReplacement = false
@@ -499,7 +513,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                                 animateAsReplacement = true
                                             }
                                             
-                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .customEmoji(context: component.context, file: itemFile, loop: false, title: nil, text: "Your channel needs to reach **Level \(nextCustomReactionCount)** to add **\(nextCustomReactionCount)** custom emoji as reactions.**", undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
+                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .customEmoji(context: component.context, file: itemFile, loop: false, title: nil, text: presentationData.strings.ChannelReactions_ToastLevelBoostRequired("\(nextCustomReactionCount)", "\(nextCustomReactionCount)").string, undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
                                             self.currentUndoController = undoController
                                             self.environment?.controller()?.present(undoController, in: .current)
                                         }
@@ -632,12 +646,11 @@ final class PeerAllowedReactionsScreenComponent: Component {
             contentHeight += switchSize.height
             contentHeight += 7.0
             
-            //TODO:localize
             let switchInfoTextSize = self.switchInfoText.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "You can add emoji from any emoji pack as a reaction.",
+                        string: environment.strings.ChannelReactions_GeneralInfoLabel,
                         font: Font.regular(13.0),
                         textColor: environment.theme.list.freeTextColor
                     )),
@@ -670,12 +683,11 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     animateIn = true
                 }
                 
-                //TODO:localize
                 let reactionsTitleTextSize = reactionsTitleText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "AVAILABLE REACTIONS",
+                            string: environment.strings.ChannelReactions_ReactionsSectionTitle,
                             font: Font.regular(13.0),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -770,7 +782,6 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     self.reactionsInfoText = reactionsInfoText
                 }
                 
-                //TODO:localize
                 let body = MarkdownAttributeSet(font: UIFont.systemFont(ofSize: 13.0), textColor: environment.theme.list.freeTextColor)
                 let link = MarkdownAttributeSet(font: UIFont.systemFont(ofSize: 13.0), textColor: environment.theme.list.itemAccentColor, additionalAttributes: [:])
                 let attributes = MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { contents in
@@ -779,7 +790,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 let reactionsInfoTextSize = reactionsInfoText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .markdown(text: "You can also [create your own]() emoji packs and use them.", attributes: attributes),
+                        text: .markdown(text: environment.strings.ChannelReactions_ReactionsInfoLabel, attributes: attributes),
                         maximumNumberOfLines: 0,
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
@@ -878,10 +889,9 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             var buttonContents: [AnyComponentWithIdentity<Empty>] = []
             buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                Text(text: "Update Reactions", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                Text(text: environment.strings.ChannelReactions_SaveAction, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
             let customReactionCount = self.isEnabled ? enabledReactions.filter({ item in
@@ -894,10 +904,10 @@ final class PeerAllowedReactionsScreenComponent: Component {
             }).count : 0
             
             if let boostStatus = self.boostStatus, customReactionCount > boostStatus.level {
-                //TODO:localize
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(ButtonSubtitleComponent(
                     count: customReactionCount,
-                    theme: environment.theme
+                    theme: environment.theme,
+                    strings: environment.strings
                 ))))
             }
             
@@ -1120,8 +1130,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             initialContent: initialContent
         ), navigationBarAppearance: .default, theme: .default)
         
-        //TODO:localize
-        self.title = "Reactions"
+        self.title = context.sharedContext.currentPresentationData.with({ $0 }).strings.ChannelReactions_Reactions
         
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? PeerAllowedReactionsScreenComponent.View else {
