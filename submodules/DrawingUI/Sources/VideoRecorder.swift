@@ -178,8 +178,12 @@ public final class EntityVideoRecorder {
                 }
                 
                 if let entityView = entitiesView.getView(for: self.entity.uuid) as? DrawingStickerEntityView {
-                    mediaEditor.onFirstAdditionalDisplay = { [weak entityView] in
-                        entityView?.invalidateCameraPreviewView()
+                    entityView.snapshotCameraPreviewView()
+                    
+                    mediaEditor.setOnNextAdditionalDisplay { [weak entityView] in
+                        Queue.mainQueue().async {
+                            entityView?.invalidateCameraPreviewView()
+                        }
                     }
                  
                     let entity = self.entity
