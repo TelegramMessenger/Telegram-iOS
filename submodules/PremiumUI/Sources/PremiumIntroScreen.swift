@@ -245,6 +245,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .wallpapers:
+            if case .wallpapers = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -284,6 +290,7 @@ public enum PremiumSource: Equatable {
     case channelBoost(EnginePeer.Id)
     case nameColor
     case similarChannels
+    case wallpapers
     
     var identifier: String? {
         switch self {
@@ -361,6 +368,8 @@ public enum PremiumSource: Equatable {
             return "name_color"
         case .similarChannels:
             return "similar_channels"
+        case .wallpapers:
+            return "wallpapers"
         }
     }
 }

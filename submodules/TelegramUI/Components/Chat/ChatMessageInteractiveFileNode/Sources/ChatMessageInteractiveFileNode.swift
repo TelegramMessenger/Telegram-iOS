@@ -339,8 +339,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return
         }
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if !context.isPremium, case .inProgress = self.audioTranscriptionState {
+            return
+        }
         
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = self.forcedAudioTranscriptionText ?? transcribedText(message: message)

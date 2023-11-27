@@ -1080,6 +1080,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_VoiceToText_Proceed
                         case .wallpapers:
                             buttonText = strings.Premium_Wallpaper_Proceed
+                        case .colors:
+                            buttonText = strings.Premium_Colors_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }

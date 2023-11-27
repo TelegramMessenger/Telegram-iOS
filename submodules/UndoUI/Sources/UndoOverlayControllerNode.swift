@@ -963,7 +963,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-            
                 self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
                 self.animatedStickerNode = nil
             
@@ -1007,12 +1006,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
             case let .premiumPaywall(title, text, customUndoText, timeout, linkAction):
                 self.avatarNode = nil
-                self.iconNode = ASImageNode()
-                self.iconNode?.displayWithoutProcessing = true
-                self.iconNode?.displaysAsynchronously = false
-                self.iconNode?.image = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/PremiumIcon"), color: .white)
+                self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = nil
+                self.animationNode = AnimationNode(animation: "PremiumStar", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
             
                 if let title = title, text.isEmpty {

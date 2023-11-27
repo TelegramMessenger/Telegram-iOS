@@ -3,6 +3,7 @@ import UIKit
 import Display
 import SwiftSignalKit
 import AsyncDisplayKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -14,6 +15,7 @@ import AccountContext
 import PresentationDataUtils
 import AppBundle
 import GraphUI
+import StoryContainerScreen
 
 private final class MessageStatsControllerArguments {
     let context: AccountContext
@@ -275,10 +277,14 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     let anyStatsContext: Any
     let dataSignal: Signal<PostStats?, NoError>
     var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
+    var openStoryImpl: ((EngineStoryItem, UIView) -> Void)?
     
     var forwardsContext: StoryStatsPublicForwardsContext?
+    let peerId: EnginePeer.Id
+    var storyItem: EngineStoryItem?
     switch subject {
     case let .message(id):
+        peerId = id.peerId
         let statsContext = MessageStatsContext(account: context.account, messageId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
@@ -303,7 +309,10 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         messagesPromise.set(.single(nil) |> then(searchSignal))
         forwardsPromise.set(.single(nil))
-    case let .story(peerId, id, _, _):
+    case let .story(peerIdValue, id, item, _):
+        peerId = peerIdValue
+        storyItem = item
+        
         let statsContext = StoryStatsContext(account: context.account, peerId: peerId, storyId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
@@ -392,7 +401,11 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             storyViews = storyItem.views
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { [weak iconNode] in
+            if let iconNode, let storyItem {
+                openStoryImpl?(storyItem, iconNode.view)
+            }
+        }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, storyViews: storyViews, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -430,6 +443,66 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             if let navigationController = controller?.navigationController as? NavigationController {
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
             }
+        })
+    }
+    openStoryImpl = { [weak controller] story, sourceView in
+        let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: story.id), storyItem: story, readGlobally: false)
+        let _ = (storyContent.state
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak sourceView] _ in
+            guard let controller, let sourceView else {
+                return
+            }
+            let transitionIn = StoryContainerScreen.TransitionIn(
+                sourceView: sourceView,
+                sourceRect: sourceView.bounds,
+                sourceCornerRadius: sourceView.bounds.width * 0.5,
+                sourceIsAvatar: false
+            )
+        
+            let storyContainerScreen = StoryContainerScreen(
+                context: context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { [weak sourceView] peerId, storyIdValue in
+                    if let sourceView {
+                        let destinationView = sourceView
+                        return StoryContainerScreen.TransitionOut(
+                            destinationView: destinationView,
+                            transitionView: StoryContainerScreen.TransitionView(
+                                makeView: { [weak destinationView] in
+                                    let parentView = UIView()
+                                    if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                        parentView.addSubview(copyView)
+                                    }
+                                    return parentView
+                                },
+                                updateView: { copyView, state, transition in
+                                    guard let view = copyView.subviews.first else {
+                                        return
+                                    }
+                                    let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                    transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                    transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                },
+                                insertCloneTransitionView: nil
+                            ),
+                            destinationRect: destinationView.bounds,
+                            destinationCornerRadius: destinationView.bounds.width * 0.5,
+                            destinationIsAvatar: false,
+                            completed: { [weak sourceView] in
+                                guard let sourceView else {
+                                    return
+                                }
+                                sourceView.isHidden = false
+                            }
+                        )
+                    } else {
+                        return nil
+                    }
+                }
+            )
+            controller.push(storyContainerScreen)
         })
     }
     return controller
