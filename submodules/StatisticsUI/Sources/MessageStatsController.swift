@@ -21,11 +21,13 @@ private final class MessageStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openMessage: (EngineMessage.Id) -> Void
+    let openStory: (EnginePeer.Id, EngineStoryItem, UIView) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void, openStory: @escaping (EnginePeer.Id, EngineStoryItem, UIView) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessage = openMessage
+        self.openStory = openStory
     }
 }
 
@@ -47,7 +49,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case reactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Bool)
     
     case publicForwardsTitle(PresentationTheme, String)
-    case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EngineMessage)
+    case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsPostItem)
     
     var section: ItemListSectionId {
         switch self {
@@ -133,8 +135,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .publicForward(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsMessage):
-                if case let .publicForward(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsMessage.id == rhsMessage.id {
+            case let .publicForward(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsPost):
+                if case let .publicForward(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsPost) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsPost == rhsPost {
                     return true
                 } else {
                     return false
@@ -164,38 +166,44 @@ private enum StatsEntry: ItemListNodeEntry {
                         }
                     })
                 }, sectionId: self.section, style: .blocks)
-            case let .publicForward(_, _, _, _, message):
+            case let .publicForward(_, _, _, _, item):
                 var views: Int32 = 0
                 var forwards: Int32 = 0
                 var reactions: Int32 = 0
-                for attribute in message.attributes {
-                    if let viewsAttribute = attribute as? ViewCountMessageAttribute {
-                        views = Int32(viewsAttribute.count)
-                    } else if let forwardsAttribute = attribute as? ForwardCountMessageAttribute {
-                        forwards = Int32(forwardsAttribute.count)
-                    } else if let reactionsAttribute = attribute as? ReactionsMessageAttribute {
-                        reactions = reactionsAttribute.reactions.reduce(0, { partialResult, reaction in
-                            return partialResult + reaction.count
-                        })
+            
+                let peer: Peer
+                switch item {
+                case let .message(message):
+                    peer = message.peers[message.id.peerId]!
+                    for attribute in message.attributes {
+                        if let viewsAttribute = attribute as? ViewCountMessageAttribute {
+                            views = Int32(viewsAttribute.count)
+                        } else if let forwardsAttribute = attribute as? ForwardCountMessageAttribute {
+                            forwards = Int32(forwardsAttribute.count)
+                        } else if let reactionsAttribute = attribute as? ReactionsMessageAttribute {
+                            reactions = reactionsAttribute.reactions.reduce(0, { partialResult, reaction in
+                                return partialResult + reaction.count
+                            })
+                        }
                     }
+                case let .story(peerValue, story):
+                    peer = peerValue._asPeer()
+                    views = Int32(story.views?.seenCount ?? 0)
+                    forwards = Int32(story.views?.forwardCount ?? 0)
+                    reactions = Int32(story.views?.reactedCount ?? 0)
                 }
-                let peer = message.peers[message.id.peerId]!
-                return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: .message(message._asMessage()), views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
-                    arguments.openMessage(message.id)
-                }, openStory: { _ in }, contextAction: nil)
-//                var views: Int32 = 0
-//                for attribute in message.attributes {
-//                    if let viewsAttribute = attribute as? ViewCountMessageAttribute {
-//                        views = Int32(viewsAttribute.count)
-//                        break
-//                    }
-//                }
-//                
-//
-//                let text: String = presentationData.strings.Stats_MessageViews(views)
-//                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(message.peers[message.id.peerId]!), height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
-//                    arguments.openMessage(message.id)
-//                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
+                return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: item, views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
+                    switch item {
+                    case let .message(message):
+                        arguments.openMessage(message.id)
+                    case .story:
+                        break
+                    }
+                }, openStory: { view in
+                    if case let .story(peer, story) = item {
+                        arguments.openStory(peer.id, story, view)
+                    }
+                }, contextAction: nil)
         }
     }
 }
@@ -243,7 +251,7 @@ private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineS
             entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
             var index: Int32 = 0
             for message in messages.messages {
-                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, EngineMessage(message)))
+                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .message(message)))
                 index += 1
             }
         }
@@ -254,9 +262,9 @@ private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineS
             for forward in forwards.forwards {
                 switch forward {
                 case let .message(message):
-                    entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, message))
-                case let .story(story):
-                    let _ = story
+                    entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .message(message._asMessage())))
+                case let .story(peer, story):
+                    entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .story(peer, story)))
                 }
                 index += 1
             }
@@ -296,7 +304,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     let anyStatsContext: Any
     let dataSignal: Signal<PostStats?, NoError>
     var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
-    var openStoryImpl: ((EngineStoryItem, UIView) -> Void)?
+    var openStoryImpl: ((EnginePeer.Id, EngineStoryItem, UIView) -> Void)?
     
     var forwardsContext: StoryStatsPublicForwardsContext?
     let peerId: EnginePeer.Id
@@ -363,6 +371,8 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         return loadDetailedGraphImpl?(graph, x) ?? .single(nil)
     }, openMessage: { messageId in
         navigateToMessageImpl?(messageId)
+    }, openStory: { peerId, story, view in
+        openStoryImpl?(peerId, story, view)
     })
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
@@ -422,7 +432,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { [weak iconNode] in
             if let iconNode, let storyItem {
-                openStoryImpl?(storyItem, iconNode.view)
+                openStoryImpl?(peerId, storyItem, iconNode.view)
             }
         }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, storyViews: storyViews, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
@@ -464,7 +474,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             }
         })
     }
-    openStoryImpl = { [weak controller] story, sourceView in
+    openStoryImpl = { [weak controller] peerId, story, sourceView in
         let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: story.id), storyItem: story, readGlobally: false)
         let _ = (storyContent.state
         |> take(1)

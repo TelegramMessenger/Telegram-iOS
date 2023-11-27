@@ -116,7 +116,9 @@ final class StoryAuthorInfoComponent: Component {
                 let timeString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp, short: true)
                 let combinedString = NSMutableAttributedString()
                 combinedString.append(NSAttributedString(string: authorName, font: Font.medium(11.0), textColor: titleColor))
-                combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
+                if timeString.count < 6 {
+                    combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
+                }
                 subtitle = combinedString
                 subtitleTruncationType = .middle
             } else {

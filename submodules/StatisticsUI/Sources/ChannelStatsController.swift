@@ -87,8 +87,8 @@ enum StatsPostItem: Equatable {
             } else {
                 return false
             }
-        case let .story(lhsStory):
-            if case let .story(rhsStory) = rhs, lhsStory == rhsStory {
+        case let .story(lhsPeer, lhsStory):
+            if case let .story(rhsPeer, rhsStory) = rhs, lhsPeer == rhsPeer, lhsStory == rhsStory {
                 return true
             } else {
                 return false
@@ -97,7 +97,7 @@ enum StatsPostItem: Equatable {
     }
     
     case message(Message)
-    case story(EngineStoryItem)
+    case story(EnginePeer, EngineStoryItem)
     
     var isStory: Bool {
         if case .story = self {
@@ -111,7 +111,7 @@ enum StatsPostItem: Equatable {
         switch self {
         case let .message(message):
             return message.timestamp
-        case let .story(story):
+        case let .story(_, story):
             return story.timestamp
         }
     }
@@ -656,7 +656,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: post, views: interactions.views, reactions: interactions.reactions, forwards: interactions.forwards, sectionId: self.section, style: .blocks, action: {
                     arguments.openPostStats(EnginePeer(peer), post)
                 }, openStory: { sourceView in
-                    if case let .story(story) = post {
+                    if case let .story(_, story) = post {
                         arguments.openStory(story, sourceView)
                     }
                 }, contextAction: !post.isStory ? { node, gesture in
@@ -908,7 +908,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 if let stories {
                     for story in stories.items {
                         if let _ = interactions[.story(peerId: peer.id, id: story.id)] {
-                            posts.append(.story(story))
+                            posts.append(.story(peer, story))
                         }
                     }
                 }
@@ -923,7 +923,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                             if let interactions = interactions[.message(id: message.id)] {
                                 entries.append(.post(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), post, interactions))
                             }
-                        case let .story(story):
+                        case let .story(_, story):
                             if let interactions = interactions[.story(peerId: peer.id, id: story.id)] {
                                 entries.append(.post(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), post, interactions))
                             }
@@ -1313,7 +1313,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         switch post {
         case let .message(message):
             subject = .message(id: message.id)
-        case let .story(story):
+        case let .story(_, story):
             subject = .story(peerId: peerId, id: story.id, item: story, fromStory: false)
         }
         controller?.push(messageStatsController(context: context, subject: subject))

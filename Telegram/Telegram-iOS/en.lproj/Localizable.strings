@@ -10554,3 +10554,6 @@ Sorry for the inconvenience.";
 "Chat.ChannelRecommendation.PremiumTooltip" = "Subcribe to [Telegram Premium]() to unlock up to **100** channels.";
 
 "Story.ForwardAuthorHiddenTooltip" = "The account was hidden by the user";
+
+"Premium.Limits.RecommendedChannels" = "Similar Channels";
+"Premium.Limits.RecommendedChannelsInfo" = "View up to 100 similar channels.";

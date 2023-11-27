@@ -198,29 +198,32 @@ private enum Limit: CaseIterable {
     case folders
     case chatsPerFolder
     case account
+    case recommendedChannels
     
     func title(strings: PresentationStrings) -> String {
         switch self {
-            case .groups:
-                return strings.Premium_Limits_GroupsAndChannels
-            case .pins:
-                return strings.Premium_Limits_PinnedChats
-            case .publicLinks:
-                return strings.Premium_Limits_PublicLinks
-            case .savedGifs:
-                return strings.Premium_Limits_SavedGifs
-            case .favedStickers:
-                return strings.Premium_Limits_FavedStickers
-            case .about:
-                return strings.Premium_Limits_Bio
-            case .captions:
-                return strings.Premium_Limits_Captions
-            case .folders:
-                return strings.Premium_Limits_Folders
-            case .chatsPerFolder:
-                return strings.Premium_Limits_ChatsPerFolder
-            case .account:
-                return strings.Premium_Limits_Accounts
+        case .groups:
+            return strings.Premium_Limits_GroupsAndChannels
+        case .pins:
+            return strings.Premium_Limits_PinnedChats
+        case .publicLinks:
+            return strings.Premium_Limits_PublicLinks
+        case .savedGifs:
+            return strings.Premium_Limits_SavedGifs
+        case .favedStickers:
+            return strings.Premium_Limits_FavedStickers
+        case .about:
+            return strings.Premium_Limits_Bio
+        case .captions:
+            return strings.Premium_Limits_Captions
+        case .folders:
+            return strings.Premium_Limits_Folders
+        case .chatsPerFolder:
+            return strings.Premium_Limits_ChatsPerFolder
+        case .account:
+            return strings.Premium_Limits_Accounts
+        case .recommendedChannels:
+            return strings.Premium_Limits_RecommendedChannels
         }
     }
     
@@ -246,6 +249,8 @@ private enum Limit: CaseIterable {
                 return strings.Premium_Limits_ChatsPerFolderInfo
             case .account:
                 return strings.Premium_Limits_AccountsInfo
+            case .recommendedChannels:
+                return strings.Premium_Limits_RecommendedChannelsInfo
         }
     }
     
@@ -272,6 +277,8 @@ private enum Limit: CaseIterable {
                 value = configuration.maxFolderChatsCount
             case .account:
                 value = isPremium ? 4 : 3
+            case .recommendedChannels:
+                value = configuration.maxChannelRecommendationsCount
         }
         return "\(value)"
     }
@@ -360,7 +367,8 @@ private final class LimitsListComponent: CombinedComponent {
                 UIColor(rgb: 0xdb5887),
                 UIColor(rgb: 0xdb496f),
                 UIColor(rgb: 0xe95d44),
-                UIColor(rgb: 0xf2822a)
+                UIColor(rgb: 0xf2822a),
+                UIColor(rgb: 0xfdb529)
             ]
             
             let items: [AnyComponentWithIdentity<Empty>] = Limit.allCases.enumerated().map { index, value in
