@@ -418,7 +418,7 @@ public final class EmojiStatusComponent: Component {
                     if transition.animation.isImmediate {
                         iconView.tintColor = iconTintColor
                     } else {
-                        transition.setTintColor(layer: iconView.layer, color: iconTintColor)
+                        transition.setTintColor(view: iconView, color: iconTintColor)
                     }
                 } else {
                     iconView.tintColor = nil

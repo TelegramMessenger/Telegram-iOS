@@ -1158,7 +1158,33 @@ private func addAttachment(attachment: UIImage, line: TextNodeLine, ascent: CGFl
 }
 
 open class TextNode: ASDisplayNode {
+    public struct RenderContentTypes: OptionSet {
+        public var rawValue: Int
+        
+        public init(rawValue: Int) {
+            self.rawValue = rawValue
+        }
+        
+        public static let text = RenderContentTypes(rawValue: 1 << 0)
+        public static let emoji = RenderContentTypes(rawValue: 1 << 1)
+        
+        public static let all: RenderContentTypes = [.text, .emoji]
+    }
+    
+    private final class DrawingParameters: NSObject {
+        let cachedLayout: TextNodeLayout?
+        let renderContentTypes: RenderContentTypes
+        
+        init(cachedLayout: TextNodeLayout?, renderContentTypes: RenderContentTypes) {
+            self.cachedLayout = cachedLayout
+            self.renderContentTypes = renderContentTypes
+            
+            super.init()
+        }
+    }
+    
     public internal(set) var cachedLayout: TextNodeLayout?
+    public var renderContentTypes: RenderContentTypes = .all
     
     override public init() {
         super.init()
@@ -2169,7 +2195,7 @@ open class TextNode: ASDisplayNode {
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return self.cachedLayout
+        return DrawingParameters(cachedLayout: self.cachedLayout, renderContentTypes: self.renderContentTypes)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -2192,8 +2218,13 @@ open class TextNode: ASDisplayNode {
         
         var blendMode: CGBlendMode = .normal
         
+        var renderContentTypes: RenderContentTypes = .all
+        if let parameters = parameters as? DrawingParameters {
+            renderContentTypes = parameters.renderContentTypes
+        }
+        
         var clearRects: [CGRect] = []
-        if let layout = parameters as? TextNodeLayout {
+        if let layout = (parameters as? DrawingParameters)?.cachedLayout {
             if !isRasterizing || layout.backgroundColor != nil {
                 context.setBlendMode(.copy)
                 blendMode = .copy
@@ -2407,6 +2438,18 @@ open class TextNode: ASDisplayNode {
                         let attributes = CTRunGetAttributes(run) as NSDictionary
                         if attributes["Attribute__EmbeddedItem"] != nil {
                             continue
+                        }
+                        
+                        if renderContentTypes != .all {
+                            if let font = attributes["NSFont"] as? UIFont, font.fontName.contains("ColorEmoji") {
+                                if !renderContentTypes.contains(.emoji) {
+                                    continue
+                                }
+                            } else {
+                                if !renderContentTypes.contains(.text) {
+                                    continue
+                                }
+                            }
                         }
                         
                         var fixDoubleEmoji = false

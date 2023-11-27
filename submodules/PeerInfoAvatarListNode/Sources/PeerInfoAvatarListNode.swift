@@ -662,6 +662,7 @@ public final class AvatarListContentNode: ASDisplayNode {
             
             if value {
                 replicatorLayer.instanceAlphaOffset = -1.0
+                replicatorLayer.animate(from: 0.0 as NSNumber, to: -1.0 as NSNumber, keyPath: "instanceAlphaOffset", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
             } else {
                 replicatorLayer.instanceAlphaOffset = 0.0
                 replicatorLayer.animate(from: -1.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "instanceAlphaOffset", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
