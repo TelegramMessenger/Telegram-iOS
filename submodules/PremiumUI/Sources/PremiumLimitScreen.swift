@@ -1193,9 +1193,8 @@ private final class LimitSheetContent: CombinedComponent {
                             titleText = strings.ChannelBoost_EnableColors
                             string = strings.ChannelBoost_EnableColorsLevelText("\(premiumConfiguration.minChannelNameColorLevel)").string
                         case let .channelReactions(reactionCount):
-                            //TODO:localize
-                            titleText = "Custom Reactions"
-                            string = "Your channel needs to reach **Level \(reactionCount)** to add **\(reactionCount)** custom emoji as reactions.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                            titleText = strings.ChannelBoost_CustomReactions
+                            string = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
                         }
                     } else {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level)

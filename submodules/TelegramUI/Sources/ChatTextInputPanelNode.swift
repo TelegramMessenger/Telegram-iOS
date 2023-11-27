@@ -1774,11 +1774,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                             }
                         } else if let channel = peer as? TelegramChannel, channel.isForum, let forumTopicData = interfaceState.forumTopicData {
                             if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
-                                //TODO:localize
-                                placeholder = "Reply in \(threadInfo.title)"
+                                placeholder = interfaceState.strings.Chat_InputPlaceholderReplyInTopic(threadInfo.title).string
                             } else {
-                                //TODO:localize
-                                placeholder = "Message in \(forumTopicData.title)"
+                                placeholder = interfaceState.strings.Chat_InputPlaceholderMessageInTopic(forumTopicData.title).string
                             }
                         } else {
                             placeholder = interfaceState.strings.Conversation_InputTextPlaceholder

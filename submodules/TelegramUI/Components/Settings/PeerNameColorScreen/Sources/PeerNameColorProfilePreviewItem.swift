@@ -247,8 +247,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                     titleView.frame = titleFrame
                 }
                 
-                //TODO:localize
-                let subtitleString: String = "last seen just now"
+                let subtitleString: String = item.strings.LastSeen_JustNow
                 let subtitleSize = self.subtitle.update(
                     transition: .immediate,
                     component: AnyComponent(Text(

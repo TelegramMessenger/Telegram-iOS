@@ -51,8 +51,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelTopicClosedText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case .peer = interfaceState.chatLocation {
             if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
-                //TODO:localize
-                self.textNode.attributedText = NSAttributedString(string: "Topic \"\(threadInfo.title)\" is closed", font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_TopicIsClosedLabel(threadInfo.title).string, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             } else {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelForumModeReplyText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             }

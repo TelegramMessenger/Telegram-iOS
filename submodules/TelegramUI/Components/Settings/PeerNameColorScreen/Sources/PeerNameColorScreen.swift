@@ -218,8 +218,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
                 sectionId: self.section
             )
         case .removeColor:
-            //TODO:localize
-            return ItemListActionItem(presentationData: presentationData, title: "Reset Profile Color", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListActionItem(presentationData: presentationData, title: presentationData.strings.ProfileColorSetup_ResetAction, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.resetColor()
             })
         case let .colorDescription(text):
@@ -390,15 +389,13 @@ private func peerNameColorScreenEntries(
                 }
                 let emojiContent = emojiContent.withSelectedItems(selectedItems).withCustomTintColor(profileColors?.main ?? presentationData.theme.list.itemSecondaryTextColor)
                 
-                //TODO:localize
-                entries.append(.backgroundEmojiHeader("ADD ICON TO PROFILE", (selectedProfileEmojiId != nil && selectedProfileEmojiId != 0) ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
+                entries.append(.backgroundEmojiHeader(presentationData.strings.ProfileColorSetup_IconSectionTitle, (selectedProfileEmojiId != nil && selectedProfileEmojiId != 0) ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
                 entries.append(.backgroundEmoji(emojiContent, profileColors?.main ?? presentationData.theme.list.itemSecondaryTextColor, true, profileColor != nil))
             } else {
-                //TODO:localize
                 if case .channel = peer {
-                    entries.append(.colorDescription("Choose a color for channel's profile"))
+                    entries.append(.colorDescription(presentationData.strings.ProfileColorSetup_ChannelColorInfoLabel))
                 } else {
-                    entries.append(.colorDescription("Choose a color for your profile"))
+                    entries.append(.colorDescription(presentationData.strings.ProfileColorSetup_AccountColorInfoLabel))
                 }
             }
         }
@@ -701,10 +698,9 @@ public func PeerNameColorScreen(
         
         let title: ItemListControllerTitle
         if case .user = peer {
-            //TODO:localize
-            title = .sectionControl(["Name", "Profile"], state.selectedTabIndex)
+            title = .sectionControl([presentationData.strings.ProfileColorSetup_TitleName, presentationData.strings.ProfileColorSetup_TitleProfile], state.selectedTabIndex)
         } else {
-            title = .text("Set Channel Color")
+            title = .text(presentationData.strings.ProfileColorSetup_TitleChannelColor)
         }
         
         let controllerState = ItemListControllerState(
@@ -861,8 +857,7 @@ public func PeerNameColorScreen(
 
                             let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colorList)
                             
-                            //TODO:localize
-                            let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: colorImage, title: nil, text: "Your color has been updated.", round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                            let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: colorImage, title: nil, text: presentationData.strings.ProfileColorSetup_ToastAccountColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
                             lastController.present(tipController, in: .window(.root))
                         }
                     }

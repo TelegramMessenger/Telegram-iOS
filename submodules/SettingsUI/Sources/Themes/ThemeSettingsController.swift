@@ -408,8 +408,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     
     let colors = nameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
     let profileColors = profileColor.flatMap { nameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }
-    //TODO:localize
-    entries.append(.nameColor(presentationData.theme, "Your Color", accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
+    entries.append(.nameColor(presentationData.theme, presentationData.strings.Settings_YourColor, accountPeer?.compactDisplayTitle ?? "", colors, profileColors))
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String
