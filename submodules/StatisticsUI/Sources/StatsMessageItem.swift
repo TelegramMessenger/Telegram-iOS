@@ -328,7 +328,11 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 }
             }
             
-            text = foldLineBreaks(text)
+            if item.isPeer {
+                text = EnginePeer(item.peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+            } else {
+                text = foldLineBreaks(text)
+            }
             
             if let _ = contentImageMedia {
                 totalLeftInset += 46.0
@@ -542,7 +546,8 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                     let labelFrame = CGRect(origin: CGPoint(x: totalLeftInset, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
                     strongSelf.labelNode.frame = labelFrame
                     
-                    let viewsFrame = CGRect(origin: CGPoint(x: params.width - rightInset - viewsLayout.size.width, y: 13.0), size: viewsLayout.size)
+                    let viewsOriginY: CGFloat = forwardsLayout.size.width > 0.0 || reactionsLayout.size.width > 0.0 ? 13.0 : floorToScreenPixels((contentSize.height - viewsLayout.size.height) / 2.0)
+                    let viewsFrame = CGRect(origin: CGPoint(x: params.width - rightInset - viewsLayout.size.width, y: viewsOriginY), size: viewsLayout.size)
                     strongSelf.viewsNode.frame = viewsFrame
                     
                     let iconSpacing: CGFloat = 3.0 - UIScreenPixel
