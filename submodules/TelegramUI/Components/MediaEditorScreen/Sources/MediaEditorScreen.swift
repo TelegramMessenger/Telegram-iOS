@@ -3450,7 +3450,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             var items: [ContextMenuItem] = []
             items.append(
-                .custom(VolumeSliderContextItem(minValue: 0.0, value: value, valueChanged: { [weak self] value, _ in
+                .custom(VolumeSliderContextItem(minValue: 0.0, maxValue: 1.5, value: value, valueChanged: { [weak self] value, _ in
                     if let self, let mediaEditor = self.mediaEditor {
                         if trackId == 0 {
                             if mediaEditor.values.videoIsMuted {

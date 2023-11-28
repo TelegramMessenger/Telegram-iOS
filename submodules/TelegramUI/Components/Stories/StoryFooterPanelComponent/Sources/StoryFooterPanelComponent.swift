@@ -126,7 +126,8 @@ public final class StoryFooterPanelComponent: Component {
         private var likeStatsText: AnimatedCountLabelView?
         private var forwardButton: ComponentView<Empty>?
         private var repostButton: ComponentView<Empty>?
-
+        private var forwardStatsText: AnimatedCountLabelView?
+        
         private var reactionStatsIcon: UIImageView?
         private var reactionStatsText: AnimatedCountLabelView?
         
@@ -368,11 +369,11 @@ public final class StoryFooterPanelComponent: Component {
             
             var viewCount = 0
             var reactionCount = 0
-            var repostCount = 0
+            var forwardCount = 0
             if let views = component.externalViews ?? component.storyItem.views, views.seenCount != 0 {
                 viewCount = views.seenCount
                 reactionCount = views.reactedCount
-                repostCount = 0
+                forwardCount = views.forwardCount
             }
             
             if component.isChannel {
@@ -388,9 +389,11 @@ public final class StoryFooterPanelComponent: Component {
             
             if component.isChannel {
                 var likeStatsTransition = transition
+                var forwardStatsTransition = transition
                 
                 if transition.animation.isImmediate, !isFirstTime, let previousComponent, previousComponent.storyItem.id == component.storyItem.id, previousComponent.expandFraction == component.expandFraction {
                     likeStatsTransition = .easeInOut(duration: 0.2)
+                    forwardStatsTransition = .easeInOut(duration: 0.2)
                 }
                 
                 let likeStatsText: AnimatedCountLabelView
@@ -491,6 +494,40 @@ public final class StoryFooterPanelComponent: Component {
                 }
                 
                 if component.canShare {
+                    let forwardStatsText: AnimatedCountLabelView
+                    if let current = self.forwardStatsText {
+                        forwardStatsText = current
+                    } else {
+                        forwardStatsTransition = forwardStatsTransition.withAnimation(.none)
+                        forwardStatsText = AnimatedCountLabelView(frame: CGRect())
+                        forwardStatsText.isUserInteractionEnabled = false
+                        self.forwardStatsText = forwardStatsText
+                        self.externalContainerView.addSubview(forwardStatsText)
+                    }
+                    
+                    let forwardStatsLayout = forwardStatsText.update(
+                        size: CGSize(width: availableSize.width, height: size.height),
+                        segments: [
+                            .number(forwardCount, NSAttributedString(string: "\(forwardCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white))
+                        ],
+                        transition: (isFirstTime || likeStatsTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
+                    )
+                    var forwardStatsFrame = CGRect(origin: CGPoint(x: rightContentOffset - forwardStatsLayout.size.width, y: floor((size.height - forwardStatsLayout.size.height) * 0.5)), size: forwardStatsLayout.size)
+                    forwardStatsFrame.origin.y += component.expandFraction * 45.0
+                    
+                    forwardStatsTransition.setPosition(view: forwardStatsText, position: forwardStatsFrame.center)
+                    forwardStatsTransition.setBounds(view: forwardStatsText, bounds: CGRect(origin: CGPoint(), size: forwardStatsFrame.size))
+                    var forwardStatsAlpha: CGFloat = (1.0 - component.expandFraction)
+                    if forwardCount == 0 {
+                        forwardStatsAlpha = 0.0
+                    }
+                    forwardStatsTransition.setAlpha(view: forwardStatsText, alpha: forwardStatsAlpha)
+                    forwardStatsTransition.setScale(view: forwardStatsText, scale: forwardCount == 0 ? 0.001 : 1.0)
+                    
+                    if forwardCount != 0 {
+                        rightContentOffset -= forwardStatsLayout.size.width + 1.0
+                    }
+                    
                     let repostButton: ComponentView<Empty>
                     if let current = self.repostButton {
                         repostButton = current
@@ -720,7 +757,7 @@ public final class StoryFooterPanelComponent: Component {
                 }
             }
             
-            if repostCount != 0 && !component.isChannel {
+            if forwardCount != 0 && !component.isChannel {
                 var repostTransition = transition
                 let repostStatsIcon: UIImageView
                 if let current = self.repostStatsIcon {
@@ -749,7 +786,7 @@ public final class StoryFooterPanelComponent: Component {
                 let repostStatsLayout = repostStatsText.update(
                     size: CGSize(width: availableSize.width, height: size.height),
                     segments: [
-                        .number(repostCount, NSAttributedString(string: "\(repostCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white))
+                        .number(forwardCount, NSAttributedString(string: "\(forwardCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white))
                     ],
                     reducedLetterSpacing: true,
                     transition: (isFirstTime || repostTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
