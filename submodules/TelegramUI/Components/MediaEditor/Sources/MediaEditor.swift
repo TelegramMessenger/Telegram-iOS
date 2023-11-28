@@ -907,7 +907,14 @@ public final class MediaEditor {
             return values.withUpdatedVideoVolume(volume)
         }
         
-        if let audioMix = self.playerAudioMix, let asset = self.player?.currentItem?.asset {
+        let audioMix: AVMutableAudioMix
+        if let current = self.playerAudioMix {
+            audioMix = current
+        } else {
+            audioMix = AVMutableAudioMix()
+            self.playerAudioMix = audioMix
+        }
+        if let asset = self.player?.currentItem?.asset {
             let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
             audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
             audioMix.inputParameters = [audioMixInputParameters]

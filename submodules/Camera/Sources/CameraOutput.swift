@@ -381,7 +381,7 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
             self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
         } else {
-            self.processAudioBuffer?(sampleBuffer)
+//            self.processAudioBuffer?(sampleBuffer)
         }
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
