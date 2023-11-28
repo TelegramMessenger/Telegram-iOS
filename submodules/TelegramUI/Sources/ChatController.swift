@@ -1607,6 +1607,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
+                    if !strongSelf.presentationInterfaceState.isPremium && mappedUpdatedReactions.count > strongSelf.context.userLimits.maxReactionsPerMessage {
+                        let _ = (ApplicationSpecificNotice.incrementMultipleReactionsSuggestion(accountManager: strongSelf.context.sharedContext.accountManager)
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] count in
+                            guard let self else {
+                                return
+                            }
+                            if count < 1 {
+                                let context = self.context
+                                let controller = UndoOverlayController(
+                                    presentationData: self.presentationData,
+                                    content: .premiumPaywall(title: nil, text: self.presentationData.strings.Chat_Reactions_MultiplePremiumTooltip, customUndoText: nil, timeout: nil, linkAction: nil),
+                                    elevatedLayout: false,
+                                    action: { [weak self] action in
+                                        if case .info = action {
+                                            if let self {
+                                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .reactions, forceDark: false, dismissed: nil)
+                                                self.push(controller)
+                                            }
+                                        }
+                                        return true
+                                    }
+                                )
+                                self.present(controller, in: .current)
+                            }
+                        })
+                    }
+                    
                     let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
                 }
             })
