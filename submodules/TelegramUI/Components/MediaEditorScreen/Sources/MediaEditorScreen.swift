@@ -4161,7 +4161,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.adminedChannels.set(.single([]) |> then(self.context.engine.peers.channelsForStories()))
             self.closeFriends.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends()))
             
-            if let _ = self.forwardSource {
+            if self.forwardSource != nil || self.isEditingStory {
                 self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
                     if #available(iOS 13.0, *) {
                         try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)

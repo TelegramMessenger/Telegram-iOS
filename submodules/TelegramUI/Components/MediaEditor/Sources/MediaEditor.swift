@@ -1149,6 +1149,17 @@ public final class MediaEditor {
         self.setRate(0.0)
     }
     
+    public var mainFramerate: Float? {
+        if let player = self.player, let asset = player.currentItem?.asset, let track = asset.tracks(withMediaType: .video).first {
+            if track.nominalFrameRate > 0.0 {
+                return track.nominalFrameRate
+            } else if track.minFrameDuration.seconds > 0.0 {
+                return Float(1.0 / track.minFrameDuration.seconds)
+            }
+        }
+        return nil
+    }
+    
     private func setRate(_ rate: Float) {
         let hostTime: UInt64 = mach_absolute_time()
         let time: TimeInterval = 0

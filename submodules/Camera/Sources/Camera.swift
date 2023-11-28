@@ -57,7 +57,7 @@ final class CameraDeviceContext {
         self.output = CameraOutput(exclusive: exclusive)
     }
     
-    func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false) {
+    func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false, preferLowerFramerate: Bool = false) {
         guard let session = self.session else {
             return
         }
@@ -65,7 +65,7 @@ final class CameraDeviceContext {
         self.previewView = previewView
         
         self.device.configure(for: session, position: position, dual: !exclusive || additional)
-        self.device.configureDeviceFormat(maxDimensions: self.maxDimensions(additional: self.additional, preferWide: preferWide), maxFramerate: self.preferredMaxFrameRate)
+        self.device.configureDeviceFormat(maxDimensions: self.maxDimensions(additional: self.additional, preferWide: preferWide), maxFramerate: self.preferredMaxFrameRate(useLower: preferLowerFramerate))
         self.input.configure(for: session, device: self.device, audio: audio)
         self.output.configure(for: session, device: self.device, input: self.input, previewView: previewView, audio: audio, photo: photo, metadata: metadata)
         
@@ -90,8 +90,11 @@ final class CameraDeviceContext {
         }
     }
     
-    private var preferredMaxFrameRate: Double {
+    private func preferredMaxFrameRate(useLower: Bool) -> Double {
         if !self.exclusive {
+            return 30.0
+        }
+        if useLower {
             return 30.0
         }
         switch DeviceModel.current {
@@ -257,7 +260,7 @@ private final class CameraContext {
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
-                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide)
+                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide, preferLowerFramerate: self.initialConfiguration.preferLowerFramerate)
                 
                 self.queue.after(0.5) {
                     self.modeChange = .none
@@ -341,7 +344,7 @@ private final class CameraContext {
                 self.additionalDeviceContext = nil
                 
                 self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false)
-                self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide)
+                self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide, preferLowerFramerate: self.initialConfiguration.preferLowerFramerate)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self, let mainDeviceContext = self.mainDeviceContext else {
@@ -613,19 +616,19 @@ public final class Camera {
         let audio: Bool
         let photo: Bool
         let metadata: Bool
-        let preferredFps: Double
         let preferWide: Bool
+        let preferLowerFramerate: Bool
         let reportAudioLevel: Bool
         
-        public init(preset: Preset, position: Position, isDualEnabled: Bool = false, audio: Bool, photo: Bool, metadata: Bool, preferredFps: Double, preferWide: Bool = false, reportAudioLevel: Bool = false) {
+        public init(preset: Preset, position: Position, isDualEnabled: Bool = false, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false, preferLowerFramerate: Bool = false, reportAudioLevel: Bool = false) {
             self.preset = preset
             self.position = position
             self.isDualEnabled = isDualEnabled
             self.audio = audio
             self.photo = photo
             self.metadata = metadata
-            self.preferredFps = preferredFps
             self.preferWide = preferWide
+            self.preferLowerFramerate = preferLowerFramerate
             self.reportAudioLevel = reportAudioLevel
         }
     }
@@ -637,7 +640,7 @@ public final class Camera {
     
     public let metrics: Camera.Metrics
     
-    public init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: false, metadata: false, preferredFps: 60.0), previewView: CameraSimplePreviewView? = nil, secondaryPreviewView: CameraSimplePreviewView? = nil) {
+    public init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: false, metadata: false), previewView: CameraSimplePreviewView? = nil, secondaryPreviewView: CameraSimplePreviewView? = nil) {
         Logger.shared.log("Camera", "Init")
         
         self.metrics = Camera.Metrics(model: DeviceModel.current)
