@@ -10465,6 +10465,12 @@ Sorry for the inconvenience.";
 
 "Channel.Info.Stats" = "Statistics and Boosts";
 
+"BoostGift.StartConfirmation.Title" = "Start Giveaway";
+"BoostGift.StartConfirmation.Text" = "Are you sure you want to start giveaway now?";
+"BoostGift.StartConfirmation.Start" = "Start";
+
+"Channel.Info.Stats" = "Statistics and Boosts";
+
 "Conversation.FreeTranscriptionLimitTooltip_1" = "You have **%@** free voice transcription left this week.";
 "Conversation.FreeTranscriptionLimitTooltip_any" = "You have **%@** free voice transcriptions left this week.";
 
