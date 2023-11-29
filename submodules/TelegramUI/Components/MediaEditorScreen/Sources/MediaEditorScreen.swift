@@ -1968,6 +1968,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var availableReactions: [ReactionItem] = []
         private var availableReactionsDisposable: Disposable?
         
+        private var panGestureRecognizer: UIPanGestureRecognizer?
         private var dismissPanGestureRecognizer: UIPanGestureRecognizer?
         
         private var isDisplayingTool = false
@@ -2374,6 +2375,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             panGestureRecognizer.minimumNumberOfTouches = 1
             panGestureRecognizer.maximumNumberOfTouches = 2
             self.view.addGestureRecognizer(panGestureRecognizer)
+            self.panGestureRecognizer = panGestureRecognizer
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
             pinchGestureRecognizer.delegate = self
@@ -2526,6 +2528,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if gestureRecognizer === self.dismissPanGestureRecognizer {
                 let location = gestureRecognizer.location(in: self.entitiesView)
                 if self.controller?.isEmbeddedEditor == true || self.isDisplayingTool || self.entitiesView.hasSelection || self.entitiesView.getView(at: location) != nil {
+                    return false
+                }
+                return true
+            } else if gestureRecognizer === self.panGestureRecognizer {
+                let location = gestureRecognizer.location(in: self.view)
+                if location.x > self.view.frame.width - 44.0 && location.y > self.view.frame.height - 180.0 {
                     return false
                 }
                 return true
