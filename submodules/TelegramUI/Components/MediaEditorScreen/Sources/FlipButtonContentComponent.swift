@@ -4,16 +4,29 @@ import Display
 import ComponentFlow
 
 final class FlipButtonContentComponent: Component {
-    init() {
-
+    let tag: AnyObject?
+    
+    init(
+        tag: AnyObject?
+    ) {
+        self.tag = tag
     }
     
     static func ==(lhs: FlipButtonContentComponent, rhs: FlipButtonContentComponent) -> Bool {
         return lhs === rhs
     }
     
-    final class View: UIView {
+    final class View: UIView, ComponentTaggedView {
         private var component: FlipButtonContentComponent?
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
         
         private let backgroundView: BlurredBackgroundView
         private let icon = SimpleLayer()

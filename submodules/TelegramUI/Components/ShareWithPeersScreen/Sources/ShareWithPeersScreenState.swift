@@ -335,6 +335,9 @@ public extension ShareWithPeersScreen {
                     var peers: [EnginePeer] = []
                     peers = chatList.items.filter { peer in
                         if let peer = peer.renderedPeer.peer {
+                            if case .secretChat = peer {
+                                return false
+                            }
                             if self.initialPeerIds.contains(peer.id) {
                                 return false
                             }
@@ -478,7 +481,9 @@ public extension ShareWithPeersScreen {
                                                             
                     let state = State(
                         peers: peers.compactMap { $0.peer }.filter { peer in
-                            if case let .user(user) = peer {
+                            if case .secretChat = peer {
+                                return false
+                            } else if case let .user(user) = peer {
                                 if user.id == context.account.peerId {
                                     return false
                                 } else if user.botInfo != nil {

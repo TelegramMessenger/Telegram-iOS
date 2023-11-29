@@ -42,6 +42,7 @@ import ForwardInfoPanelComponent
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
 private let saveButtonTag = GenericComponentViewTag()
+private let switchCameraButtonTag = GenericComponentViewTag()
 
 final class MediaEditorScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -1736,11 +1737,15 @@ final class MediaEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(
-                        FlipButtonContentComponent()
+                        FlipButtonContentComponent(tag: switchCameraButtonTag)
                     ),
                     action: { [weak self] in
                         if let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen {
                             controller.node.recording.togglePosition()
+                            
+                            if let view = self.switchCameraButton.findTaggedView(tag: switchCameraButtonTag) as? FlipButtonContentComponent.View {
+                                view.playAnimation()
+                            }
                         }
                     }
                 ).withIsExclusive(false)),
