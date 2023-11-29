@@ -2373,7 +2373,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             panGestureRecognizer.delegate = self
             panGestureRecognizer.minimumNumberOfTouches = 1
             panGestureRecognizer.maximumNumberOfTouches = 2
-            self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
+            self.view.addGestureRecognizer(panGestureRecognizer)
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
             pinchGestureRecognizer.delegate = self
@@ -2411,8 +2411,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 },
                 updateColor: { [weak self] color in
                     if let self, let selectedEntityView = self.entitiesView.selectedEntityView {
-                        selectedEntityView.entity.color = color
-                        selectedEntityView.update(animated: false)
+                        let selectedEntity = selectedEntityView.entity
+                        if let textEntity = selectedEntity as? DrawingTextEntity, let textEntityView = selectedEntityView as? DrawingTextEntityView, textEntityView.isEditing {
+                            textEntity.setColor(color, range: textEntityView.selectedRange)
+                            textEntityView.update(animated: false, keepSelectedRange: true)
+                        } else {
+                            selectedEntity.color = color
+                            selectedEntityView.update(animated: false)
+                        }
                     }
                 },
                 onInteractionUpdated: { [weak self] isInteracting in

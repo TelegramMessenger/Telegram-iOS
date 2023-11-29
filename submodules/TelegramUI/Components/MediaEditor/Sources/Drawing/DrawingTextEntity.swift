@@ -96,6 +96,10 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         return isAnimated
     }
     
+    public struct TextAttributes {
+        public static let color = NSAttributedString.Key(rawValue: "Attribute__Color")
+    }
+    
     public var text: NSAttributedString
     public var style: Style
     public var animation: Animation
@@ -305,5 +309,35 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
             return false
         }
         return true
+    }
+}
+
+public extension DrawingTextEntity {
+    func setColor(_ color: DrawingColor, range: NSRange) {
+        if range.length == 0 {
+            self.color = color
+            
+            let updatedText = self.text.mutableCopy() as! NSMutableAttributedString
+            let range = NSMakeRange(0, updatedText.length)
+            updatedText.removeAttribute(DrawingTextEntity.TextAttributes.color, range: range)
+            self.text = updatedText
+        } else {
+            let updatedText = self.text.mutableCopy() as! NSMutableAttributedString
+            updatedText.removeAttribute(DrawingTextEntity.TextAttributes.color, range: range)
+            updatedText.addAttribute(DrawingTextEntity.TextAttributes.color, value: color.toUIColor(), range: range)
+            self.text = updatedText
+        }
+    }
+    
+    func color(in range: NSRange) -> DrawingColor {
+        if range.length == 0 {
+            return self.color
+        } else {
+            if let color = self.text.attribute(DrawingTextEntity.TextAttributes.color, at: range.location, effectiveRange: nil) as? UIColor {
+                return DrawingColor(color: color)
+            } else {
+                return self.color
+            }
+        }
     }
 }

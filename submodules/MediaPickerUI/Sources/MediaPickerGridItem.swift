@@ -260,11 +260,18 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
     }
     
+    private var innerIsHidden = false
     func updateHiddenMedia() {
-        let wasHidden = self.isHidden
-        self.isHidden = self.interaction?.hiddenMediaId == self.identifier
-        if !self.isHidden && wasHidden {
-            self.animateFadeIn(animateCheckNode: true, animateSpoilerNode: true)
+        let wasHidden = self.innerIsHidden
+        if self.identifier == self.interaction?.hiddenMediaId {
+            self.isHidden = true
+            self.innerIsHidden = true
+        } else {
+            self.isHidden  = false
+            self.innerIsHidden = false
+            if wasHidden {
+                self.animateFadeIn(animateCheckNode: true, animateSpoilerNode: true)
+            }
         }
     }
     

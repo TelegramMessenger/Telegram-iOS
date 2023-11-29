@@ -834,9 +834,14 @@ private final class DrawingScreenComponent: CombinedComponent {
         
         func updateColor(_ color: DrawingColor, animated: Bool = false) {
             self.currentColor = color
-            if let selectedEntity = self.selectedEntity {
-                selectedEntity.color = color
-                self.updateEntityView.invoke((selectedEntity.uuid, false))
+            if let selectedEntity = self.selectedEntity, let selectedEntityView = self.entityViewForEntity(selectedEntity) {
+                if let textEntity = selectedEntity as? DrawingTextEntity, let textEntityView = selectedEntityView as? DrawingTextEntityView {
+                    textEntity.setColor(color, range: textEntityView.selectedRange)
+                    textEntityView.update(animated: false, keepSelectedRange: true)
+                } else {
+                    selectedEntity.color = color
+                    selectedEntityView.update(animated: false)
+                }
             } else {
                 self.drawingState = self.drawingState.withUpdatedColor(color)
                 self.updateToolState.invoke(self.drawingState.currentToolState)
@@ -3497,7 +3502,7 @@ public final class DrawingToolsInteraction {
                                     return
                                 }
                                 entityView.suspendEditing()
-                                self?.presentColorPicker(initialColor: textEntity.color, dismissed: {
+                                self?.presentColorPicker(initialColor: textEntity.color(in: entityView.selectedRange), dismissed: {
                                     entityView.resumeEditing()
                                 })
                             },

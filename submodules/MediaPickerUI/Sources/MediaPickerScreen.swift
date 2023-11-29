@@ -359,13 +359,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             |> deliverOnMainQueue).start(next: { [weak self] id in
                 if let strongSelf = self {
                     strongSelf.controller?.interaction?.hiddenMediaId = id
-                    
                     strongSelf.gridNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? MediaPickerGridItemNode {
                             itemNode.updateHiddenMedia()
                         }
                     }
-                    
                     strongSelf.selectionNode?.updateHiddenMedia()
                 }
             })

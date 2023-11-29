@@ -367,6 +367,10 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         }
     }
     
+    public var selectedRange: NSRange {
+        return self.textView.selectedRange
+    }
+    
     public func textViewDidChange(_ textView: UITextView) {
         guard let updatedText = self.textView.attributedText.mutableCopy() as? NSMutableAttributedString else {
             return
@@ -379,7 +383,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         self.textEntity.text = updatedText
         
         self.sizeToFit()
-        self.update(afterAppendingEmoji: true)
+        self.update(keepSelectedRange: true)
         
         self.textChanged()
     }
@@ -398,7 +402,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         
         self.textEntity.text = updatedText
         
-        self.update(animated: false, afterAppendingEmoji: true)
+        self.update(animated: false, keepSelectedRange: true)
         
         self.textView.selectedRange = NSMakeRange(previousSelectedRange.location + previousSelectedRange.length + text.length, 0)
     }
@@ -493,6 +497,9 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             if let _ = attributes[ChatTextInputAttributes.customEmoji] {
                 text.addAttribute(.foregroundColor, value: UIColor.clear, range: subrange)
                 visualText.addAttribute(.foregroundColor, value: UIColor.clear, range: subrange)
+            } else if let color = attributes[DrawingTextEntity.TextAttributes.color] {
+                text.addAttribute(.foregroundColor, value: color, range: subrange)
+                visualText.addAttribute(.foregroundColor, value: color, range: subrange)
             }
         }
         
@@ -565,10 +572,14 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
     
     public override func update(animated: Bool = false) {
-        self.update(animated: animated, afterAppendingEmoji: false, updateEditingPosition: true)
+        self.update(animated: animated, keepSelectedRange: false, updateEditingPosition: true)
     }
     
-    func update(animated: Bool = false, afterAppendingEmoji: Bool = false, updateEditingPosition: Bool = true) {
+    public func update(animated: Bool = false, keepSelectedRange: Bool = false) {
+        self.update(animated: animated, keepSelectedRange: keepSelectedRange, updateEditingPosition: true)
+    }
+    
+    func update(animated: Bool = false, keepSelectedRange: Bool = false, updateEditingPosition: Bool = true) {
         if !self.isEditing {
             self.center = self.textEntity.position
             self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.textEntity.rotation), self.textEntity.scale, self.textEntity.scale)
@@ -612,7 +623,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         }
         self.textView.textAlignment = self.textEntity.alignment.alignment
         
-        self.updateText(keepSelectedRange: afterAppendingEmoji)
+        self.updateText(keepSelectedRange: keepSelectedRange)
         
         self.sizeToFit()
         
