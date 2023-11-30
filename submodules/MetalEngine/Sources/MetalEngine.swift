@@ -115,6 +115,10 @@ open class MetalEngineSubjectLayer: SimpleLayer {
     fileprivate var internalId: Int = -1
     fileprivate var surfaceAllocation: MetalEngine.SurfaceAllocation?
     
+    #if DEBUG
+    fileprivate var surfaceChangeFrameCount: Int = 0
+    #endif
+    
     public override init() {
         super.init()
         
@@ -780,7 +784,10 @@ public final class MetalEngine {
                     
                     if previousSurfaceId != nil {
                         #if DEBUG
-                        print("Changing surface for layer \(layer) (\(renderSpec.allocationWidth)x\(renderSpec.allocationHeight))")
+                        layer.surfaceChangeFrameCount += 1
+                        if layer.surfaceChangeFrameCount > 100 {
+                            print("Changing surface for layer \(layer) (\(renderSpec.allocationWidth)x\(renderSpec.allocationHeight))")
+                        }
                         #endif
                     }
                 } else {
@@ -792,6 +799,10 @@ public final class MetalEngine {
                         #endif
                     }
                 }
+            } else {
+                #if DEBUG
+                layer.surfaceChangeFrameCount = max(0, layer.surfaceChangeFrameCount - 1)
+                #endif
             }
         }
         

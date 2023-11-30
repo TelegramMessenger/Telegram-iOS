@@ -591,7 +591,7 @@ public struct Transition {
             completion?(true)
         case let .curve(duration, curve):
             let previousValue: CATransform3D
-            if let presentation = layer.presentation() {
+            if layer.animation(forKey: "transform") != nil, let presentation = layer.presentation() {
                 previousValue = presentation.transform
             } else {
                 previousValue = layer.transform
@@ -696,6 +696,33 @@ public struct Transition {
                 keyPath: "sublayerTransform",
                 duration: duration,
                 delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setZPosition(layer: CALayer, zPosition: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if layer.zPosition == zPosition {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            layer.zPosition = zPosition
+            layer.removeAnimation(forKey: "zPosition")
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousZPosition = layer.presentation()?.opacity ?? layer.opacity
+            layer.zPosition = zPosition
+            layer.animate(
+                from: previousZPosition as NSNumber,
+                to: zPosition as NSNumber,
+                keyPath: "zPosition",
+                duration: duration,
+                delay: delay,
                 curve: curve,
                 removeOnCompletion: true,
                 additive: false,

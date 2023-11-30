@@ -11,8 +11,10 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
         state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, _ in
             for (key, _) in attributes {
                 if key == attribute {
-                    addAttribute = false
-                    attributesToRemove.append(key)
+                    if nsRange == range {
+                        addAttribute = false
+                        attributesToRemove.append(key)
+                    }
                 }
             }
         }

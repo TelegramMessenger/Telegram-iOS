@@ -513,7 +513,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                                 animateAsReplacement = true
                                             }
                                             
-                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .customEmoji(context: component.context, file: itemFile, loop: false, title: nil, text: presentationData.strings.ChannelReactions_ToastLevelBoostRequired("\(nextCustomReactionCount)", "\(nextCustomReactionCount)").string, undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
+                                            let text = presentationData.strings.ChannelReactions_ToastLevelBoostRequiredTemplate(presentationData.strings.ChannelReactions_ToastLevelBoostRequiredTemplateLevel(Int32(nextCustomReactionCount)), presentationData.strings.ChannelReactions_ToastLevelBoostRequiredTemplateEmojiCount(Int32(nextCustomReactionCount))).string
+                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .customEmoji(context: component.context, file: itemFile, loop: false, title: nil, text: text, undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
                                             self.currentUndoController = undoController
                                             self.environment?.controller()?.present(undoController, in: .current)
                                         }
@@ -724,13 +725,12 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     self.reactionInput = reactionInput
                 }
                 
-                //TOOD:localize
                 let reactionInputSize = reactionInput.update(
                     transition: animateIn ? .immediate : transition,
                     component: AnyComponent(EmojiListInputComponent(
                         context: component.context,
                         theme: environment.theme,
-                        placeholder: "Add Reactions...",
+                        placeholder: environment.strings.ChannelReactions_InputPlaceholder,
                         reactionItems: enabledReactions,
                         isInputActive: self.displayInput,
                         caretPosition: caretPosition,

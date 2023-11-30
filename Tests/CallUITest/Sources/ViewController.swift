@@ -5,7 +5,7 @@ import Display
 import CallScreen
 import ComponentFlow
 
-public final class ViewController: UIViewController {
+public final class ViewController: UIViewController {    
     private var callScreenView: PrivateCallScreen?
     private var callState: PrivateCallScreen.State = PrivateCallScreen.State(
         lifecycleState: .connecting,
@@ -16,6 +16,9 @@ public final class ViewController: UIViewController {
         localVideo: nil,
         remoteVideo: nil
     )
+    
+    private var currentLayout: (size: CGSize, insets: UIEdgeInsets)?
+    private var viewLayoutTransition: Transition?
     
     override public func viewDidLoad() {
         super.viewDidLoad()
@@ -66,6 +69,8 @@ public final class ViewController: UIViewController {
             }
             if let input = self.callState.localVideo as? FileVideoSource {
                 input.sourceId = input.sourceId == 0 ? 1 : 0
+                input.fixedRotationAngle = input.sourceId == 0 ? Float.pi * 0.0 : Float.pi * 0.5
+                input.sizeMultiplicator = input.sourceId == 0 ? CGPoint(x: 1.0, y: 1.0) : CGPoint(x: 1.5, y: 1.0)
             }
         }
         callScreenView.videoAction = { [weak self] in
@@ -73,7 +78,7 @@ public final class ViewController: UIViewController {
                 return
             }
             if self.callState.localVideo == nil {
-                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test2", withExtension: "mp4")!)
+                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test3", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.0)
             } else {
                 self.callState.localVideo = nil
             }
@@ -81,7 +86,7 @@ public final class ViewController: UIViewController {
         }
         callScreenView.microhoneMuteAction = {
             if self.callState.remoteVideo == nil {
-                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test2", withExtension: "mp4")!)
+                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test4", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.0)
             } else {
                 self.callState.remoteVideo = nil
             }
@@ -96,32 +101,44 @@ public final class ViewController: UIViewController {
             self.callState.localVideo = nil
             self.update(transition: .spring(duration: 0.4))
         }
-        
-        self.update(transition: .immediate)
     }
     
     private func update(transition: Transition) {
-        self.update(size: self.view.bounds.size, transition: transition)
+        if let (size, insets) = self.currentLayout {
+            self.update(size: size, insets: insets, transition: transition)
+        }
     }
     
-    private func update(size: CGSize, transition: Transition) {
+    private func update(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
         guard let callScreenView = self.callScreenView else {
             return
         }
         
         transition.setFrame(view: callScreenView, frame: CGRect(origin: CGPoint(), size: size))
-        let insets: UIEdgeInsets
-        if size.width < size.height {
-            insets = UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
-        } else {
-            insets = UIEdgeInsets(top: 0.0, left: 44.0, bottom: 0.0, right: 44.0)
-        }
         callScreenView.update(size: size, insets: insets, screenCornerRadius: 55.0, state: self.callState, transition: transition)
+    }
+    
+    override public func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        
+        let safeAreaLayoutGuide = self.view.safeAreaLayoutGuide
+        
+        let size = self.view.bounds.size
+        let insets = UIEdgeInsets(top: safeAreaLayoutGuide.layoutFrame.minY, left: safeAreaLayoutGuide.layoutFrame.minX, bottom: size.height - safeAreaLayoutGuide.layoutFrame.maxY, right: safeAreaLayoutGuide.layoutFrame.minX)
+        
+        let transition = self.viewLayoutTransition ?? .immediate
+        self.viewLayoutTransition = nil
+        
+        if let currentLayout = self.currentLayout, currentLayout == (size, insets) {
+        } else {
+            self.currentLayout = (size, insets)
+            self.update(size: size, insets: insets, transition: transition)
+        }
     }
     
     override public func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
         
-        self.update(size: size, transition: .easeInOut(duration: 0.3))
+        self.viewLayoutTransition = .easeInOut(duration: 0.3)
     }
 }

@@ -64,7 +64,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
                 
                 if highlighted {
                     self.layer.removeAnimation(forKey: "opacity")
-                    self.layer.removeAnimation(forKey: "sublayerTransform")
+                    self.layer.removeAnimation(forKey: "transform")
                     let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.layer, scale: topScale)
                 } else {

@@ -16,6 +16,8 @@ public final class AppDelegate: NSObject, UIApplicationDelegate {
         window.rootViewController = ViewController()
         window.makeKeyAndVisible()
         
+        application.internalSetStatusBarStyle(.lightContent, animated: false)
+        
         return true
     }
 }
