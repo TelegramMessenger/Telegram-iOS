@@ -197,7 +197,9 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
             let controller = textAlertController(context: item.context, title: item.presentationData.strings.Chat_RemoveWallpaper_Title, text: item.presentationData.strings.Chat_RemoveWallpaper_Text, actions: [
                 TextAlertAction(type: .genericAction, title: item.presentationData.strings.Common_Cancel, action: {}),
                 TextAlertAction(type: .destructiveAction, title: item.presentationData.strings.Chat_RemoveWallpaper_Remove, action: { [weak item] in
-                    let _ = item?.context.engine.themes.revertChatWallpaper(peerId: item.message.id.peerId).startStandalone()
+                    if let item {
+                        let _ = item.context.engine.themes.revertChatWallpaper(peerId: item.message.id.peerId).startStandalone()
+                    }
                 })
             ])
             item.controllerInteraction.presentController(controller, nil)

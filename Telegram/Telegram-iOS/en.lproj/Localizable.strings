@@ -10598,6 +10598,6 @@ Sorry for the inconvenience.";
 "Chat.Reactions.MultiplePremiumTooltip" = "You can set multiple reactions with [Telegram Premium]().";
 
 "Notification.Wallpaper.Remove" = "Remove";
-"Char.RemoveWallpaper.Title" = "Remove Wallpaper";
-"Char.RemoveWallpaper.Text" = "Are you sure you want to reset the wallpaper?";
-"Char.RemoveWallpaper.Remove" = "Remove";
+"Chat.RemoveWallpaper.Title" = "Remove Wallpaper";
+"Chat.RemoveWallpaper.Text" = "Are you sure you want to reset the wallpaper?";
+"Chat.RemoveWallpaper.Remove" = "Remove";
