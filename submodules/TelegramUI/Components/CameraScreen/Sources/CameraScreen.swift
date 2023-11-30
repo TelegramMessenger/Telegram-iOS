@@ -1745,8 +1745,7 @@ public class CameraScreen: ViewController {
                     isDualEnabled: self.cameraState.isDualCameraEnabled,
                     audio: true,
                     photo: true,
-                    metadata: false,
-                    preferredFps: 60.0
+                    metadata: false
                 ),
                 previewView: self.mainPreviewView,
                 secondaryPreviewView: self.additionalPreviewView

@@ -158,7 +158,7 @@ final class ThemeAccentColorController: ViewController {
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
-        }, apply: { [weak self] state, serviceBackgroundColor in
+        }, apply: { [weak self] state, serviceBackgroundColor, forBoth in
             if let strongSelf = self {
                 let context = strongSelf.context
                 let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
@@ -175,7 +175,7 @@ final class ThemeAccentColorController: ViewController {
                 }
                 
                 if case let .peer(peer) = strongSelf.resultMode {
-                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: coloredWallpaper, forBoth: false).start()
+                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: coloredWallpaper, forBoth: forBoth).start()
                     strongSelf.completion?()
                     return
                 }

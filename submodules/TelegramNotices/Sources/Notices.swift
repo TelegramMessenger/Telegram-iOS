@@ -187,6 +187,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case replyQuoteTextSelectionTip = 53
     case dismissedPremiumWallpapersBadge = 54
     case dismissedPremiumColorsBadge = 55
+    case multipleReactionsSuggestion = 56
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -460,6 +461,9 @@ private struct ApplicationSpecificNoticeKeys {
     }
     static func dismissedPremiumColorsBadge() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedPremiumColorsBadge.key)
+    }
+    static func multipleReactionsSuggestion() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.multipleReactionsSuggestion.key)
     }
 }
 
@@ -1820,5 +1824,32 @@ public struct ApplicationSpecificNotice {
             }
         }
         |> take(1)
+    }
+    
+    public static func getMultipleReactionsSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.multipleReactionsSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementMultipleReactionsSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.multipleReactionsSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.multipleReactionsSuggestion(), entry)
+            }
+            
+            return Int(previousValue)
+        }
     }
 }

@@ -272,7 +272,7 @@ private final class StoryStatsPublicForwardsContextImpl {
                                     peers[groupOrChannel.id] = groupOrChannel
                                 }
                             }
-                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(peers: Array(peers.values)))
                             var resultForwards: [StoryStatsPublicForwardsContext.State.Forward] = []
                             for forward in forwards {
                                 switch forward {

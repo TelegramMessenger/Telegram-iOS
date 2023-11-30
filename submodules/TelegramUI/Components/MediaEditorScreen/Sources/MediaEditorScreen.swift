@@ -42,6 +42,7 @@ import ForwardInfoPanelComponent
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
 private let saveButtonTag = GenericComponentViewTag()
+private let switchCameraButtonTag = GenericComponentViewTag()
 
 final class MediaEditorScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -1736,11 +1737,15 @@ final class MediaEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(Button(
                     content: AnyComponent(
-                        FlipButtonContentComponent()
+                        FlipButtonContentComponent(tag: switchCameraButtonTag)
                     ),
                     action: { [weak self] in
                         if let self, let environment = self.environment, let controller = environment.controller() as? MediaEditorScreen {
                             controller.node.recording.togglePosition()
+                            
+                            if let view = self.switchCameraButton.findTaggedView(tag: switchCameraButtonTag) as? FlipButtonContentComponent.View {
+                                view.playAnimation()
+                            }
                         }
                     }
                 ).withIsExclusive(false)),
@@ -1963,6 +1968,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var availableReactions: [ReactionItem] = []
         private var availableReactionsDisposable: Disposable?
         
+        private var panGestureRecognizer: UIPanGestureRecognizer?
         private var dismissPanGestureRecognizer: UIPanGestureRecognizer?
         
         private var isDisplayingTool = false
@@ -2368,7 +2374,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             panGestureRecognizer.delegate = self
             panGestureRecognizer.minimumNumberOfTouches = 1
             panGestureRecognizer.maximumNumberOfTouches = 2
-            self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
+            self.view.addGestureRecognizer(panGestureRecognizer)
+            self.panGestureRecognizer = panGestureRecognizer
             
             let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(self.handlePinch(_:)))
             pinchGestureRecognizer.delegate = self
@@ -2406,8 +2413,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 },
                 updateColor: { [weak self] color in
                     if let self, let selectedEntityView = self.entitiesView.selectedEntityView {
-                        selectedEntityView.entity.color = color
-                        selectedEntityView.update(animated: false)
+                        let selectedEntity = selectedEntityView.entity
+                        if let textEntity = selectedEntity as? DrawingTextEntity, let textEntityView = selectedEntityView as? DrawingTextEntityView, textEntityView.isEditing {
+                            textEntity.setColor(color, range: textEntityView.selectedRange)
+                            textEntityView.update(animated: false, keepSelectedRange: true)
+                        } else {
+                            selectedEntity.color = color
+                            selectedEntityView.update(animated: false)
+                        }
                     }
                 },
                 onInteractionUpdated: { [weak self] isInteracting in
@@ -2515,6 +2528,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if gestureRecognizer === self.dismissPanGestureRecognizer {
                 let location = gestureRecognizer.location(in: self.entitiesView)
                 if self.controller?.isEmbeddedEditor == true || self.isDisplayingTool || self.entitiesView.hasSelection || self.entitiesView.getView(at: location) != nil {
+                    return false
+                }
+                return true
+            } else if gestureRecognizer === self.panGestureRecognizer {
+                let location = gestureRecognizer.location(in: self.view)
+                if location.x > self.view.frame.width - 44.0 && location.y > self.view.frame.height - 180.0 {
                     return false
                 }
                 return true
@@ -3450,7 +3469,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             var items: [ContextMenuItem] = []
             items.append(
-                .custom(VolumeSliderContextItem(minValue: 0.0, value: value, valueChanged: { [weak self] value, _ in
+                .custom(VolumeSliderContextItem(minValue: 0.0, maxValue: 1.5, value: value, valueChanged: { [weak self] value, _ in
                     if let self, let mediaEditor = self.mediaEditor {
                         if trackId == 0 {
                             if mediaEditor.values.videoIsMuted {
@@ -4161,7 +4180,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.adminedChannels.set(.single([]) |> then(self.context.engine.peers.channelsForStories()))
             self.closeFriends.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends()))
             
-            if let _ = self.forwardSource {
+            if self.forwardSource != nil || self.isEditingStory {
                 self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
                     if #available(iOS 13.0, *) {
                         try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)

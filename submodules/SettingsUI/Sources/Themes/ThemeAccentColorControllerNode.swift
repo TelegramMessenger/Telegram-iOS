@@ -225,7 +225,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
     }
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ThemeAccentColorController.ResultMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?) -> Void, ready: Promise<Bool>) {
+    init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ThemeAccentColorController.ResultMode, theme: PresentationTheme, wallpaper: TelegramWallpaper, dismiss: @escaping () -> Void, apply: @escaping (ThemeColorState, UIColor?, Bool) -> Void, ready: Promise<Bool>) {
         self.context = context
         self.mode = mode
         self.resultMode = resultMode
@@ -437,7 +437,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         }
         
-        self.toolbarNode.done = { [weak self] _ in
+        self.toolbarNode.done = { [weak self] forBoth in
             if let strongSelf = self {
                 if strongSelf.state.displayPatternPanel {
                     strongSelf.updateState({ current in
@@ -448,7 +448,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 } else {
                     if !strongSelf.dismissed {
                         strongSelf.dismissed = true
-                        apply(strongSelf.state, strongSelf.serviceBackgroundColor)
+                        apply(strongSelf.state, strongSelf.serviceBackgroundColor, forBoth)
                     }
                 }
             }

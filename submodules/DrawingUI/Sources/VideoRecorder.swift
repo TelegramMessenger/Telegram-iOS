@@ -41,6 +41,14 @@ public final class EntityVideoRecorder {
         
         self.entity = DrawingStickerEntity(content: .dualVideoReference(true))
         
+        var preferLowerFramerate = false
+        if let mainFramerate = mediaEditor.mainFramerate {
+            let frameRate = Int(round(mainFramerate / 30.0) * 30.0)
+            if frameRate == 30 {
+                preferLowerFramerate = true
+            }
+        }
+        
         self.camera = Camera(
             configuration: Camera.Configuration(
                 preset: .hd1920x1080,
@@ -49,8 +57,8 @@ public final class EntityVideoRecorder {
                 audio: true,
                 photo: false,
                 metadata: false,
-                preferredFps: 60.0,
                 preferWide: true,
+                preferLowerFramerate: preferLowerFramerate,
                 reportAudioLevel: true
             ),
             previewView: self.previewView,

@@ -731,6 +731,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
+                                    model: .island,
                                     videoFile: configuration.videos["wallpapers"],
                                     decoration: .swirlStars
                                 )),

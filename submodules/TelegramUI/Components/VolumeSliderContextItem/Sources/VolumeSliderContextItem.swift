@@ -10,17 +10,19 @@ import AnimatedCountLabelNode
 
 public final class VolumeSliderContextItem: ContextMenuCustomItem {
     private let minValue: CGFloat
+    private let maxValue: CGFloat
     private let value: CGFloat
     private let valueChanged: (CGFloat, Bool) -> Void
     
-    public init(minValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    public init(minValue: CGFloat, maxValue: CGFloat = 1.0, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.minValue = minValue
+        self.maxValue = maxValue
         self.value = value
         self.valueChanged = valueChanged
     }
     
     public func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
-        return VolumeSliderContextItemNode(presentationData: presentationData, getController: getController, minValue: self.minValue, value: self.value, valueChanged: self.valueChanged)
+        return VolumeSliderContextItemNode(presentationData: presentationData, getController: getController, minValue: self.minValue, maxValue: self.maxValue, value: self.value, valueChanged: self.valueChanged)
     }
 }
 
@@ -40,6 +42,7 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
     private let foregroundTextNode: ImmediateAnimatedCountLabelNode
     
     let minValue: CGFloat
+    let maxValue: CGFloat
     var value: CGFloat = 1.0 {
         didSet {
             self.updateValue(transition: .animated(duration: 0.2, curve: .spring))
@@ -50,9 +53,10 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
     
     private let hapticFeedback = HapticFeedback()
 
-    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, minValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, minValue: CGFloat, maxValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.presentationData = presentationData
         self.minValue = minValue
+        self.maxValue = maxValue
         self.value = value
         self.valueChanged = valueChanged
         
@@ -153,8 +157,9 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
     private func updateValue(transition: ContainedViewLayoutTransition = .immediate) {
         let width = self.frame.width
         
+        let range = self.maxValue - self.minValue
         let value = self.value
-        transition.updateFrameAdditive(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: value * width, height: self.frame.height)))
+        transition.updateFrameAdditive(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: value / range * width, height: self.frame.height)))
         
         let stringValue = "\(Int(self.value * 100.0))%"
         
@@ -236,10 +241,10 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
                 
                 let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
                 let delta = translation / self.bounds.width
-                self.value = max(self.minValue, min(1.0, self.value + delta))
+                self.value = max(self.minValue, min(self.maxValue, self.value + delta))
                 gestureRecognizer.setTranslation(CGPoint(), in: gestureRecognizer.view)
                 
-                if self.value == 1.0 && previousValue != 1.0 {
+                if self.value == self.maxValue && previousValue != self.maxValue {
                     self.backgroundIconNode.layer.animateScale(from: 1.0, to: 1.1, duration: 0.16, removeOnCompletion: false, completion: { [weak self] _ in
                         if let strongSelf = self {
                             strongSelf.backgroundIconNode.layer.animateScale(from: 1.1, to: 1.0, duration: 0.16)
@@ -251,6 +256,8 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
                         }
                     })
                     self.hapticFeedback.impact(.soft)
+                } else if self.maxValue != 1.0 && self.value == 1.0 && previousValue != 1.0 {
+                    self.hapticFeedback.impact(.soft)
                 } else if self.value == 0.0 && previousValue != 0.0 {
                     self.hapticFeedback.impact(.soft)
                 }
@@ -260,7 +267,7 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
             case .ended:
                 let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
                 let delta = translation / self.bounds.width
-                self.value = max(self.minValue, min(1.0, self.value + delta))
+                self.value = max(self.minValue, min(self.maxValue, self.value + delta))
                 self.valueChanged(self.value, true)
             default:
                 break
@@ -269,7 +276,7 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
         let location = gestureRecognizer.location(in: gestureRecognizer.view)
-        self.value = max(self.minValue, min(1.0, location.x / self.bounds.width))
+        self.value = max(self.minValue, min(self.maxValue, location.x / self.bounds.width))
         self.valueChanged(self.value, true)
     }
     

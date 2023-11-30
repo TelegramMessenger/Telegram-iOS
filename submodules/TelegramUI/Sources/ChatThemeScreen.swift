@@ -415,7 +415,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         }
                     }
                     if item.themeReference == nil {
-                        strongSelf.imageNode.backgroundColor = item.theme.actionSheet.opaqueItemBackgroundColor
+                        strongSelf.imageNode.backgroundColor = item.theme.list.plainBackgroundColor
                     }
                     
                     if updatedTheme || updatedSelected {

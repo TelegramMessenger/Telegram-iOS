@@ -78,7 +78,7 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
             return
         }
         self.shimmerEffectNode = nil
-        shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak shimmerEffectNode] _ in
+        shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak shimmerEffectNode] _ in
             shimmerEffectNode?.removeFromSupernode()
         })
     }

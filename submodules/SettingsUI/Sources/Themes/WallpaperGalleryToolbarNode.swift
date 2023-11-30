@@ -190,7 +190,13 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
             }
         }
         
+        private var previousActionTime: Double?
         @objc func pressed() {
+            let currentTime = CACurrentMediaTime()
+            if let previousActionTime = self.previousActionTime, currentTime < previousActionTime + 1.0 {
+                return
+            }
+            self.previousActionTime = currentTime
             self.action()
         }
     }

@@ -22,6 +22,7 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import WallpaperPreviewMedia
 import ChatControllerInteraction
+import PresentationDataUtils
 
 public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
@@ -193,7 +194,15 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
         }
         
         if canRemove {
-            let _ = item.context.engine.themes.revertChatWallpaper(peerId: item.message.id.peerId).startStandalone()
+            let controller = textAlertController(context: item.context, title: item.presentationData.strings.Chat_RemoveWallpaper_Title, text: item.presentationData.strings.Chat_RemoveWallpaper_Text, actions: [
+                TextAlertAction(type: .genericAction, title: item.presentationData.strings.Common_Cancel, action: {}),
+                TextAlertAction(type: .destructiveAction, title: item.presentationData.strings.Chat_RemoveWallpaper_Remove, action: { [weak item] in
+                    if let item {
+                        let _ = item.context.engine.themes.revertChatWallpaper(peerId: item.message.id.peerId).startStandalone()
+                    }
+                })
+            ])
+            item.controllerInteraction.presentController(controller, nil)
         } else {
             let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
         }
@@ -291,7 +300,7 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                 
                 let buttonText: String
                 if let wallpaper, forBoth && item.presentationData.theme.wallpaper.isBasicallyEqual(to: wallpaper) {
-                    buttonText = "Remove"
+                    buttonText = item.presentationData.strings.Notification_Wallpaper_Remove
                 } else {
                     buttonText = item.presentationData.strings.Notification_Wallpaper_View
                 }

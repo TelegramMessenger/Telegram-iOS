@@ -107,8 +107,14 @@ public final class MediaEditor {
     private let clock = CMClockGetHostTimeClock()
         
     private var player: AVPlayer?
+    private var playerAudioMix: AVMutableAudioMix?
+    
     private var additionalPlayer: AVPlayer?
+    private var additionalPlayerAudioMix: AVMutableAudioMix?
+    
     private var audioPlayer: AVPlayer?
+    private var audioPlayerAudioMix: AVMutableAudioMix?
+    
     private var volumeFadeIn: SwiftSignalKit.Timer?
     
     private var timeObserver: Any?
@@ -901,7 +907,19 @@ public final class MediaEditor {
             return values.withUpdatedVideoVolume(volume)
         }
         
-        self.player?.volume = Float(volume ?? 1.0)
+        let audioMix: AVMutableAudioMix
+        if let current = self.playerAudioMix {
+            audioMix = current
+        } else {
+            audioMix = AVMutableAudioMix()
+            self.playerAudioMix = audioMix
+        }
+        if let asset = self.player?.currentItem?.asset {
+            let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+            audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
+            audioMix.inputParameters = [audioMixInputParameters]
+            self.player?.currentItem?.audioMix = audioMix
+        }
     }
     
     public func setVideoIsMirrored(_ videoIsMirrored: Bool) {
@@ -1138,6 +1156,17 @@ public final class MediaEditor {
         self.setRate(0.0)
     }
     
+    public var mainFramerate: Float? {
+        if let player = self.player, let asset = player.currentItem?.asset, let track = asset.tracks(withMediaType: .video).first {
+            if track.nominalFrameRate > 0.0 {
+                return track.nominalFrameRate
+            } else if track.minFrameDuration.seconds > 0.0 {
+                return Float(1.0 / track.minFrameDuration.seconds)
+            }
+        }
+        return nil
+    }
+    
     private func setRate(_ rate: Float) {
         let hostTime: UInt64 = mach_absolute_time()
         let time: TimeInterval = 0
@@ -1334,6 +1363,7 @@ public final class MediaEditor {
             
             self.additionalPlayer = nil
             self.additionalPlayerPromise.set(.single(nil))
+            self.additionalPlayerAudioMix = nil
             
             if let textureSource = self.renderer.textureSource as? UniversalTextureSource {
                 textureSource.forceUpdates = true
@@ -1376,12 +1406,18 @@ public final class MediaEditor {
             player.masterClock = clock
         }
         player.automaticallyWaitsToMinimizeStalling = false
+        
+        let audioMix = AVMutableAudioMix()
+        let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+        if let volume = self.values.additionalVideoVolume {
+            audioMixInputParameters.setVolume(Float(volume), at: .zero)
+        }
+        audioMix.inputParameters = [audioMixInputParameters]
+        player.currentItem?.audioMix = audioMix
+        
         self.additionalPlayer = player
         self.additionalPlayerPromise.set(.single(player))
-        
-        if let volume = self.values.additionalVideoVolume {
-            self.additionalPlayer?.volume = Float(volume)
-        }
+        self.additionalPlayerAudioMix = audioMix
         
         (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInput(.video(playerItem))
     }
@@ -1417,7 +1453,12 @@ public final class MediaEditor {
             return values.withUpdatedAdditionalVideoVolume(volume)
         }
         
-        self.additionalPlayer?.volume = Float(volume ?? 1.0)
+        if let audioMix = self.additionalPlayerAudioMix, let asset = self.additionalPlayer?.currentItem?.asset {
+            let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+            audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
+            audioMix.inputParameters = [audioMixInputParameters]
+            self.additionalPlayer?.currentItem?.audioMix = audioMix
+        }
     }
     
     private func updateAdditionalVideoPlaybackRange() {
@@ -1444,6 +1485,7 @@ public final class MediaEditor {
             
             self.audioPlayer = nil
             self.audioPlayerPromise.set(.single(nil))
+            self.audioPlayerAudioMix = nil
             
             self.audioDelayTimer?.invalidate()
             self.audioDelayTimer = nil
@@ -1465,13 +1507,19 @@ public final class MediaEditor {
         let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioPath))
         let audioPlayer = AVPlayer(playerItem: AVPlayerItem(asset: audioAsset))
         audioPlayer.automaticallyWaitsToMinimizeStalling = false
+        
+        let audioMix = AVMutableAudioMix()
+        let audioMixInputParameters = AVMutableAudioMixInputParameters(track: audioAsset.tracks(withMediaType: .audio).first)
+        if let volume = self.values.audioTrackVolume {
+            audioMixInputParameters.setVolume(Float(volume), at: .zero)
+        }
+        audioMix.inputParameters = [audioMixInputParameters]
+        audioPlayer.currentItem?.audioMix = audioMix
+        
         self.audioPlayer = audioPlayer
         self.audioPlayerPromise.set(.single(audioPlayer))
+        self.audioPlayerAudioMix = audioMix
         self.maybeGenerateAudioSamples(asset: audioAsset)
-        
-        if let volume = self.values.audioTrackVolume {
-            self.audioPlayer?.volume = Float(volume)
-        }
         
         self.setupTimeObservers()
     }
@@ -1510,7 +1558,12 @@ public final class MediaEditor {
             return values.withUpdatedAudioTrackVolume(volume)
         }
         
-        self.audioPlayer?.volume = Float(volume ?? 1.0)
+        if let audioMix = self.audioPlayerAudioMix, let asset = self.audioPlayer?.currentItem?.asset {
+            let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+            audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
+            audioMix.inputParameters = [audioMixInputParameters]
+            self.audioPlayer?.currentItem?.audioMix = audioMix
+        }
     }
     
     public func setDrawingAndEntities(data: Data?, image: UIImage?, entities: [CodableDrawingEntity]) {
