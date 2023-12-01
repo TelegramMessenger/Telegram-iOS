@@ -2552,7 +2552,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 
                 if let messageIndex = messageIndex {
-                    self.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
+                    let _ = messageIndex
+                    //self.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                 }
                 
                 if let maxOverallIndex = maxOverallIndex, maxOverallIndex != self.maxVisibleMessageIndexReported {
