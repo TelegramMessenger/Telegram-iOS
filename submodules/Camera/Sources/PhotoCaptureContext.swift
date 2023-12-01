@@ -33,11 +33,13 @@ public enum PhotoCaptureResult: Equatable {
 }
 
 final class PhotoCaptureContext: NSObject, AVCapturePhotoCaptureDelegate {
+    private let ciContext: CIContext
     private let pipe = ValuePipe<PhotoCaptureResult>()
     private let orientation: AVCaptureVideoOrientation
     private let mirror: Bool
     
-    init(settings: AVCapturePhotoSettings, orientation: AVCaptureVideoOrientation, mirror: Bool) {
+    init(ciContext: CIContext, settings: AVCapturePhotoSettings, orientation: AVCaptureVideoOrientation, mirror: Bool) {
+        self.ciContext = ciContext
         self.orientation = orientation
         self.mirror = mirror
         
@@ -70,9 +72,8 @@ final class PhotoCaptureContext: NSObject, AVCapturePhotoCaptureDelegate {
             }
             
             let finalPixelBuffer = photoPixelBuffer
-            let ciContext = CIContext()
             let renderedCIImage = CIImage(cvImageBuffer: finalPixelBuffer)
-            if let cgImage = ciContext.createCGImage(renderedCIImage, from: renderedCIImage.extent)  {
+            if let cgImage = self.ciContext.createCGImage(renderedCIImage, from: renderedCIImage.extent)  {
                 var image = UIImage(cgImage: cgImage, scale: 1.0, orientation: orientation)
                 if image.imageOrientation != .up {
                     UIGraphicsBeginImageContextWithOptions(image.size, true, image.scale)

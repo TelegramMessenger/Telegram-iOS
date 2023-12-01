@@ -78,13 +78,14 @@ public struct CameraCode: Equatable {
 }
 
 final class CameraOutput: NSObject {
+    let exclusive: Bool
+    let ciContext: CIContext
+    
     let photoOutput = AVCapturePhotoOutput()
     let videoOutput = AVCaptureVideoDataOutput()
     let audioOutput = AVCaptureAudioDataOutput()
     let metadataOutput = AVCaptureMetadataOutput()
-    
-    let exclusive: Bool
-    
+
     private var photoConnection: AVCaptureConnection?
     private var videoConnection: AVCaptureConnection?
     private var previewConnection: AVCaptureConnection?
@@ -99,8 +100,9 @@ final class CameraOutput: NSObject {
     var processAudioBuffer: ((CMSampleBuffer) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
     
-    init(exclusive: Bool) {
+    init(exclusive: Bool, ciContext: CIContext) {
         self.exclusive = exclusive
+        self.ciContext = ciContext
         
         super.init()
 
@@ -266,7 +268,7 @@ final class CameraOutput: NSObject {
         }
         
         let uniqueId = settings.uniqueID
-        let photoCapture = PhotoCaptureContext(settings: settings, orientation: orientation, mirror: mirror)
+        let photoCapture = PhotoCaptureContext(ciContext: self.ciContext, settings: settings, orientation: orientation, mirror: mirror)
         self.photoCaptureRequests[uniqueId] = photoCapture
         self.photoOutput.capturePhoto(with: settings, delegate: photoCapture)
         
@@ -309,7 +311,7 @@ final class CameraOutput: NSObject {
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         
-        let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), orientation: orientation, fileUrl: outputFileURL, completion: { [weak self] result in
+        let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), ciContext: self.ciContext, orientation: orientation, fileUrl: outputFileURL, completion: { [weak self] result in
             guard let self else {
                 return
             }

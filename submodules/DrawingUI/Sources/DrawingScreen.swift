@@ -3082,12 +3082,15 @@ public final class DrawingToolsInteraction {
                 return
             }
             
+            var isRectangleImage = false
             var isVideo = false
             var isAdditional = false
             if let entity = entityView.entity as? DrawingStickerEntity {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
                     isAdditional = isAdditionalValue
+                } else if case let .image(_, type) = entity.content, case .rectangle = type {
+                    isRectangleImage = true
                 }
             }
             
@@ -3144,6 +3147,21 @@ public final class DrawingToolsInteraction {
                     }))
                 }
             }
+            #if DEBUG
+            if isRectangleImage {
+                actions.append(ContextMenuAction(content: .text(title: "Cut Out", accessibilityLabel: "Cut Out"), action: { [weak self, weak entityView] in
+                    if let self, let entityView, let entity = entityView.entity as? DrawingStickerEntity, case let .image(image, _) = entity.content {
+                        let _ = (cutoutStickerImage(from: image)
+                        |> deliverOnMainQueue).start(next: { result in
+                            if let result {
+                                let newEntity = DrawingStickerEntity(content: .image(result, .sticker))
+                                self.insertEntity(newEntity)
+                            }
+                        })
+                    }
+                }))
+            }
+            #endif
             let entityFrame = entityView.convert(entityView.selectionBounds, to: node.view).offsetBy(dx: 0.0, dy: -6.0)
             let controller = makeContextMenuController(actions: actions)
             let bounds = node.bounds.insetBy(dx: 0.0, dy: 160.0)

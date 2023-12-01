@@ -34,7 +34,7 @@ private final class VideoRecorderImpl {
     private var videoInput: AVAssetWriterInput?
     private var audioInput: AVAssetWriterInput?
     
-    private let imageContext = CIContext()
+    private let ciContext: CIContext
     private var transitionImage: UIImage?
     private var savedTransitionImage = false
     
@@ -63,8 +63,9 @@ private final class VideoRecorderImpl {
     private var hasAllVideoBuffers = false
     private var hasAllAudioBuffers = false
     
-    public init?(configuration: VideoRecorder.Configuration, orientation: AVCaptureVideoOrientation, fileUrl: URL) {
+    public init?(configuration: VideoRecorder.Configuration, ciContext: CIContext, orientation: AVCaptureVideoOrientation, fileUrl: URL) {
         self.configuration = configuration
+        self.ciContext = ciContext
         
         var transform: CGAffineTransform = CGAffineTransform(rotationAngle: .pi / 2.0)
         if orientation == .landscapeLeft {
@@ -184,7 +185,7 @@ private final class VideoRecorderImpl {
                         self.savedTransitionImage = true
                         Queue.concurrentBackgroundQueue().async {
                             let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-                            if let cgImage = self.imageContext.createCGImage(ciImage, from: ciImage.extent) {
+                            if let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) {
                                 var orientation: UIImage.Orientation = .right
                                 if self.orientation == .landscapeLeft {
                                     orientation = .down
@@ -479,12 +480,12 @@ public final class VideoRecorder {
         return self.impl.isRecording
     }
     
-    init?(configuration: Configuration, orientation: AVCaptureVideoOrientation, fileUrl: URL, completion: @escaping (Result) -> Void) {
+    init?(configuration: Configuration, ciContext: CIContext, orientation: AVCaptureVideoOrientation, fileUrl: URL, completion: @escaping (Result) -> Void) {
         self.configuration = configuration
         self.fileUrl = fileUrl
         self.completion = completion
         
-        guard let impl = VideoRecorderImpl(configuration: configuration, orientation: orientation, fileUrl: fileUrl) else {
+        guard let impl = VideoRecorderImpl(configuration: configuration, ciContext: ciContext, orientation: orientation, fileUrl: fileUrl) else {
             completion(.initError(.generic))
             return nil
         }

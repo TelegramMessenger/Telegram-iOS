@@ -379,7 +379,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                 middle1RightItemLayoutAndApply = makeMiddle1RightItemLayout(
                     params.width,
                     item.presentationData,
-                    compactNumericCountString(views.forwardCount - Int(item.publicShares ?? 0)),
+                    item.publicShares.flatMap { "≈\( compactNumericCountString(max(0, views.forwardCount - Int($0))))" } ?? "–",
                     item.presentationData.strings.Stats_Message_PrivateShares,
                     nil
                 )
