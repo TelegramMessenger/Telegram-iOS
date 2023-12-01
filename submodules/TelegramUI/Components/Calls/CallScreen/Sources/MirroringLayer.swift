@@ -39,6 +39,28 @@ final class MirroringLayer: SimpleLayer {
         }
     }
     
+    override var anchorPoint: CGPoint {
+        get {
+            return super.anchorPoint
+        } set(value) {
+            if let targetLayer = self.targetLayer {
+                targetLayer.anchorPoint = value
+            }
+            super.anchorPoint = value
+        }
+    }
+    
+    override var anchorPointZ: CGFloat {
+        get {
+            return super.anchorPointZ
+        } set(value) {
+            if let targetLayer = self.targetLayer {
+                targetLayer.anchorPointZ = value
+            }
+            super.anchorPointZ = value
+        }
+    }
+    
     override var opacity: Float {
         get {
             return super.opacity

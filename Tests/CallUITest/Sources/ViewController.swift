@@ -48,7 +48,7 @@ public final class ViewController: UIViewController {
                 self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: Date().timeIntervalSince1970,
                     signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
-                    emojiKey: ["A", "B", "C", "D"]
+                    emojiKey: ["😂", "😘", "😍", "😊"]
                 ))
             case var .active(activeState):
                 activeState.signalInfo.quality = activeState.signalInfo.quality == 1.0 ? 0.1 : 1.0
@@ -57,7 +57,7 @@ public final class ViewController: UIViewController {
                 self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: Date().timeIntervalSince1970,
                     signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
-                    emojiKey: ["A", "B", "C", "D"]
+                    emojiKey: ["😂", "😘", "😍", "😊"]
                 ))
             }
             

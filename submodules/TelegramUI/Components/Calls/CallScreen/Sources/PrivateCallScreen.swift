@@ -127,6 +127,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var weakSignalView: WeakSignalView?
     
     private var emojiView: KeyEmojiView?
+    private var emojiExpandedInfoView: EmojiExpandedInfoView?
     
     private let videoContainerBackgroundView: RoundedCornersView
     private let overlayContentsVideoContainerBackgroundView: RoundedCornersView
@@ -139,6 +140,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var activeLocalVideoSource: VideoSource?
     private var waitingForFirstLocalVideoFrameDisposable: Disposable?
     
+    private var isEmojiKeyExpanded: Bool = false
     private var areControlsHidden: Bool = false
     private var swapLocalAndRemoteVideo: Bool = false
     
@@ -458,6 +460,53 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, controlsHidden: currentAreControlsHidden, buttons: buttons, transition: transition)
         
+        if self.isEmojiKeyExpanded {
+            let emojiExpandedInfoView: EmojiExpandedInfoView
+            var emojiExpandedInfoTransition = transition
+            var animateIn = false
+            if let current = self.emojiExpandedInfoView {
+                emojiExpandedInfoView = current
+            } else {
+                emojiExpandedInfoTransition = emojiExpandedInfoTransition.withAnimation(.none)
+                animateIn = true
+                
+                emojiExpandedInfoView = EmojiExpandedInfoView(title: "This call is end-to-end encrypted", text: "If the emoji on Emma's screen are the same, this call is 100% secure.")
+                self.emojiExpandedInfoView = emojiExpandedInfoView
+                emojiExpandedInfoView.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+                if let emojiView = self.emojiView {
+                    self.insertSubview(emojiExpandedInfoView, belowSubview: emojiView)
+                } else {
+                    self.addSubview(emojiExpandedInfoView)
+                }
+                
+                emojiExpandedInfoView.closeAction = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.isEmojiKeyExpanded = false
+                    self.update(transition: .spring(duration: 0.4))
+                }
+            }
+            
+            let emojiExpandedInfoSize = emojiExpandedInfoView.update(constrainedWidth: params.size.width, sideInset: params.insets.left + 44.0, transition: emojiExpandedInfoTransition)
+            let emojiExpandedInfoFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiExpandedInfoSize.width) * 0.5), y: params.insets.top + 73.0), size: emojiExpandedInfoSize)
+            emojiExpandedInfoTransition.setPosition(view: emojiExpandedInfoView, position: CGPoint(x: emojiExpandedInfoFrame.maxX, y: emojiExpandedInfoFrame.minY))
+            emojiExpandedInfoTransition.setBounds(view: emojiExpandedInfoView, bounds: CGRect(origin: CGPoint(), size: emojiExpandedInfoFrame.size))
+            
+            if animateIn {
+                transition.animateAlpha(view: emojiExpandedInfoView, from: 0.0, to: 1.0)
+                transition.animateScale(view: emojiExpandedInfoView, from: 0.001, to: 1.0)
+            }
+        } else {
+            if let emojiExpandedInfoView = self.emojiExpandedInfoView {
+                self.emojiExpandedInfoView = nil
+                transition.setAlpha(view: emojiExpandedInfoView, alpha: 0.0, completion: { [weak emojiExpandedInfoView] _ in
+                    emojiExpandedInfoView?.removeFromSuperview()
+                })
+                transition.setScale(view: emojiExpandedInfoView, scale: 0.001)
+            }
+        }
+        
         if case let .active(activeState) = params.state.lifecycleState {
             let emojiView: KeyEmojiView
             var emojiTransition = transition
@@ -469,6 +518,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 emojiAlphaTransition = genericAlphaTransition.withAnimation(.none)
                 emojiView = KeyEmojiView(emoji: activeState.emojiKey)
                 self.emojiView = emojiView
+                emojiView.pressAction = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    if !self.isEmojiKeyExpanded {
+                        self.isEmojiKeyExpanded = true
+                        self.update(transition: .spring(duration: 0.4))
+                    }
+                }
             }
             if emojiView.superview == nil {
                 self.addSubview(emojiView)
@@ -476,14 +534,25 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     emojiView.animateIn()
                 }
             }
-            let emojiY: CGFloat
-            if currentAreControlsHidden {
-                emojiY = -8.0 - emojiView.size.height
+            emojiView.isUserInteractionEnabled = !self.isEmojiKeyExpanded
+            
+            let emojiViewSize = emojiView.update(isExpanded: self.isEmojiKeyExpanded, transition: emojiTransition)
+            
+            if self.isEmojiKeyExpanded {
+                let emojiViewFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiViewSize.width) * 0.5), y: params.insets.top + 93.0), size: emojiViewSize)
+                emojiTransition.setFrame(view: emojiView, frame: emojiViewFrame)
             } else {
-                emojiY = params.insets.top + 12.0
+                let emojiY: CGFloat
+                if currentAreControlsHidden {
+                    emojiY = -8.0 - emojiViewSize.height
+                } else {
+                    emojiY = params.insets.top + 12.0
+                }
+                emojiTransition.setFrame(view: emojiView, frame: CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 12.0 - emojiViewSize.width, y: emojiY), size: emojiViewSize))
+                emojiAlphaTransition.setAlpha(view: emojiView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
             }
-            emojiTransition.setFrame(view: emojiView, frame: CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 12.0 - emojiView.size.width, y: emojiY), size: emojiView.size))
-            emojiAlphaTransition.setAlpha(view: emojiView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
+            
+            emojiAlphaTransition.setAlpha(view: emojiView, alpha: 1.0)
         } else {
             if let emojiView = self.emojiView {
                 self.emojiView = nil
@@ -666,6 +735,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         transition.setPosition(layer: self.avatarLayer, position: avatarFrame.center)
         transition.setBounds(layer: self.avatarLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
         self.avatarLayer.update(size: collapsedAvatarFrame.size, isExpanded: havePrimaryVideo, cornerRadius: avatarCornerRadius, transition: transition)
+        transition.setAlpha(layer: self.avatarLayer, alpha: (self.isEmojiKeyExpanded && !havePrimaryVideo) ? 0.0 : 1.0)
         
         transition.setPosition(view: self.videoContainerBackgroundView, position: avatarFrame.center)
         transition.setBounds(view: self.videoContainerBackgroundView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
@@ -693,7 +763,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             transition.setAlpha(layer: self.blobLayer, alpha: 0.0)
         default:
             titleString = params.state.name
-            transition.setAlpha(layer: self.blobLayer, alpha: 1.0)
+            transition.setAlpha(layer: self.blobLayer, alpha: (self.isEmojiKeyExpanded && !havePrimaryVideo) ? 0.0 : 1.0)
         }
         
         let titleSize = self.titleView.update(
