@@ -380,7 +380,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
 
 private final class AdaptedCallVideoSource: VideoSource {
     private static let queue = Queue(name: "AdaptedCallVideoSource")
-    var updated: (() -> Void)?
+    private var onUpdatedListeners = Bag<() -> Void>()
     private(set) var currentOutput: Output?
     
     private var textureCache: CVMetalTextureCache?
@@ -425,7 +425,7 @@ private final class AdaptedCallVideoSource: VideoSource {
                         return
                     }
                     
-                    output = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically ? 1 : 0)
+                    output = Output(resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)), y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically ? 1 : 0)
                 default:
                     return
                 }
@@ -435,10 +435,25 @@ private final class AdaptedCallVideoSource: VideoSource {
                         return
                     }
                     self.currentOutput = output
-                    self.updated?()
+                    for onUpdated in self.onUpdatedListeners.copyItems() {
+                        onUpdated()
+                    }
                 }
             }
         })
+    }
+    
+    func addOnUpdated(_ f: @escaping () -> Void) -> Disposable {
+        let index = self.onUpdatedListeners.add(f)
+        
+        return ActionDisposable { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else {
+                    return
+                }
+                self.onUpdatedListeners.remove(index)
+            }
+        }
     }
     
     deinit {
