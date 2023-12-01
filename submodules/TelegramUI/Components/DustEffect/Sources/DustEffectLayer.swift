@@ -110,6 +110,8 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     private var items: [Item] = []
     private var lastTimeStep: Double = 0.0
     
+    public var animationSpeed: Float = 1.0
+    
     public var becameEmpty: (() -> Void)?
     
     override public init() {
@@ -164,7 +166,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         
         var didRemoveItems = false
         for i in (0 ..< self.items.count).reversed() {
-            self.items[i].phase += Float(deltaTimeValue) / Float(UIView.animationDurationFactor())
+            self.items[i].phase += Float(deltaTimeValue) * self.animationSpeed / Float(UIView.animationDurationFactor())
             
             if self.items[i].phase >= 4.0 {
                 self.items.remove(at: i)

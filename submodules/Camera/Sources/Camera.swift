@@ -50,11 +50,11 @@ final class CameraDeviceContext {
     let input = CameraInput()
     let output: CameraOutput
     
-    init(session: CameraSession, exclusive: Bool, additional: Bool) {
+    init(session: CameraSession, exclusive: Bool, additional: Bool, ciContext: CIContext) {
         self.session = session
         self.exclusive = exclusive
         self.additional = additional
-        self.output = CameraOutput(exclusive: exclusive)
+        self.output = CameraOutput(exclusive: exclusive, ciContext: ciContext)
     }
     
     func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false, preferLowerFramerate: Bool = false) {
@@ -114,7 +114,7 @@ private final class CameraContext {
     private var mainDeviceContext: CameraDeviceContext?
     private var additionalDeviceContext: CameraDeviceContext?
 
-    private let cameraImageContext = CIContext()
+    private let ciContext = CIContext()
     
     private let initialConfiguration: Camera.Configuration
     private var invalidated = false
@@ -140,7 +140,7 @@ private final class CameraContext {
                 ciImage = ciImage.transformed(by: transform)
             }
             ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 40.0).cropped(to: CGRect(origin: .zero, size: size))
-            if let cgImage = self.cameraImageContext.createCGImage(ciImage, from: ciImage.extent) {
+            if let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
                 if front {
                     CameraSimplePreviewView.saveLastFrontImage(uiImage)
@@ -303,10 +303,10 @@ private final class CameraContext {
         if enabled {
             self.configure {
                 self.mainDeviceContext?.invalidate()
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: false)
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: false, ciContext: self.ciContext)
                 self.mainDeviceContext?.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             
-                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: true)
+                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: true, ciContext: self.ciContext)
                 self.additionalDeviceContext?.configure(position: .front, previewView: self.secondaryPreviewView, audio: false, photo: true, metadata: false)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
@@ -343,7 +343,7 @@ private final class CameraContext {
                 self.additionalDeviceContext?.invalidate()
                 self.additionalDeviceContext = nil
                 
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false)
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false, ciContext: self.ciContext)
                 self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide, preferLowerFramerate: self.initialConfiguration.preferLowerFramerate)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
