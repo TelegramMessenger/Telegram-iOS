@@ -26,7 +26,6 @@ final class TextView: UIView {
         
         self.isOpaque = false
         self.backgroundColor = nil
-        self.contentMode = .center
     }
     
     required init?(coder: NSCoder) {

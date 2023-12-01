@@ -29,6 +29,10 @@ final class KeyEmojiView: HighlightTrackingButton {
     
     private var currentLayout: Layout?
     
+    var isExpanded: Bool? {
+        return self.currentLayout?.params.isExpanded
+    }
+    
     init(emoji: [String]) {
         self.emoji = emoji
         self.emojiViews = emoji.map { _ in
@@ -125,4 +129,51 @@ final class KeyEmojiView: HighlightTrackingButton {
         
         return CGSize(width: nextX, height: height)
     }
+}
+
+func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat, duration: Double, curve: Transition.Animation.Curve, reverse: Bool) -> [CGPoint] {
+    let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - elevation)
+    
+    let x1 = sourcePoint.x
+    let y1 = sourcePoint.y
+    let x2 = midPoint.x
+    let y2 = midPoint.y
+    let x3 = targetPosition.x
+    let y3 = targetPosition.y
+    
+    let numPoints: Int = Int(ceil(Double(UIScreen.main.maximumFramesPerSecond) * duration))
+    
+    var keyframes: [CGPoint] = []
+    if abs(y1 - y3) < 5.0 && abs(x1 - x3) < 5.0 {
+        for rawI in 0 ..< numPoints {
+            let i = reverse ? (numPoints - 1 - rawI) : rawI
+            let ks = CGFloat(i) / CGFloat(numPoints - 1)
+            var k = curve.solve(at: reverse ? (1.0 - ks) : ks)
+            if reverse {
+                k = 1.0 - k
+            }
+            let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+            let y = sourcePoint.y * (1.0 - k) + targetPosition.y * k
+            keyframes.append(CGPoint(x: x, y: y))
+        }
+    } else {
+        let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+        let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+        let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+        
+        for rawI in 0 ..< numPoints {
+            let i = reverse ? (numPoints - 1 - rawI) : rawI
+            
+            let ks = CGFloat(i) / CGFloat(numPoints - 1)
+            var k = curve.solve(at: reverse ? (1.0 - ks) : ks)
+            if reverse {
+                k = 1.0 - k
+            }
+            let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+            let y = a * x * x + b * x + c
+            keyframes.append(CGPoint(x: x, y: y))
+        }
+    }
+    
+    return keyframes
 }

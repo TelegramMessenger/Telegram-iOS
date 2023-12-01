@@ -36,18 +36,6 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     }
     
     final class RenderState: RenderToLayerState {
-        final class Input {
-            let rect: CGRect
-            let blobs: [Blob]
-            let phase: Float
-            
-            init(rect: CGRect, blobs: [Blob], phase: Float) {
-                self.rect = rect
-                self.blobs = blobs
-                self.phase = phase
-            }
-        }
-        
         let pipelineState: MTLRenderPipelineState
         
         required init?(device: MTLDevice) {
@@ -133,7 +121,7 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         let phase = self.phase
         let blobs = self.blobs
         
-        context.renderToLayer(spec: RenderLayerSpec(size: RenderSize(width: Int(self.bounds.width * 3.0), height: Int(self.bounds.height * 3.0))), state: RenderState.self, layer: self, commands: { encoder, placement in
+        context.renderToLayer(spec: RenderLayerSpec(size: RenderSize(width: Int(self.bounds.width * 3.0), height: Int(self.bounds.height * 3.0)), edgeInset: 4), state: RenderState.self, layer: self, commands: { encoder, placement in
             let rect = placement.effectiveRect
             
             for i in 0 ..< blobs.count {

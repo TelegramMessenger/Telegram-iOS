@@ -6,11 +6,9 @@ import ComponentFlow
 final class EmojiExpandedInfoView: OverlayMaskContainerView {
     private struct Params: Equatable {
         var constrainedWidth: CGFloat
-        var sideInset: CGFloat
         
-        init(constrainedWidth: CGFloat, sideInset: CGFloat) {
+        init(constrainedWidth: CGFloat) {
             self.constrainedWidth = constrainedWidth
-            self.sideInset = sideInset
         }
     }
     
@@ -28,6 +26,8 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
     private let text: String
     
     private let backgroundView: UIImageView
+    private let separatorLayer: SimpleLayer
+    
     private let titleView: TextView
     private let textView: TextView
     
@@ -56,6 +56,8 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
             context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - buttonHeight), size: CGSize(width: size.width, height: UIScreenPixel)))
         })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 5, topCapHeight: Int(cornerRadius) + 5)
         
+        self.separatorLayer = SimpleLayer()
+        
         self.titleView = TextView()
         self.textView = TextView()
         
@@ -66,6 +68,8 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
         super.init(frame: CGRect())
         
         self.maskContents.addSubview(self.backgroundView)
+        
+        self.layer.addSublayer(self.separatorLayer)
         
         self.addSubview(self.titleView)
         self.addSubview(self.textView)
@@ -100,6 +104,8 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
             }
         }
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: .touchUpInside)
+        
+        self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     required init?(coder: NSCoder) {
@@ -110,8 +116,21 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
         self.closeAction?()
     }
     
-    func update(constrainedWidth: CGFloat, sideInset: CGFloat, transition: Transition) -> CGSize {
-        let params = Params(constrainedWidth: constrainedWidth, sideInset: sideInset)
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.closeAction?()
+        }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = self.actionButton.hitTest(self.convert(point, to: self.actionButton), with: event) {
+            return result
+        }
+        return nil
+    }
+    
+    func update(constrainedWidth: CGFloat, transition: Transition) -> CGSize {
+        let params = Params(constrainedWidth: constrainedWidth)
         if let currentLayout = self.currentLayout, currentLayout.params == params {
             return currentLayout.size
         }
@@ -121,21 +140,31 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
     }
     
     private func update(params: Params, transition: Transition) -> CGSize {
-        let size = CGSize(width: 304.0, height: 227.0)
+        let buttonHeight: CGFloat = 56.0
+        
+        var constrainedWidth = params.constrainedWidth
+        constrainedWidth = min(constrainedWidth, 300.0)
+        
+        let titleSize = self.titleView.update(string: self.title, fontSize: 16.0, fontWeight: 0.3, alignment: .center, color: .white, constrainedWidth: constrainedWidth - 16.0 * 2.0, transition: transition)
+        let textSize = self.textView.update(string: self.text, fontSize: 16.0, fontWeight: 0.0, alignment: .center, color: .white, constrainedWidth: constrainedWidth - 16.0 * 2.0, transition: transition)
+        
+        let contentWidth: CGFloat = max(titleSize.width, textSize.width) + 26.0 * 2.0
+        let contentHeight = 78.0 + titleSize.height + 10.0 + textSize.height + 22.0 + buttonHeight
+        
+        let size = CGSize(width: contentWidth, height: contentHeight)
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
-        let titleSize = self.titleView.update(string: self.title, fontSize: 16.0, fontWeight: 0.3, alignment: .center, color: .white, constrainedWidth: params.constrainedWidth - params.sideInset * 2.0 - 16.0 * 2.0, transition: transition)
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) * 0.5), y: 78.0), size: titleSize)
         transition.setFrame(view: self.titleView, frame: titleFrame)
         
-        let textSize = self.textView.update(string: self.text, fontSize: 16.0, fontWeight: 0.0, alignment: .center, color: .white, constrainedWidth: params.constrainedWidth - params.sideInset * 2.0 - 16.0 * 2.0, transition: transition)
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) * 0.5), y: titleFrame.maxY + 10.0), size: textSize)
         transition.setFrame(view: self.textView, frame: textFrame)
         
-        let buttonHeight: CGFloat = 56.0
         let buttonFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - buttonHeight), size: CGSize(width: size.width, height: buttonHeight))
         transition.setFrame(view: self.actionButton, frame: buttonFrame)
+        
+        transition.setFrame(layer: self.separatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - buttonHeight), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         let actionTitleSize = self.actionTitleView.update(string: "OK", fontSize: 19.0, fontWeight: 0.3, color: .white, constrainedWidth: size.width, transition: transition)
         let actionTitleFrame = CGRect(origin: CGPoint(x: floor((buttonFrame.width - actionTitleSize.width) * 0.5), y: floor((buttonFrame.height - actionTitleSize.height) * 0.5)), size: actionTitleSize)

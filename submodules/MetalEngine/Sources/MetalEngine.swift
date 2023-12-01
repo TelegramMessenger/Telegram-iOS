@@ -119,6 +119,28 @@ open class MetalEngineSubjectLayer: SimpleLayer {
     fileprivate var surfaceChangeFrameCount: Int = 0
     #endif
     
+    public var cloneLayers: [CALayer] = []
+    
+    override open var contents: Any? {
+        didSet {
+            if !self.cloneLayers.isEmpty {
+                for cloneLayer in self.cloneLayers {
+                    cloneLayer.contents = self.contents
+                }
+            }
+        }
+    }
+    
+    override open var contentsRect: CGRect {
+        didSet {
+            if !self.cloneLayers.isEmpty {
+                for cloneLayer in self.cloneLayers {
+                    cloneLayer.contentsRect = self.contentsRect
+                }
+            }
+        }
+    }
+    
     public override init() {
         super.init()
         
@@ -533,10 +555,13 @@ public final class MetalEngine {
             let renderingRect: CGRect
             let contentsRect: CGRect
             
-            init(baseRect: CGRect, surfaceWidth: Int, surfaceHeight: Int) {
+            init(baseRect: CGRect, edgeSize: CGFloat, surfaceWidth: Int, surfaceHeight: Int) {
                 self.subRect = CGRect(origin: CGPoint(x: baseRect.minX, y: baseRect.minY), size: CGSize(width: baseRect.width, height: baseRect.height))
                 self.renderingRect = CGRect(origin: CGPoint(x: self.subRect.minX / CGFloat(surfaceWidth), y: self.subRect.minY / CGFloat(surfaceHeight)), size: CGSize(width: self.subRect.width / CGFloat(surfaceWidth), height: self.subRect.height / CGFloat(surfaceHeight)))
-                self.contentsRect = CGRect(origin: CGPoint(x: self.subRect.minX / CGFloat(surfaceWidth), y: 1.0 - self.subRect.minY / CGFloat(surfaceHeight) - self.subRect.height / CGFloat(surfaceHeight)), size: CGSize(width: self.subRect.width / CGFloat(surfaceWidth), height: self.subRect.height / CGFloat(surfaceHeight)))
+                
+                let subRectWithInset = self.subRect.insetBy(dx: edgeSize, dy: edgeSize)
+                
+                self.contentsRect = CGRect(origin: CGPoint(x: subRectWithInset.minX / CGFloat(surfaceWidth), y: 1.0 - subRectWithInset.minY / CGFloat(surfaceHeight) - subRectWithInset.height / CGFloat(surfaceHeight)), size: CGSize(width: subRectWithInset.width / CGFloat(surfaceWidth), height: subRectWithInset.height / CGFloat(surfaceHeight)))
             }
         }
         
@@ -550,11 +575,13 @@ public final class MetalEngine {
             if item0.itemId != -1 && item1.itemId != -1 {
                 let layout0 = AllocationLayout(
                     baseRect: CGRect(origin: CGPoint(x: CGFloat(item0.x), y: CGFloat(item0.y)), size: CGSize(width: CGFloat(item0.width), height: CGFloat(item0.height))),
+                    edgeSize: CGFloat(renderingParameters.edgeInset),
                     surfaceWidth: self.width,
                     surfaceHeight: self.height
                 )
                 let layout1 = AllocationLayout(
                     baseRect: CGRect(origin: CGPoint(x: CGFloat(item1.x), y: CGFloat(item1.y)), size: CGSize(width: CGFloat(item1.width), height: CGFloat(item1.height))),
+                    edgeSize: CGFloat(renderingParameters.edgeInset),
                     surfaceWidth: self.width,
                     surfaceHeight: self.height
                 )

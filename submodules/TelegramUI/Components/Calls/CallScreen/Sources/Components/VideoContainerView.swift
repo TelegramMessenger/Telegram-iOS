@@ -630,7 +630,7 @@ final class VideoContainerView: HighlightTrackingButton {
                 }
             })
             
-            self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(videoLayout.rotatedVideoResolution.width), height: Int(videoLayout.rotatedVideoResolution.height)))
+            self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(videoLayout.rotatedVideoResolution.width), height: Int(videoLayout.rotatedVideoResolution.height)), edgeInset: 2)
         } else {
             var rotatedResolution = videoMetrics.resolution
             var videoIsRotated = false
@@ -719,7 +719,7 @@ final class VideoContainerView: HighlightTrackingButton {
             videoTransition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
             
             if !params.isAnimatedOut {
-                self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)))
+                self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
             }
         }
         

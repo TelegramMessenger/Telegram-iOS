@@ -5,11 +5,28 @@ import Display
 import CallScreen
 import ComponentFlow
 
+private extension UIScreen {
+    private static let cornerRadiusKey: String = {
+        let components = ["Radius", "Corner", "display", "_"]
+        return components.reversed().joined()
+    }()
+
+    var displayCornerRadius: CGFloat {
+        guard let cornerRadius = self.value(forKey: Self.cornerRadiusKey) as? CGFloat else {
+            assertionFailure("Failed to detect screen corner radius")
+            return 0
+        }
+
+        return cornerRadius
+    }
+}
+
 public final class ViewController: UIViewController {    
     private var callScreenView: PrivateCallScreen?
     private var callState: PrivateCallScreen.State = PrivateCallScreen.State(
         lifecycleState: .connecting,
         name: "Emma Walters",
+        shortName: "Emma",
         avatarImage: UIImage(named: "test"),
         audioOutput: .internalSpeaker,
         isMicrophoneMuted: false,
@@ -19,6 +36,8 @@ public final class ViewController: UIViewController {
     
     private var currentLayout: (size: CGSize, insets: UIEdgeInsets)?
     private var viewLayoutTransition: Transition?
+    
+    private var audioLevelTimer: Foundation.Timer?
     
     override public func viewDidLoad() {
         super.viewDidLoad()
@@ -59,6 +78,29 @@ public final class ViewController: UIViewController {
                     signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
                     emojiKey: ["😂", "😘", "😍", "😊"]
                 ))
+            }
+            
+            switch self.callState.lifecycleState {
+            case .terminated:
+                if let audioLevelTimer = self.audioLevelTimer {
+                    self.audioLevelTimer = nil
+                    audioLevelTimer.invalidate()
+                }
+            default:
+                if self.audioLevelTimer == nil {
+                    let startTime = CFAbsoluteTimeGetCurrent()
+                    self.audioLevelTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true, block: { [weak self] _ in
+                        guard let self, let callScreenView = self.callScreenView else {
+                            return
+                        }
+                        let timestamp = CFAbsoluteTimeGetCurrent() - startTime
+                        let stream1 = sin(timestamp * Double.pi * 2.0)
+                        let stream2 = sin(2.0 * timestamp * Double.pi * 2.0)
+                        let stream3 = sin(3.0 * timestamp * Double.pi * 2.0)
+                        let result = stream1 + stream2 + stream3
+                        callScreenView.addIncomingAudioLevel(value: abs(Float(result)))
+                    })
+                }
             }
             
             self.update(transition: .spring(duration: 0.4))
@@ -115,7 +157,7 @@ public final class ViewController: UIViewController {
         }
         
         transition.setFrame(view: callScreenView, frame: CGRect(origin: CGPoint(), size: size))
-        callScreenView.update(size: size, insets: insets, screenCornerRadius: 55.0, state: self.callState, transition: transition)
+        callScreenView.update(size: size, insets: insets, screenCornerRadius: UIScreen.main.displayCornerRadius, state: self.callState, transition: transition)
     }
     
     override public func viewWillLayoutSubviews() {

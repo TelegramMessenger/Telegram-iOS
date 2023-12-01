@@ -5,6 +5,53 @@ import MetalEngine
 import ComponentFlow
 import SwiftSignalKit
 
+/*private final class EdgeTestLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    final class RenderState: RenderToLayerState {
+        let pipelineState: MTLRenderPipelineState
+        
+        required init?(device: MTLDevice) {
+            guard let library = metalLibrary(device: device) else {
+                return nil
+            }
+            guard let vertexFunction = library.makeFunction(name: "edgeTestVertex"), let fragmentFunction = library.makeFunction(name: "edgeTestFragment") else {
+                return nil
+            }
+            
+            let pipelineDescriptor = MTLRenderPipelineDescriptor()
+            pipelineDescriptor.vertexFunction = vertexFunction
+            pipelineDescriptor.fragmentFunction = fragmentFunction
+            pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
+            pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
+            pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
+            pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
+            pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = .one
+            pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
+            pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+            pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
+            
+            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
+                return nil
+            }
+            self.pipelineState = pipelineState
+        }
+    }
+    
+    var internalData: MetalEngineSubjectInternalData?
+    
+    func update(context: MetalEngineSubjectContext) {
+        context.renderToLayer(spec: RenderLayerSpec(size: RenderSize(width: 300, height: 300), edgeInset: 100), state: RenderState.self, layer: self, commands: { encoder, placement in
+            let effectiveRect = placement.effectiveRect
+            
+            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width * 0.5), Float(effectiveRect.height))
+            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
+            
+            var color = SIMD4<Float>(1.0, 0.0, 0.0, 1.0)
+            encoder.setFragmentBytes(&color, length: 4 * 4, index: 0)
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        })
+    }
+}*/
+
 public final class PrivateCallScreen: OverlayMaskContainerView {
     public struct State: Equatable {
         public struct SignalInfo: Equatable {
@@ -50,6 +97,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         public var lifecycleState: LifecycleState
         public var name: String
+        public var shortName: String
         public var avatarImage: UIImage?
         public var audioOutput: AudioOutput
         public var isMicrophoneMuted: Bool
@@ -59,6 +107,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         public init(
             lifecycleState: LifecycleState,
             name: String,
+            shortName: String,
             avatarImage: UIImage?,
             audioOutput: AudioOutput,
             isMicrophoneMuted: Bool,
@@ -67,6 +116,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         ) {
             self.lifecycleState = lifecycleState
             self.name = name
+            self.shortName = shortName
             self.avatarImage = avatarImage
             self.audioOutput = audioOutput
             self.isMicrophoneMuted = isMicrophoneMuted
@@ -79,6 +129,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 return false
             }
             if lhs.name != rhs.name {
+                return false
+            }
+            if lhs.shortName != rhs.shortName {
                 return false
             }
             if lhs.avatarImage != rhs.avatarImage {
@@ -119,7 +172,10 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private let backgroundLayer: CallBackgroundLayer
     private let overlayContentsView: UIView
     private let buttonGroupView: ButtonGroupView
+    private let blobTransformLayer: SimpleLayer
+    private let blobBackgroundLayer: CALayer
     private let blobLayer: CallBlobsLayer
+    private let avatarTransformLayer: SimpleLayer
     private let avatarLayer: AvatarLayer
     private let titleView: TextView
     
@@ -140,6 +196,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var activeLocalVideoSource: VideoSource?
     private var waitingForFirstLocalVideoFrameDisposable: Disposable?
     
+    private var canAnimateAudioLevel: Bool = false
     private var isEmojiKeyExpanded: Bool = false
     private var areControlsHidden: Bool = false
     private var swapLocalAndRemoteVideo: Bool = false
@@ -147,6 +204,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var processedInitialAudioLevelBump: Bool = false
     private var audioLevelBump: Float = 0.0
     
+    private var currentAvatarAudioScale: CGFloat = 1.0
     private var targetAudioLevel: Float = 0.0
     private var audioLevel: Float = 0.0
     private var audioLevelUpdateSubscription: SharedDisplayLinkDriver.Link?
@@ -165,7 +223,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         self.buttonGroupView = ButtonGroupView()
         
+        self.blobTransformLayer = SimpleLayer()
+        self.blobBackgroundLayer = self.backgroundLayer.externalBlurredLayer
         self.blobLayer = CallBlobsLayer()
+        self.blobBackgroundLayer.mask = self.blobTransformLayer
+        
+        self.avatarTransformLayer = SimpleLayer()
         self.avatarLayer = AvatarLayer()
         
         self.videoContainerBackgroundView = RoundedCornersView(color: .black)
@@ -176,13 +239,22 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         super.init(frame: frame)
         
+        self.clipsToBounds = true
+        
         self.layer.addSublayer(self.backgroundLayer)
         self.overlayContentsView.layer.addSublayer(self.backgroundLayer.blurredLayer)
         
         self.overlayContentsView.addSubview(self.overlayContentsVideoContainerBackgroundView)
         
-        self.layer.addSublayer(self.blobLayer)
-        self.layer.addSublayer(self.avatarLayer)
+        self.layer.addSublayer(self.blobBackgroundLayer)
+        self.blobTransformLayer.addSublayer(self.blobLayer)
+        
+        self.avatarTransformLayer.addSublayer(self.avatarLayer)
+        self.layer.addSublayer(self.avatarTransformLayer)
+        
+        /*let edgeTestLayer = EdgeTestLayer()
+        edgeTestLayer.frame = CGRect(origin: CGPoint(x: 20.0, y: 100.0), size: CGSize(width: 100.0, height: 100.0))
+        self.layer.addSublayer(edgeTestLayer)*/
         
         self.addSubview(self.videoContainerBackgroundView)
         
@@ -233,11 +305,21 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             return nil
         }
         
+        if let emojiExpandedInfoView = self.emojiExpandedInfoView, self.isEmojiKeyExpanded {
+            if !result.isDescendant(of: emojiExpandedInfoView) {
+                return emojiExpandedInfoView
+            }
+        }
+        
         return result
     }
     
     public func addIncomingAudioLevel(value: Float) {
-        self.targetAudioLevel = value
+        if self.canAnimateAudioLevel {
+            self.targetAudioLevel = value
+        } else {
+            self.targetAudioLevel = 0.0
+        }
     }
     
     private func attenuateAudioLevelStep() {
@@ -249,14 +331,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     }
     
     private func updateAudioLevel() {
-        if self.activeRemoteVideoSource == nil && self.activeLocalVideoSource == nil {
+        if self.canAnimateAudioLevel {
             let additionalAvatarScale = CGFloat(max(0.0, min(self.audioLevel, 5.0)) * 0.05)
-            self.avatarLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale, 1.0 + additionalAvatarScale, 1.0)
+            self.currentAvatarAudioScale = 1.0 + additionalAvatarScale
+            self.avatarTransformLayer.transform = CATransform3DMakeScale(self.currentAvatarAudioScale, self.currentAvatarAudioScale, 1.0)
             
             if let params = self.params, case .terminated = params.state.lifecycleState {
             } else {
                 let blobAmplificationFactor: CGFloat = 2.0
-                self.blobLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0)
+                self.blobTransformLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0)
             }
         }
     }
@@ -396,11 +479,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         let backgroundAspect: CGFloat = params.size.width / params.size.height
         let backgroundSizeNorm: CGFloat = 64.0
         let backgroundRenderingSize = CGSize(width: floor(backgroundSizeNorm * backgroundAspect), height: backgroundSizeNorm)
-        let backgroundEdgeSize: Int = 2
-        let visualBackgroundFrame = backgroundFrame.insetBy(dx: -CGFloat(backgroundEdgeSize) / backgroundRenderingSize.width * backgroundFrame.width, dy: -CGFloat(backgroundEdgeSize) / backgroundRenderingSize.height * backgroundFrame.height)
-        self.backgroundLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(backgroundRenderingSize.width) + backgroundEdgeSize * 2, height: Int(backgroundRenderingSize.height) + backgroundEdgeSize * 2))
+        let visualBackgroundFrame = backgroundFrame
+        self.backgroundLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(backgroundRenderingSize.width), height: Int(backgroundRenderingSize.height)), edgeInset: 8)
         transition.setFrame(layer: self.backgroundLayer, frame: visualBackgroundFrame)
         transition.setFrame(layer: self.backgroundLayer.blurredLayer, frame: visualBackgroundFrame)
+        transition.setFrame(layer: self.blobBackgroundLayer, frame: visualBackgroundFrame)
         
         let backgroundStateIndex: Int
         switch params.state.lifecycleState {
@@ -460,19 +543,27 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, controlsHidden: currentAreControlsHidden, buttons: buttons, transition: transition)
         
+        var expandedEmojiKeyRect: CGRect?
         if self.isEmojiKeyExpanded {
             let emojiExpandedInfoView: EmojiExpandedInfoView
             var emojiExpandedInfoTransition = transition
-            var animateIn = false
+            let alphaTransition: Transition
             if let current = self.emojiExpandedInfoView {
                 emojiExpandedInfoView = current
+                alphaTransition = genericAlphaTransition
             } else {
                 emojiExpandedInfoTransition = emojiExpandedInfoTransition.withAnimation(.none)
-                animateIn = true
+                if !genericAlphaTransition.animation.isImmediate {
+                    alphaTransition = genericAlphaTransition.withAnimation(.curve(duration: 0.1, curve: .easeInOut))
+                } else {
+                    alphaTransition = genericAlphaTransition
+                }
                 
-                emojiExpandedInfoView = EmojiExpandedInfoView(title: "This call is end-to-end encrypted", text: "If the emoji on Emma's screen are the same, this call is 100% secure.")
+                emojiExpandedInfoView = EmojiExpandedInfoView(title: "This call is end-to-end encrypted", text: "If the emoji on \(params.state.shortName)'s screen are the same, this call is 100% secure.")
                 self.emojiExpandedInfoView = emojiExpandedInfoView
-                emojiExpandedInfoView.layer.anchorPoint = CGPoint(x: 1.0, y: 0.0)
+                emojiExpandedInfoView.alpha = 0.0
+                Transition.immediate.setScale(view: emojiExpandedInfoView, scale: 0.5)
+                emojiExpandedInfoView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.1)
                 if let emojiView = self.emojiView {
                     self.insertSubview(emojiExpandedInfoView, belowSubview: emojiView)
                 } else {
@@ -488,22 +579,30 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 }
             }
             
-            let emojiExpandedInfoSize = emojiExpandedInfoView.update(constrainedWidth: params.size.width, sideInset: params.insets.left + 44.0, transition: emojiExpandedInfoTransition)
+            let emojiExpandedInfoSize = emojiExpandedInfoView.update(constrainedWidth: params.size.width - (params.insets.left + 16.0) * 2.0, transition: emojiExpandedInfoTransition)
             let emojiExpandedInfoFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiExpandedInfoSize.width) * 0.5), y: params.insets.top + 73.0), size: emojiExpandedInfoSize)
-            emojiExpandedInfoTransition.setPosition(view: emojiExpandedInfoView, position: CGPoint(x: emojiExpandedInfoFrame.maxX, y: emojiExpandedInfoFrame.minY))
+            emojiExpandedInfoTransition.setPosition(view: emojiExpandedInfoView, position: CGPoint(x: emojiExpandedInfoFrame.minX + emojiExpandedInfoView.layer.anchorPoint.x * emojiExpandedInfoFrame.width, y: emojiExpandedInfoFrame.minY + emojiExpandedInfoView.layer.anchorPoint.y * emojiExpandedInfoFrame.height))
             emojiExpandedInfoTransition.setBounds(view: emojiExpandedInfoView, bounds: CGRect(origin: CGPoint(), size: emojiExpandedInfoFrame.size))
             
-            if animateIn {
-                transition.animateAlpha(view: emojiExpandedInfoView, from: 0.0, to: 1.0)
-                transition.animateScale(view: emojiExpandedInfoView, from: 0.001, to: 1.0)
-            }
+            alphaTransition.setAlpha(view: emojiExpandedInfoView, alpha: 1.0)
+            transition.setScale(view: emojiExpandedInfoView, scale: 1.0)
+            
+            expandedEmojiKeyRect = emojiExpandedInfoFrame
         } else {
             if let emojiExpandedInfoView = self.emojiExpandedInfoView {
                 self.emojiExpandedInfoView = nil
-                transition.setAlpha(view: emojiExpandedInfoView, alpha: 0.0, completion: { [weak emojiExpandedInfoView] _ in
+                
+                let alphaTransition: Transition
+                if !genericAlphaTransition.animation.isImmediate {
+                    alphaTransition = genericAlphaTransition.withAnimation(.curve(duration: 0.1, curve: .easeInOut))
+                } else {
+                    alphaTransition = genericAlphaTransition
+                }
+                
+                alphaTransition.setAlpha(view: emojiExpandedInfoView, alpha: 0.0, completion: { [weak emojiExpandedInfoView] _ in
                     emojiExpandedInfoView?.removeFromSuperview()
                 })
-                transition.setScale(view: emojiExpandedInfoView, scale: 0.001)
+                transition.setScale(view: emojiExpandedInfoView, scale: 0.5)
             }
         }
         
@@ -536,11 +635,21 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             }
             emojiView.isUserInteractionEnabled = !self.isEmojiKeyExpanded
             
+            let emojiViewWasExpanded = emojiView.isExpanded
             let emojiViewSize = emojiView.update(isExpanded: self.isEmojiKeyExpanded, transition: emojiTransition)
             
             if self.isEmojiKeyExpanded {
                 let emojiViewFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiViewSize.width) * 0.5), y: params.insets.top + 93.0), size: emojiViewSize)
-                emojiTransition.setFrame(view: emojiView, frame: emojiViewFrame)
+                
+                if case let .curve(duration, curve) = transition.animation, let emojiViewWasExpanded, !emojiViewWasExpanded {
+                    let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)
+                    let positionKeyframes = generateParabollicMotionKeyframes(from: emojiView.center, to: emojiViewFrame.center, elevation: -distance.y * 0.8, duration: duration, curve: curve, reverse: false)
+                    emojiView.center = emojiViewFrame.center
+                    emojiView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position", additive: false)
+                } else {
+                    emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
+                }
+                emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
             } else {
                 let emojiY: CGFloat
                 if currentAreControlsHidden {
@@ -548,7 +657,17 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 } else {
                     emojiY = params.insets.top + 12.0
                 }
-                emojiTransition.setFrame(view: emojiView, frame: CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 12.0 - emojiViewSize.width, y: emojiY), size: emojiViewSize))
+                let emojiViewFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 12.0 - emojiViewSize.width, y: emojiY), size: emojiViewSize)
+                
+                if case let .curve(duration, curve) = transition.animation, let emojiViewWasExpanded, emojiViewWasExpanded {
+                    let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)
+                    let positionKeyframes = generateParabollicMotionKeyframes(from: emojiViewFrame.center, to: emojiView.center, elevation: distance.y * 0.8, duration: duration, curve: curve, reverse: true)
+                    emojiView.center = emojiViewFrame.center
+                    emojiView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position", additive: false)
+                } else {
+                    emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
+                }
+                emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
                 emojiAlphaTransition.setAlpha(view: emojiView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
             }
             
@@ -565,7 +684,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         let collapsedAvatarSize: CGFloat = 136.0
         let blobSize: CGFloat = collapsedAvatarSize + 40.0
         
-        let collapsedAvatarFrame = CGRect(origin: CGPoint(x: floor((params.size.width - collapsedAvatarSize) * 0.5), y: 222.0), size: CGSize(width: collapsedAvatarSize, height: collapsedAvatarSize))
+        let collapsedAvatarFrame = CGRect(origin: CGPoint(x: floor((params.size.width - collapsedAvatarSize) * 0.5), y: max(params.insets.top + 8.0, floor(params.size.height * 0.49) - 39.0 - collapsedAvatarSize)), size: CGSize(width: collapsedAvatarSize, height: collapsedAvatarSize))
         let expandedAvatarFrame = CGRect(origin: CGPoint(), size: params.size)
         let expandedVideoFrame = CGRect(origin: CGPoint(), size: params.size)
         let avatarFrame = havePrimaryVideo ? expandedAvatarFrame : collapsedAvatarFrame
@@ -625,13 +744,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             let videoContainerTransition = transition
             if animateIn {
                 if i == 0 && self.videoContainerViews.count == 1 {
-                    videoContainerView.layer.position = self.avatarLayer.position
-                    videoContainerView.layer.bounds = self.avatarLayer.bounds
+                    videoContainerView.layer.position = self.avatarTransformLayer.position
+                    videoContainerView.layer.bounds = self.avatarTransformLayer.bounds
                     videoContainerView.alpha = 0.0
-                    videoContainerView.blurredContainerLayer.position = self.avatarLayer.position
-                    videoContainerView.blurredContainerLayer.bounds = self.avatarLayer.bounds
+                    videoContainerView.blurredContainerLayer.position = self.avatarTransformLayer.position
+                    videoContainerView.blurredContainerLayer.bounds = self.avatarTransformLayer.bounds
                     videoContainerView.blurredContainerLayer.opacity = 0.0
-                    videoContainerView.update(size: self.avatarLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
+                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
+                    Transition.immediate.setScale(view: videoContainerView, scale: self.currentAvatarAudioScale)
+                    Transition.immediate.setScale(view: self.videoContainerBackgroundView, scale: self.currentAvatarAudioScale)
                 } else {
                     videoContainerView.layer.position = expandedVideoFrame.center
                     videoContainerView.layer.bounds = CGRect(origin: CGPoint(), size: expandedVideoFrame.size)
@@ -639,14 +760,16 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     videoContainerView.blurredContainerLayer.position = expandedVideoFrame.center
                     videoContainerView.blurredContainerLayer.bounds = CGRect(origin: CGPoint(), size: expandedVideoFrame.size)
                     videoContainerView.blurredContainerLayer.opacity = 0.0
-                    videoContainerView.update(size: self.avatarLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: i != 0, transition: .immediate)
+                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: i != 0, transition: .immediate)
                 }
             }
             
             videoContainerTransition.setPosition(view: videoContainerView, position: expandedVideoFrame.center)
             videoContainerTransition.setBounds(view: videoContainerView, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
+            videoContainerTransition.setScale(view: videoContainerView, scale: 1.0)
             videoContainerTransition.setPosition(layer: videoContainerView.blurredContainerLayer, position: expandedVideoFrame.center)
             videoContainerTransition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
+            videoContainerTransition.setScale(layer: videoContainerView.blurredContainerLayer, scale: 1.0)
             videoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: false, transition: videoContainerTransition)
             
             let alphaTransition: Transition
@@ -679,7 +802,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             if !validVideoContainerKeys.contains(videoContainerView.key) {
                 removedVideoContainerIndices.append(i)
                 
-                if self.videoContainerViews.count == 1 {
+                if self.videoContainerViews.count == 1 || (i == 0 && !havePrimaryVideo) {
                     let alphaTransition: Transition = genericAlphaTransition
                     
                     videoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, cornerRadius: avatarCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: transition)
@@ -732,13 +855,48 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         if self.avatarLayer.image !== params.state.avatarImage {
             self.avatarLayer.image = params.state.avatarImage
         }
-        transition.setPosition(layer: self.avatarLayer, position: avatarFrame.center)
-        transition.setBounds(layer: self.avatarLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+        
+        transition.setPosition(layer: self.avatarTransformLayer, position: avatarFrame.center)
+        transition.setBounds(layer: self.avatarTransformLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+        transition.setPosition(layer: self.avatarLayer, position: CGPoint(x: avatarFrame.width * 0.5, y: avatarFrame.height * 0.5))
+        
+        if havePrimaryVideo != self.avatarLayer.params?.isExpanded {
+            if havePrimaryVideo {
+                self.canAnimateAudioLevel = false
+                self.audioLevel = 0.0
+                self.currentAvatarAudioScale = 1.0
+                transition.setScale(layer: self.avatarTransformLayer, scale: 1.0)
+                transition.setScale(layer: self.blobTransformLayer, scale: 1.0)
+            }
+            transition.setBounds(layer: self.avatarLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size), completion: { [weak self] completed in
+                guard let self, let params = self.params, completed else {
+                    return
+                }
+                if !havePrimaryVideo {
+                    switch params.state.lifecycleState {
+                    case .terminated:
+                        break
+                    default:
+                        self.canAnimateAudioLevel = true
+                    }
+                }
+            })
+        } else {
+            transition.setBounds(layer: self.avatarLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+        }
+        
+        var expandedEmojiKeyOverlapsAvatar = false
+        if let expandedEmojiKeyRect, collapsedAvatarFrame.insetBy(dx: -40.0, dy: -40.0).intersects(expandedEmojiKeyRect) {
+            expandedEmojiKeyOverlapsAvatar = true
+        }
+        
         self.avatarLayer.update(size: collapsedAvatarFrame.size, isExpanded: havePrimaryVideo, cornerRadius: avatarCornerRadius, transition: transition)
-        transition.setAlpha(layer: self.avatarLayer, alpha: (self.isEmojiKeyExpanded && !havePrimaryVideo) ? 0.0 : 1.0)
+        transition.setAlpha(layer: self.avatarLayer, alpha: (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo) ? 0.0 : 1.0)
+        transition.setScale(layer: self.avatarLayer, scale: expandedEmojiKeyOverlapsAvatar ? 0.001 : 1.0)
         
         transition.setPosition(view: self.videoContainerBackgroundView, position: avatarFrame.center)
         transition.setBounds(view: self.videoContainerBackgroundView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+        transition.setScale(view: self.videoContainerBackgroundView, scale: 1.0)
         transition.setAlpha(view: self.videoContainerBackgroundView, alpha: havePrimaryVideo ? 1.0 : 0.0)
         self.videoContainerBackgroundView.update(cornerRadius: havePrimaryVideo ? params.screenCornerRadius : avatarCornerRadius, transition: transition)
         
@@ -748,22 +906,28 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         self.overlayContentsVideoContainerBackgroundView.update(cornerRadius: havePrimaryVideo ? params.screenCornerRadius : avatarCornerRadius, transition: transition)
         
         let blobFrame = CGRect(origin: CGPoint(x: floor(avatarFrame.midX - blobSize * 0.5), y: floor(avatarFrame.midY - blobSize * 0.5)), size: CGSize(width: blobSize, height: blobSize))
-        transition.setPosition(layer: self.blobLayer, position: CGPoint(x: blobFrame.midX, y: blobFrame.midY))
+        transition.setPosition(layer: self.blobTransformLayer, position: CGPoint(x: blobFrame.midX, y: blobFrame.midY))
+        transition.setBounds(layer: self.blobTransformLayer, bounds: CGRect(origin: CGPoint(), size: blobFrame.size))
+        transition.setPosition(layer: self.blobLayer, position: CGPoint(x: blobFrame.width * 0.5, y: blobFrame.height * 0.5))
         transition.setBounds(layer: self.blobLayer, bounds: CGRect(origin: CGPoint(), size: blobFrame.size))
         
         let titleString: String
         switch params.state.lifecycleState {
         case .terminated:
+            self.titleView.contentMode = .center
             titleString = "Call Ended"
-            if !transition.animation.isImmediate {
-                transition.withAnimation(.curve(duration: 0.3, curve: .easeInOut)).setScale(layer: self.blobLayer, scale: 0.3)
-            } else {
-                transition.setScale(layer: self.blobLayer, scale: 0.3)
-            }
-            transition.setAlpha(layer: self.blobLayer, alpha: 0.0)
+            genericAlphaTransition.setScale(layer: self.blobLayer, scale: 0.3)
+            genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: 0.0)
+            self.canAnimateAudioLevel = false
+            self.audioLevel = 0.0
+            self.currentAvatarAudioScale = 1.0
+            transition.setScale(layer: self.avatarTransformLayer, scale: 1.0)
+            transition.setScale(layer: self.blobTransformLayer, scale: 1.0)
         default:
+            self.titleView.contentMode = .scaleToFill
             titleString = params.state.name
-            transition.setAlpha(layer: self.blobLayer, alpha: (self.isEmojiKeyExpanded && !havePrimaryVideo) ? 0.0 : 1.0)
+            genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo) ? 0.0 : 1.0)
+            transition.setScale(layer: self.blobLayer, scale: expandedEmojiKeyOverlapsAvatar ? 0.001 : 1.0)
         }
         
         let titleSize = self.titleView.update(
