@@ -243,13 +243,30 @@ private final class StoryStatsPublicForwardsContextImpl {
         let storyId = self.storyId
         let lastOffset = self.lastOffset
         
-        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
-            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+        self.disposable.set((self.account.postbox.transaction { transaction -> (Api.InputPeer, Int32?)? in
+            let statsDatacenterId = (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.statsDatacenterId
+            guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) else {
+                return nil
+            }
+            return (inputPeer, statsDatacenterId)
         }
-        |> mapToSignal { inputPeer -> Signal<([StoryStatsPublicForwardsContext.State.Forward], Int32, String?), NoError> in
-            if let inputPeer = inputPeer {
+        |> mapToSignal { data -> Signal<([StoryStatsPublicForwardsContext.State.Forward], Int32, String?), NoError> in
+            if let (inputPeer, statsDatacenterId) = data {
                 let offset = lastOffset ?? ""
-                let signal = account.network.request(Api.functions.stats.getStoryPublicForwards(peer: inputPeer, id: storyId, offset: offset, limit: 50))
+                
+                let request = Api.functions.stats.getStoryPublicForwards(peer: inputPeer, id: storyId, offset: offset, limit: 50)
+                let signal: Signal<Api.stats.PublicForwards, MTRpcError>
+                if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
+                    signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
+                    |> castError(MTRpcError.self)
+                    |> mapToSignal { worker in
+                        return worker.request(request)
+                    }
+                } else {
+                    signal = account.network.request(request, automaticFloodWait: false)
+                }
+                
+                return signal
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stats.PublicForwards?, NoError> in
                     return .single(nil)
@@ -325,7 +342,6 @@ private final class StoryStatsPublicForwardsContextImpl {
                         }
                     }
                 }
-                return signal
             } else {
                 return .single(([], 0, nil))
             }
