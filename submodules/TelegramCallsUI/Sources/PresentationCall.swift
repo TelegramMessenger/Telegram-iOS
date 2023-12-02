@@ -896,7 +896,13 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     func video(isIncoming: Bool) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
-        return self.ongoingContext?.video(isIncoming: isIncoming)
+        if isIncoming {
+            return self.ongoingContext?.video(isIncoming: isIncoming)
+        } else if let videoCapturer = self.videoCapturer {
+            return videoCapturer.video()
+        } else {
+            return nil
+        }
     }
     
     public func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {

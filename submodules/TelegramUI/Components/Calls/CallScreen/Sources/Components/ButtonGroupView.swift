@@ -57,13 +57,31 @@ final class ButtonGroupView: OverlayMaskContainerView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, buttons: [Button], transition: Transition) {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let result = super.hitTest(point, with: event) else {
+            return nil
+        }
+        if result === self {
+            return nil
+        }
+        return result
+    }
+    
+    func update(size: CGSize, insets: UIEdgeInsets, controlsHidden: Bool, buttons: [Button], transition: Transition) -> CGFloat {
         self.buttons = buttons
         
         let buttonSize: CGFloat = 56.0
         let buttonSpacing: CGFloat = 36.0
         
-        let buttonY: CGFloat = size.height - 86.0 - buttonSize
+        let buttonY: CGFloat
+        let resultHeight: CGFloat
+        if controlsHidden {
+            buttonY = size.height + 12.0
+            resultHeight = insets.bottom + 4.0
+        } else {
+            buttonY = size.height - insets.bottom - 52.0 - buttonSize
+            resultHeight = size.height - buttonY
+        }
         var buttonX: CGFloat = floor((size.width - buttonSize * CGFloat(buttons.count) - buttonSpacing * CGFloat(buttons.count - 1)) * 0.5)
         
         for button in buttons {
@@ -137,5 +155,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
         for key in removeKeys {
             self.buttonViews.removeValue(forKey: key)
         }
+        
+        return resultHeight
     }
 }

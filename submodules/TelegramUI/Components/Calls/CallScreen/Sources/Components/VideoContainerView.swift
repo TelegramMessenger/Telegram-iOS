@@ -3,144 +3,522 @@ import UIKit
 import Display
 import ComponentFlow
 import MetalEngine
+import SwiftSignalKit
 
 private let shadowImage: UIImage? = {
     UIImage(named: "Call/VideoGradient")?.precomposed()
 }()
 
-final class VideoContainerView: UIView {
-    private struct Params: Equatable {
-        var size: CGSize
-        var insets: UIEdgeInsets
-        var cornerRadius: CGFloat
-        var isMinimized: Bool
-        var isAnimatingOut: Bool
+private final class VideoContainerLayer: SimpleLayer {
+    let contentsLayer: SimpleLayer
+    
+    override init() {
+        self.contentsLayer = SimpleLayer()
         
-        init(size: CGSize, insets: UIEdgeInsets, cornerRadius: CGFloat, isMinimized: Bool, isAnimatingOut: Bool) {
-            self.size = size
-            self.insets = insets
-            self.cornerRadius = cornerRadius
-            self.isMinimized = isMinimized
-            self.isAnimatingOut = isAnimatingOut
-        }
+        super.init()
+        
+        self.addSublayer(self.contentsLayer)
     }
     
-    private struct VideoMetrics: Equatable {
-        var resolution: CGSize
-        var rotationAngle: Float
+    override init(layer: Any) {
+        self.contentsLayer = SimpleLayer()
         
-        init(resolution: CGSize, rotationAngle: Float) {
-            self.resolution = resolution
-            self.rotationAngle = rotationAngle
-        }
-    }
-    
-    private let videoLayer: PrivateCallVideoLayer
-    let blurredContainerLayer: SimpleLayer
-    
-    private let topShadowView: UIImageView
-    private let bottomShadowView: UIImageView
-    
-    private var params: Params?
-    private var videoMetrics: VideoMetrics?
-    private var appliedVideoMetrics: VideoMetrics?
-    
-    var video: VideoSource? {
-        didSet {
-            self.video?.updated = { [weak self] in
-                guard let self else {
-                    return
-                }
-                var videoMetrics: VideoMetrics?
-                if let currentOutput = self.video?.currentOutput {
-                    self.videoLayer.video = currentOutput
-                    videoMetrics = VideoMetrics(resolution: CGSize(width: CGFloat(currentOutput.y.width), height: CGFloat(currentOutput.y.height)), rotationAngle: currentOutput.rotationAngle)
-                } else {
-                    self.videoLayer.video = nil
-                }
-                self.videoLayer.setNeedsUpdate()
-                
-                if self.videoMetrics != videoMetrics {
-                    self.videoMetrics = videoMetrics
-                    self.update(transition: .easeInOut(duration: 0.2))
-                }
-            }
-            var videoMetrics: VideoMetrics?
-            if let currentOutput = self.video?.currentOutput {
-                self.videoLayer.video = currentOutput
-                videoMetrics = VideoMetrics(resolution: CGSize(width: CGFloat(currentOutput.y.width), height: CGFloat(currentOutput.y.height)), rotationAngle: currentOutput.rotationAngle)
-            } else {
-                self.videoLayer.video = nil
-            }
-            self.videoLayer.setNeedsUpdate()
-            
-            if self.videoMetrics != videoMetrics {
-                self.videoMetrics = videoMetrics
-                self.update(transition: .easeInOut(duration: 0.2))
-            }
-        }
-    }
-    
-    override init(frame: CGRect) {
-        self.videoLayer = PrivateCallVideoLayer()
-        self.blurredContainerLayer = SimpleLayer()
-        
-        self.topShadowView = UIImageView()
-        self.topShadowView.transform = CGAffineTransformMakeScale(1.0, -1.0)
-        self.bottomShadowView = UIImageView()
-        
-        super.init(frame: frame)
-        
-        self.backgroundColor = UIColor.black
-        self.blurredContainerLayer.backgroundColor = UIColor.black.cgColor
-        
-        self.layer.addSublayer(self.videoLayer)
-        self.blurredContainerLayer.addSublayer(self.videoLayer.blurredLayer)
-        
-        self.topShadowView.image = shadowImage
-        self.bottomShadowView.image = shadowImage
-        self.addSubview(self.topShadowView)
-        self.addSubview(self.bottomShadowView)
+        super.init(layer: layer)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    func update(size: CGSize, transition: Transition) {
+        transition.setFrame(layer: self.contentsLayer, frame: CGRect(origin: CGPoint(), size: size))
+    }
+}
+
+final class VideoContainerView: HighlightTrackingButton {
+    enum Key {
+        case background
+        case foreground
+    }
+    
+    private struct Params: Equatable {
+        var size: CGSize
+        var insets: UIEdgeInsets
+        var cornerRadius: CGFloat
+        var controlsHidden: Bool
+        var isMinimized: Bool
+        var isAnimatedOut: Bool
+        
+        init(size: CGSize, insets: UIEdgeInsets, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool) {
+            self.size = size
+            self.insets = insets
+            self.cornerRadius = cornerRadius
+            self.controlsHidden = controlsHidden
+            self.isMinimized = isMinimized
+            self.isAnimatedOut = isAnimatedOut
+        }
+    }
+    
+    private struct VideoMetrics: Equatable {
+        var resolution: CGSize
+        var rotationAngle: Float
+        var sourceId: Int
+        
+        init(resolution: CGSize, rotationAngle: Float, sourceId: Int) {
+            self.resolution = resolution
+            self.rotationAngle = rotationAngle
+            self.sourceId = sourceId
+        }
+    }
+    
+    private final class FlipAnimationInfo {
+        let isForward: Bool
+        
+        init(isForward: Bool) {
+            self.isForward = isForward
+        }
+    }
+    
+    private final class DisappearingVideo {
+        let flipAnimationInfo: FlipAnimationInfo?
+        let videoLayer: PrivateCallVideoLayer
+        let videoMetrics: VideoMetrics
+        var isAlphaAnimationInitiated: Bool = false
+        
+        init(flipAnimationInfo: FlipAnimationInfo?, videoLayer: PrivateCallVideoLayer, videoMetrics: VideoMetrics) {
+            self.flipAnimationInfo = flipAnimationInfo
+            self.videoLayer = videoLayer
+            self.videoMetrics = videoMetrics
+        }
+    }
+    
+    private enum MinimizedPosition: CaseIterable {
+        case topLeft
+        case topRight
+        case bottomLeft
+        case bottomRight
+    }
+    
+    let key: Key
+    
+    private let videoContainerLayer: VideoContainerLayer
+    
+    private var videoLayer: PrivateCallVideoLayer
+    private var disappearingVideoLayer: DisappearingVideo?
+    
+    let blurredContainerLayer: SimpleLayer
+    
+    private let shadowContainer: SimpleLayer
+    private let topShadowLayer: SimpleLayer
+    private let bottomShadowLayer: SimpleLayer
+    
+    private var params: Params?
+    private var videoMetrics: VideoMetrics?
+    private var appliedVideoMetrics: VideoMetrics?
+    
+    private var highlightedState: Bool = false
+    
+    private(set) var isFillingBounds: Bool = false
+    
+    private var minimizedPosition: MinimizedPosition = .bottomRight
+    private var initialDragPosition: CGPoint?
+    private var dragPosition: CGPoint?
+    private var dragVelocity: CGPoint = CGPoint()
+    private var dragPositionAnimatorLink: SharedDisplayLinkDriver.Link?
+    
+    private var videoOnUpdatedListener: Disposable?
+    var video: VideoSource? {
+        didSet {
+            if self.video !== oldValue {
+                self.videoOnUpdatedListener?.dispose()
+                
+                self.videoOnUpdatedListener = self.video?.addOnUpdated { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    var videoMetrics: VideoMetrics?
+                    if let currentOutput = self.video?.currentOutput {
+                        if let previousVideo = self.videoLayer.video, previousVideo.sourceId != currentOutput.sourceId {
+                            self.initiateVideoSourceSwitch(flipAnimationInfo: FlipAnimationInfo(isForward: previousVideo.sourceId < currentOutput.sourceId))
+                        }
+                        
+                        self.videoLayer.video = currentOutput
+                        videoMetrics = VideoMetrics(resolution: currentOutput.resolution, rotationAngle: currentOutput.rotationAngle, sourceId: currentOutput.sourceId)
+                    } else {
+                        self.videoLayer.video = nil
+                    }
+                    self.videoLayer.setNeedsUpdate()
+                    
+                    if self.videoMetrics != videoMetrics {
+                        self.videoMetrics = videoMetrics
+                        self.update(transition: .easeInOut(duration: 0.2))
+                    }
+                }
+                
+                if oldValue != nil {
+                    self.initiateVideoSourceSwitch(flipAnimationInfo: nil)
+                }
+                
+                var videoMetrics: VideoMetrics?
+                if let currentOutput = self.video?.currentOutput {
+                    self.videoLayer.video = currentOutput
+                    videoMetrics = VideoMetrics(resolution: currentOutput.resolution, rotationAngle: currentOutput.rotationAngle, sourceId: currentOutput.sourceId)
+                } else {
+                    self.videoLayer.video = nil
+                }
+                self.videoLayer.setNeedsUpdate()
+                
+                if self.videoMetrics != videoMetrics || oldValue != nil {
+                    self.videoMetrics = videoMetrics
+                    self.update(transition: .easeInOut(duration: 0.2))
+                }
+            }
+        }
+    }
+    
+    var pressAction: (() -> Void)?
+    
+    init(key: Key) {
+        self.key = key
+        
+        self.videoContainerLayer = VideoContainerLayer()
+        self.videoContainerLayer.backgroundColor = nil
+        self.videoContainerLayer.isOpaque = false
+        self.videoContainerLayer.contentsLayer.backgroundColor = nil
+        self.videoContainerLayer.contentsLayer.isOpaque = false
+        if #available(iOS 13.0, *) {
+            self.videoContainerLayer.contentsLayer.cornerCurve = .circular
+        }
+        
+        self.videoLayer = PrivateCallVideoLayer()
+        self.videoLayer.masksToBounds = true
+        self.videoLayer.isDoubleSided = false
+        if #available(iOS 13.0, *) {
+            self.videoLayer.cornerCurve = .circular
+        }
+        
+        self.blurredContainerLayer = SimpleLayer()
+        
+        self.shadowContainer = SimpleLayer()
+        self.topShadowLayer = SimpleLayer()
+        self.topShadowLayer.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+        self.bottomShadowLayer = SimpleLayer()
+        
+        super.init(frame: CGRect())
+        
+        self.videoContainerLayer.contentsLayer.addSublayer(self.videoLayer)
+        self.layer.addSublayer(self.videoContainerLayer)
+        self.blurredContainerLayer.addSublayer(self.videoLayer.blurredLayer)
+        
+        self.topShadowLayer.contents = shadowImage?.cgImage
+        self.bottomShadowLayer.contents = shadowImage?.cgImage
+        self.shadowContainer.addSublayer(self.topShadowLayer)
+        self.shadowContainer.addSublayer(self.bottomShadowLayer)
+        self.layer.addSublayer(self.shadowContainer)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            guard let self, let params = self.params, !self.videoContainerLayer.bounds.isEmpty else {
+                return
+            }
+            var highlightedState = false
+            if highlighted {
+                if params.isMinimized {
+                    highlightedState = true
+                }
+            } else {
+                highlightedState = false
+            }
+            
+            if self.highlightedState == highlightedState {
+                return
+            }
+            self.highlightedState = highlightedState
+            
+            let measurementSide = min(self.videoContainerLayer.bounds.width, self.videoContainerLayer.bounds.height)
+            let topScale: CGFloat = (measurementSide - 8.0) / measurementSide
+            let maxScale: CGFloat = (measurementSide + 2.0) / measurementSide
+            
+            if highlightedState {
+                self.videoContainerLayer.removeAnimation(forKey: "sublayerTransform")
+                let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
+                transition.setSublayerTransform(layer: self.videoContainerLayer, transform: CATransform3DMakeScale(topScale, topScale, 1.0))
+            } else {
+                let t = self.videoContainerLayer.presentation()?.sublayerTransform ?? self.videoContainerLayer.sublayerTransform
+                let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+                
+                let transition = Transition(animation: .none)
+                transition.setSublayerTransform(layer: self.videoContainerLayer, transform: CATransform3DIdentity)
+                
+                self.videoContainerLayer.animateSublayerScale(from: currentScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] completed in
+                    guard let self, completed else {
+                        return
+                    }
+                    
+                    self.videoContainerLayer.animateSublayerScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                })
+            }
+        }
+        self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+        
+        self.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let params = self.params else {
+            return nil
+        }
+        if params.isMinimized {
+            let videoContainerPoint = self.layer.convert(point, to: self.videoContainerLayer)
+            if self.videoContainerLayer.bounds.contains(videoContainerPoint) {
+                return self
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    @objc private func pressed() {
+        self.pressAction?()
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began, .changed:
+            self.dragVelocity = CGPoint()
+            if let dragPositionAnimatorLink = self.dragPositionAnimatorLink {
+                self.dragPositionAnimatorLink = nil
+                dragPositionAnimatorLink.invalidate()
+            }
+            let translation = recognizer.translation(in: self)
+            
+            let initialDragPosition: CGPoint
+            if let current = self.initialDragPosition {
+                initialDragPosition = current
+            } else {
+                initialDragPosition = self.videoContainerLayer.position
+                self.initialDragPosition = initialDragPosition
+            }
+            self.dragPosition = initialDragPosition.offsetBy(dx: translation.x, dy: translation.y)
+            self.update(transition: .immediate)
+        case .ended, .cancelled:
+            self.initialDragPosition = nil
+            self.dragVelocity = recognizer.velocity(in: self)
+            
+            if let params = self.params, let dragPosition = self.dragPosition {
+                let endPosition = CGPoint(
+                    x: dragPosition.x - self.dragVelocity.x / (1000.0 * log(0.99)),
+                    y: dragPosition.y - self.dragVelocity.y / (1000.0 * log(0.99))
+                )
+                
+                var minCornerDistance: (corner: MinimizedPosition, distance: CGFloat)?
+                for corner in MinimizedPosition.allCases {
+                    let cornerPosition: CGPoint
+                    switch corner {
+                    case .topLeft:
+                        cornerPosition = CGPoint(x: params.insets.left, y: params.insets.top)
+                    case .topRight:
+                        cornerPosition = CGPoint(x: params.size.width - params.insets.right, y: params.insets.top)
+                    case .bottomLeft:
+                        cornerPosition = CGPoint(x: params.insets.left, y: params.size.height - params.insets.bottom)
+                    case .bottomRight:
+                        cornerPosition = CGPoint(x: params.size.width - params.insets.right, y: params.size.height - params.insets.bottom)
+                    }
+                    
+                    let distance = CGPoint(x: endPosition.x - cornerPosition.x, y: endPosition.y - cornerPosition.y)
+                    let scalarDistance = sqrt(distance.x * distance.x + distance.y * distance.y)
+                    if let (_, minDistance) = minCornerDistance {
+                        if scalarDistance < minDistance {
+                            minCornerDistance = (corner, scalarDistance)
+                        }
+                    } else {
+                        minCornerDistance = (corner, scalarDistance)
+                    }
+                }
+                if let minCornerDistance {
+                    self.minimizedPosition = minCornerDistance.corner
+                }
+            }
+            
+            self.dragPositionAnimatorLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
+                guard let self else {
+                    return
+                }
+                self.updateDragPositionAnimation(deltaTime: deltaTime)
+            })
+        default:
+            break
+        }
+    }
+    
+    private func updateVelocityUsingSpring(currentVelocity: CGPoint, currentPosition: CGPoint, attractor: CGPoint, springConstant: CGFloat, damping: CGFloat, deltaTime: CGFloat) -> CGPoint {
+        let displacement = CGPoint(x: attractor.x - currentPosition.x, y: attractor.y - currentPosition.y)
+        let springForce = CGPoint(x: -springConstant * displacement.x, y: -springConstant * displacement.y)
+        var newVelocity = CGPoint(x: currentVelocity.x + springForce.x * deltaTime, y: currentVelocity.y + springForce.y * deltaTime)
+        newVelocity = CGPoint(x: newVelocity.x * exp(-damping * deltaTime), y: newVelocity.y * exp(-damping * deltaTime))
+        return newVelocity
+    }
+    
+    private func updateDragPositionAnimation(deltaTime: Double) {
+        guard let params = self.params, let videoMetrics = self.videoMetrics else {
+            self.dragPosition = nil
+            self.dragPositionAnimatorLink = nil
+            return
+        }
+        if !params.isMinimized {
+            self.dragPosition = nil
+            self.dragPositionAnimatorLink = nil
+            return
+        }
+        guard var dragPosition = self.dragPosition else {
+            self.dragPosition = nil
+            self.dragPositionAnimatorLink = nil
+            return
+        }
+        let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, applyDragPosition: false)
+        let targetPosition = videoLayout.rotatedVideoFrame.center
+        
+        self.dragVelocity = self.updateVelocityUsingSpring(
+            currentVelocity: self.dragVelocity,
+            currentPosition: dragPosition,
+            attractor: targetPosition,
+            springConstant: -130.0,
+            damping: 17.0,
+            deltaTime: CGFloat(deltaTime)
+        )
+        
+        if sqrt(self.dragVelocity.x * self.dragVelocity.x + self.dragVelocity.y * self.dragVelocity.y) <= 0.1 {
+            self.dragVelocity = CGPoint()
+            self.dragPosition = nil
+            self.dragPositionAnimatorLink = nil
+        } else {
+            dragPosition.x += self.dragVelocity.x * CGFloat(deltaTime)
+            dragPosition.y += self.dragVelocity.y * CGFloat(deltaTime)
+            
+            self.dragPosition = dragPosition
+        }
+        
+        self.update(transition: .immediate)
+    }
+    
+    private func initiateVideoSourceSwitch(flipAnimationInfo: FlipAnimationInfo?) {
+        guard let videoMetrics = self.videoMetrics else {
+            return
+        }
+        if let disappearingVideoLayer = self.disappearingVideoLayer {
+            disappearingVideoLayer.videoLayer.removeFromSuperlayer()
+            disappearingVideoLayer.videoLayer.blurredLayer.removeFromSuperlayer()
+        }
+        let previousVideoLayer = self.videoLayer
+        self.disappearingVideoLayer = DisappearingVideo(flipAnimationInfo: flipAnimationInfo, videoLayer: self.videoLayer, videoMetrics: videoMetrics)
+        
+        self.videoLayer = PrivateCallVideoLayer()
+        self.videoLayer.opacity = previousVideoLayer.opacity
+        self.videoLayer.masksToBounds = true
+        self.videoLayer.isDoubleSided = false
+        if #available(iOS 13.0, *) {
+            self.videoLayer.cornerCurve = .circular
+        }
+        self.videoLayer.cornerRadius = previousVideoLayer.cornerRadius
+        self.videoLayer.blurredLayer.opacity = previousVideoLayer.blurredLayer.opacity
+        
+        self.videoContainerLayer.contentsLayer.addSublayer(self.videoLayer)
+        self.blurredContainerLayer.addSublayer(self.videoLayer.blurredLayer)
+        
+        self.dragPosition = nil
+        self.dragPositionAnimatorLink = nil
+    }
+    
     private func update(transition: Transition) {
         guard let params = self.params else {
             return
         }
-        self.update(params: params, transition: transition)
+        self.update(previousParams: params, params: params, transition: transition)
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, cornerRadius: CGFloat, isMinimized: Bool, isAnimatingOut: Bool, transition: Transition) {
-        let params = Params(size: size, insets: insets, cornerRadius: cornerRadius, isMinimized: isMinimized, isAnimatingOut: isAnimatingOut)
+    func update(size: CGSize, insets: UIEdgeInsets, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, transition: Transition) {
+        let params = Params(size: size, insets: insets, cornerRadius: cornerRadius, controlsHidden: controlsHidden, isMinimized: isMinimized, isAnimatedOut: isAnimatedOut)
         if self.params == params {
             return
         }
         
-        self.layer.masksToBounds = true
-        if self.layer.animation(forKey: "cornerRadius") == nil {
-            self.layer.cornerRadius = self.params?.cornerRadius ?? 0.0
-        }
-        
+        let previousParams = self.params
         self.params = params
         
-        transition.setCornerRadius(layer: self.layer, cornerRadius: params.cornerRadius, completion: { [weak self] completed in
-            guard let self, let params = self.params, completed else {
-                return
-            }
-            if !params.isAnimatingOut {
-                self.layer.masksToBounds = false
-                self.layer.cornerRadius = 0.0
-            }
-        })
+        if let previousParams, previousParams.controlsHidden != params.controlsHidden {
+            self.dragPosition = nil
+            self.dragPositionAnimatorLink = nil
+        }
         
-        self.update(params: params, transition: transition)
+        self.update(previousParams: previousParams, params: params, transition: transition)
     }
     
-    private func update(params: Params, transition: Transition) {
+    private struct MinimizedLayout {
+        var videoIsRotated: Bool
+        var rotatedVideoSize: CGSize
+        var rotatedVideoResolution: CGSize
+        var rotatedVideoFrame: CGRect
+        var videoTransform: CATransform3D
+        var effectiveVideoFrame: CGRect
+    }
+    
+    private func calculateMinimizedLayout(params: Params, videoMetrics: VideoMetrics, applyDragPosition: Bool) -> MinimizedLayout {
+        var rotatedResolution = videoMetrics.resolution
+        var videoIsRotated = false
+        if videoMetrics.rotationAngle == Float.pi * 0.5 || videoMetrics.rotationAngle == Float.pi * 3.0 / 2.0 {
+            rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
+            videoIsRotated = true
+        }
+        
+        let minimizedBoundingSize: CGFloat = params.controlsHidden ? 140.0 : 240.0
+        let videoSize = rotatedResolution.aspectFitted(CGSize(width: minimizedBoundingSize, height: minimizedBoundingSize))
+        
+        let videoResolution = rotatedResolution.aspectFittedOrSmaller(CGSize(width: 1280, height: 1280)).aspectFittedOrSmaller(CGSize(width: videoSize.width * 3.0, height: videoSize.height * 3.0))
+        let rotatedVideoResolution = videoIsRotated ? CGSize(width: videoResolution.height, height: videoResolution.width) : videoResolution
+        
+        let rotatedVideoSize = videoIsRotated ? CGSize(width: videoSize.height, height: videoSize.width) : videoSize
+        
+        let rotatedVideoFrame: CGRect
+        if applyDragPosition, let dragPosition = self.dragPosition {
+            rotatedVideoFrame = videoSize.centered(around: dragPosition)
+        } else {
+            switch self.minimizedPosition {
+            case .topLeft:
+                rotatedVideoFrame = CGRect(origin: CGPoint(x: params.insets.left, y: params.insets.top), size: videoSize)
+            case .topRight:
+                rotatedVideoFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - videoSize.width, y: params.insets.top), size: videoSize)
+            case .bottomLeft:
+                rotatedVideoFrame = CGRect(origin: CGPoint(x: params.insets.left, y: params.size.height - params.insets.bottom - videoSize.height), size: videoSize)
+            case .bottomRight:
+                rotatedVideoFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - videoSize.width, y: params.size.height - params.insets.bottom - videoSize.height), size: videoSize)
+            }
+        }
+        
+        let effectiveVideoFrame = videoSize.centered(around: rotatedVideoFrame.center)
+        
+        var videoTransform = CATransform3DIdentity
+        videoTransform.m34 = 1.0 / 600.0
+        videoTransform = CATransform3DRotate(videoTransform, CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0)
+        if params.isAnimatedOut {
+            videoTransform = CATransform3DScale(videoTransform, 0.6, 0.6, 1.0)
+        }
+        
+        return MinimizedLayout(
+            videoIsRotated: videoIsRotated,
+            rotatedVideoSize: rotatedVideoSize,
+            rotatedVideoResolution: rotatedVideoResolution,
+            rotatedVideoFrame: rotatedVideoFrame,
+            videoTransform: videoTransform,
+            effectiveVideoFrame: effectiveVideoFrame
+        )
+    }
+    
+    private func update(previousParams: Params?, params: Params, transition: Transition) {
         guard let videoMetrics = self.videoMetrics else {
             return
         }
@@ -151,43 +529,108 @@ final class VideoContainerView: UIView {
         self.appliedVideoMetrics = videoMetrics
         
         if params.isMinimized {
-            var rotatedResolution = videoMetrics.resolution
-            var videoIsRotated = false
-            if videoMetrics.rotationAngle == Float.pi * 0.5 || videoMetrics.rotationAngle == Float.pi * 3.0 / 2.0 {
-                rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
-                videoIsRotated = true
+            self.isFillingBounds = false
+            
+            let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, applyDragPosition: true)
+            
+            transition.setPosition(layer: self.videoContainerLayer, position: videoLayout.rotatedVideoFrame.center)
+            
+            self.videoContainerLayer.contentsLayer.masksToBounds = true
+            if self.disappearingVideoLayer != nil {
+                self.videoContainerLayer.contentsLayer.backgroundColor = UIColor.black.cgColor
+            }
+            transition.setBounds(layer: self.videoContainerLayer, bounds: CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize), completion: { [weak self] completed in
+                guard let self, completed else {
+                    return
+                }
+                self.videoContainerLayer.contentsLayer.masksToBounds = false
+                self.videoContainerLayer.contentsLayer.backgroundColor = nil
+            })
+            self.videoContainerLayer.update(size: videoLayout.rotatedVideoSize, transition: transition)
+            
+            var videoTransition = transition
+            if self.videoLayer.bounds.isEmpty {
+                videoTransition = .immediate
+            }
+            var animateFlipDisappearingVideo: DisappearingVideo?
+            if let disappearingVideoLayer = self.disappearingVideoLayer {
+                self.disappearingVideoLayer = nil
+                
+                let disappearingVideoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: disappearingVideoLayer.videoMetrics, applyDragPosition: true)
+                let initialDisapparingVideoSize = disappearingVideoLayout.rotatedVideoSize
+                
+                if !disappearingVideoLayer.isAlphaAnimationInitiated {
+                    disappearingVideoLayer.isAlphaAnimationInitiated = true
+                    
+                    if let flipAnimationInfo = disappearingVideoLayer.flipAnimationInfo {
+                        var videoTransform = self.videoContainerLayer.transform
+                        videoTransform = CATransform3DRotate(videoTransform, (flipAnimationInfo.isForward ? 1.0 : -1.0) * CGFloat.pi * 0.9999, 0.0, 1.0, 0.0)
+                        self.videoContainerLayer.transform = videoTransform
+                        
+                        disappearingVideoLayer.videoLayer.zPosition = 1.0
+                        transition.setZPosition(layer: disappearingVideoLayer.videoLayer, zPosition: -1.0)
+                        
+                        disappearingVideoLayer.videoLayer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                        
+                        animateFlipDisappearingVideo = disappearingVideoLayer
+                        disappearingVideoLayer.videoLayer.blurredLayer.removeFromSuperlayer()
+                    } else {
+                        let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                        let disappearingVideoLayerValue = disappearingVideoLayer.videoLayer
+                        alphaTransition.setAlpha(layer: disappearingVideoLayerValue, alpha: 0.0, completion: { [weak self, weak disappearingVideoLayerValue] _ in
+                            guard let self, let disappearingVideoLayerValue else {
+                                return
+                            }
+                            disappearingVideoLayerValue.removeFromSuperlayer()
+                            if self.disappearingVideoLayer?.videoLayer === disappearingVideoLayerValue {
+                                self.disappearingVideoLayer = nil
+                                self.update(transition: .immediate)
+                            }
+                        })
+                        disappearingVideoLayer.videoLayer.blurredLayer.removeFromSuperlayer()
+                        
+                        self.videoLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                    
+                    self.videoLayer.position = disappearingVideoLayer.videoLayer.position
+                    self.videoLayer.bounds = CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize.aspectFilled(initialDisapparingVideoSize))
+                    self.videoLayer.blurredLayer.position = disappearingVideoLayer.videoLayer.blurredLayer.position
+                    self.videoLayer.blurredLayer.bounds = CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize.aspectFilled(initialDisapparingVideoSize))
+                }
+                
+                let disappearingVideoSize = initialDisapparingVideoSize.aspectFilled(videoLayout.rotatedVideoSize)
+                transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: CGPoint(x: videoLayout.rotatedVideoSize.width * 0.5, y: videoLayout.rotatedVideoSize.height * 0.5))
+                transition.setBounds(layer: disappearingVideoLayer.videoLayer, bounds: CGRect(origin: CGPoint(), size: disappearingVideoSize))
+                transition.setPosition(layer: disappearingVideoLayer.videoLayer.blurredLayer, position: videoLayout.rotatedVideoFrame.center)
+                transition.setBounds(layer: disappearingVideoLayer.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: disappearingVideoSize))
             }
             
-            let videoSize = rotatedResolution.aspectFitted(CGSize(width: 160.0, height: 160.0))
+            let animateFlipDisappearingVideoLayer = animateFlipDisappearingVideo?.videoLayer
+            transition.setTransform(layer: self.videoContainerLayer, transform: videoLayout.videoTransform, completion: { [weak animateFlipDisappearingVideoLayer] _ in
+                animateFlipDisappearingVideoLayer?.removeFromSuperlayer()
+            })
             
-            let videoResolution = rotatedResolution.aspectFittedOrSmaller(CGSize(width: 1280, height: 1280)).aspectFittedOrSmaller(CGSize(width: videoSize.width * 3.0, height: videoSize.height * 3.0))
-            let rotatedVideoResolution = videoIsRotated ? CGSize(width: videoResolution.height, height: videoResolution.width) : videoResolution
+            transition.setPosition(layer: self.videoLayer, position: CGPoint(x: videoLayout.rotatedVideoSize.width * 0.5, y: videoLayout.rotatedVideoSize.height * 0.5))
+            transition.setBounds(layer: self.videoLayer, bounds: CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize))
             
-            let rotatedVideoSize = videoIsRotated ? CGSize(width: videoSize.height, height: videoSize.width) : videoSize
-            let rotatedVideoFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - videoSize.width, y: params.size.height - params.insets.bottom - videoSize.height), size: videoSize)
-            let effectiveVideoFrame = videoSize.centered(around: rotatedVideoFrame.center)
+            transition.setPosition(layer: self.videoLayer.blurredLayer, position: videoLayout.rotatedVideoFrame.center)
+            transition.setAlpha(layer: self.videoLayer.blurredLayer, alpha: 0.0)
+            transition.setBounds(layer: self.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize))
+            videoTransition.setTransform(layer: self.videoLayer.blurredLayer, transform: videoLayout.videoTransform)
             
-            transition.setPosition(layer: self.videoLayer, position: rotatedVideoFrame.center)
-            transition.setBounds(layer: self.videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoSize))
-            transition.setPosition(layer: self.videoLayer.blurredLayer, position: rotatedVideoFrame.center)
-            transition.setBounds(layer: self.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoSize))
+            if let previousParams, !previousParams.isMinimized {
+                self.videoContainerLayer.contentsLayer.cornerRadius = previousParams.cornerRadius
+            }
+            transition.setCornerRadius(layer: self.videoContainerLayer.contentsLayer, cornerRadius: 18.0, completion: { [weak self] completed in
+                guard let self, completed, let params = self.params else {
+                    return
+                }
+                if params.isMinimized {
+                    self.videoLayer.cornerRadius = 18.0
+                }
+            })
             
-            transition.setTransform(layer: self.videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
-            transition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
-            
-            transition.setCornerRadius(layer: self.videoLayer, cornerRadius: 10.0)
-            
-            self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)))
-            
-            let topShadowHeight: CGFloat = floor(effectiveVideoFrame.height * 0.2)
-            let topShadowFrame = CGRect(origin: effectiveVideoFrame.origin, size: CGSize(width: effectiveVideoFrame.width, height: topShadowHeight))
-            transition.setPosition(view: self.topShadowView, position: topShadowFrame.center)
-            transition.setBounds(view: self.topShadowView, bounds: CGRect(origin: CGPoint(x: effectiveVideoFrame.minX, y: effectiveVideoFrame.maxY - topShadowHeight), size: topShadowFrame.size))
-            transition.setAlpha(view: self.topShadowView, alpha: 0.0)
-            
-            let bottomShadowHeight: CGFloat = 200.0
-            transition.setFrame(view: self.bottomShadowView, frame: CGRect(origin: CGPoint(x: 0.0, y: params.size.height - bottomShadowHeight), size: CGSize(width: params.size.width, height: bottomShadowHeight)))
-            transition.setAlpha(view: self.bottomShadowView, alpha: 0.0)
+            self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(videoLayout.rotatedVideoResolution.width), height: Int(videoLayout.rotatedVideoResolution.height)), edgeInset: 2)
         } else {
             var rotatedResolution = videoMetrics.resolution
             var videoIsRotated = false
@@ -196,41 +639,109 @@ final class VideoContainerView: UIView {
                 videoIsRotated = true
             }
             
-            var videoSize = rotatedResolution.aspectFitted(params.size)
-            let boundingAspectRatio = params.size.width / params.size.height
-            let videoAspectRatio = videoSize.width / videoSize.height
-            if abs(boundingAspectRatio - videoAspectRatio) < 0.15 {
+            var videoSize: CGSize
+            if params.isAnimatedOut {
+                self.isFillingBounds = true
                 videoSize = rotatedResolution.aspectFilled(params.size)
+            } else {
+                videoSize = rotatedResolution.aspectFitted(params.size)
+                let boundingAspectRatio = params.size.width / params.size.height
+                let videoAspectRatio = videoSize.width / videoSize.height
+                self.isFillingBounds = abs(boundingAspectRatio - videoAspectRatio) < 0.15
+                if self.isFillingBounds {
+                    videoSize = rotatedResolution.aspectFilled(params.size)
+                }
             }
             
             let videoResolution = rotatedResolution.aspectFittedOrSmaller(CGSize(width: 1280, height: 1280)).aspectFittedOrSmaller(CGSize(width: videoSize.width * 3.0, height: videoSize.height * 3.0))
             let rotatedVideoResolution = videoIsRotated ? CGSize(width: videoResolution.height, height: videoResolution.width) : videoResolution
             
+            let rotatedBoundingSize = videoIsRotated ? CGSize(width: params.size.height, height: params.size.width) : params.size
             let rotatedVideoSize = videoIsRotated ? CGSize(width: videoSize.height, height: videoSize.width) : videoSize
-            let rotatedBoundingSize = params.size
-            let rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((rotatedBoundingSize.width - rotatedVideoSize.width) * 0.5), y: floor((rotatedBoundingSize.height - rotatedVideoSize.height) * 0.5)), size: rotatedVideoSize)
+            let rotatedVideoBoundingSize = params.size
+            let rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((rotatedVideoBoundingSize.width - rotatedVideoSize.width) * 0.5), y: floor((rotatedVideoBoundingSize.height - rotatedVideoSize.height) * 0.5)), size: rotatedVideoSize)
+
+            self.videoContainerLayer.contentsLayer.masksToBounds = true
+            if let previousParams, self.videoContainerLayer.contentsLayer.animation(forKey: "cornerRadius") == nil {
+                if previousParams.isMinimized {
+                    self.videoContainerLayer.contentsLayer.cornerRadius = self.videoLayer.cornerRadius
+                } else {
+                    self.videoContainerLayer.contentsLayer.cornerRadius = previousParams.cornerRadius
+                }
+            }
+            self.videoLayer.cornerRadius = 0.0
+            transition.setCornerRadius(layer: self.videoContainerLayer.contentsLayer, cornerRadius: params.cornerRadius, completion: { [weak self] completed in
+                guard let self, completed, let params = self.params else {
+                    return
+                }
+                if !params.isMinimized && !params.isAnimatedOut {
+                    self.videoContainerLayer.contentsLayer.cornerRadius = 0.0
+                }
+            })
             
-            transition.setPosition(layer: self.videoLayer, position: rotatedVideoFrame.center)
-            transition.setBounds(layer: self.videoLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
-            transition.setPosition(layer: self.videoLayer.blurredLayer, position: rotatedVideoFrame.center)
-            transition.setBounds(layer: self.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
+            transition.setPosition(layer: self.videoContainerLayer, position: CGPoint(x: params.size.width * 0.5, y: params.size.height * 0.5))
+            transition.setBounds(layer: self.videoContainerLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBoundingSize))
+            self.videoContainerLayer.update(size: rotatedBoundingSize, transition: transition)
             
-            transition.setTransform(layer: self.videoLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
-            transition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
-            
-            if !params.isAnimatingOut {
-                self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)))
+            var videoTransition = transition
+            if self.videoLayer.bounds.isEmpty {
+                videoTransition = .immediate
+                if !transition.animation.isImmediate {
+                    self.videoLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.videoLayer.blurredLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             
-            let topShadowHeight: CGFloat = 200.0
-            let topShadowFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.size.width, height: topShadowHeight))
-            transition.setPosition(view: self.topShadowView, position: topShadowFrame.center)
-            transition.setBounds(view: self.topShadowView, bounds: CGRect(origin: CGPoint(), size: topShadowFrame.size))
-            transition.setAlpha(view: self.topShadowView, alpha: 1.0)
+            if let disappearingVideoLayer = self.disappearingVideoLayer {
+                self.disappearingVideoLayer = nil
+                
+                if !disappearingVideoLayer.isAlphaAnimationInitiated {
+                    disappearingVideoLayer.isAlphaAnimationInitiated = true
+                    
+                    let alphaTransition: Transition = .easeInOut(duration: 0.2)
+                    let disappearingVideoLayerValue = disappearingVideoLayer.videoLayer
+                    alphaTransition.setAlpha(layer: disappearingVideoLayerValue, alpha: 0.0, completion: { [weak disappearingVideoLayerValue] _ in
+                        disappearingVideoLayerValue?.removeFromSuperlayer()
+                    })
+                    let disappearingVideoLayerBlurredLayerValue = disappearingVideoLayer.videoLayer.blurredLayer
+                    alphaTransition.setAlpha(layer: disappearingVideoLayerBlurredLayerValue, alpha: 0.0, completion: { [weak disappearingVideoLayerBlurredLayerValue] _ in
+                        disappearingVideoLayerBlurredLayerValue?.removeFromSuperlayer()
+                    })
+                }
+            }
             
-            let bottomShadowHeight: CGFloat = 200.0
-            transition.setFrame(view: self.bottomShadowView, frame: CGRect(origin: CGPoint(x: 0.0, y: params.size.height - bottomShadowHeight), size: CGSize(width: params.size.width, height: bottomShadowHeight)))
-            transition.setAlpha(view: self.bottomShadowView, alpha: 1.0)
+            transition.setTransform(layer: self.videoContainerLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
+            
+            videoTransition.setFrame(layer: self.videoLayer, frame: rotatedVideoSize.centered(around: CGPoint(x: rotatedBoundingSize.width * 0.5, y: rotatedBoundingSize.height * 0.5)))
+            videoTransition.setPosition(layer: self.videoLayer.blurredLayer, position: rotatedVideoFrame.center)
+            videoTransition.setBounds(layer: self.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
+            videoTransition.setAlpha(layer: self.videoLayer.blurredLayer, alpha: 1.0)
+            videoTransition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
+            
+            if !params.isAnimatedOut {
+                self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)
+            }
         }
+        
+        self.shadowContainer.masksToBounds = true
+        transition.setCornerRadius(layer: self.shadowContainer, cornerRadius: params.cornerRadius, completion: { [weak self] completed in
+            guard let self, completed else {
+                return
+            }
+            self.shadowContainer.masksToBounds = false
+        })
+        transition.setFrame(layer: self.shadowContainer, frame: CGRect(origin: CGPoint(), size: params.size))
+        
+        let shadowAlpha: CGFloat = (params.controlsHidden || params.isMinimized || params.isAnimatedOut) ? 0.0 : 1.0
+        
+        let topShadowHeight: CGFloat = 200.0
+        let topShadowFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.size.width, height: topShadowHeight))
+        transition.setPosition(layer: self.topShadowLayer, position: topShadowFrame.center)
+        transition.setBounds(layer: self.topShadowLayer, bounds: CGRect(origin: CGPoint(), size: topShadowFrame.size))
+        transition.setAlpha(layer: self.topShadowLayer, alpha: shadowAlpha)
+        
+        let bottomShadowHeight: CGFloat = 200.0
+        transition.setFrame(layer: self.bottomShadowLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: params.size.height - bottomShadowHeight), size: CGSize(width: params.size.width, height: bottomShadowHeight)))
+        transition.setAlpha(layer: self.bottomShadowLayer, alpha: shadowAlpha)
     }
 }

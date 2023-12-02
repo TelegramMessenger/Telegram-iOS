@@ -481,8 +481,14 @@ public struct Transition {
     }
     
     public func setScale(layer: CALayer, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
-        let t = layer.presentation()?.transform ?? layer.transform
-        let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+        let currentTransform: CATransform3D
+        if layer.animation(forKey: "transform") != nil || layer.animation(forKey: "transform.scale") != nil {
+            currentTransform = layer.presentation()?.transform ?? layer.transform
+        } else {
+            currentTransform = layer.transform
+        }
+        
+        let currentScale = sqrt((currentTransform.m11 * currentTransform.m11) + (currentTransform.m12 * currentTransform.m12) + (currentTransform.m13 * currentTransform.m13))
         if currentScale == scale {
             if let animation = layer.animation(forKey: "transform.scale") as? CABasicAnimation, let toValue = animation.toValue as? NSNumber {
                 if toValue.doubleValue == scale {
@@ -591,7 +597,7 @@ public struct Transition {
             completion?(true)
         case let .curve(duration, curve):
             let previousValue: CATransform3D
-            if let presentation = layer.presentation() {
+            if layer.animation(forKey: "transform") != nil, let presentation = layer.presentation() {
                 previousValue = presentation.transform
             } else {
                 previousValue = layer.transform
@@ -696,6 +702,33 @@ public struct Transition {
                 keyPath: "sublayerTransform",
                 duration: duration,
                 delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
+        }
+    }
+    
+    public func setZPosition(layer: CALayer, zPosition: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if layer.zPosition == zPosition {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            layer.zPosition = zPosition
+            layer.removeAnimation(forKey: "zPosition")
+            completion?(true)
+        case let .curve(duration, curve):
+            let previousZPosition = layer.presentation()?.opacity ?? layer.opacity
+            layer.zPosition = zPosition
+            layer.animate(
+                from: previousZPosition as NSNumber,
+                to: zPosition as NSNumber,
+                keyPath: "zPosition",
+                duration: duration,
+                delay: delay,
                 curve: curve,
                 removeOnCompletion: true,
                 additive: false,

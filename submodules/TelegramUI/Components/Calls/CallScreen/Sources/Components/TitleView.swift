@@ -8,6 +8,7 @@ final class TextView: UIView {
         var fontSize: CGFloat
         var fontWeight: CGFloat
         var monospacedDigits: Bool
+        var alignment: NSTextAlignment
         var constrainedWidth: CGFloat
     }
     
@@ -25,7 +26,6 @@ final class TextView: UIView {
         
         self.isOpaque = false
         self.backgroundColor = nil
-        self.contentMode = .center
     }
     
     required init?(coder: NSCoder) {
@@ -43,8 +43,8 @@ final class TextView: UIView {
         return super.action(for: layer, forKey: event)
     }
     
-    func update(string: String, fontSize: CGFloat, fontWeight: CGFloat, monospacedDigits: Bool = false, color: UIColor, constrainedWidth: CGFloat, transition: Transition) -> CGSize {
-        let params = Params(string: string, fontSize: fontSize, fontWeight: fontWeight, monospacedDigits: monospacedDigits, constrainedWidth: constrainedWidth)
+    func update(string: String, fontSize: CGFloat, fontWeight: CGFloat, monospacedDigits: Bool = false, alignment: NSTextAlignment = .natural, color: UIColor, constrainedWidth: CGFloat, transition: Transition) -> CGSize {
+        let params = Params(string: string, fontSize: fontSize, fontWeight: fontWeight, monospacedDigits: monospacedDigits, alignment: alignment, constrainedWidth: constrainedWidth)
         if let layoutState = self.layoutState, layoutState.params == params {
             return layoutState.size
         }
@@ -56,9 +56,13 @@ final class TextView: UIView {
             font = UIFont.systemFont(ofSize: fontSize, weight: UIFont.Weight(fontWeight))
         }
         
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = alignment
+        paragraphStyle.lineSpacing = 0.6
         let attributedString = NSAttributedString(string: string, attributes: [
             .font: font,
             .foregroundColor: color,
+            .paragraphStyle: paragraphStyle
         ])
         let stringBounds = attributedString.boundingRect(with: CGSize(width: constrainedWidth, height: 200.0), options: .usesLineFragmentOrigin, context: nil)
         let stringSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))

@@ -16,6 +16,7 @@ import TinyThumbnail
 import ImageBlur
 import TelegramVoip
 import MetalEngine
+import DeviceAccess
 
 final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeProtocol {
     private let sharedContext: SharedAccountContext
@@ -32,6 +33,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     
     private var callStartTimestamp: Double?
     
+    private var callState: PresentationCallState?
     var isMuted: Bool = false
     
     var toggleMute: (() -> Void)?
@@ -56,6 +58,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private var isMicrophoneMutedDisposable: Disposable?
     private var audioLevelDisposable: Disposable?
     
+    private var localVideo: AdaptedCallVideoSource?
     private var remoteVideo: AdaptedCallVideoSource?
     
     init(
@@ -94,7 +97,13 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             guard let self else {
                 return
             }
-            let _ = self
+            self.toggleVideo()
+        }
+        self.callScreen.flipCameraAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.call.switchVideoCamera()
         }
         self.callScreen.microhoneMuteAction = { [weak self] in
             guard let self else {
@@ -112,6 +121,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         self.callScreenState = PrivateCallScreen.State(
             lifecycleState: .connecting,
             name: " ",
+            shortName: " ",
             avatarImage: nil,
             audioOutput: .internalSpeaker,
             isMicrophoneMuted: false,
@@ -176,6 +186,93 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         }
     }
     
+    private func toggleVideo() {
+        guard let callState = self.callState else {
+            return
+        }
+        switch callState.state {
+        case .active:
+            switch callState.videoState {
+            case .active(let isScreencast), .paused(let isScreencast):
+                if isScreencast {
+                    (self.call as? PresentationCallImpl)?.disableScreencast()
+                } else {
+                    self.call.disableVideo()
+                }
+            default:
+                DeviceAccess.authorizeAccess(to: .camera(.videoCall), onlyCheck: true, presentationData: self.presentationData, present: { [weak self] c, a in
+                    if let strongSelf = self {
+                        strongSelf.present?(c)
+                    }
+                }, openSettings: { [weak self] in
+                    self?.sharedContext.applicationBindings.openSettings()
+                }, _: { [weak self] ready in
+                    guard let self, ready else {
+                        return
+                    }
+                    let proceed = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        /*switch callState.videoState {
+                        case .inactive:
+                            self.isRequestingVideo = true
+                            self.updateButtonsMode()
+                        default:
+                            break
+                        }*/
+                        self.call.requestVideo()
+                    }
+                    
+                    self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let outgoingVideoView = outgoingVideoView {
+                            outgoingVideoView.view.backgroundColor = .black
+                            outgoingVideoView.view.clipsToBounds = true
+                            
+                            var updateLayoutImpl: ((ContainerViewLayout, CGFloat) -> Void)?
+                            
+                            let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: { [weak self] in
+                                guard let self, let (layout, navigationBarHeight) = self.validLayout else {
+                                    return
+                                }
+                                updateLayoutImpl?(layout, navigationBarHeight)
+                            }, orientationUpdated: { [weak self] in
+                                guard let self, let (layout, navigationBarHeight) = self.validLayout else {
+                                    return
+                                }
+                                updateLayoutImpl?(layout, navigationBarHeight)
+                            }, isFlippedUpdated: { [weak self] _ in
+                                guard let self, let (layout, navigationBarHeight) = self.validLayout else {
+                                    return
+                                }
+                                updateLayoutImpl?(layout, navigationBarHeight)
+                            })
+                            
+                            let controller = VoiceChatCameraPreviewController(sharedContext: self.sharedContext, cameraNode: outgoingVideoNode, shareCamera: { _, _ in
+                                proceed()
+                            }, switchCamera: { [weak self] in
+                                Queue.mainQueue().after(0.1) {
+                                    self?.call.switchVideoCamera()
+                                }
+                            })
+                            self.present?(controller)
+                            
+                            updateLayoutImpl = { [weak controller] layout, navigationBarHeight in
+                                controller?.containerLayoutUpdated(layout, transition: .immediate)
+                            }
+                        }
+                    })
+                })
+            }
+        default:
+            break
+        }
+    }
+    
     private func resolvedEmojiKey(data: Data) -> [String] {
         if let emojiKey = self.emojiKey, emojiKey.data == data {
             return emojiKey.resolvedKey
@@ -186,6 +283,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
     
     func updateCallState(_ callState: PresentationCallState) {
+        self.callState = callState
+        
         let mappedLifecycleState: PrivateCallScreen.State.LifecycleState
         switch callState.state {
         case .waiting:
@@ -236,9 +335,23 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.remoteVideo = nil
         }
         
+        switch callState.videoState {
+        case .active(let isScreencast), .paused(let isScreencast):
+            if isScreencast {
+                self.localVideo = nil
+            } else {
+                if self.localVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
+                    self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                }
+            }
+        case .inactive, .notAvailable:
+            self.localVideo = nil
+        }
+        
         if var callScreenState = self.callScreenState {
             callScreenState.lifecycleState = mappedLifecycleState
             callScreenState.remoteVideo = self.remoteVideo
+            callScreenState.localVideo = self.localVideo
             
             if self.callScreenState != callScreenState {
                 self.callScreenState = callScreenState
@@ -380,7 +493,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
 
 private final class AdaptedCallVideoSource: VideoSource {
     private static let queue = Queue(name: "AdaptedCallVideoSource")
-    var updated: (() -> Void)?
+    private var onUpdatedListeners = Bag<() -> Void>()
     private(set) var currentOutput: Output?
     
     private var textureCache: CVMetalTextureCache?
@@ -425,7 +538,7 @@ private final class AdaptedCallVideoSource: VideoSource {
                         return
                     }
                     
-                    output = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically ? 1 : 0)
+                    output = Output(resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)), y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically ? 1 : 0)
                 default:
                     return
                 }
@@ -435,10 +548,25 @@ private final class AdaptedCallVideoSource: VideoSource {
                         return
                     }
                     self.currentOutput = output
-                    self.updated?()
+                    for onUpdated in self.onUpdatedListeners.copyItems() {
+                        onUpdated()
+                    }
                 }
             }
         })
+    }
+    
+    func addOnUpdated(_ f: @escaping () -> Void) -> Disposable {
+        let index = self.onUpdatedListeners.add(f)
+        
+        return ActionDisposable { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else {
+                    return
+                }
+                self.onUpdatedListeners.remove(index)
+            }
+        }
     }
     
     deinit {

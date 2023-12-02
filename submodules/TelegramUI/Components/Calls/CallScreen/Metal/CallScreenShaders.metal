@@ -232,7 +232,7 @@ vertex BlobVertexOut callBlobVertex(
 fragment half4 callBlobFragment(
     BlobVertexOut in [[stage_in]]
 ) {
-    half alpha = 0.15;
+    half alpha = 0.35;
     return half4(1.0 * alpha, 1.0 * alpha, 1.0 * alpha, alpha);
 }
 
@@ -344,4 +344,29 @@ kernel void gaussianBlurVertical(
     uint2 gid [[ thread_position_in_grid ]]
 ) {
     gaussianBlur(inTexture, outTexture, float2(0, 1), gid);
+}
+
+vertex QuadVertexOut edgeTestVertex(
+    const device Rectangle &rect [[ buffer(0) ]],
+    unsigned int vid [[ vertex_id ]]
+) {
+    float2 quadVertex = quadVertices[vid];
+    
+    QuadVertexOut out;
+    
+    out.position = float4(rect.origin.x + quadVertex.x * rect.size.x, rect.origin.y + quadVertex.y * rect.size.y, 0.0, 1.0);
+    out.position.x = -1.0 + out.position.x * 2.0;
+    out.position.y = -1.0 + out.position.y * 2.0;
+    
+    out.uv = quadVertex;
+    
+    return out;
+}
+
+fragment half4 edgeTestFragment(
+    QuadVertexOut in [[stage_in]],
+    const device float4 &colorIn
+) {
+    half4 color = half4(colorIn);
+    return color;
 }

@@ -80,6 +80,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     ]
     
     let blurredLayer: MetalEngineSubjectLayer
+    let externalBlurredLayer: MetalEngineSubjectLayer
     
     private var phase: Float = 0.0
     
@@ -100,6 +101,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     
     override init() {
         self.blurredLayer = MetalEngineSubjectLayer()
+        self.externalBlurredLayer = MetalEngineSubjectLayer()
         
         self.colorSets = [
             ColorSet(colors: [
@@ -124,6 +126,8 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         self.colorTransition = AnimatedProperty<ColorSet>(colorSets[0])
         
         super.init()
+        
+        self.blurredLayer.cloneLayers.append(self.externalBlurredLayer)
         
         self.didEnterHierarchy = { [weak self] in
             guard let self else {
@@ -154,6 +158,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     
     override init(layer: Any) {
         self.blurredLayer = MetalEngineSubjectLayer()
+        self.externalBlurredLayer = MetalEngineSubjectLayer()
         self.colorSets = []
         self.colorTransition = AnimatedProperty<ColorSet>(ColorSet(colors: []))
         
@@ -187,7 +192,8 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         for i in 0 ..< 2 {
             let isBlur = i == 1
             context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: i == 0 ? self : self.blurredLayer, commands: { encoder, placement in
-                let effectiveRect = placement.effectiveRect
+                var effectiveRect = placement.effectiveRect
+                effectiveRect = effectiveRect.insetBy(dx: -effectiveRect.width * 0.1, dy: -effectiveRect.height * 0.1)
                 
                 var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
                 encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
