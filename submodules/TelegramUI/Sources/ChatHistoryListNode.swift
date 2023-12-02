@@ -894,7 +894,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
                 }
                 
-                var maxMessage: Message?
+                var maxMessage: MessageIndex?
                 strongSelf.forEachVisibleMessageItemNode { itemNode in
                     if let item = itemNode.item {
                         var matches = false
@@ -908,19 +908,32 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         }
                         
                         if matches {
-                            if let maxMessageValue = maxMessage {
-                                if maxMessageValue.index < item.message.index {
-                                    maxMessage = item.message
+                            var maxItemIndex: MessageIndex?
+                            for (message, _) in item.content {
+                                if let maxItemIndexValue = maxItemIndex {
+                                    if maxItemIndexValue < message.index {
+                                        maxItemIndex = message.index
+                                    }
+                                } else {
+                                    maxItemIndex = message.index
                                 }
-                            } else {
-                                maxMessage = item.message
+                            }
+                            
+                            if let maxItemIndex {
+                                if let maxMessageValue = maxMessage {
+                                    if maxMessageValue < maxItemIndex {
+                                        maxMessage = maxItemIndex
+                                    }
+                                } else {
+                                    maxMessage = maxItemIndex
+                                }
                             }
                         }
                     }
                 }
                 if let maxMessage {
                     //print("read \(maxMessage.text)")
-                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxMessage.index)
+                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxMessage)
                 }
             }
         }
