@@ -381,7 +381,13 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 }
             }
             
-            let (viewsLayout, viewsApply) = makeViewsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_MessageViews(item.views), font: labelFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 128.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))
+            let viewsString: String
+            if item.views == 0 {
+                viewsString = item.presentationData.strings.Stats_MessageViews_NoViews
+            } else {
+                viewsString = item.presentationData.strings.Stats_MessageViews(item.views)
+            }
+            let (viewsLayout, viewsApply) = makeViewsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: viewsString, font: labelFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 128.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))
             
             let reactions = item.reactions > 0 ? compactNumericCountString(Int(item.reactions), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator) : ""
             let (reactionsLayout, reactionsApply) = makeReactionsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: reactions, font: labelFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 128.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))

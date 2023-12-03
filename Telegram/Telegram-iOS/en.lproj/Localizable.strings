@@ -5305,6 +5305,7 @@ Sorry for the inconvenience.";
 "Stats.LanguagesTitle" = "LANGUAGES";
 "Stats.PostsTitle" = "RECENT POSTS";
 
+"Stats.MessageViews.NoViews" = "No views";
 "Stats.MessageViews_0" = "%@ views";
 "Stats.MessageViews_1" = "%@ view";
 "Stats.MessageViews_2" = "%@ views";

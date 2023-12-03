@@ -1446,7 +1446,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     return controller
 }
 
-private final class ChannelStatsContextExtractedContentSource: ContextExtractedContentSource {
+final class ChannelStatsContextExtractedContentSource: ContextExtractedContentSource {
     var keepInPlace: Bool
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
