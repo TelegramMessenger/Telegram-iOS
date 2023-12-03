@@ -644,7 +644,7 @@ public final class MessageInputActionButtonComponent: Component {
 
         public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             var result = super.hitTest(point, with: event)
-            if result == nil {
+            if result == nil, !self.isHidden && self.alpha > 0.0 {
                 for view in self.button.view.subviews {
                     if view.point(inside: self.convert(point, to: view), with: event) {
                         result = self.button.view
