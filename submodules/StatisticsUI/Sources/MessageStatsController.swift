@@ -549,7 +549,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             return
         }
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
         var items: [ContextMenuItem] = []
         
