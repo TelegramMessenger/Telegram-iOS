@@ -2534,6 +2534,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if location.x > self.view.frame.width - 44.0 && location.y > self.view.frame.height - 180.0 {
                     return false
                 }
+                if let reactionNode = self.view.subviews.last?.asyncdisplaykit_node as? ReactionContextNode {
+                    if let hitTestResult = self.view.hitTest(location, with: nil), hitTestResult.isDescendant(of: reactionNode.view) {
+                        return false
+                    }
+                }
                 return true
             } else {
                 return true
@@ -4413,28 +4418,28 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var items: [ContextMenuItem] = []
         
-        items.append(.action(ContextMenuActionItem(text: "Image", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Image, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Image"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
             
             self?.node.presentGallery()
         })))
-        items.append(.action(ContextMenuActionItem(text: "Location", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Location, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
             
             self?.node.presentLocationPicker()
         })))
-        items.append(.action(ContextMenuActionItem(text: "Reaction", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Reaction, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
             
             self?.node.addReaction()
         })))
-        items.append(.action(ContextMenuActionItem(text: "Audio", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Audio, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/AudioSmall"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)

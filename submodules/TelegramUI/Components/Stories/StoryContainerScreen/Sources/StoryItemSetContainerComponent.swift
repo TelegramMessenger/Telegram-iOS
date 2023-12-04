@@ -715,6 +715,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.audioRecorderStatusDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
             self.videoRecorderDisposable?.dispose()
+            self.updateDisposable.dispose()
         }
         
         func allowsExternalGestures(point: CGPoint) -> Bool {
@@ -5161,6 +5162,7 @@ public final class StoryItemSetContainerComponent: Component {
             StoryContainerScreen.openPeerStories(context: component.context, peerId: peer.id, parentController: controller, avatarNode: avatarNode)
         }
         
+        private let updateDisposable = MetaDisposable()
         func openStoryEditing(repost: Bool = false) {
             guard let component = self.component, let peerReference = PeerReference(component.slice.peer._asPeer()) else {
                 return
@@ -5234,7 +5236,6 @@ public final class StoryItemSetContainerComponent: Component {
                 transitionOut: nil
             )
             
-            let updateDisposable = MetaDisposable()
             var updateProgressImpl: ((Float) -> Void)?
             let controller = MediaEditorScreen(
                 context: context,
@@ -5324,7 +5325,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     TempBox.shared.dispose(tempFile)
                                 }
                                 if let imageData = compressImageToJPEG(image, quality: 0.7, tempFilePath: tempFile.path) {
-                                    updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .image(dimensions: dimensions, data: imageData, stickers: result.stickers), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
+                                    self.updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .image(dimensions: dimensions, data: imageData, stickers: result.stickers), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                     |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                                         guard let self else {
                                             return
@@ -5378,7 +5379,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         }
                                     }
                                     
-                                    updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
+                                    self.updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: result.stickers), mediaAreas: result.mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                     |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                                         guard let self else {
                                             return
@@ -5441,9 +5442,9 @@ public final class StoryItemSetContainerComponent: Component {
                 self?.state?.updated(transition: .easeInOut(duration: 0.2))
             }
             self.component?.controller()?.push(controller)
-            updateProgressImpl = { [weak controller] progress in
-                controller?.updateEditProgress(progress, cancel: {
-                    updateDisposable.dispose()
+            updateProgressImpl = { [weak controller, weak self] progress in
+                controller?.updateEditProgress(progress, cancel: { [weak self] in
+                    self?.updateDisposable.set(nil)
                 })
             }
         }

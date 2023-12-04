@@ -327,68 +327,73 @@ public final class MessageInputActionButtonComponent: Component {
             self.containerNode.isUserInteractionEnabled = component.longPressAction != nil
             
             if self.micButton == nil {
-                let micButton = ChatTextInputMediaRecordingButton(
-                    context: component.context,
-                    theme: defaultDarkPresentationTheme,
-                    useDarkTheme: true,
-                    strings: component.strings,
-                    presentController: component.presentController
-                )
-                self.micButton = micButton
-                micButton.statusBarHost = component.context.sharedContext.mainWindow?.statusBarHost
-                self.addSubview(micButton)
-                
-                micButton.disablesInteractiveKeyboardGestureRecognizer = true
-                
-                micButton.beginRecording = { [weak self] in
-                    guard let self, let component = self.component else {
-                        return
+                switch component.mode {
+                case .videoInput, .voiceInput, .unavailableVoiceInput, .send:
+                    let micButton = ChatTextInputMediaRecordingButton(
+                        context: component.context,
+                        theme: defaultDarkPresentationTheme,
+                        useDarkTheme: true,
+                        strings: component.strings,
+                        presentController: component.presentController
+                    )
+                    self.micButton = micButton
+                    micButton.statusBarHost = component.context.sharedContext.mainWindow?.statusBarHost
+                    self.addSubview(micButton)
+                    
+                    micButton.disablesInteractiveKeyboardGestureRecognizer = true
+                    
+                    micButton.beginRecording = { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        switch component.mode {
+                        case .voiceInput, .videoInput:
+                            component.action(component.mode, .down, false)
+                        default:
+                            break
+                        }
                     }
-                    switch component.mode {
-                    case .voiceInput, .videoInput:
-                        component.action(component.mode, .down, false)
-                    default:
-                        break
+                    micButton.stopRecording = { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.stopAndPreviewMediaRecording()
                     }
-                }
-                micButton.stopRecording = { [weak self] in
-                    guard let self, let component = self.component else {
-                        return
+                    micButton.endRecording = { [weak self] sendMedia in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        switch component.mode {
+                        case .voiceInput, .videoInput:
+                            component.action(component.mode, .up, sendMedia)
+                        default:
+                            break
+                        }
                     }
-                    component.stopAndPreviewMediaRecording()
-                }
-                micButton.endRecording = { [weak self] sendMedia in
-                    guard let self, let component = self.component else {
-                        return
+                    micButton.updateLocked = { [weak self] _ in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.lockMediaRecording()
                     }
-                    switch component.mode {
-                    case .voiceInput, .videoInput:
-                        component.action(component.mode, .up, sendMedia)
-                    default:
-                        break
+                    micButton.switchMode = { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        if case .unavailableVoiceInput = component.mode {
+                            component.action(component.mode, .up, false)
+                        } else {
+                            component.switchMediaInputMode()
+                        }
                     }
-                }
-                micButton.updateLocked = { [weak self] _ in
-                    guard let self, let component = self.component else {
-                        return
+                    micButton.updateCancelTranslation = { [weak self] in
+                        guard let self, let micButton = self.micButton, let component = self.component else {
+                            return
+                        }
+                        component.updateMediaCancelFraction(micButton.cancelTranslation)
                     }
-                    component.lockMediaRecording()
-                }
-                micButton.switchMode = { [weak self] in
-                    guard let self, let component = self.component else {
-                        return
-                    }
-                    if case .unavailableVoiceInput = component.mode {
-                        component.action(component.mode, .up, false)
-                    } else {
-                        component.switchMediaInputMode()
-                    }
-                }
-                micButton.updateCancelTranslation = { [weak self] in
-                    guard let self, let micButton = self.micButton, let component = self.component else {
-                        return
-                    }
-                    component.updateMediaCancelFraction(micButton.cancelTranslation)
+                default:
+                    break
                 }
             }
             
@@ -635,6 +640,19 @@ public final class MessageInputActionButtonComponent: Component {
             }
             
             return availableSize
+        }
+
+        public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            var result = super.hitTest(point, with: event)
+            if result == nil, !self.isHidden && self.alpha > 0.0 {
+                for view in self.button.view.subviews {
+                    if view.point(inside: self.convert(point, to: view), with: event) {
+                        result = self.button.view
+                        break
+                    }
+                }
+            }
+            return result
         }
     }
     

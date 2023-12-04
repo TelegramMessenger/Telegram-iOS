@@ -956,9 +956,9 @@ final class CaptureControlsComponent: Component {
             } else {
                 galleryButtonFrame = CGRect(origin: CGPoint(x: buttonSideInset, y: floorToScreenPixels((size.height - galleryButtonSize.height) / 2.0)), size: galleryButtonSize)
             }
-            if let galleryButtonView = self.galleryButtonView.view {
-                galleryButtonView.clipsToBounds = true
-                galleryButtonView.layer.cornerRadius = galleryCornerRadius
+            if let galleryButtonView = self.galleryButtonView.view as? CameraButton.View {
+                galleryButtonView.contentView.clipsToBounds = true
+                galleryButtonView.contentView.layer.cornerRadius = galleryCornerRadius
                 if galleryButtonView.superview == nil {
                     self.addSubview(galleryButtonView)
                 }

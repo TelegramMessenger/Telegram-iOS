@@ -16,18 +16,21 @@ import PresentationDataUtils
 import AppBundle
 import GraphUI
 import StoryContainerScreen
+import ContextUI
 
 private final class MessageStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openMessage: (EngineMessage.Id) -> Void
     let openStory: (EnginePeer.Id, EngineStoryItem, UIView) -> Void
+    let storyContextAction: (EnginePeer.Id, ASDisplayNode, ContextGesture?, Bool) -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void, openStory: @escaping (EnginePeer.Id, EngineStoryItem, UIView) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (EngineMessage.Id) -> Void, openStory: @escaping (EnginePeer.Id, EngineStoryItem, UIView) -> Void, storyContextAction: @escaping (EnginePeer.Id, ASDisplayNode, ContextGesture?, Bool) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessage = openMessage
         self.openStory = openStory
+        self.storyContextAction = storyContextAction
     }
 }
 
@@ -171,6 +174,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 var forwards: Int32 = 0
                 var reactions: Int32 = 0
             
+                var isStory = false
                 let peer: Peer
                 switch item {
                 case let .message(message):
@@ -191,6 +195,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     views = Int32(story.views?.seenCount ?? 0)
                     forwards = Int32(story.views?.forwardCount ?? 0)
                     reactions = Int32(story.views?.reactedCount ?? 0)
+                    isStory = true
                 }
                 return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: item, views: views, reactions: reactions, forwards: forwards, isPeer: true, sectionId: self.section, style: .blocks, action: {
                     switch item {
@@ -203,7 +208,9 @@ private enum StatsEntry: ItemListNodeEntry {
                     if case let .story(peer, story) = item {
                         arguments.openStory(peer.id, story, view)
                     }
-                }, contextAction: nil)
+                }, contextAction: { node, gesture in
+                    arguments.storyContextAction(peer.id, node, gesture, !isStory)
+                })
         }
     }
 }
@@ -305,6 +312,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     let dataSignal: Signal<PostStats?, NoError>
     var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
     var openStoryImpl: ((EnginePeer.Id, EngineStoryItem, UIView) -> Void)?
+    var storyContextActionImpl: ((EnginePeer.Id, ASDisplayNode, ContextGesture?, Bool) -> Void)?
     
     var forwardsContext: StoryStatsPublicForwardsContext?
     let peerId: EnginePeer.Id
@@ -373,6 +381,8 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         navigateToMessageImpl?(messageId)
     }, openStory: { peerId, story, view in
         openStoryImpl?(peerId, story, view)
+    }, storyContextAction: { peerId, node, gesture, isMessage in
+        storyContextActionImpl?(peerId, node, gesture, isMessage)
     })
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
@@ -533,6 +543,51 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
             )
             controller.push(storyContainerScreen)
         })
+    }
+    storyContextActionImpl = { [weak controller] peerId, sourceNode, gesture, isMessage in
+        guard let controller = controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
+            return
+        }
+        
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
+        var items: [ContextMenuItem] = []
+        
+        let title: String
+        let iconName: String
+        if isMessage {
+            title = presentationData.strings.Conversation_ViewInChannel
+            iconName = "Chat/Context Menu/GoToMessage"
+        } else {
+            if peerId.isGroupOrChannel {
+                title = presentationData.strings.ChatList_ContextOpenChannel
+                iconName = "Chat/Context Menu/Channels"
+            } else {
+                title = presentationData.strings.Conversation_ContextMenuOpenProfile
+                iconName = "Chat/Context Menu/User"
+            }
+        }
+        
+        items.append(.action(ContextMenuActionItem(text: title, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor) }, action: { [weak controller] c, _ in
+            c.dismiss(completion: {
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let peer = peer, let navigationController = controller?.navigationController as? NavigationController else {
+                        return
+                    }
+                    if case .user = peer {
+                        if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false, requestsContext: nil) {
+                            navigationController.pushViewController(controller)
+                        }
+                    } else {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: nil))
+                    }
+                })
+            })
+        })))
+        
+        let contextController = ContextController(presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        controller.presentInGlobalOverlay(contextController)
     }
     return controller
 }

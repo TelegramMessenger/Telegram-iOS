@@ -617,8 +617,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
+                        let previous = strongSelf.audioTranscriptionState
                         strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
-                        strongSelf.updateTranscriptionExpanded?(strongSelf.audioTranscriptionState)
+                        if previous != updatedAudioTranscriptionState {
+                            strongSelf.updateTranscriptionExpanded?(strongSelf.audioTranscriptionState)
+                        }
                     }
                     if let updatedTranscriptionText = updatedTranscriptionText {
                         strongSelf.audioTranscriptionText = updatedTranscriptionText

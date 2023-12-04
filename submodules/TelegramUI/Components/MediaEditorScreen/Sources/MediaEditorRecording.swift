@@ -61,9 +61,24 @@ extension MediaEditorScreen {
         }
         
         func requestDeviceAccess() {
-            DeviceAccess.authorizeAccess(to: .camera(.video), { granted in
+            guard let controller = self.controller else {
+                return
+            }
+            let context = controller.context
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+            DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: presentationData, present: { c, a in
+                c.presentationArguments = a
+                context.sharedContext.mainWindow?.present(c, on: .root)
+            }, openSettings: {
+                context.sharedContext.applicationBindings.openSettings()
+            }, { granted in
                 if granted {
-                    DeviceAccess.authorizeAccess(to: .microphone(.video))
+                    DeviceAccess.authorizeAccess(to: .microphone(.video), presentationData: presentationData, present: { c, a in
+                        c.presentationArguments = a
+                        context.sharedContext.mainWindow?.present(c, on: .root)
+                    }, openSettings: {
+                        context.sharedContext.applicationBindings.openSettings()
+                    })
                 }
             })
         }
@@ -119,6 +134,11 @@ extension MediaEditorScreen {
                     
                     self.cameraIsActive = false
                 } else {
+                    if self.cameraAuthorizationStatus != .allowed || self.microphoneAuthorizationStatus != .allowed {
+                        self.requestDeviceAccess()
+                        return
+                    }
+                    
                     guard self.tooltipController == nil, let sourceView else {
                         return
                     }
