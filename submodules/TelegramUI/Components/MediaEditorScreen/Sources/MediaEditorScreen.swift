@@ -2534,6 +2534,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if location.x > self.view.frame.width - 44.0 && location.y > self.view.frame.height - 180.0 {
                     return false
                 }
+                if let reactionNode = self.view.subviews.last?.asyncdisplaykit_node as? ReactionContextNode {
+                    if let hitTestResult = self.view.hitTest(location, with: nil), hitTestResult.isDescendant(of: reactionNode.view) {
+                        return false
+                    }
+                }
                 return true
             } else {
                 return true
