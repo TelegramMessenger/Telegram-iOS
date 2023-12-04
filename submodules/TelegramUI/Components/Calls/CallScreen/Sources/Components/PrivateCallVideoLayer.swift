@@ -5,38 +5,6 @@ import MetalPerformanceShaders
 import Accelerate
 import MetalEngine
 
-func imageToCVPixelBuffer(image: UIImage) -> CVPixelBuffer? {
-    guard let cgImage = image.cgImage, let data = cgImage.dataProvider?.data, let bytes = CFDataGetBytePtr(data), let colorSpace = cgImage.colorSpace, case .rgb = colorSpace.model, cgImage.bitsPerPixel / cgImage.bitsPerComponent == 4 else {
-        return nil
-    }
-
-    let width = cgImage.width
-    let height = cgImage.width
-
-    var pixelBuffer: CVPixelBuffer? = nil
-    let _ = CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, [
-        kCVPixelBufferIOSurfacePropertiesKey: NSDictionary()
-    ] as CFDictionary, &pixelBuffer)
-    guard let pixelBuffer else {
-        return nil
-    }
-
-    CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
-    defer {
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
-    }
-    guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
-        return nil
-    }
-
-    var srcBuffer = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: bytes), height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: cgImage.bytesPerRow)
-    var dstBuffer = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: baseAddress), height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: CVPixelBufferGetBytesPerRow(pixelBuffer))
-    
-    vImageCopyBuffer(&srcBuffer, &dstBuffer, 4, vImage_Flags(kvImageDoNotTile))
-
-    return pixelBuffer
-}
-
 final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     var internalData: MetalEngineSubjectInternalData?
     
@@ -221,6 +189,13 @@ final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 
                 var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
                 encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
+                
+                var mirror = SIMD2<UInt32>(
+                    videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
+                    videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
+                )
+                encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
+                
                 encoder.setFragmentTexture(blurredTexture, index: 0)
                 
                 var brightness: Float = 1.0
@@ -243,6 +218,13 @@ final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             
             var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
             encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
+            
+            var mirror = SIMD2<UInt32>(
+                videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
+                videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
+            )
+            encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
+            
             encoder.setFragmentTexture(rgbaTexture, index: 0)
             
             var brightness: Float = 1.0

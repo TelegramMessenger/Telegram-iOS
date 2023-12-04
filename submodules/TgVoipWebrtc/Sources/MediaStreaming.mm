@@ -106,7 +106,7 @@ private:
             }
 
             if (storedSink && mappedBuffer) {
-                storedSink([[CallVideoFrameData alloc] initWithBuffer:mappedBuffer frame:videoFrame mirrorHorizontally:mirrorHorizontally mirrorVertically:mirrorVertically]);
+                storedSink([[CallVideoFrameData alloc] initWithBuffer:mappedBuffer frame:videoFrame mirrorHorizontally:mirrorHorizontally mirrorVertically:mirrorVertically hasDeviceRelativeVideoRotation:false deviceRelativeVideoRotation:OngoingCallVideoOrientation0]);
             }
         }));
     }

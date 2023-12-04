@@ -31,7 +31,8 @@ public final class ViewController: UIViewController {
         audioOutput: .internalSpeaker,
         isMicrophoneMuted: false,
         localVideo: nil,
-        remoteVideo: nil
+        remoteVideo: nil,
+        isRemoteBatteryLow: false
     )
     
     private var currentLayout: (size: CGSize, insets: UIEdgeInsets)?
@@ -141,6 +142,13 @@ public final class ViewController: UIViewController {
             self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0))
             self.callState.remoteVideo = nil
             self.callState.localVideo = nil
+            self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.backAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.callState.isMicrophoneMuted = !self.callState.isMicrophoneMuted
             self.update(transition: .spring(duration: 0.4))
         }
     }

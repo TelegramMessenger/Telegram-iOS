@@ -5,17 +5,30 @@ import Display
 import SwiftSignalKit
 
 public final class VideoSourceOutput {
+    public struct MirrorDirection: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let horizontal = MirrorDirection(rawValue: 1 << 0)
+        public static let vertical = MirrorDirection(rawValue: 1 << 1)
+    }
+    
     public let resolution: CGSize
     public let y: MTLTexture
     public let uv: MTLTexture
     public let rotationAngle: Float
+    public let mirrorDirection: MirrorDirection
     public let sourceId: Int
     
-    public init(resolution: CGSize, y: MTLTexture, uv: MTLTexture, rotationAngle: Float, sourceId: Int) {
+    public init(resolution: CGSize, y: MTLTexture, uv: MTLTexture, rotationAngle: Float, mirrorDirection: MirrorDirection, sourceId: Int) {
         self.resolution = resolution
         self.y = y
         self.uv = uv
         self.rotationAngle = rotationAngle
+        self.mirrorDirection = mirrorDirection
         self.sourceId = sourceId
     }
 }
@@ -148,7 +161,7 @@ public final class FileVideoSource: VideoSource {
         resolution.width = floor(resolution.width * self.sizeMultiplicator.x)
         resolution.height = floor(resolution.height * self.sizeMultiplicator.y)
         
-        self.currentOutput = Output(resolution: resolution, y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: self.sourceId)
+        self.currentOutput = Output(resolution: resolution, y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, mirrorDirection: [], sourceId: self.sourceId)
         return true
     }
 }

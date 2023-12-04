@@ -103,6 +103,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         public var isMicrophoneMuted: Bool
         public var localVideo: VideoSource?
         public var remoteVideo: VideoSource?
+        public var isRemoteBatteryLow: Bool
         
         public init(
             lifecycleState: LifecycleState,
@@ -112,7 +113,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             audioOutput: AudioOutput,
             isMicrophoneMuted: Bool,
             localVideo: VideoSource?,
-            remoteVideo: VideoSource?
+            remoteVideo: VideoSource?,
+            isRemoteBatteryLow: Bool
         ) {
             self.lifecycleState = lifecycleState
             self.name = name
@@ -122,6 +124,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             self.isMicrophoneMuted = isMicrophoneMuted
             self.localVideo = localVideo
             self.remoteVideo = remoteVideo
+            self.isRemoteBatteryLow = isRemoteBatteryLow
         }
         
         public static func ==(lhs: State, rhs: State) -> Bool {
@@ -147,6 +150,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 return false
             }
             if lhs.remoteVideo !== rhs.remoteVideo {
+                return false
+            }
+            if lhs.isRemoteBatteryLow != rhs.isRemoteBatteryLow {
                 return false
             }
             return true
@@ -178,11 +184,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private let avatarTransformLayer: SimpleLayer
     private let avatarLayer: AvatarLayer
     private let titleView: TextView
+    private let backButtonView: BackButtonView
     
     private var statusView: StatusView
     private var weakSignalView: WeakSignalView?
     
     private var emojiView: KeyEmojiView?
+    private var emojiTooltipView: EmojiTooltipView?
     private var emojiExpandedInfoView: EmojiExpandedInfoView?
     
     private let videoContainerBackgroundView: RoundedCornersView
@@ -197,6 +205,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var waitingForFirstLocalVideoFrameDisposable: Disposable?
     
     private var canAnimateAudioLevel: Bool = false
+    private var displayEmojiTooltip: Bool = false
     private var isEmojiKeyExpanded: Bool = false
     private var areControlsHidden: Bool = false
     private var swapLocalAndRemoteVideo: Bool = false
@@ -214,6 +223,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     public var videoAction: (() -> Void)?
     public var microhoneMuteAction: (() -> Void)?
     public var endCallAction: (() -> Void)?
+    public var backAction: (() -> Void)?
     
     public override init(frame: CGRect) {
         self.overlayContentsView = UIView()
@@ -236,6 +246,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         self.titleView = TextView()
         self.statusView = StatusView()
+        
+        self.backButtonView = BackButtonView(text: "Back")
         
         super.init(frame: frame)
         
@@ -270,6 +282,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             self?.update(transition: .immediate)
         }
         
+        self.addSubview(self.backButtonView)
+        
         (self.layer as? SimpleLayer)?.didEnterHierarchy = { [weak self] in
             guard let self else {
                 return
@@ -289,6 +303,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         
         self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        
+        self.backButtonView.pressAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.backAction?()
+        }
     }
     
     public required init?(coder: NSCoder) {
@@ -346,8 +367,19 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
+            var update = false
+            
+            if self.displayEmojiTooltip {
+                self.displayEmojiTooltip = false
+                update = true
+            }
+            
             if self.activeRemoteVideoSource != nil || self.activeLocalVideoSource != nil {
                 self.areControlsHidden = !self.areControlsHidden
+                update = true
+            }
+            
+            if update {
                 self.update(transition: .spring(duration: 0.4))
             }
         }
@@ -432,6 +464,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         if self.activeRemoteVideoSource == nil && self.activeLocalVideoSource == nil {
             self.areControlsHidden = false
+        }
+        
+        if let previousParams = self.params, case .active = params.state.lifecycleState {
+            switch previousParams.state.lifecycleState {
+            case .connecting, .exchangingKeys, .ringing:
+                self.displayEmojiTooltip = true
+            default:
+                break
+            }
         }
         
         self.params = params
@@ -541,7 +582,19 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 self.speakerAction?()
             }), at: 0)
         }
-        let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, controlsHidden: currentAreControlsHidden, buttons: buttons, transition: transition)
+        
+        var notices: [ButtonGroupView.Notice] = []
+        if params.state.isMicrophoneMuted {
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "Your microphone is turned off"))
+        }
+        if params.state.remoteVideo != nil && params.state.localVideo == nil {
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "Your camera is turned off"))
+        }
+        if params.state.isRemoteBatteryLow {
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "\(params.state.shortName)'s battery is low"))
+        }
+        
+        let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, controlsHidden: currentAreControlsHidden, buttons: buttons, notices: notices, transition: transition)
         
         var expandedEmojiKeyRect: CGRect?
         if self.isEmojiKeyExpanded {
@@ -606,6 +659,16 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             }
         }
         
+        let backButtonY: CGFloat
+        if currentAreControlsHidden {
+            backButtonY = -self.backButtonView.size.height - 12.0
+        } else {
+            backButtonY = params.insets.top + 12.0
+        }
+        let backButtonFrame = CGRect(origin: CGPoint(x: params.insets.left + 10.0, y: backButtonY), size: self.backButtonView.size)
+        transition.setFrame(view: self.backButtonView, frame: backButtonFrame)
+        transition.setAlpha(view: self.backButtonView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
+        
         if case let .active(activeState) = params.state.lifecycleState {
             let emojiView: KeyEmojiView
             var emojiTransition = transition
@@ -623,6 +686,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     }
                     if !self.isEmojiKeyExpanded {
                         self.isEmojiKeyExpanded = true
+                        self.displayEmojiTooltip = false
                         self.update(transition: .spring(duration: 0.4))
                     }
                 }
@@ -650,6 +714,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
                 }
                 emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
+                
+                if let emojiTooltipView = self.emojiTooltipView {
+                    self.emojiTooltipView = nil
+                    emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
+                        emojiTooltipView?.removeFromSuperview()
+                    })
+                }
             } else {
                 let emojiY: CGFloat
                 if currentAreControlsHidden {
@@ -669,6 +740,34 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 }
                 emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
                 emojiAlphaTransition.setAlpha(view: emojiView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
+                
+                if self.displayEmojiTooltip {
+                    let emojiTooltipView: EmojiTooltipView
+                    var emojiTooltipTransition = transition
+                    var animateIn = false
+                    if let current = self.emojiTooltipView {
+                        emojiTooltipView = current
+                    } else {
+                        emojiTooltipTransition = emojiTooltipTransition.withAnimation(.none)
+                        emojiTooltipView = EmojiTooltipView(text: "Encryption key of this call")
+                        animateIn = true
+                        self.emojiTooltipView = emojiTooltipView
+                        self.addSubview(emojiTooltipView)
+                    }
+                    
+                    let emojiTooltipSize = emojiTooltipView.update(constrainedWidth: params.size.width - 32.0 * 2.0, subjectWidth: emojiViewSize.width - 20.0)
+                    let emojiTooltipFrame = CGRect(origin: CGPoint(x: emojiViewFrame.maxX - emojiTooltipSize.width, y: emojiViewFrame.maxY + 8.0), size: emojiTooltipSize)
+                    emojiTooltipTransition.setFrame(view: emojiTooltipView, frame: emojiTooltipFrame)
+                    
+                    if animateIn && !transition.animation.isImmediate {
+                        emojiTooltipView.animateIn()
+                    }
+                } else if let emojiTooltipView = self.emojiTooltipView {
+                    self.emojiTooltipView = nil
+                    emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
+                        emojiTooltipView?.removeFromSuperview()
+                    })
+                }
             }
             
             emojiAlphaTransition.setAlpha(view: emojiView, alpha: 1.0)
@@ -677,6 +776,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 self.emojiView = nil
                 genericAlphaTransition.setAlpha(view: emojiView, alpha: 0.0, completion: { [weak emojiView] _ in
                     emojiView?.removeFromSuperview()
+                })
+            }
+            if let emojiTooltipView = self.emojiTooltipView {
+                self.emojiTooltipView = nil
+                emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
+                    emojiTooltipView?.removeFromSuperview()
                 })
             }
         }
@@ -1024,7 +1129,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             genericAlphaTransition.setAlpha(view: self.statusView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
         }
         
-        if case let .active(activeState) = params.state.lifecycleState, activeState.signalInfo.quality <= 0.2 {
+        if case let .active(activeState) = params.state.lifecycleState, activeState.signalInfo.quality <= 0.2, !self.isEmojiKeyExpanded, (!self.displayEmojiTooltip || !havePrimaryVideo) {
             let weakSignalView: WeakSignalView
             if let current = self.weakSignalView {
                 weakSignalView = current

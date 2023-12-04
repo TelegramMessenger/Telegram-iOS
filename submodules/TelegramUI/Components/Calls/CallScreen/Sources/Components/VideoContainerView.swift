@@ -73,9 +73,11 @@ final class VideoContainerView: HighlightTrackingButton {
     
     private final class FlipAnimationInfo {
         let isForward: Bool
+        let previousRotationAngle: Float
         
-        init(isForward: Bool) {
+        init(isForward: Bool, previousRotationAngle: Float) {
             self.isForward = isForward
+            self.previousRotationAngle = previousRotationAngle
         }
     }
     
@@ -139,7 +141,7 @@ final class VideoContainerView: HighlightTrackingButton {
                     var videoMetrics: VideoMetrics?
                     if let currentOutput = self.video?.currentOutput {
                         if let previousVideo = self.videoLayer.video, previousVideo.sourceId != currentOutput.sourceId {
-                            self.initiateVideoSourceSwitch(flipAnimationInfo: FlipAnimationInfo(isForward: previousVideo.sourceId < currentOutput.sourceId))
+                            self.initiateVideoSourceSwitch(flipAnimationInfo: FlipAnimationInfo(isForward: previousVideo.sourceId < currentOutput.sourceId, previousRotationAngle: previousVideo.rotationAngle))
                         }
                         
                         self.videoLayer.video = currentOutput
@@ -564,13 +566,29 @@ final class VideoContainerView: HighlightTrackingButton {
                     
                     if let flipAnimationInfo = disappearingVideoLayer.flipAnimationInfo {
                         var videoTransform = self.videoContainerLayer.transform
-                        videoTransform = CATransform3DRotate(videoTransform, (flipAnimationInfo.isForward ? 1.0 : -1.0) * CGFloat.pi * 0.9999, 0.0, 1.0, 0.0)
+                        var axis: (x: CGFloat, y: CGFloat, z: CGFloat) = (0.0, 0.0, 0.0)
+                        let previousVideoScale: CGPoint
+                        if flipAnimationInfo.previousRotationAngle == Float.pi * 0.5 {
+                            axis.x = -1.0
+                            previousVideoScale = CGPoint(x: 1.0, y: -1.0)
+                        } else if flipAnimationInfo.previousRotationAngle == Float.pi {
+                            axis.y = -1.0
+                            previousVideoScale = CGPoint(x: -1.0, y: -1.0)
+                        } else if flipAnimationInfo.previousRotationAngle == Float.pi * 3.0 / 2.0 {
+                            axis.x = 1.0
+                            previousVideoScale = CGPoint(x: 1.0, y: 1.0)
+                        } else {
+                            axis.y = 1.0
+                            previousVideoScale = CGPoint(x: -1.0, y: 1.0)
+                        }
+                        
+                        videoTransform = CATransform3DRotate(videoTransform, (flipAnimationInfo.isForward ? 1.0 : -1.0) * CGFloat.pi * 0.9999, axis.x, axis.y, axis.z)
                         self.videoContainerLayer.transform = videoTransform
                         
                         disappearingVideoLayer.videoLayer.zPosition = 1.0
                         transition.setZPosition(layer: disappearingVideoLayer.videoLayer, zPosition: -1.0)
                         
-                        disappearingVideoLayer.videoLayer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                        disappearingVideoLayer.videoLayer.transform = CATransform3DMakeScale(previousVideoScale.x, previousVideoScale.y, 1.0)
                         
                         animateFlipDisappearingVideo = disappearingVideoLayer
                         disappearingVideoLayer.videoLayer.blurredLayer.removeFromSuperlayer()

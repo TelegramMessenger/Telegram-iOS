@@ -251,6 +251,7 @@ kernel void videoYUVToRGBA(
 
 vertex QuadVertexOut mainVideoVertex(
     const device Rectangle &rect [[ buffer(0) ]],
+    const device uint2 &mirror [[ buffer(1) ]],
     unsigned int vid [[ vertex_id ]]
 ) {
     float2 quadVertex = quadVertices[vid];
@@ -262,6 +263,12 @@ vertex QuadVertexOut mainVideoVertex(
     out.position.y = -1.0 + out.position.y * 2.0;
     
     out.uv = float2(quadVertex.x, 1.0 - quadVertex.y);
+    if (mirror.x == 1) {
+        out.uv.x = 1.0 - out.uv.x;
+    }
+    if (mirror.y == 1) {
+        out.uv.y = 1.0 - out.uv.y;
+    }
     
     return out;
 }

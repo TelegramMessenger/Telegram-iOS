@@ -53,6 +53,6 @@
 
 @interface CallVideoFrameData (Initialization)
 
-- (instancetype _Nonnull)initWithBuffer:(id<CallVideoFrameBuffer> _Nonnull)buffer frame:(webrtc::VideoFrame const &)frame mirrorHorizontally:(bool)mirrorHorizontally mirrorVertically:(bool)mirrorVertically;
+- (instancetype _Nonnull)initWithBuffer:(id<CallVideoFrameBuffer> _Nonnull)buffer frame:(webrtc::VideoFrame const &)frame mirrorHorizontally:(bool)mirrorHorizontally mirrorVertically:(bool)mirrorVertically hasDeviceRelativeVideoRotation:(bool)hasDeviceRelativeVideoRotation deviceRelativeVideoRotation:(OngoingCallVideoOrientationWebrtc)deviceRelativeVideoRotation;
 
 @end

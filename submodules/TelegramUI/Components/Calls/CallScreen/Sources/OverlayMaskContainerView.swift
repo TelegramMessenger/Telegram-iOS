@@ -60,7 +60,7 @@ public class OverlayMaskContainerView: UIView, OverlayMaskContainerViewProtocol 
         super.willRemoveSubview(subview)
         
         if let view = subview as? OverlayMaskContainerViewProtocol {
-            if view.maskContents.superview === self {
+            if view.maskContents.superview === self.maskContents {
                 view.maskContents.removeFromSuperview()
             }
         }

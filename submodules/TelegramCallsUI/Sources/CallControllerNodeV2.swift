@@ -117,6 +117,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             self.endCall?()
         }
+        self.callScreen.backAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.back?()
+        }
         
         self.callScreenState = PrivateCallScreen.State(
             lifecycleState: .connecting,
@@ -126,7 +132,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             audioOutput: .internalSpeaker,
             isMicrophoneMuted: false,
             localVideo: nil,
-            remoteVideo: nil
+            remoteVideo: nil,
+            isRemoteBatteryLow: false
         )
         if let peer = call.peer {
             self.updatePeer(peer: peer)
@@ -326,32 +333,45 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             mappedLifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: duration))
         }
         
-        switch callState.remoteVideoState {
-        case .active, .paused:
-            if self.remoteVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: true) {
-                self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
-            }
-        case .inactive:
-            self.remoteVideo = nil
-        }
-        
-        switch callState.videoState {
-        case .active(let isScreencast), .paused(let isScreencast):
-            if isScreencast {
-                self.localVideo = nil
-            } else {
-                if self.localVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
-                    self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
-                }
-            }
-        case .inactive, .notAvailable:
+        switch callState.state {
+        case .terminating, .terminated:
             self.localVideo = nil
+            self.remoteVideo = nil
+        default:
+            switch callState.videoState {
+            case .active(let isScreencast), .paused(let isScreencast):
+                if isScreencast {
+                    self.localVideo = nil
+                } else {
+                    if self.localVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
+                        self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                    }
+                }
+            case .inactive, .notAvailable:
+                self.localVideo = nil
+            }
+            
+            switch callState.remoteVideoState {
+            case .active, .paused:
+                if self.remoteVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: true) {
+                    self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                }
+            case .inactive:
+                self.remoteVideo = nil
+            }
         }
         
         if var callScreenState = self.callScreenState {
             callScreenState.lifecycleState = mappedLifecycleState
             callScreenState.remoteVideo = self.remoteVideo
             callScreenState.localVideo = self.localVideo
+            
+            switch callState.remoteBatteryLevel {
+            case .low:
+                callScreenState.isRemoteBatteryLow = true
+            case .normal:
+                callScreenState.isRemoteBatteryLow = false
+            }
             
             if self.callScreenState != callScreenState {
                 self.callScreenState = callScreenState
@@ -509,7 +529,7 @@ private final class AdaptedCallVideoSource: VideoSource {
             }
             
             let rotationAngle: Float
-            switch videoFrameData.orientation {
+            switch videoFrameData.deviceRelativeOrientation ?? videoFrameData.orientation {
             case .rotation0:
                 rotationAngle = 0.0
             case .rotation90:
@@ -518,6 +538,47 @@ private final class AdaptedCallVideoSource: VideoSource {
                 rotationAngle = Float.pi
             case .rotation270:
                 rotationAngle = Float.pi * 3.0 / 2.0
+            }
+            
+            var mirrorDirection: Output.MirrorDirection = []
+            
+            var sourceId: Int = 0
+            if videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically {
+                sourceId = 1
+            }
+            
+            if let deviceRelativeOrientation = videoFrameData.deviceRelativeOrientation, deviceRelativeOrientation != videoFrameData.orientation {
+                let shouldMirror = videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically
+                
+                var mirrorHorizontally = false
+                var mirrorVertically = false
+                
+                if shouldMirror {
+                    switch deviceRelativeOrientation {
+                    case .rotation0:
+                        mirrorHorizontally = true
+                    case .rotation90:
+                        mirrorVertically = true
+                    case .rotation180:
+                        mirrorHorizontally = true
+                    case .rotation270:
+                        mirrorVertically = true
+                    }
+                }
+                
+                if mirrorHorizontally {
+                    mirrorDirection.insert(.horizontal)
+                }
+                if mirrorVertically {
+                    mirrorDirection.insert(.vertical)
+                }
+            } else {
+                if videoFrameData.mirrorHorizontally {
+                    mirrorDirection.insert(.horizontal)
+                }
+                if videoFrameData.mirrorVertically {
+                    mirrorDirection.insert(.vertical)
+                }
             }
             
             AdaptedCallVideoSource.queue.async { [weak self] in
@@ -538,7 +599,14 @@ private final class AdaptedCallVideoSource: VideoSource {
                         return
                     }
                     
-                    output = Output(resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)), y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically ? 1 : 0)
+                    output = Output(
+                        resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)),
+                        y: yTexture,
+                        uv: uvTexture,
+                        rotationAngle: rotationAngle,
+                        mirrorDirection: mirrorDirection,
+                        sourceId: sourceId
+                    )
                 default:
                     return
                 }
