@@ -42,7 +42,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     private let action: (PeerInfoHeaderButtonNode, ContextGesture?) -> Void
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
-    private let backgroundNode: NavigationBackgroundNode
+    //private let backgroundNode: NavigationBackgroundNode
     private let contentNode: ASDisplayNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
@@ -52,6 +52,9 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     private var icon: PeerInfoHeaderButtonIcon?
     private var isActive: Bool?
     
+    let backgroundContainerView: UIView
+    let backgroundView: UIView
+    
     init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode, ContextGesture?) -> Void) {
         self.key = key
         self.action = action
@@ -60,8 +63,13 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         
-        self.backgroundNode = NavigationBackgroundNode(color: UIColor(white: 1.0, alpha: 0.2), enableBlur: true, enableSaturation: false)
-        self.backgroundNode.isUserInteractionEnabled = false
+        self.backgroundContainerView = UIView()
+        self.backgroundView = UIView()
+        self.backgroundView.backgroundColor = .white
+        self.backgroundContainerView.addSubview(self.backgroundView)
+        
+        /*self.backgroundNode = NavigationBackgroundNode(color: UIColor(white: 1.0, alpha: 0.2), enableBlur: true, enableSaturation: false)
+        self.backgroundNode.isUserInteractionEnabled = false*/
         
         self.contentNode = ASDisplayNode()
         self.contentNode.isUserInteractionEnabled = false
@@ -80,7 +88,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.accessibilityTraits = .button
         
         self.containerNode.addSubnode(self.referenceNode)
-        self.referenceNode.addSubnode(self.backgroundNode)
+        //self.referenceNode.addSubnode(self.backgroundNode)
         self.referenceNode.addSubnode(self.contentNode)
         self.contentNode.addSubnode(self.iconNode)
         self.addSubnode(self.containerNode)
@@ -259,12 +267,14 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         
         let backgroundY: CGFloat = size.height * (1.0 - fraction)
         let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: backgroundY), size: CGSize(width: size.width, height: max(0.0, size.height - backgroundY)))
-        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        //transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        transition.updateFrame(view: self.backgroundView, frame: backgroundFrame)
         
         transition.updateSublayerTransformScale(node: self.contentNode, scale: 1.0 * fraction + 0.001 * (1.0 - fraction))
         
-        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: min(11.0, backgroundFrame.height * 0.5), transition: transition)
-        self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
+        transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(11.0, backgroundFrame.height * 0.5))
+        //self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: min(11.0, backgroundFrame.height * 0.5), transition: transition)
+        //self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
         if let animatedIconView = self.animatedIcon?.view {
             transition.updateFrame(view: animatedIconView, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))

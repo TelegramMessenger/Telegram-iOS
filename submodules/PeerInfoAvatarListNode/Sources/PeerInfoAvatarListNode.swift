@@ -599,6 +599,9 @@ private final class VariableBlurView: UIVisualEffectView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func updateTraitsIfNeeded() {
+    }
+    
     private func resetEffect() {
         let filterClassStringEncoded = "Q0FGaWx0ZXI="
         let filterClassString: String = {
@@ -669,6 +672,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         
         self.imageView = UIImageView()
         self.imageView.contentMode = .scaleToFill
+        self.imageView.alpha = 0.8
         
         super.init()
         
@@ -702,6 +706,7 @@ public final class PeerAvatarBottomShadowNode: ASDisplayNode {
         
         self.backgroundNode.updateColor(color: UIColor(white: 0.0, alpha: 0.1), enableSaturation: false, forceKeepBlur: true, transition: .immediate)
         
+        self.view.addSubview(self.imageView)
         //self.addSubnode(self.backgroundNode)
     }
     
@@ -1688,7 +1693,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 transition.updateAlpha(node: self.setByYouNode, alpha: 0.7)
                 self.setByYouNode.attributedText = NSAttributedString(string: photoTitle, font: Font.regular(12.0), textColor: UIColor.white)
                 let setByYouSize = self.setByYouNode.updateLayout(size)
-                self.setByYouNode.frame = CGRect(origin: CGPoint(x: size.width - setByYouSize.width - 14.0, y: size.height - setByYouSize.height - 18.0), size: setByYouSize)
+                self.setByYouNode.frame = CGRect(origin: CGPoint(x: size.width - setByYouSize.width - 14.0, y: size.height - setByYouSize.height - 40.0), size: setByYouSize)
                 self.setByYouNode.isUserInteractionEnabled = hasLink
             } else {
                 transition.updateAlpha(node: self.setByYouNode, alpha: 0.0)
