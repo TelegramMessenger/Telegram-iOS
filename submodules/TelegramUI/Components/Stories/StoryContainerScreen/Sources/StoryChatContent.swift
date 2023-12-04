@@ -880,14 +880,26 @@ public final class StoryContentContextImpl: StoryContentContext {
         var possibleItems: [(EnginePeer, EngineStoryItem)] = []
         var pollItems: [StoryKey] = []
         if let slice = currentState.centralPeerContext.sliceValue {
+            var shouldPollItem = false
             if slice.peer.id == self.context.account.peerId {
+                shouldPollItem = true
+            } else if case .channel = slice.peer {
+                shouldPollItem = true
+            }
+            if shouldPollItem {
                 pollItems.append(StoryKey(peerId: slice.peer.id, id: slice.item.storyItem.id))
             }
             
             for item in currentState.centralPeerContext.nextItems {
                 possibleItems.append((slice.peer, item))
                 
+                var shouldPollNextItem = false
                 if slice.peer.id == self.context.account.peerId {
+                    shouldPollNextItem = true
+                } else if case .channel = slice.peer {
+                    shouldPollNextItem = true
+                }
+                if shouldPollNextItem {
                     pollItems.append(StoryKey(peerId: slice.peer.id, id: item.id))
                 }
             }
