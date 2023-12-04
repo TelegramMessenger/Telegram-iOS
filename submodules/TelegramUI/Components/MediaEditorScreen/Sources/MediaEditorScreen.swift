@@ -4418,28 +4418,28 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var items: [ContextMenuItem] = []
         
-        items.append(.action(ContextMenuActionItem(text: "Image", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Image, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Image"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
             
             self?.node.presentGallery()
         })))
-        items.append(.action(ContextMenuActionItem(text: "Location", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Location, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/LocationSmall"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
             
             self?.node.presentLocationPicker()
         })))
-        items.append(.action(ContextMenuActionItem(text: "Reaction", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Reaction, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
             
             self?.node.addReaction()
         })))
-        items.append(.action(ContextMenuActionItem(text: "Audio", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaEditor_Shortcut_Audio, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/AudioSmall"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)

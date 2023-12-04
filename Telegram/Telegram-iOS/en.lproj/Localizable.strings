@@ -10609,3 +10609,8 @@ Sorry for the inconvenience.";
 "Chat.RemoveWallpaper.Title" = "Remove Wallpaper";
 "Chat.RemoveWallpaper.Text" = "Are you sure you want to reset the wallpaper?";
 "Chat.RemoveWallpaper.Remove" = "Remove";
+
+"MediaEditor.Shortcut.Image" = "Image";
+"MediaEditor.Shortcut.Location" = "Location";
+"MediaEditor.Shortcut.Reaction" = "Reaction";
+"MediaEditor.Shortcut.Audio" = "Audio";
