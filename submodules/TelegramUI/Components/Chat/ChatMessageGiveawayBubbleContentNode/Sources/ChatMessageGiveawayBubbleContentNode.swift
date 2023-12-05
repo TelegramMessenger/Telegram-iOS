@@ -33,6 +33,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
     private let prizeTitleNode: TextNode
     private let prizeTextNode: TextNode
     
+    private let additionalPrizeTitleNode: TextNode
+    private let additionalPrizeTextNode: TextNode
+    
     private let participantsTitleNode: TextNode
     private let participantsTextNode: TextNode
     
@@ -81,6 +84,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         self.prizeTitleNode = TextNode()
         self.prizeTextNode = TextNode()
         
+        self.additionalPrizeTitleNode = TextNode()
+        self.additionalPrizeTextNode = TextNode()
+        
         self.participantsTitleNode = TextNode()
         self.participantsTextNode = TextNode()
         
@@ -101,6 +107,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         
         self.addSubnode(self.prizeTitleNode)
         self.addSubnode(self.prizeTextNode)
+        self.addSubnode(self.additionalPrizeTitleNode)
+        self.addSubnode(self.additionalPrizeTextNode)
         self.addSubnode(self.participantsTitleNode)
         self.addSubnode(self.participantsTextNode)
         self.addSubnode(self.countriesTextNode)
@@ -181,6 +189,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         let makePrizeTitleLayout = TextNode.asyncLayout(self.prizeTitleNode)
         let makePrizeTextLayout = TextNode.asyncLayout(self.prizeTextNode)
         
+        let makeAdditionalPrizeTitleLayout = TextNode.asyncLayout(self.additionalPrizeTitleNode)
+        let makeAdditionalPrizeTextLayout = TextNode.asyncLayout(self.additionalPrizeTextNode)
+        
         let makeParticipantsTitleLayout = TextNode.asyncLayout(self.participantsTitleNode)
         let makeParticipantsTextLayout = TextNode.asyncLayout(self.participantsTextNode)
         
@@ -232,6 +243,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             
             let prizeTitleString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_PrizeTitle, font: titleFont, textColor: textColor)
             var prizeTextString: NSAttributedString?
+            var additionalPrizeTitleString: NSAttributedString?
+            var additionalPrizeTextString: NSAttributedString?
             if let giveaway {
                 prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_PrizeText(
                     item.presentationData.strings.Chat_Giveaway_Message_Subscriptions(giveaway.quantity),
@@ -244,6 +257,11 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                         return ("URL", url)
                     }
                 ), textAlignment: .center)
+                
+                if let prizeDescription = giveaway.prizeDescription {
+                    additionalPrizeTitleString = NSAttributedString(string: "Additional Prize", font: titleFont, textColor: textColor)
+                    additionalPrizeTextString = NSAttributedString(string: prizeDescription, font: textFont, textColor: textColor)
+                }
             }
             
             let participantsTitleString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_ParticipantsTitle, font: titleFont, textColor: textColor)
@@ -315,6 +333,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 let (prizeTitleLayout, prizeTitleApply) = makePrizeTitleLayout(TextNodeLayoutArguments(attributedString: prizeTitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                                 
                 let (prizeTextLayout, prizeTextApply) = makePrizeTextLayout(TextNodeLayoutArguments(attributedString: prizeTextString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                
+                let (additionalPrizeTitleLayout, additionalPrizeTitleApply) = makeAdditionalPrizeTitleLayout(TextNodeLayoutArguments(attributedString: additionalPrizeTitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                                
+                let (additionalPrizeTextLayout, additionalPrizeTextApply) = makeAdditionalPrizeTextLayout(TextNodeLayoutArguments(attributedString: additionalPrizeTextString, backgroundColor: nil, maximumNumberOfLines: 6, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (participantsTitleLayout, participantsTitleApply) = makeParticipantsTitleLayout(TextNodeLayoutArguments(attributedString: participantsTitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 let (participantsTextLayout, participantsTextApply) = makeParticipantsTextLayout(TextNodeLayoutArguments(attributedString: participantsTextString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
@@ -423,6 +445,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 }
                 maxContentWidth = max(maxContentWidth, prizeTitleLayout.size.width)
                 maxContentWidth = max(maxContentWidth, prizeTextLayout.size.width)
+                maxContentWidth = max(maxContentWidth, additionalPrizeTitleLayout.size.width)
+                maxContentWidth = max(maxContentWidth, additionalPrizeTextLayout.size.width)
                 maxContentWidth = max(maxContentWidth, participantsTitleLayout.size.width)
                 maxContentWidth = max(maxContentWidth, participantsTextLayout.size.width)
                 maxContentWidth = max(maxContentWidth, dateTitleLayout.size.width)
@@ -453,6 +477,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     
                     var layoutSize = CGSize(width: boundingWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTitleLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 120.0)
                     
+                    if additionalPrizeTextLayout.size.height > 0.0 {
+                        layoutSize.height += additionalPrizeTitleLayout.size.height + additionalPrizeTextLayout.size.height + 7.0
+                    }
                     if countriesTextLayout.size.height > 0.0 {
                         layoutSize.height += countriesTextLayout.size.height + 7.0
                     }
@@ -473,10 +500,12 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             strongSelf.giveaway = giveaway
                             
                             strongSelf.updateVisibility()
-                                                        
+                            
                             let _ = badgeTextApply()
                             let _ = prizeTitleApply()
                             let _ = prizeTextApply()
+                            let _ = additionalPrizeTitleApply()
+                            let _ = additionalPrizeTextApply()
                             let _ = participantsTitleApply()
                             let _ = participantsTextApply()
                             let _ = countriesTextApply()
@@ -502,12 +531,19 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             }
                             
                             originY += 112.0
-                                                        
+                            
                             strongSelf.prizeTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - prizeTitleLayout.size.width) / 2.0), y: originY), size: prizeTitleLayout.size)
                             originY += prizeTitleLayout.size.height + smallSpacing
                             strongSelf.prizeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - prizeTextLayout.size.width) / 2.0), y: originY), size: prizeTextLayout.size)
                             originY += prizeTextLayout.size.height + largeSpacing
                             
+                            if additionalPrizeTextLayout.size.height > 0.0 { 
+                                strongSelf.additionalPrizeTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - additionalPrizeTitleLayout.size.width) / 2.0), y: originY), size: additionalPrizeTitleLayout.size)
+                                originY += additionalPrizeTitleLayout.size.height + smallSpacing
+                                strongSelf.additionalPrizeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - additionalPrizeTextLayout.size.width) / 2.0), y: originY), size: additionalPrizeTextLayout.size)
+                                originY += additionalPrizeTextLayout.size.height + largeSpacing
+                            }
+                        
                             strongSelf.participantsTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTitleLayout.size.width) / 2.0), y: originY), size: participantsTitleLayout.size)
                             originY += participantsTitleLayout.size.height + smallSpacing
                             strongSelf.participantsTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTextLayout.size.width) / 2.0), y: originY), size: participantsTextLayout.size)

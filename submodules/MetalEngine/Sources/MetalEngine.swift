@@ -1,8 +1,12 @@
 import Foundation
 import Metal
-import UIKit
-import IOSurface
+
+#if os(iOS)
 import Display
+import UIKit
+#endif
+
+import IOSurface
 import ShelfPack
 
 public final class Placeholder<Resolved> {
