@@ -53,6 +53,8 @@ private enum CreateGiveawaySection: Int32 {
     case subscriptions
     case channels
     case users
+    case winners
+    case prizeDescription
     case time
     case duration
 }
@@ -92,6 +94,14 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case usersNew(PresentationTheme, String, String, Bool)
     case usersInfo(PresentationTheme, String)
     
+    case winnersHeader(PresentationTheme, String)
+    case winners(PresentationTheme, String, Bool)
+    case winnersInfo(PresentationTheme, String)
+    
+    case prizeDescriptionHeader(PresentationTheme, String)
+    case prizeDescription(PresentationTheme, String, String)
+    case prizeDescriptionInfo(PresentationTheme, String)
+    
     case timeHeader(PresentationTheme, String)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
     case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Int32?, Int32?, Bool, Bool)
@@ -113,6 +123,10 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return CreateGiveawaySection.channels.rawValue
         case .usersHeader, .usersAll, .usersNew, .usersInfo:
             return CreateGiveawaySection.users.rawValue
+        case .winnersHeader, .winners, .winnersInfo:
+            return CreateGiveawaySection.winners.rawValue
+        case .prizeDescriptionHeader, .prizeDescription, .prizeDescriptionInfo:
+            return CreateGiveawaySection.prizeDescription.rawValue
         case .timeHeader, .timeExpiryDate, .timeCustomPicker, .timeInfo:
             return CreateGiveawaySection.time.rawValue
         case .durationHeader, .duration, .durationInfo:
@@ -154,20 +168,32 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 return 104
             case .usersInfo:
                 return 105
-            case .timeHeader:
+            case .winnersHeader:
                 return 106
-            case .timeExpiryDate:
+            case .winners:
                 return 107
-            case .timeCustomPicker:
+            case .winnersInfo:
                 return 108
-            case .timeInfo:
+            case .prizeDescriptionHeader:
                 return 109
-            case .durationHeader:
+            case .prizeDescription:
                 return 110
+            case .prizeDescriptionInfo:
+                return 111
+            case .timeHeader:
+                return 112
+            case .timeExpiryDate:
+                return 113
+            case .timeCustomPicker:
+                return 114
+            case .timeInfo:
+                return 115
+            case .durationHeader:
+                return 116
             case let .duration(index, _, _, _, _, _, _, _):
-                return 111 + index
+                return 117 + index
             case .durationInfo:
-                return 120
+                return 130
         }
     }
     
@@ -269,7 +295,42 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-            
+        case let .winnersHeader(lhsTheme, lhsText):
+            if case let .winnersHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .winners(lhsTheme, lhsText, lhsValue):
+            if case let .winners(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .winnersInfo(lhsTheme, lhsText):
+            if case let .winnersInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .prizeDescriptionHeader(lhsTheme, lhsText):
+            if case let .prizeDescriptionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .prizeDescription(lhsTheme, lhsPlaceholder, lhsValue):
+            if case let .prizeDescription(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .prizeDescriptionInfo(lhsTheme, lhsText):
+            if case let .prizeDescriptionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         case let .timeHeader(lhsTheme, lhsText):
             if case let .timeHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
@@ -422,6 +483,30 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .usersInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .winnersHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .winners(_, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateState { state in
+                    var updatedState = state
+                    updatedState.showWinners = value
+                    return updatedState
+                }
+            })
+        case let .winnersInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .prizeDescriptionHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .prizeDescription(_, placeholder, value):
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+                arguments.updateState { state in
+                    var updatedState = state
+                    updatedState.prizeDescription = value
+                    return updatedState
+                }
+            }, action: {})
+        case let .prizeDescriptionInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .timeHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -617,6 +702,14 @@ private func createGiveawayControllerEntries(
         entries.append(.usersNew(presentationData.theme, presentationData.strings.BoostGift_OnlyNewSubscribers, countriesText, state.onlyNewEligible))
         entries.append(.usersInfo(presentationData.theme, presentationData.strings.BoostGift_LimitSubscribersInfo))
         
+        entries.append(.winnersHeader(presentationData.theme, presentationData.strings.BoostGift_WinnersTitle.uppercased()))
+        entries.append(.winners(presentationData.theme, presentationData.strings.BoostGift_Winners, state.showWinners))
+        entries.append(.winnersInfo(presentationData.theme, presentationData.strings.BoostGift_WinnersInfo))
+        
+        entries.append(.prizeDescriptionHeader(presentationData.theme, "Additional Prizes".uppercased()))
+        entries.append(.prizeDescription(presentationData.theme, "Prize Description (Optional)", state.prizeDescription))
+        entries.append(.prizeDescriptionInfo(presentationData.theme, "Provide description of any additional prizes you plan to award to the winners, in addition to Telegram Premium."))
+        
         entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
         entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate, state.pickingExpiryDate, state.pickingExpiryTime))
         entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
@@ -680,11 +773,13 @@ private struct CreateGiveawayControllerState: Equatable {
     
     var mode: Mode
     var subscriptions: Int32
-    var channels: [EnginePeer.Id]
-    var peers: [EnginePeer.Id]
+    var channels: [EnginePeer.Id] = []
+    var peers: [EnginePeer.Id] = []
     var selectedMonths: Int32?
-    var countries: [String]
-    var onlyNewEligible: Bool
+    var countries: [String] = []
+    var onlyNewEligible: Bool = false
+    var showWinners: Bool = false
+    var prizeDescription: String = ""
     var time: Int32
     var pickingExpiryTime = false
     var pickingExpiryDate = false
@@ -722,7 +817,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let minDate = currentTime + 60 * 30
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], countries: [], onlyNewEligible: false, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -948,7 +1043,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             let quantity: Int32
             switch state.mode {
             case .giveaway:
-                purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
+                purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
                 quantity = selectedProduct.giftOption.storeQuantity
             case .gift:
                 purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
@@ -1040,7 +1135,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 return updatedState
             }
             
-            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
+            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
             |> deliverOnMainQueue).startStandalone(completed: {
                 if let controller, let navigationController = controller.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers

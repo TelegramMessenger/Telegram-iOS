@@ -10614,3 +10614,7 @@ Sorry for the inconvenience.";
 "MediaEditor.Shortcut.Location" = "Location";
 "MediaEditor.Shortcut.Reaction" = "Reaction";
 "MediaEditor.Shortcut.Audio" = "Audio";
+
+"BoostGift.WinnersTitle" = "WINNERS";
+"BoostGift.Winners" = "Show Winners";
+"BoostGift.WinnersInfo" = "Choose whether to make the list of winners public when the giveaway ends.";
