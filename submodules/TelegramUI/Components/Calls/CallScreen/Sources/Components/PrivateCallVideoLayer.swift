@@ -198,8 +198,8 @@ final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 
                 encoder.setFragmentTexture(blurredTexture, index: 0)
                 
-                var brightness: Float = 1.0
-                var saturation: Float = 1.2
+                var brightness: Float = 0.7
+                var saturation: Float = 1.3
                 var overlay: SIMD4<Float> = SIMD4<Float>(1.0, 1.0, 1.0, 0.2)
                 encoder.setFragmentBytes(&brightness, length: 4, index: 0)
                 encoder.setFragmentBytes(&saturation, length: 4, index: 1)
