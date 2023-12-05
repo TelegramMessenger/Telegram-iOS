@@ -3,6 +3,7 @@ import UIKit
 import Display
 import WebKit
 import SwiftSignalKit
+import TelegramCore
 
 private let findActiveElementY = """
 function getOffset(el) {
@@ -91,8 +92,22 @@ function disconnectObserver() {
 final class WebAppWebView: WKWebView {
     var handleScriptMessage: (WKScriptMessage) -> Void = { _ in }
     
-    init() {
+    init(account: Account) {
         let configuration = WKWebViewConfiguration()
+        
+        let uuid: UUID
+        
+        if let current = UserDefaults.standard.object(forKey: "TelegramWebStoreUUID_\(account.id.int64)") as? String {
+            uuid = UUID(uuidString: current)!
+        } else {
+            uuid = UUID()
+            UserDefaults.standard.set(uuid.uuidString, forKey: "TelegramWebStoreUUID_\(account.id.int64)")
+        }
+                
+        if #available(iOS 17.0, *) {
+            configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: uuid)
+        }
+        
         let contentController = WKUserContentController()
                            
         var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?

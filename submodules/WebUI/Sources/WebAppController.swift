@@ -312,7 +312,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
             
-            let webView = WebAppWebView()
+            let webView = WebAppWebView(account: context.account)
             webView.alpha = 0.0
             webView.navigationDelegate = self
             webView.uiDelegate = self
@@ -418,8 +418,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 })
             })
-                
-            self.setupWebView()
         }
         
         deinit {
@@ -433,6 +431,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         override func didLoad() {
             super.didLoad()
+            
+            self.setupWebView()
             
             guard let webView = self.webView else {
                 return
