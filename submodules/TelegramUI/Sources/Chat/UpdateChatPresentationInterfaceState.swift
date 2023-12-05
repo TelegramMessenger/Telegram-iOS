@@ -220,7 +220,7 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
-    if let (updatedUrlPreviewState, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0) {
+    if let (updatedUrlPreviewState, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0, forPeerId: selfController.chatLocation.peerId) {
         selfController.urlPreviewQueryState?.1.dispose()
         var inScope = true
         var inScopeResult: ((TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?)?
@@ -301,7 +301,7 @@ func updateChatPresentationInterfaceStateImpl(
     
     let isEditingMedia: Bool = updatedChatPresentationInterfaceState.editMessageState?.content != .plaintext
     let editingUrlPreviewText: NSAttributedString? = isEditingMedia ? nil : updatedChatPresentationInterfaceState.interfaceState.editMessage?.inputState.inputText
-    if let (updatedEditingUrlPreviewState, updatedEditingUrlPreviewSignal) = urlPreviewStateForInputText(editingUrlPreviewText, context: selfController.context, currentQuery: selfController.editingUrlPreviewQueryState?.0) {
+    if let (updatedEditingUrlPreviewState, updatedEditingUrlPreviewSignal) = urlPreviewStateForInputText(editingUrlPreviewText, context: selfController.context, currentQuery: selfController.editingUrlPreviewQueryState?.0, forPeerId: selfController.chatLocation.peerId) {
         selfController.editingUrlPreviewQueryState?.1.dispose()
         var inScope = true
         var inScopeResult: ((TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?)?

@@ -844,7 +844,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
             return
         }
         
-        if let (updatedUrlPreviewState, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil), let updatedUrlPreviewState, let detectedUrl = updatedUrlPreviewState.detectedUrls.first {
+        if let (updatedUrlPreviewState, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil, forPeerId: selfController.chatLocation.peerId), let updatedUrlPreviewState, let detectedUrl = updatedUrlPreviewState.detectedUrls.first {
             if let webpage = webpageCache[detectedUrl] {
                 progress?.set(.single(false))
                 
