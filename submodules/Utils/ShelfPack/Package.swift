@@ -23,5 +23,6 @@ let package = Package(
             dependencies: [],
             path: ".",
             publicHeadersPath: "PublicHeaders"),
-    ]
+    ],
+    cxxLanguageStandard: .cxx20
 )

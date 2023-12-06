@@ -4,7 +4,11 @@ import Metal
 #if os(iOS)
 import Display
 import UIKit
+#else
+import AppKit
+import TGUIKit
 #endif
+
 
 import IOSurface
 import ShelfPack
