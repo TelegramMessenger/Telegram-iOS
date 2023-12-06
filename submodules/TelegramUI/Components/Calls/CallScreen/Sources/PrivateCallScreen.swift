@@ -100,7 +100,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         public var shortName: String
         public var avatarImage: UIImage?
         public var audioOutput: AudioOutput
-        public var isMicrophoneMuted: Bool
+        public var isLocalAudioMuted: Bool
+        public var isRemoteAudioMuted: Bool
         public var localVideo: VideoSource?
         public var remoteVideo: VideoSource?
         public var isRemoteBatteryLow: Bool
@@ -111,7 +112,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             shortName: String,
             avatarImage: UIImage?,
             audioOutput: AudioOutput,
-            isMicrophoneMuted: Bool,
+            isLocalAudioMuted: Bool,
+            isRemoteAudioMuted: Bool,
             localVideo: VideoSource?,
             remoteVideo: VideoSource?,
             isRemoteBatteryLow: Bool
@@ -121,7 +123,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             self.shortName = shortName
             self.avatarImage = avatarImage
             self.audioOutput = audioOutput
-            self.isMicrophoneMuted = isMicrophoneMuted
+            self.isLocalAudioMuted = isLocalAudioMuted
+            self.isRemoteAudioMuted = isRemoteAudioMuted
             self.localVideo = localVideo
             self.remoteVideo = remoteVideo
             self.isRemoteBatteryLow = isRemoteBatteryLow
@@ -143,7 +146,10 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             if lhs.audioOutput != rhs.audioOutput {
                 return false
             }
-            if lhs.isMicrophoneMuted != rhs.isMicrophoneMuted {
+            if lhs.isLocalAudioMuted != rhs.isLocalAudioMuted {
+                return false
+            }
+            if lhs.isRemoteAudioMuted != rhs.isRemoteAudioMuted {
                 return false
             }
             if lhs.localVideo !== rhs.localVideo {
@@ -224,6 +230,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     public var microhoneMuteAction: (() -> Void)?
     public var endCallAction: (() -> Void)?
     public var backAction: (() -> Void)?
+    public var closeAction: (() -> Void)?
     
     public override init(frame: CGRect) {
         self.overlayContentsView = UIView()
@@ -263,10 +270,6 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         self.avatarTransformLayer.addSublayer(self.avatarLayer)
         self.layer.addSublayer(self.avatarTransformLayer)
-        
-        /*let edgeTestLayer = EdgeTestLayer()
-        edgeTestLayer.frame = CGRect(origin: CGPoint(x: 20.0, y: 100.0), size: CGSize(width: 100.0, height: 100.0))
-        self.layer.addSublayer(edgeTestLayer)*/
         
         self.addSubview(self.videoContainerBackgroundView)
         
@@ -309,6 +312,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 return
             }
             self.backAction?()
+        }
+        
+        self.buttonGroupView.closePressed = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.closeAction?()
         }
     }
     
@@ -497,6 +507,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         let backgroundFrame = CGRect(origin: CGPoint(), size: params.size)
         
+        let wideContentWidth: CGFloat
+        if params.size.width < 500.0 {
+            wideContentWidth = params.size.width - 44.0 * 2.0
+        } else {
+            wideContentWidth = 400.0
+        }
+        
         var activeVideoSources: [(VideoContainerView.Key, VideoSource)] = []
         if self.swapLocalAndRemoteVideo {
             if let activeLocalVideoSource = self.activeLocalVideoSource {
@@ -554,7 +571,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 }
                 self.videoAction?()
             }),
-            ButtonGroupView.Button(content: .microphone(isMuted: params.state.isMicrophoneMuted), action: { [weak self] in
+            ButtonGroupView.Button(content: .microphone(isMuted: params.state.isLocalAudioMuted), action: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -584,8 +601,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         
         var notices: [ButtonGroupView.Notice] = []
-        if params.state.isMicrophoneMuted {
+        if params.state.isLocalAudioMuted {
             notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "Your microphone is turned off"))
+        }
+        if params.state.isRemoteAudioMuted {
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "\(params.state.shortName)'s microphone is turned off"))
         }
         if params.state.remoteVideo != nil && params.state.localVideo == nil {
             notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "Your camera is turned off"))
@@ -594,7 +614,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "\(params.state.shortName)'s battery is low"))
         }
         
-        let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, controlsHidden: currentAreControlsHidden, buttons: buttons, notices: notices, transition: transition)
+        var displayClose = false
+        if case .terminated = params.state.lifecycleState {
+            displayClose = true
+        }
+        let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, minWidth: wideContentWidth, controlsHidden: currentAreControlsHidden, displayClose: displayClose, buttons: buttons, notices: notices, transition: transition)
         
         var expandedEmojiKeyRect: CGRect?
         if self.isEmojiKeyExpanded {
@@ -632,7 +656,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 }
             }
             
-            let emojiExpandedInfoSize = emojiExpandedInfoView.update(constrainedWidth: params.size.width - (params.insets.left + 16.0) * 2.0, transition: emojiExpandedInfoTransition)
+            let emojiExpandedInfoSize = emojiExpandedInfoView.update(width: wideContentWidth, transition: emojiExpandedInfoTransition)
             let emojiExpandedInfoFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiExpandedInfoSize.width) * 0.5), y: params.insets.top + 73.0), size: emojiExpandedInfoSize)
             emojiExpandedInfoTransition.setPosition(view: emojiExpandedInfoView, position: CGPoint(x: emojiExpandedInfoFrame.minX + emojiExpandedInfoView.layer.anchorPoint.x * emojiExpandedInfoFrame.width, y: emojiExpandedInfoFrame.minY + emojiExpandedInfoView.layer.anchorPoint.y * emojiExpandedInfoFrame.height))
             emojiExpandedInfoTransition.setBounds(view: emojiExpandedInfoView, bounds: CGRect(origin: CGPoint(), size: emojiExpandedInfoFrame.size))

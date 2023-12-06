@@ -553,6 +553,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let navigationContentsAccentColor: UIColor
         let navigationContentsPrimaryColor: UIColor
         let navigationContentsSecondaryColor: UIColor
+        let navigationContentsCanBeExpanded: Bool
         
         let contentButtonBackgroundColor: UIColor
         let contentButtonForegroundColor: UIColor
@@ -640,6 +641,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             navigationContentsAccentColor = collapsedHeaderNavigationContentsAccentColor
             navigationContentsPrimaryColor = collapsedHeaderNavigationContentsPrimaryColor
             navigationContentsSecondaryColor = collapsedHeaderNavigationContentsSecondaryColor
+            navigationContentsCanBeExpanded = true
+            
             contentButtonBackgroundColor = collapsedHeaderContentButtonBackgroundColor
             contentButtonForegroundColor = collapsedHeaderContentButtonForegroundColor
             
@@ -651,6 +654,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             contentButtonBackgroundColor = expandedAvatarContentButtonBackgroundColor
             contentButtonForegroundColor = expandedAvatarContentButtonForegroundColor
             
+            navigationContentsCanBeExpanded = false
+            
             headerButtonBackgroundColor = expandedAvatarHeaderButtonBackgroundColor
         } else {
             let effectiveTransitionFraction: CGFloat = innerBackgroundTransitionFraction < 0.5 ? 0.0 : 1.0
@@ -658,6 +663,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             navigationContentsAccentColor = regularNavigationContentsAccentColor.mixedWith(collapsedHeaderNavigationContentsAccentColor, alpha: effectiveTransitionFraction)
             navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor.mixedWith(collapsedHeaderNavigationContentsPrimaryColor, alpha: effectiveTransitionFraction)
             navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor.mixedWith(collapsedHeaderNavigationContentsSecondaryColor, alpha: effectiveTransitionFraction)
+            
+            if peer?.profileColor != nil {
+                navigationContentsCanBeExpanded = effectiveTransitionFraction == 1.0
+            } else {
+                navigationContentsCanBeExpanded = true
+            }
             
             contentButtonBackgroundColor = regularContentButtonBackgroundColor//.mixedWith(collapsedHeaderContentButtonBackgroundColor, alpha: effectiveTransitionFraction)
             contentButtonForegroundColor = regularContentButtonForegroundColor//.mixedWith(collapsedHeaderContentButtonForegroundColor, alpha: effectiveTransitionFraction)
@@ -775,7 +786,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.titleExpandedCredibilityIconSize = expandedIconSize
         }
         
-        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: navigationContentsAccentColor, transition: navigationTransition)
+        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: navigationContentsAccentColor, canBeExpanded: navigationContentsCanBeExpanded, transition: navigationTransition)
         
         self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: navigationTransition)
         self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: navigationTransition)

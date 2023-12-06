@@ -7,7 +7,7 @@ import TelegramApi
 public enum BotPaymentInvoiceSource {
     case message(MessageId)
     case slug(String)
-    case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
+    case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
 }
 
 
@@ -214,13 +214,16 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
     case let .slug(slug):
         return .inputInvoiceSlug(slug: slug)
-    case let .premiumGiveaway(boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, randomId, untilDate, currency, amount, option):
+    case let .premiumGiveaway(boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate, currency, amount, option):
         guard let peer = transaction.getPeer(boostPeerId), let apiBoostPeer = apiInputPeer(peer) else {
             return nil
         }
         var flags: Int32 = 0
         if onlyNewSubscribers {
             flags |= (1 << 0)
+        }
+        if showWinners {
+            flags |= (1 << 3)
         }
         var additionalPeers: [Api.InputPeer] = []
         if !additionalPeerIds.isEmpty {
@@ -234,7 +237,11 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         if !countries.isEmpty {
             flags |= (1 << 2)
         }
-        let input: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
+        if let _ = prizeDescription {
+            flags |= (1 << 4)
+        }
+        
+        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
 
         flags = 0
         
@@ -247,7 +254,7 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         
         let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: option.users, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
         
-        return .inputInvoicePremiumGiftCode(purpose: input, option: option)
+        return .inputInvoicePremiumGiftCode(purpose: inputPurpose, option: option)
     }
 }
 
@@ -526,7 +533,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     }
                                                 }
                                             }
-                                        case let .premiumGiveaway(_, _, _, _, randomId, _, _, _, _):
+                                        case let .premiumGiveaway(_, _, _, _, _, _, randomId, _, _, _, _):
                                             if message.globallyUniqueId == randomId {
                                                 if case let .Id(id) = message.id {
                                                     receiptMessageId = id

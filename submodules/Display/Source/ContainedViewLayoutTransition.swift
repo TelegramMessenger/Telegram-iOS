@@ -1573,6 +1573,56 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateLineWidth(layer: CAShapeLayer, lineWidth: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if layer.lineWidth == lineWidth {
+            completion?(true)
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.removeAnimation(forKey: "lineWidth")
+            layer.lineWidth = lineWidth
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let fromLineWidth = layer.lineWidth
+            layer.lineWidth = lineWidth
+            layer.animate(from: fromLineWidth as NSNumber, to: lineWidth as NSNumber, keyPath: "lineWidth", timingFunction: curve.timingFunction, duration: duration, delay: delay, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+    
+    func updateStrokeColor(layer: CAShapeLayer, strokeColor: UIColor, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        if layer.strokeColor.flatMap(UIColor.init(cgColor:)) == strokeColor {
+            completion?(true)
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.removeAnimation(forKey: "strokeColor")
+            layer.strokeColor = strokeColor.cgColor
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let fromStrokeColor = layer.strokeColor ?? UIColor.clear.cgColor
+            layer.strokeColor = strokeColor.cgColor
+            layer.animate(from: fromStrokeColor, to: strokeColor.cgColor, keyPath: "strokeColor", timingFunction: curve.timingFunction, duration: duration, delay: delay, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+    
     func attachAnimation(view: UIView, id: String, completion: @escaping (Bool) -> Void) {
         switch self {
         case .immediate:

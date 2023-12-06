@@ -29,8 +29,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private let callScreen: PrivateCallScreen
     private var callScreenState: PrivateCallScreen.State?
     
-    private var shouldStayHiddenUntilConnection: Bool = false
-    
     private var callStartTimestamp: Double?
     
     private var callState: PresentationCallState?
@@ -67,7 +65,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         presentationData: PresentationData,
         statusBar: StatusBar,
         debugInfo: Signal<(String, String), NoError>,
-        shouldStayHiddenUntilConnection: Bool = false,
         easyDebugAccess: Bool,
         call: PresentationCall
     ) {
@@ -79,8 +76,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         
         self.containerView = UIView()
         self.callScreen = PrivateCallScreen()
-        
-        self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         
         super.init()
         
@@ -123,6 +118,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             self.back?()
         }
+        self.callScreen.closeAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismissedInteractively?()
+        }
         
         self.callScreenState = PrivateCallScreen.State(
             lifecycleState: .connecting,
@@ -130,7 +131,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             shortName: " ",
             avatarImage: nil,
             audioOutput: .internalSpeaker,
-            isMicrophoneMuted: false,
+            isLocalAudioMuted: false,
+            isRemoteAudioMuted: false,
             localVideo: nil,
             remoteVideo: nil,
             isRemoteBatteryLow: false
@@ -145,8 +147,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 return
             }
             self.isMuted = isMuted
-            if callScreenState.isMicrophoneMuted != isMuted {
-                callScreenState.isMicrophoneMuted = isMuted
+            if callScreenState.isLocalAudioMuted != isMuted {
+                callScreenState.isLocalAudioMuted = isMuted
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.3, curve: .spring))
             }
@@ -373,6 +375,13 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.isRemoteBatteryLow = false
             }
             
+            switch callState.remoteAudioState {
+            case .muted:
+                callScreenState.isRemoteAudioMuted = true
+            case .active:
+                callScreenState.isRemoteAudioMuted = false
+            }
+            
             if self.callScreenState != callScreenState {
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.35, curve: .spring))
@@ -393,6 +402,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             return
         }
         callScreenState.name = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+        callScreenState.shortName = peer.compactDisplayTitle
         
         if self.currentPeer?.smallProfileImage != peer.smallProfileImage {
             self.peerAvatarDisposable?.dispose()
@@ -460,16 +470,14 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.containerView.layer.removeAnimation(forKey: "scale")
             self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            if !self.shouldStayHiddenUntilConnection {
-                self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-                self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            }
+            self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
+            self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        if !self.shouldStayHiddenUntilConnection || self.containerView.alpha > 0.0 {
+        if self.containerView.alpha > 0.0 {
             self.containerView.layer.allowsGroupOpacity = true
             self.containerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
                 self?.containerView.layer.allowsGroupOpacity = false
@@ -499,7 +507,14 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         transition.updateFrame(view: self.containerView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(view: self.callScreen, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        if let callScreenState = self.callScreenState {
+        if var callScreenState = self.callScreenState {
+            if case .terminated = callScreenState.lifecycleState {
+                callScreenState.isLocalAudioMuted = false
+                callScreenState.isRemoteAudioMuted = false
+                callScreenState.isRemoteBatteryLow = false
+                callScreenState.localVideo = nil
+                callScreenState.remoteVideo = nil
+            }
             self.callScreen.update(
                 size: layout.size,
                 insets: layout.insets(options: [.statusBar]),

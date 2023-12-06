@@ -445,6 +445,15 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         (self.micLockValue as? LockView)?.updateTheme(theme)
     }
     
+    public override func createLockPanelView() -> UIView! {
+        if self.hidesOnLock {
+            let view = WrapperBlurrredBackgroundView(frame: CGRect(origin: .zero, size: CGSize(width: 40.0, height: 72.0)))
+            return view
+        } else {
+            return super.createLockPanelView()
+        }
+    }
+    
     public func cancelRecording() {
         self.isEnabled = false
         self.isEnabled = true
@@ -569,6 +578,34 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 let iconSize = view.bounds.size
                 view.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
             }
+        }
+    }
+}
+
+private class WrapperBlurrredBackgroundView: UIView {
+    let view: BlurredBackgroundView
+    
+    override init(frame: CGRect) {
+        let view = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.5), enableBlur: true)
+        view.frame = CGRect(origin: .zero, size: frame.size)
+        view.update(size: frame.size, cornerRadius: frame.width / 2.0, transition: .immediate)
+        self.view = view
+
+        super.init(frame: frame)
+        
+        self.addSubview(view)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override var frame: CGRect {
+        get {
+            return super.frame
+        } set {
+            super.frame = newValue
+            self.view.update(size: newValue.size, cornerRadius: newValue.width / 2.0, transition: .immediate)
         }
     }
 }
