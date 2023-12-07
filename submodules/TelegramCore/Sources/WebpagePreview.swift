@@ -18,6 +18,10 @@ public enum WebpagePreviewResult: Equatable {
     case progress
     case result(Result?)
 }
+#if os(macOS)
+private typealias UIImage = NSImage
+#endif
+
 
 public func webpagePreview(account: Account, urls: [String], webpageId: MediaId? = nil, forPeerId: PeerId? = nil) -> Signal<WebpagePreviewResult, NoError> {
     return webpagePreviewWithProgress(account: account, urls: urls, webpageId: webpageId, forPeerId: forPeerId)
@@ -48,7 +52,7 @@ public func webpagePreviewWithProgress(account: Account, urls: [String], webpage
             }
             return .single(.result(WebpagePreviewResult.Result(webpage: webpage, sourceUrl: sourceUrl)))
         } else {
-            if #available(iOS 13.0, *) {
+            if #available(iOS 13.0, macOS 10.15, *) {
                 if let forPeerId, forPeerId.namespace == Namespaces.Peer.SecretChat, let sourceUrl = urls.first, let url = URL(string: sourceUrl) {
                     let localHosts: [String] = [
                         "twitter.com",
