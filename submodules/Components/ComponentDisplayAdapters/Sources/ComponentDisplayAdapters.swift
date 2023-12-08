@@ -7,7 +7,7 @@ public extension Transition.Animation.Curve {
     init(_ curve: ContainedViewLayoutTransitionCurve) {
         switch curve {
         case .linear:
-            self = .easeInOut
+            self = .linear
         case .easeInOut:
             self = .easeInOut
         case let .custom(a, b, c, d):
@@ -21,6 +21,8 @@ public extension Transition.Animation.Curve {
     
     var containedViewLayoutTransitionCurve: ContainedViewLayoutTransitionCurve {
         switch self {
+        case .linear:
+            return .linear
         case .easeInOut:
             return .easeInOut
         case .spring:

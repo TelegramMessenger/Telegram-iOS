@@ -73,6 +73,8 @@ public final class CallController: ViewController {
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
+    public var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
+    
     public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
         self.account = account
@@ -136,7 +138,16 @@ public final class CallController: ViewController {
     
     override public func loadDisplayNode() {
         if self.sharedContext.immediateExperimentalUISettings.callUIV2 {
-            self.displayNode = CallControllerNodeV2(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), easyDebugAccess: self.easyDebugAccess, call: self.call)
+            let displayNode = CallControllerNodeV2(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), easyDebugAccess: self.easyDebugAccess, call: self.call)
+            self.displayNode = displayNode
+            
+            displayNode.restoreUIForPictureInPicture = { [weak self] completion in
+                guard let self, let restoreUIForPictureInPicture = self.restoreUIForPictureInPicture else {
+                    completion(false)
+                    return
+                }
+                restoreUIForPictureInPicture(completion)
+            }
         } else {
             self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
         }

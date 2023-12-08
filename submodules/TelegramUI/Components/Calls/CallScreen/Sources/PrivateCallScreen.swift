@@ -1,58 +1,14 @@
 import Foundation
+import AVFoundation
+import AVKit
 import UIKit
 import Display
 import MetalEngine
 import ComponentFlow
 import SwiftSignalKit
+import UIKitRuntimeUtils
 
-/*private final class EdgeTestLayer: MetalEngineSubjectLayer, MetalEngineSubject {
-    final class RenderState: RenderToLayerState {
-        let pipelineState: MTLRenderPipelineState
-        
-        required init?(device: MTLDevice) {
-            guard let library = metalLibrary(device: device) else {
-                return nil
-            }
-            guard let vertexFunction = library.makeFunction(name: "edgeTestVertex"), let fragmentFunction = library.makeFunction(name: "edgeTestFragment") else {
-                return nil
-            }
-            
-            let pipelineDescriptor = MTLRenderPipelineDescriptor()
-            pipelineDescriptor.vertexFunction = vertexFunction
-            pipelineDescriptor.fragmentFunction = fragmentFunction
-            pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-            pipelineDescriptor.colorAttachments[0].isBlendingEnabled = true
-            pipelineDescriptor.colorAttachments[0].rgbBlendOperation = .add
-            pipelineDescriptor.colorAttachments[0].alphaBlendOperation = .add
-            pipelineDescriptor.colorAttachments[0].sourceRGBBlendFactor = .one
-            pipelineDescriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
-            pipelineDescriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
-            pipelineDescriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
-            
-            guard let pipelineState = try? device.makeRenderPipelineState(descriptor: pipelineDescriptor) else {
-                return nil
-            }
-            self.pipelineState = pipelineState
-        }
-    }
-    
-    var internalData: MetalEngineSubjectInternalData?
-    
-    func update(context: MetalEngineSubjectContext) {
-        context.renderToLayer(spec: RenderLayerSpec(size: RenderSize(width: 300, height: 300), edgeInset: 100), state: RenderState.self, layer: self, commands: { encoder, placement in
-            let effectiveRect = placement.effectiveRect
-            
-            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width * 0.5), Float(effectiveRect.height))
-            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
-            
-            var color = SIMD4<Float>(1.0, 0.0, 0.0, 1.0)
-            encoder.setFragmentBytes(&color, length: 4 * 4, index: 0)
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        })
-    }
-}*/
-
-public final class PrivateCallScreen: OverlayMaskContainerView {
+public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictureControllerDelegate {
     public struct State: Equatable {
         public struct SignalInfo: Equatable {
             public var quality: Double
@@ -168,12 +124,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private struct Params: Equatable {
         var size: CGSize
         var insets: UIEdgeInsets
+        var interfaceOrientation: UIInterfaceOrientation
         var screenCornerRadius: CGFloat
         var state: State
         
-        init(size: CGSize, insets: UIEdgeInsets, screenCornerRadius: CGFloat, state: State) {
+        init(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, screenCornerRadius: CGFloat, state: State) {
             self.size = size
             self.insets = insets
+            self.interfaceOrientation = interfaceOrientation
             self.screenCornerRadius = screenCornerRadius
             self.state = state
         }
@@ -210,11 +168,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var activeLocalVideoSource: VideoSource?
     private var waitingForFirstLocalVideoFrameDisposable: Disposable?
     
+    private var isUpdating: Bool = false
+    
     private var canAnimateAudioLevel: Bool = false
     private var displayEmojiTooltip: Bool = false
     private var isEmojiKeyExpanded: Bool = false
     private var areControlsHidden: Bool = false
     private var swapLocalAndRemoteVideo: Bool = false
+    private var isPictureInPictureActive: Bool = false
     
     private var processedInitialAudioLevelBump: Bool = false
     private var audioLevelBump: Float = 0.0
@@ -231,6 +192,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     public var endCallAction: (() -> Void)?
     public var backAction: (() -> Void)?
     public var closeAction: (() -> Void)?
+    public var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
+    
+    private let pipView: PrivateCallPictureInPictureView
+    private var pipContentSource: AnyObject?
+    private var pipVideoCallViewController: UIViewController?
+    private var pipController: AVPictureInPictureController?
     
     public override init(frame: CGRect) {
         self.overlayContentsView = UIView()
@@ -255,6 +222,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         self.statusView = StatusView()
         
         self.backButtonView = BackButtonView(text: "Back")
+        
+        self.pipView = PrivateCallPictureInPictureView(frame: CGRect(origin: CGPoint(), size: CGSize()))
         
         super.init(frame: frame)
         
@@ -320,6 +289,20 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             }
             self.closeAction?()
         }
+        
+        if #available(iOS 16.0, *) {
+            let pipVideoCallViewController = AVPictureInPictureVideoCallViewController()
+            pipVideoCallViewController.view.addSubview(self.pipView)
+            self.pipView.frame = pipVideoCallViewController.view.bounds
+            self.pipView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            self.pipView.translatesAutoresizingMaskIntoConstraints = true
+            self.pipVideoCallViewController = pipVideoCallViewController
+        }
+        
+        if let blurFilter = makeBlurFilter() {
+            blurFilter.setValue(10.0 as NSNumber, forKey: "inputRadius")
+            self.overlayContentsView.layer.filters = [blurFilter]
+        }
     }
     
     public required init?(coder: NSCoder) {
@@ -343,6 +326,39 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         
         return result
+    }
+    
+    public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        self.isPictureInPictureActive = true
+        if !self.isUpdating {
+            self.update(transition: .easeInOut(duration: 0.2))
+        }
+    }
+    
+    public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        self.isPictureInPictureActive = false
+        if !self.isUpdating {
+            let wereControlsHidden = self.areControlsHidden
+            self.areControlsHidden = true
+            self.update(transition: .immediate)
+            
+            if !wereControlsHidden {
+                self.areControlsHidden = false
+                self.update(transition: .spring(duration: 0.4))
+            }
+        }
+    }
+    
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
+        if self.activeLocalVideoSource != nil || self.activeRemoteVideoSource != nil {
+            if let restoreUIForPictureInPicture = self.restoreUIForPictureInPicture {
+                restoreUIForPictureInPicture(completionHandler)
+            } else {
+                completionHandler(false)
+            }
+        } else {
+            completionHandler(false)
+        }
     }
     
     public func addIncomingAudioLevel(value: Float) {
@@ -395,8 +411,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
     }
     
-    public func update(size: CGSize, insets: UIEdgeInsets, screenCornerRadius: CGFloat, state: State, transition: Transition) {
-        let params = Params(size: size, insets: insets, screenCornerRadius: screenCornerRadius, state: state)
+    public func beginPictureInPictureIfPossible() {
+        if let pipController = self.pipController, (self.activeLocalVideoSource != nil || self.activeRemoteVideoSource != nil) {
+            pipController.startPictureInPicture()
+        }
+    }
+    
+    public func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, screenCornerRadius: CGFloat, state: State, transition: Transition) {
+        let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, screenCornerRadius: screenCornerRadius, state: state)
         if self.params == params {
             return
         }
@@ -497,6 +519,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     }
     
     private func updateInternal(params: Params, transition: Transition) {
+        self.isUpdating = true
+        defer {
+            self.isUpdating = false
+        }
+        
         let genericAlphaTransition: Transition
         switch transition.animation {
         case .none:
@@ -531,6 +558,41 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             }
         }
         let havePrimaryVideo = !activeVideoSources.isEmpty
+        
+        if #available(iOS 16.0, *) {
+            if havePrimaryVideo, let pipVideoCallViewController = self.pipVideoCallViewController as? AVPictureInPictureVideoCallViewController {
+                if self.pipController == nil {
+                    let pipContentSource = AVPictureInPictureController.ContentSource(activeVideoCallSourceView: self, contentViewController: pipVideoCallViewController)
+                    let pipController = AVPictureInPictureController(contentSource: pipContentSource)
+                    self.pipController = pipController
+                    pipController.canStartPictureInPictureAutomaticallyFromInline = true
+                    pipController.delegate = self
+                }
+            } else if let pipController = self.pipController {
+                self.pipController = nil
+                
+                if pipController.isPictureInPictureActive {
+                    pipController.stopPictureInPicture()
+                }
+                
+                if self.isPictureInPictureActive {
+                    self.isPictureInPictureActive = false
+                }
+            }
+        }
+        
+        self.pipView.isRenderingEnabled = self.isPictureInPictureActive
+        self.pipView.video = self.activeRemoteVideoSource ?? self.activeLocalVideoSource
+        if let pipVideoCallViewController = self.pipVideoCallViewController {
+            if let video = self.pipView.video, let currentOutput = video.currentOutput {
+                var rotatedResolution = currentOutput.resolution
+                let resolvedRotationAngle = currentOutput.rotationAngle
+                if resolvedRotationAngle == Float.pi * 0.5 || resolvedRotationAngle == Float.pi * 3.0 / 2.0 {
+                    rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
+                }
+                pipVideoCallViewController.preferredContentSize = rotatedResolution
+            }
+        }
         
         let currentAreControlsHidden = havePrimaryVideo && self.areControlsHidden
         
@@ -605,13 +667,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "Your microphone is turned off"))
         }
         if params.state.isRemoteAudioMuted {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "\(params.state.shortName)'s microphone is turned off"))
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "\(params.state.shortName)'s microphone is turned off"))
         }
         if params.state.remoteVideo != nil && params.state.localVideo == nil {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "Your camera is turned off"))
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "Your camera is turned off"))
         }
         if params.state.isRemoteBatteryLow {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "\(params.state.shortName)'s battery is low"))
+            notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), text: "\(params.state.shortName)'s battery is low"))
         }
         
         var displayClose = false
@@ -879,7 +941,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     videoContainerView.blurredContainerLayer.position = self.avatarTransformLayer.position
                     videoContainerView.blurredContainerLayer.bounds = self.avatarTransformLayer.bounds
                     videoContainerView.blurredContainerLayer.opacity = 0.0
-                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
+                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: .immediate)
                     Transition.immediate.setScale(view: videoContainerView, scale: self.currentAvatarAudioScale)
                     Transition.immediate.setScale(view: self.videoContainerBackgroundView, scale: self.currentAvatarAudioScale)
                 } else {
@@ -889,7 +951,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     videoContainerView.blurredContainerLayer.position = expandedVideoFrame.center
                     videoContainerView.blurredContainerLayer.bounds = CGRect(origin: CGPoint(), size: expandedVideoFrame.size)
                     videoContainerView.blurredContainerLayer.opacity = 0.0
-                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: i != 0, transition: .immediate)
+                    videoContainerView.update(size: self.avatarTransformLayer.bounds.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: i != 0, transition: .immediate)
                 }
             }
             
@@ -899,7 +961,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             videoContainerTransition.setPosition(layer: videoContainerView.blurredContainerLayer, position: expandedVideoFrame.center)
             videoContainerTransition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
             videoContainerTransition.setScale(layer: videoContainerView.blurredContainerLayer, scale: 1.0)
-            videoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: false, transition: videoContainerTransition)
+            videoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: i != 0, isAnimatedOut: false, transition: videoContainerTransition)
             
             let alphaTransition: Transition
             switch transition.animation {
@@ -921,8 +983,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 }
             }
             
-            alphaTransition.setAlpha(view: videoContainerView, alpha: 1.0)
-            alphaTransition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 1.0)
+            let videoAlpha: CGFloat = self.isPictureInPictureActive ? 0.0 : 1.0
+            alphaTransition.setAlpha(view: videoContainerView, alpha: videoAlpha)
+            alphaTransition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: videoAlpha)
         }
         
         var removedVideoContainerIndices: [Int] = []
@@ -934,7 +997,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 if self.videoContainerViews.count == 1 || (i == 0 && !havePrimaryVideo) {
                     let alphaTransition: Transition = genericAlphaTransition
                     
-                    videoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, cornerRadius: avatarCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: transition)
+                    videoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: avatarCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: false, isAnimatedOut: true, transition: transition)
                     transition.setPosition(layer: videoContainerView.blurredContainerLayer, position: avatarFrame.center)
                     transition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
                     transition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 0.0)
@@ -973,7 +1036,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                     })
                     alphaTransition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 0.0)
                     
-                    videoContainerView.update(size: params.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: true, isAnimatedOut: true, transition: transition)
+                    videoContainerView.update(size: params.size, insets: minimizedVideoInsets, interfaceOrientation: params.interfaceOrientation, cornerRadius: params.screenCornerRadius, controlsHidden: currentAreControlsHidden, isMinimized: true, isAnimatedOut: true, transition: transition)
                 }
             }
         }

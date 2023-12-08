@@ -1054,6 +1054,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.mainWindow?.hostView.containerView.endEditing(true)
         let callController = CallController(sharedContext: self, account: call.context.account, call: call, easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
         self.callController = callController
+        callController.restoreUIForPictureInPicture = { [weak self, weak callController] completion in
+            guard let self, let callController else {
+                completion(false)
+                return
+            }
+            if callController.window == nil {
+                self.mainWindow?.present(callController, on: .calls)
+            }
+            completion(true)
+        }
         self.mainWindow?.present(callController, on: .calls)
     }
     

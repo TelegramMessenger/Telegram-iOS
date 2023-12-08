@@ -443,6 +443,7 @@ official_apple_pay_merchants = [
     "merchant.org.telegram.billinenet.test",
     "merchant.org.telegram.billinenet.prod",
     "merchant.org.telegram.portmone.test",
+    "merchant.org.telegram.portmone.prod",
     "merchant.org.telegram.ecommpay.test",
 ]
 

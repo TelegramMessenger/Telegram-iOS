@@ -49,6 +49,8 @@ private extension Transition.Animation.Curve {
         switch self {
         case .easeInOut:
             return CAMediaTimingFunction(name: .easeInEaseOut)
+        case .linear:
+            return CAMediaTimingFunction(name: .linear)
         case let .custom(a, b, c, d):
             return CAMediaTimingFunction(controlPoints: a, b, c, d)
         case .spring:
@@ -72,6 +74,7 @@ public struct Transition {
         public enum Curve {
             case easeInOut
             case spring
+            case linear
             case custom(Float, Float, Float, Float)
             
             public func solve(at offset: CGFloat) -> CGFloat {
@@ -80,6 +83,8 @@ public struct Transition {
                     return listViewAnimationCurveEaseInOut(offset)
                 case .spring:
                     return listViewAnimationCurveSystem(offset)
+                case .linear:
+                    return offset
                 case let .custom(c1x, c1y, c2x, c2y):
                     return bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), offset)
                 }

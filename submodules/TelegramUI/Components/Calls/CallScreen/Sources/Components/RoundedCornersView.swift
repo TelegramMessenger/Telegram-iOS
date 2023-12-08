@@ -25,22 +25,32 @@ final class RoundedCornersView: UIImageView {
         guard let cornerRadius = self.currentCornerRadius else {
             return
         }
-        if self.smoothCorners {
-            let size = CGSize(width: cornerRadius * 2.0 + 10.0, height: cornerRadius * 2.0 + 10.0)
-            if let cornerImage = self.cornerImage, cornerImage.size == size {
+        if cornerRadius == 0.0 {
+            if let cornerImage = self.cornerImage, cornerImage.size.width == 1.0 {
             } else {
-                self.cornerImage = generateImage(size, rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius).cgPath)
+                self.cornerImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
                     context.setFillColor(self.color.cgColor)
-                    context.fillPath()
+                    context.fill(CGRect(origin: CGPoint(), size: size))
                 })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 5, topCapHeight: Int(cornerRadius) + 5)
             }
         } else {
-            let size = CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0)
-            if let cornerImage = self.cornerImage, cornerImage.size == size {
+            if self.smoothCorners {
+                let size = CGSize(width: cornerRadius * 2.0 + 10.0, height: cornerRadius * 2.0 + 10.0)
+                if let cornerImage = self.cornerImage, cornerImage.size == size {
+                } else {
+                    self.cornerImage = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius).cgPath)
+                        context.setFillColor(self.color.cgColor)
+                        context.fillPath()
+                    })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 5, topCapHeight: Int(cornerRadius) + 5)
+                }
             } else {
-                self.cornerImage = generateStretchableFilledCircleImage(diameter: size.width, color: self.color)
+                let size = CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0)
+                if let cornerImage = self.cornerImage, cornerImage.size == size {
+                } else {
+                    self.cornerImage = generateStretchableFilledCircleImage(diameter: size.width, color: self.color)
+                }
             }
         }
         self.image = self.cornerImage

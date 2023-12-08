@@ -2925,7 +2925,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {
         let layout = ContainerViewLayout(
             size: size,
-            metrics: LayoutMetrics(widthClass: isRegular ? .regular : .compact, heightClass: isRegular ? .regular : .compact),
+            metrics: LayoutMetrics(widthClass: isRegular ? .regular : .compact, heightClass: isRegular ? .regular : .compact, orientation: nil),
             deviceMetrics: DeviceMetrics(screenSize: size, scale: UIScreen.main.scale, statusBarHeight: statusBarHeight, onScreenNavigationHeight: nil),
             intrinsicInsets: intrinsicInsets,
             safeInsets: safeInsets,

@@ -71,6 +71,8 @@ private final class AnimatableProperty<T: Interpolatable> {
         let timeFromStart = timestamp - animation.startTimestamp
         var t = max(0.0, timeFromStart / duration)
         switch curve {
+        case .linear:
+            break
         case .easeInOut:
             t = listViewAnimationCurveEaseInOut(t)
         case .spring:

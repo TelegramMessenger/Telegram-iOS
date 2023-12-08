@@ -69,13 +69,15 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     
     let hostView = WindowHostView(containerView: view, eventView: view, isRotating: {
         return false
-    }, systemUserInterfaceStyle: .single(.light), updateSupportedInterfaceOrientations: { orientations in
+    }, systemUserInterfaceStyle: .single(.light), currentInterfaceOrientation: {
+        return .portrait
+    }, updateSupportedInterfaceOrientations: { orientations in
     }, updateDeferScreenEdgeGestures: { edges in
     }, updatePrefersOnScreenNavigationHidden: { value in
     })
     
     view.updateSize = { [weak hostView] size in
-        hostView?.updateSize?(size, 0.0)
+        hostView?.updateSize?(size, 0.0, .portrait)
     }
     
     view.layoutSubviewsEvent = { [weak hostView] in

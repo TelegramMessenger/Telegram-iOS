@@ -2455,7 +2455,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             inputPanelHeight: 0.0,
             transition: .immediate,
             interfaceState: presentationInterfaceState,
-            layoutMetrics: LayoutMetrics(widthClass: .compact, heightClass: .compact),
+            layoutMetrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil),
             deviceMetrics: DeviceMetrics.iPhone12,
             isVisible: true,
             isExpanded: false

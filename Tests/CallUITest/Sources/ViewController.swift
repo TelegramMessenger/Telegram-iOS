@@ -29,7 +29,8 @@ public final class ViewController: UIViewController {
         shortName: "Emma",
         avatarImage: UIImage(named: "test"),
         audioOutput: .internalSpeaker,
-        isMicrophoneMuted: false,
+        isLocalAudioMuted: false,
+        isRemoteAudioMuted: false,
         localVideo: nil,
         remoteVideo: nil,
         isRemoteBatteryLow: false
@@ -142,7 +143,7 @@ public final class ViewController: UIViewController {
             self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0))
             self.callState.remoteVideo = nil
             self.callState.localVideo = nil
-            self.callState.isMicrophoneMuted = false
+            self.callState.isLocalAudioMuted = false
             self.callState.isRemoteBatteryLow = false
             self.update(transition: .spring(duration: 0.4))
         }
@@ -150,8 +151,9 @@ public final class ViewController: UIViewController {
             guard let self else {
                 return
             }
-            self.callState.isMicrophoneMuted = !self.callState.isMicrophoneMuted
-            self.update(transition: .spring(duration: 0.4))
+            //self.callState.isLocalAudioMuted = !self.callState.isLocalAudioMuted
+            //self.update(transition: .spring(duration: 0.4))
+            self.callScreenView?.beginPictureInPicture()
         }
         callScreenView.closeAction = { [weak self] in
             guard let self else {
@@ -163,17 +165,17 @@ public final class ViewController: UIViewController {
     
     private func update(transition: Transition) {
         if let (size, insets) = self.currentLayout {
-            self.update(size: size, insets: insets, transition: transition)
+            self.update(size: size, insets: insets, interfaceOrientation: self.interfaceOrientation, transition: transition)
         }
     }
     
-    private func update(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
+    private func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, transition: Transition) {
         guard let callScreenView = self.callScreenView else {
             return
         }
         
         transition.setFrame(view: callScreenView, frame: CGRect(origin: CGPoint(), size: size))
-        callScreenView.update(size: size, insets: insets, screenCornerRadius: UIScreen.main.displayCornerRadius, state: self.callState, transition: transition)
+        callScreenView.update(size: size, insets: insets, interfaceOrientation: interfaceOrientation, screenCornerRadius: UIScreen.main.displayCornerRadius, state: self.callState, transition: transition)
     }
     
     override public func viewWillLayoutSubviews() {
@@ -190,7 +192,7 @@ public final class ViewController: UIViewController {
         if let currentLayout = self.currentLayout, currentLayout == (size, insets) {
         } else {
             self.currentLayout = (size, insets)
-            self.update(size: size, insets: insets, transition: transition)
+            self.update(size: size, insets: insets, interfaceOrientation: self.interfaceOrientation, transition: transition)
         }
     }
     

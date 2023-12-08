@@ -236,7 +236,7 @@ fragment half4 callBlobFragment(
     return half4(1.0 * alpha, 1.0 * alpha, 1.0 * alpha, alpha);
 }
 
-kernel void videoYUVToRGBA(
+kernel void videoBiPlanarToRGBA(
     texture2d<half, access::read> inTextureY [[ texture(0) ]],
     texture2d<half, access::read> inTextureUV [[ texture(1) ]],
     texture2d<half, access::write> outTexture [[ texture(2) ]],
@@ -244,6 +244,22 @@ kernel void videoYUVToRGBA(
 ) {
     half y = inTextureY.read(threadPosition).r;
     half2 uv = inTextureUV.read(uint2(threadPosition.x / 2, threadPosition.y / 2)).rg - half2(0.5, 0.5);
+    
+    half4 color(y + 1.403 * uv.y, y - 0.344 * uv.x - 0.714 * uv.y, y + 1.770 * uv.x, 1.0);
+    outTexture.write(color, threadPosition);
+}
+
+kernel void videoTriPlanarToRGBA(
+    texture2d<half, access::read> inTextureY [[ texture(0) ]],
+    texture2d<half, access::read> inTextureU [[ texture(1) ]],
+    texture2d<half, access::read> inTextureV [[ texture(2) ]],
+    texture2d<half, access::write> outTexture [[ texture(3) ]],
+    uint2 threadPosition [[ thread_position_in_grid ]]
+) {
+    half y = inTextureY.read(threadPosition).r;
+    uint2 uvPosition = uint2(threadPosition.x / 2, threadPosition.y / 2);
+    half2 inUV = (inTextureU.read(uvPosition).r, inTextureV.read(uvPosition).r);
+    half2 uv = inUV - half2(0.5, 0.5);
     
     half4 color(y + 1.403 * uv.y, y - 0.344 * uv.x - 0.714 * uv.y, y + 1.770 * uv.x, 1.0);
     outTexture.write(color, threadPosition);

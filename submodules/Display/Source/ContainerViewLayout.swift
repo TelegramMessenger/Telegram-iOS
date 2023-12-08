@@ -23,15 +23,18 @@ public enum ContainerViewLayoutSizeClass {
 public struct LayoutMetrics: Equatable {
     public let widthClass: ContainerViewLayoutSizeClass
     public let heightClass: ContainerViewLayoutSizeClass
+    public let orientation: UIInterfaceOrientation?
     
-    public init(widthClass: ContainerViewLayoutSizeClass, heightClass: ContainerViewLayoutSizeClass) {
+    public init(widthClass: ContainerViewLayoutSizeClass, heightClass: ContainerViewLayoutSizeClass, orientation: UIInterfaceOrientation?) {
         self.widthClass = widthClass
         self.heightClass = heightClass
+        self.orientation = orientation
     }
     
     public init() {
         self.widthClass = .compact
         self.heightClass = .compact
+        self.orientation = nil
     }
 }
 

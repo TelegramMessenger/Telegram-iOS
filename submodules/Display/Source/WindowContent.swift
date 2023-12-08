@@ -156,6 +156,7 @@ public final class WindowHostView {
     public let eventView: UIView
     public let isRotating: () -> Bool
     public let systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>
+    public let currentInterfaceOrientation: () -> UIInterfaceOrientation
     
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
@@ -166,7 +167,7 @@ public final class WindowHostView {
     var addGlobalPortalHostViewImpl: ((PortalSourceView) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
     var nativeController: (() -> UIViewController?)?
-    var updateSize: ((CGSize, Double) -> Void)?
+    var updateSize: ((CGSize, Double, UIInterfaceOrientation) -> Void)?
     var layoutSubviews: (() -> Void)?
     var updateToInterfaceOrientation: ((UIInterfaceOrientation) -> Void)?
     var isUpdatingOrientationLayout = false
@@ -178,11 +179,12 @@ public final class WindowHostView {
     var forEachController: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElements: (() -> [Any]?)?
     
-    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, systemUserInterfaceStyle:  Signal<WindowUserInterfaceStyle, NoError>, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void) {
+    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>, currentInterfaceOrientation: @escaping () -> UIInterfaceOrientation, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void) {
         self.containerView = containerView
         self.eventView = eventView
         self.isRotating = isRotating
         self.systemUserInterfaceStyle = systemUserInterfaceStyle
+        self.currentInterfaceOrientation = currentInterfaceOrientation
         self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
         self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
         self.updatePrefersOnScreenNavigationHidden = updatePrefersOnScreenNavigationHidden
@@ -220,11 +222,11 @@ public extension UIView {
     }
 }
 
-private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
+private func layoutMetricsForScreenSize(size: CGSize, orientation: UIInterfaceOrientation?) -> LayoutMetrics {
     if size.width > 690.0 && size.height > 650.0 {
-        return LayoutMetrics(widthClass: .regular, heightClass: .regular)
+        return LayoutMetrics(widthClass: .regular, heightClass: .regular, orientation: orientation)
     } else {
-        return LayoutMetrics(widthClass: .compact, heightClass: .compact)
+        return LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: orientation)
     }
 }
 
@@ -350,11 +352,13 @@ public class Window1 {
             self.keyboardViewManager = nil
         }
         
-        let isLandscape =  boundsSize.width > boundsSize.height
+        let isLandscape = boundsSize.width > boundsSize.height
         let safeInsets = self.deviceMetrics.safeInsets(inLandscape: isLandscape)
         let onScreenNavigationHeight = self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
         
-        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsets, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: UIAccessibility.isVoiceOverRunning)
+        let orientation: UIInterfaceOrientation = self.hostView.currentInterfaceOrientation()
+        
+        self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(size: boundsSize, orientation: orientation), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsets, onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: UIAccessibility.isVoiceOverRunning)
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
         self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.containerView)
@@ -406,8 +410,8 @@ public class Window1 {
             self?.presentNative(controller)
         }
         
-        self.hostView.updateSize = { [weak self] size, duration in
-            self?.updateSize(size, duration: duration)
+        self.hostView.updateSize = { [weak self] size, duration, orientation in
+            self?.updateSize(size, duration: duration, orientation: orientation)
         }
         
         self.hostView.layoutSubviews = { [weak self] in
@@ -807,14 +811,14 @@ public class Window1 {
         return self.viewController?.view.hitTest(point, with: event)
     }
     
-    func updateSize(_ value: CGSize, duration: Double) {
+    func updateSize(_ value: CGSize, duration: Double, orientation: UIInterfaceOrientation) {
         let transition: ContainedViewLayoutTransition
         if !duration.isZero {
             transition = .animated(duration: duration, curve: .easeInOut)
         } else {
             transition = .immediate
         }
-        self.updateLayout { $0.update(size: value, metrics: layoutMetricsForScreenSize(value), safeInsets: self.deviceMetrics.safeInsets(inLandscape: value.width > value.height), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
+        self.updateLayout { $0.update(size: value, metrics: layoutMetricsForScreenSize(size: value, orientation: orientation), safeInsets: self.deviceMetrics.safeInsets(inLandscape: value.width > value.height), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
         if let statusBarHost = self.statusBarHost, !statusBarHost.isApplicationInForeground {
             self.layoutSubviews(force: true)
         }
@@ -1117,7 +1121,7 @@ public class Window1 {
                 }
                 let previousInputOffset = inputHeightOffsetForLayout(self.windowLayout)
                 
-                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(updatingLayout.layout.size), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight), upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound, inVoiceOver: updatingLayout.layout.inVoiceOver)
+                self.windowLayout = WindowLayout(size: updatingLayout.layout.size, metrics: layoutMetricsForScreenSize(size: updatingLayout.layout.size, orientation: updatingLayout.layout.metrics.orientation), statusBarHeight: statusBarHeight, forceInCallStatusBarText: updatingLayout.layout.forceInCallStatusBarText, inputHeight: updatingLayout.layout.inputHeight, safeInsets: updatingLayout.layout.safeInsets, onScreenNavigationHeight: self.deviceMetrics.onScreenNavigationHeight(inLandscape: isLandscape, systemOnScreenNavigationHeight: self.hostView.onScreenNavigationHeight), upperKeyboardInputPositionBound: updatingLayout.layout.upperKeyboardInputPositionBound, inVoiceOver: updatingLayout.layout.inVoiceOver)
                 
                 let childLayout = containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics)
                 let childLayoutUpdated = self.updatedContainerLayout != childLayout
