@@ -653,7 +653,7 @@ public struct PresentationThemeSettings: Codable {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(theme: .builtin(.dayClassic), themePreferredBaseTheme: [:], themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, listsFontSize: .regular, chatBubbleSettings: .default, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(force: false, trigger: .system, theme: .builtin(.night)), largeEmoji: true, reduceMotion: false)
+        return PresentationThemeSettings(theme: .builtin(.nightAccent), themePreferredBaseTheme: [:], themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, listsFontSize: .regular, chatBubbleSettings: .default, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(force: false, trigger: .system, theme: .builtin(.night)), largeEmoji: true, reduceMotion: false)
     }
     
     public init(theme: PresentationThemeReference, themePreferredBaseTheme: [Int64: TelegramBaseTheme], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize, chatBubbleSettings: PresentationChatBubbleSettings, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, reduceMotion: Bool) {
