@@ -183,7 +183,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             self.controller.containerLayoutUpdated(
                 ContainerViewLayout(
                     size: size,
-                    metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact),
+                    metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil),
                     deviceMetrics: parentLayout.deviceMetrics,
                     intrinsicInsets: UIEdgeInsets(),
                     safeInsets: UIEdgeInsets(),
@@ -765,7 +765,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 defaultContentSize.height = min(defaultContentSize.height, 460.0)
                 
                 let contentSize: CGSize
-                if let preferredSize = contentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: defaultContentSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                if let preferredSize = contentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: defaultContentSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
                     contentSize = preferredSize
                 } else if let storedContentHeight = contentNode.storedContentHeight {
                     contentSize = CGSize(width: defaultContentSize.width, height: storedContentHeight)

@@ -12,6 +12,24 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
     }
 }()
 
+func getCurrentViewInterfaceOrientation(view: UIView) -> UIInterfaceOrientation {
+    var orientation: UIInterfaceOrientation = .portrait
+    if #available(iOS 13.0, *) {
+        if let window = view as? UIWindow {
+            if let windowScene = window.windowScene {
+                orientation = windowScene.interfaceOrientation
+            }
+        } else {
+            if let windowScene = view.window?.windowScene {
+                orientation = windowScene.interfaceOrientation
+            }
+        }
+    } else {
+        orientation = UIApplication.shared.statusBarOrientation
+    }
+    return orientation
+}
+
 public enum WindowUserInterfaceStyle {
     case light
     case dark
@@ -74,7 +92,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
     private var registeredForPreviewing = false
     
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
-    var transitionToSize: ((CGSize, Double) -> Void)?
+    var transitionToSize: ((CGSize, Double, UIInterfaceOrientation) -> Void)?
     
     private var _systemUserInterfaceStyle = ValuePromise<WindowUserInterfaceStyle>(ignoreRepeated: true)
     var systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError> {
@@ -182,8 +200,10 @@ private final class WindowRootViewController: UIViewController, UIViewController
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
+        
+        let orientation = getCurrentViewInterfaceOrientation(view: self.view)
         UIView.performWithoutAnimation {
-            self.transitionToSize?(size, coordinator.transitionDuration)
+            self.transitionToSize?(size, coordinator.transitionDuration, orientation)
         }
     }
     
@@ -372,18 +392,29 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     rootViewController.view.frame = CGRect(origin: CGPoint(), size: window.bounds.size)
     rootViewController.viewDidAppear(false)
     
-    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, isRotating: {
-        return window.isRotating()
-    }, systemUserInterfaceStyle: rootViewController.systemUserInterfaceStyle, updateSupportedInterfaceOrientations: { orientations in
-        rootViewController.orientations = orientations
-    }, updateDeferScreenEdgeGestures: { edges in
-        rootViewController.gestureEdges = edges
-    }, updatePrefersOnScreenNavigationHidden: { value in
-        rootViewController.prefersOnScreenNavigationHidden = value
-    })
+    let hostView = WindowHostView(
+        containerView: rootViewController.view,
+        eventView: window,
+        isRotating: {
+            return window.isRotating()
+        },
+        systemUserInterfaceStyle: rootViewController.systemUserInterfaceStyle,
+        currentInterfaceOrientation: {
+            return getCurrentViewInterfaceOrientation(view: window)
+        },
+        updateSupportedInterfaceOrientations: { orientations in
+            rootViewController.orientations = orientations
+        },
+        updateDeferScreenEdgeGestures: { edges in
+            rootViewController.gestureEdges = edges
+        },
+        updatePrefersOnScreenNavigationHidden: { value in
+            rootViewController.prefersOnScreenNavigationHidden = value
+        }
+    )
     
-    rootViewController.transitionToSize = { [weak hostView] size, duration in
-        hostView?.updateSize?(size, duration)
+    rootViewController.transitionToSize = { [weak hostView] size, duration, orientation in
+        hostView?.updateSize?(size, duration, orientation)
     }
     
     window.updateSize = { _ in

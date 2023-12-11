@@ -17,6 +17,7 @@ import ImageBlur
 import TelegramVoip
 import MetalEngine
 import DeviceAccess
+import LibYuvBinding
 
 final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeProtocol {
     private let sharedContext: SharedAccountContext
@@ -28,8 +29,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private let containerView: UIView
     private let callScreen: PrivateCallScreen
     private var callScreenState: PrivateCallScreen.State?
-    
-    private var shouldStayHiddenUntilConnection: Bool = false
     
     private var callStartTimestamp: Double?
     
@@ -47,6 +46,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     var dismissAllTooltips: (() -> Void)?
+    var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
     
     private var emojiKey: (data: Data, resolvedKey: [String])?
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
@@ -67,7 +67,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         presentationData: PresentationData,
         statusBar: StatusBar,
         debugInfo: Signal<(String, String), NoError>,
-        shouldStayHiddenUntilConnection: Bool = false,
         easyDebugAccess: Bool,
         call: PresentationCall
     ) {
@@ -79,8 +78,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         
         self.containerView = UIView()
         self.callScreen = PrivateCallScreen()
-        
-        self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         
         super.init()
         
@@ -122,6 +119,20 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 return
             }
             self.back?()
+            self.callScreen.beginPictureInPictureIfPossible()
+        }
+        self.callScreen.closeAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismissedInteractively?()
+        }
+        self.callScreen.restoreUIForPictureInPicture = { [weak self] completion in
+            guard let self else {
+                completion(false)
+                return
+            }
+            self.restoreUIForPictureInPicture?(completion)
         }
         
         self.callScreenState = PrivateCallScreen.State(
@@ -130,7 +141,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             shortName: " ",
             avatarImage: nil,
             audioOutput: .internalSpeaker,
-            isMicrophoneMuted: false,
+            isLocalAudioMuted: false,
+            isRemoteAudioMuted: false,
             localVideo: nil,
             remoteVideo: nil,
             isRemoteBatteryLow: false
@@ -145,8 +157,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 return
             }
             self.isMuted = isMuted
-            if callScreenState.isMicrophoneMuted != isMuted {
-                callScreenState.isMicrophoneMuted = isMuted
+            if callScreenState.isLocalAudioMuted != isMuted {
+                callScreenState.isLocalAudioMuted = isMuted
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.3, curve: .spring))
             }
@@ -310,6 +322,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         case let .active(startTime, signalQuality, keyData):
             self.callStartTimestamp = startTime
             
+            var signalQuality = signalQuality
+            signalQuality = 4
+            
             let _ = keyData
             mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
                 startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
@@ -320,7 +335,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             let _ = keyData
             mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
                 startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
-                signalInfo: PrivateCallScreen.State.SignalInfo(quality: 0.0),
+                signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
                 emojiKey: self.resolvedEmojiKey(data: keyData)
             ))
         case .terminating, .terminated:
@@ -373,6 +388,13 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.isRemoteBatteryLow = false
             }
             
+            switch callState.remoteAudioState {
+            case .muted:
+                callScreenState.isRemoteAudioMuted = true
+            case .active:
+                callScreenState.isRemoteAudioMuted = false
+            }
+            
             if self.callScreenState != callScreenState {
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.35, curve: .spring))
@@ -393,6 +415,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             return
         }
         callScreenState.name = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+        callScreenState.shortName = peer.compactDisplayTitle
         
         if self.currentPeer?.smallProfileImage != peer.smallProfileImage {
             self.peerAvatarDisposable?.dispose()
@@ -460,16 +483,14 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.containerView.layer.removeAnimation(forKey: "scale")
             self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            if !self.shouldStayHiddenUntilConnection {
-                self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-                self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            }
+            self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
+            self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        if !self.shouldStayHiddenUntilConnection || self.containerView.alpha > 0.0 {
+        if self.containerView.alpha > 0.0 {
             self.containerView.layer.allowsGroupOpacity = true
             self.containerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
                 self?.containerView.layer.allowsGroupOpacity = false
@@ -499,10 +520,18 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         transition.updateFrame(view: self.containerView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(view: self.callScreen, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        if let callScreenState = self.callScreenState {
+        if var callScreenState = self.callScreenState {
+            if case .terminated = callScreenState.lifecycleState {
+                callScreenState.isLocalAudioMuted = false
+                callScreenState.isRemoteAudioMuted = false
+                callScreenState.isRemoteBatteryLow = false
+                callScreenState.localVideo = nil
+                callScreenState.remoteVideo = nil
+            }
             self.callScreen.update(
                 size: layout.size,
                 insets: layout.insets(options: [.statusBar]),
+                interfaceOrientation: layout.metrics.orientation ?? .portrait,
                 screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
                 state: callScreenState,
                 transition: Transition(transition)
@@ -511,7 +540,100 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
 }
 
+private func copyI420BufferToNV12Buffer(buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer, pixelBuffer: CVPixelBuffer) -> Bool {
+    guard CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange else {
+        return false
+    }
+    guard CVPixelBufferGetWidthOfPlane(pixelBuffer, 0) == buffer.width else {
+        return false
+    }
+    guard CVPixelBufferGetHeightOfPlane(pixelBuffer, 0) == buffer.height else {
+        return false
+    }
+
+    let cvRet = CVPixelBufferLockBaseAddress(pixelBuffer, [])
+    if cvRet != kCVReturnSuccess {
+        return false
+    }
+    defer {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+    }
+
+    guard let dstY = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0) else {
+        return false
+    }
+    let dstStrideY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
+
+    guard let dstUV = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1) else {
+        return false
+    }
+    let dstStrideUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
+
+    buffer.y.withUnsafeBytes { srcYBuffer in
+        guard let srcY = srcYBuffer.baseAddress else {
+            return
+        }
+        buffer.u.withUnsafeBytes { srcUBuffer in
+            guard let srcU = srcUBuffer.baseAddress else {
+                return
+            }
+            buffer.v.withUnsafeBytes { srcVBuffer in
+                guard let srcV = srcVBuffer.baseAddress else {
+                    return
+                }
+                libyuv_I420ToNV12(
+                    srcY.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideY),
+                    srcU.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideU),
+                    srcV.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideV),
+                    dstY.assumingMemoryBound(to: UInt8.self),
+                    Int32(dstStrideY),
+                    dstUV.assumingMemoryBound(to: UInt8.self),
+                    Int32(dstStrideUV),
+                    Int32(buffer.width),
+                    Int32(buffer.height)
+                )
+            }
+        }
+    }
+
+    return true
+}
+
 private final class AdaptedCallVideoSource: VideoSource {
+    final class I420DataBuffer: Output.DataBuffer {
+        private let buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer
+        
+        override var pixelBuffer: CVPixelBuffer? {
+            let ioSurfaceProperties = NSMutableDictionary()
+            let options = NSMutableDictionary()
+            options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
+            
+            var pixelBuffer: CVPixelBuffer?
+            CVPixelBufferCreate(
+                kCFAllocatorDefault,
+                self.buffer.width,
+                self.buffer.height,
+                kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                options,
+                &pixelBuffer
+            )
+            if let pixelBuffer, copyI420BufferToNV12Buffer(buffer: buffer, pixelBuffer: pixelBuffer) {
+                return pixelBuffer
+            } else {
+                return nil
+            }
+        }
+        
+        init(buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer) {
+            self.buffer = buffer
+            
+            super.init()
+        }
+    }
+    
     private static let queue = Queue(name: "AdaptedCallVideoSource")
     private var onUpdatedListeners = Bag<() -> Void>()
     private(set) var currentOutput: Output?
@@ -539,6 +661,8 @@ private final class AdaptedCallVideoSource: VideoSource {
             case .rotation270:
                 rotationAngle = Float.pi * 3.0 / 2.0
             }
+            
+            let followsDeviceOrientation = videoFrameData.deviceRelativeOrientation != nil
             
             var mirrorDirection: Output.MirrorDirection = []
             
@@ -601,12 +725,45 @@ private final class AdaptedCallVideoSource: VideoSource {
                     
                     output = Output(
                         resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)),
-                        y: yTexture,
-                        uv: uvTexture,
+                        textureLayout: .biPlanar(Output.BiPlanarTextureLayout(
+                            y: yTexture,
+                            uv: uvTexture
+                        )),
+                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
                         rotationAngle: rotationAngle,
+                        followsDeviceOrientation: followsDeviceOrientation,
                         mirrorDirection: mirrorDirection,
                         sourceId: sourceId
                     )
+                case let .i420(i420Buffer):
+                    let width = i420Buffer.width
+                    let height = i420Buffer.height
+                    
+                    let _ = width
+                    let _ = height
+                    return
+                    
+                    /*var cvMetalTextureY: CVMetalTexture?
+                    var status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, nativeBuffer.pixelBuffer, nil, .r8Unorm, width, height, 0, &cvMetalTextureY)
+                    guard status == kCVReturnSuccess, let yTexture = CVMetalTextureGetTexture(cvMetalTextureY!) else {
+                        return
+                    }
+                    var cvMetalTextureUV: CVMetalTexture?
+                    status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, nativeBuffer.pixelBuffer, nil, .rg8Unorm, width / 2, height / 2, 1, &cvMetalTextureUV)
+                    guard status == kCVReturnSuccess, let uvTexture = CVMetalTextureGetTexture(cvMetalTextureUV!) else {
+                        return
+                    }
+                    
+                    output = Output(
+                        resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)),
+                        y: yTexture,
+                        uv: uvTexture,
+                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
+                        rotationAngle: rotationAngle,
+                        followsDeviceOrientation: followsDeviceOrientation,
+                        mirrorDirection: mirrorDirection,
+                        sourceId: sourceId
+                    )*/
                 default:
                     return
                 }

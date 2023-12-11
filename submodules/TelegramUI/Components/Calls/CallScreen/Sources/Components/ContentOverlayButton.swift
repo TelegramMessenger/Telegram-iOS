@@ -63,8 +63,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
                 let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
                 
                 if highlighted {
-                    self.layer.removeAnimation(forKey: "opacity")
-                    self.layer.removeAnimation(forKey: "transform")
+                    self.layer.removeAnimation(forKey: "sublayerTransform")
                     let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.layer, scale: topScale)
                 } else {

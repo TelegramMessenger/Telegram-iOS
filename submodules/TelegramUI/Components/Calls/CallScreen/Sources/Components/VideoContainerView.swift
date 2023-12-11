@@ -9,6 +9,26 @@ private let shadowImage: UIImage? = {
     UIImage(named: "Call/VideoGradient")?.precomposed()
 }()
 
+func resolveVideoRotationAngle(angle: Float, followsDeviceOrientation: Bool, interfaceOrientation: UIInterfaceOrientation) -> Float {
+    if !followsDeviceOrientation {
+        return angle
+    }
+    let interfaceAngle: Float
+    switch interfaceOrientation {
+    case .portrait, .unknown:
+        interfaceAngle = 0.0
+    case .landscapeLeft:
+        interfaceAngle = Float.pi * 0.5
+    case .landscapeRight:
+        interfaceAngle = Float.pi * 3.0 / 2.0
+    case .portraitUpsideDown:
+        interfaceAngle = Float.pi
+    @unknown default:
+        interfaceAngle = 0.0
+    }
+    return (angle + interfaceAngle).truncatingRemainder(dividingBy: Float.pi * 2.0)
+}
+
 private final class VideoContainerLayer: SimpleLayer {
     let contentsLayer: SimpleLayer
     
@@ -44,14 +64,16 @@ final class VideoContainerView: HighlightTrackingButton {
     private struct Params: Equatable {
         var size: CGSize
         var insets: UIEdgeInsets
+        var interfaceOrientation: UIInterfaceOrientation
         var cornerRadius: CGFloat
         var controlsHidden: Bool
         var isMinimized: Bool
         var isAnimatedOut: Bool
         
-        init(size: CGSize, insets: UIEdgeInsets, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool) {
+        init(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool) {
             self.size = size
             self.insets = insets
+            self.interfaceOrientation = interfaceOrientation
             self.cornerRadius = cornerRadius
             self.controlsHidden = controlsHidden
             self.isMinimized = isMinimized
@@ -59,14 +81,16 @@ final class VideoContainerView: HighlightTrackingButton {
         }
     }
     
-    private struct VideoMetrics: Equatable {
+    struct VideoMetrics: Equatable {
         var resolution: CGSize
         var rotationAngle: Float
+        var followsDeviceOrientation: Bool
         var sourceId: Int
         
-        init(resolution: CGSize, rotationAngle: Float, sourceId: Int) {
+        init(resolution: CGSize, rotationAngle: Float, followsDeviceOrientation: Bool, sourceId: Int) {
             self.resolution = resolution
             self.rotationAngle = rotationAngle
+            self.followsDeviceOrientation = followsDeviceOrientation
             self.sourceId = sourceId
         }
     }
@@ -74,10 +98,12 @@ final class VideoContainerView: HighlightTrackingButton {
     private final class FlipAnimationInfo {
         let isForward: Bool
         let previousRotationAngle: Float
+        let followsDeviceOrientation: Bool
         
-        init(isForward: Bool, previousRotationAngle: Float) {
+        init(isForward: Bool, previousRotationAngle: Float, followsDeviceOrientation: Bool) {
             self.isForward = isForward
             self.previousRotationAngle = previousRotationAngle
+            self.followsDeviceOrientation = followsDeviceOrientation
         }
     }
     
@@ -141,11 +167,11 @@ final class VideoContainerView: HighlightTrackingButton {
                     var videoMetrics: VideoMetrics?
                     if let currentOutput = self.video?.currentOutput {
                         if let previousVideo = self.videoLayer.video, previousVideo.sourceId != currentOutput.sourceId {
-                            self.initiateVideoSourceSwitch(flipAnimationInfo: FlipAnimationInfo(isForward: previousVideo.sourceId < currentOutput.sourceId, previousRotationAngle: previousVideo.rotationAngle))
+                            self.initiateVideoSourceSwitch(flipAnimationInfo: FlipAnimationInfo(isForward: previousVideo.sourceId < currentOutput.sourceId, previousRotationAngle: previousVideo.rotationAngle, followsDeviceOrientation: previousVideo.followsDeviceOrientation))
                         }
                         
                         self.videoLayer.video = currentOutput
-                        videoMetrics = VideoMetrics(resolution: currentOutput.resolution, rotationAngle: currentOutput.rotationAngle, sourceId: currentOutput.sourceId)
+                        videoMetrics = VideoMetrics(resolution: currentOutput.resolution, rotationAngle: currentOutput.rotationAngle, followsDeviceOrientation: currentOutput.followsDeviceOrientation, sourceId: currentOutput.sourceId)
                     } else {
                         self.videoLayer.video = nil
                     }
@@ -164,7 +190,7 @@ final class VideoContainerView: HighlightTrackingButton {
                 var videoMetrics: VideoMetrics?
                 if let currentOutput = self.video?.currentOutput {
                     self.videoLayer.video = currentOutput
-                    videoMetrics = VideoMetrics(resolution: currentOutput.resolution, rotationAngle: currentOutput.rotationAngle, sourceId: currentOutput.sourceId)
+                    videoMetrics = VideoMetrics(resolution: currentOutput.resolution, rotationAngle: currentOutput.rotationAngle, followsDeviceOrientation: currentOutput.followsDeviceOrientation, sourceId: currentOutput.sourceId)
                 } else {
                     self.videoLayer.video = nil
                 }
@@ -382,7 +408,7 @@ final class VideoContainerView: HighlightTrackingButton {
             self.dragPositionAnimatorLink = nil
             return
         }
-        let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, applyDragPosition: false)
+        let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, resolvedRotationAngle: resolveVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: false)
         let targetPosition = videoLayout.rotatedVideoFrame.center
         
         self.dragVelocity = self.updateVelocityUsingSpring(
@@ -443,8 +469,8 @@ final class VideoContainerView: HighlightTrackingButton {
         self.update(previousParams: params, params: params, transition: transition)
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, transition: Transition) {
-        let params = Params(size: size, insets: insets, cornerRadius: cornerRadius, controlsHidden: controlsHidden, isMinimized: isMinimized, isAnimatedOut: isAnimatedOut)
+    func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, cornerRadius: CGFloat, controlsHidden: Bool, isMinimized: Bool, isAnimatedOut: Bool, transition: Transition) {
+        let params = Params(size: size, insets: insets, interfaceOrientation: interfaceOrientation, cornerRadius: cornerRadius, controlsHidden: controlsHidden, isMinimized: isMinimized, isAnimatedOut: isAnimatedOut)
         if self.params == params {
             return
         }
@@ -469,10 +495,10 @@ final class VideoContainerView: HighlightTrackingButton {
         var effectiveVideoFrame: CGRect
     }
     
-    private func calculateMinimizedLayout(params: Params, videoMetrics: VideoMetrics, applyDragPosition: Bool) -> MinimizedLayout {
+    private func calculateMinimizedLayout(params: Params, videoMetrics: VideoMetrics, resolvedRotationAngle: Float, applyDragPosition: Bool) -> MinimizedLayout {
         var rotatedResolution = videoMetrics.resolution
         var videoIsRotated = false
-        if videoMetrics.rotationAngle == Float.pi * 0.5 || videoMetrics.rotationAngle == Float.pi * 3.0 / 2.0 {
+        if resolvedRotationAngle == Float.pi * 0.5 || resolvedRotationAngle == Float.pi * 3.0 / 2.0 {
             rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
             videoIsRotated = true
         }
@@ -505,7 +531,7 @@ final class VideoContainerView: HighlightTrackingButton {
         
         var videoTransform = CATransform3DIdentity
         videoTransform.m34 = 1.0 / 600.0
-        videoTransform = CATransform3DRotate(videoTransform, CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0)
+        videoTransform = CATransform3DRotate(videoTransform, CGFloat(resolvedRotationAngle), 0.0, 0.0, 1.0)
         if params.isAnimatedOut {
             videoTransform = CATransform3DScale(videoTransform, 0.6, 0.6, 1.0)
         }
@@ -530,10 +556,12 @@ final class VideoContainerView: HighlightTrackingButton {
         }
         self.appliedVideoMetrics = videoMetrics
         
+        let resolvedRotationAngle = resolveVideoRotationAngle(angle: videoMetrics.rotationAngle, followsDeviceOrientation: videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation)
+        
         if params.isMinimized {
             self.isFillingBounds = false
             
-            let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, applyDragPosition: true)
+            let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, resolvedRotationAngle: resolvedRotationAngle, applyDragPosition: true)
             
             transition.setPosition(layer: self.videoContainerLayer, position: videoLayout.rotatedVideoFrame.center)
             
@@ -558,23 +586,25 @@ final class VideoContainerView: HighlightTrackingButton {
             if let disappearingVideoLayer = self.disappearingVideoLayer {
                 self.disappearingVideoLayer = nil
                 
-                let disappearingVideoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: disappearingVideoLayer.videoMetrics, applyDragPosition: true)
+                let disappearingVideoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: disappearingVideoLayer.videoMetrics, resolvedRotationAngle: resolveVideoRotationAngle(angle: disappearingVideoLayer.videoMetrics.rotationAngle, followsDeviceOrientation: disappearingVideoLayer.videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: true)
                 let initialDisapparingVideoSize = disappearingVideoLayout.rotatedVideoSize
                 
                 if !disappearingVideoLayer.isAlphaAnimationInitiated {
                     disappearingVideoLayer.isAlphaAnimationInitiated = true
                     
                     if let flipAnimationInfo = disappearingVideoLayer.flipAnimationInfo {
+                        let resolvedPreviousRotationAngle = resolveVideoRotationAngle(angle: flipAnimationInfo.previousRotationAngle, followsDeviceOrientation: flipAnimationInfo.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation)
+                        
                         var videoTransform = self.videoContainerLayer.transform
                         var axis: (x: CGFloat, y: CGFloat, z: CGFloat) = (0.0, 0.0, 0.0)
                         let previousVideoScale: CGPoint
-                        if flipAnimationInfo.previousRotationAngle == Float.pi * 0.5 {
+                        if resolvedPreviousRotationAngle == Float.pi * 0.5 {
                             axis.x = -1.0
                             previousVideoScale = CGPoint(x: 1.0, y: -1.0)
-                        } else if flipAnimationInfo.previousRotationAngle == Float.pi {
+                        } else if resolvedPreviousRotationAngle == Float.pi {
                             axis.y = -1.0
                             previousVideoScale = CGPoint(x: -1.0, y: -1.0)
-                        } else if flipAnimationInfo.previousRotationAngle == Float.pi * 3.0 / 2.0 {
+                        } else if resolvedPreviousRotationAngle == Float.pi * 3.0 / 2.0 {
                             axis.x = 1.0
                             previousVideoScale = CGPoint(x: 1.0, y: 1.0)
                         } else {
@@ -652,7 +682,7 @@ final class VideoContainerView: HighlightTrackingButton {
         } else {
             var rotatedResolution = videoMetrics.resolution
             var videoIsRotated = false
-            if videoMetrics.rotationAngle == Float.pi * 0.5 || videoMetrics.rotationAngle == Float.pi * 3.0 / 2.0 {
+            if resolvedRotationAngle == Float.pi * 0.5 || resolvedRotationAngle == Float.pi * 3.0 / 2.0 {
                 rotatedResolution = CGSize(width: rotatedResolution.height, height: rotatedResolution.width)
                 videoIsRotated = true
             }
@@ -728,13 +758,13 @@ final class VideoContainerView: HighlightTrackingButton {
                 }
             }
             
-            transition.setTransform(layer: self.videoContainerLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
+            transition.setTransform(layer: self.videoContainerLayer, transform: CATransform3DMakeRotation(CGFloat(resolvedRotationAngle), 0.0, 0.0, 1.0))
             
             videoTransition.setFrame(layer: self.videoLayer, frame: rotatedVideoSize.centered(around: CGPoint(x: rotatedBoundingSize.width * 0.5, y: rotatedBoundingSize.height * 0.5)))
             videoTransition.setPosition(layer: self.videoLayer.blurredLayer, position: rotatedVideoFrame.center)
             videoTransition.setBounds(layer: self.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
             videoTransition.setAlpha(layer: self.videoLayer.blurredLayer, alpha: 1.0)
-            videoTransition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(videoMetrics.rotationAngle), 0.0, 0.0, 1.0))
+            videoTransition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(resolvedRotationAngle), 0.0, 0.0, 1.0))
             
             if !params.isAnimatedOut {
                 self.videoLayer.renderSpec = RenderLayerSpec(size: RenderSize(width: Int(rotatedVideoResolution.width), height: Int(rotatedVideoResolution.height)), edgeInset: 2)

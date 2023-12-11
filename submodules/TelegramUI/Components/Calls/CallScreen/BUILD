@@ -67,6 +67,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/AppBundle",
+        "//submodules/UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

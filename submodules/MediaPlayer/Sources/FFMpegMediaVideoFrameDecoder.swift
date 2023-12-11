@@ -2,6 +2,7 @@
 import UIKit
 #else
 import AppKit
+import TGUIKit
 #endif
 import CoreMedia
 import Accelerate

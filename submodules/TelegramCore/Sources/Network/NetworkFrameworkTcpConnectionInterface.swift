@@ -4,7 +4,7 @@ import Network
 import MtProtoKit
 import SwiftSignalKit
 
-@available(iOS 12.0, macOS 10.14, *)
+@available(iOS 12.0, macOS 14.0, *)
 final class NetworkFrameworkTcpConnectionInterface: NSObject, MTTcpConnectionInterface {
     private struct ReadRequest {
         let length: Int

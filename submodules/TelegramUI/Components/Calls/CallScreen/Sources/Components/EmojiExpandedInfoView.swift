@@ -5,10 +5,10 @@ import ComponentFlow
 
 final class EmojiExpandedInfoView: OverlayMaskContainerView {
     private struct Params: Equatable {
-        var constrainedWidth: CGFloat
+        var width: CGFloat
         
-        init(constrainedWidth: CGFloat) {
-            self.constrainedWidth = constrainedWidth
+        init(width: CGFloat) {
+            self.width = width
         }
     }
     
@@ -129,8 +129,8 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
         return nil
     }
     
-    func update(constrainedWidth: CGFloat, transition: Transition) -> CGSize {
-        let params = Params(constrainedWidth: constrainedWidth)
+    func update(width: CGFloat, transition: Transition) -> CGSize {
+        let params = Params(width: width)
         if let currentLayout = self.currentLayout, currentLayout.params == params {
             return currentLayout.size
         }
@@ -142,16 +142,12 @@ final class EmojiExpandedInfoView: OverlayMaskContainerView {
     private func update(params: Params, transition: Transition) -> CGSize {
         let buttonHeight: CGFloat = 56.0
         
-        var constrainedWidth = params.constrainedWidth
-        constrainedWidth = min(constrainedWidth, 300.0)
+        let titleSize = self.titleView.update(string: self.title, fontSize: 16.0, fontWeight: 0.3, alignment: .center, color: .white, constrainedWidth: params.width - 16.0 * 2.0, transition: transition)
+        let textSize = self.textView.update(string: self.text, fontSize: 16.0, fontWeight: 0.0, alignment: .center, color: .white, constrainedWidth: params.width - 16.0 * 2.0, transition: transition)
         
-        let titleSize = self.titleView.update(string: self.title, fontSize: 16.0, fontWeight: 0.3, alignment: .center, color: .white, constrainedWidth: constrainedWidth - 16.0 * 2.0, transition: transition)
-        let textSize = self.textView.update(string: self.text, fontSize: 16.0, fontWeight: 0.0, alignment: .center, color: .white, constrainedWidth: constrainedWidth - 16.0 * 2.0, transition: transition)
-        
-        let contentWidth: CGFloat = max(titleSize.width, textSize.width) + 26.0 * 2.0
         let contentHeight = 78.0 + titleSize.height + 10.0 + textSize.height + 22.0 + buttonHeight
         
-        let size = CGSize(width: contentWidth, height: contentHeight)
+        let size = CGSize(width: params.width, height: contentHeight)
         
         transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size))
         
