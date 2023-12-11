@@ -468,6 +468,22 @@ final class StoryItemSetViewListComponent: Component {
                         dateText += " • commented"
                     }
                     
+                    let subtitleAccessory: PeerListItemComponent.SubtitleAccessory
+                    if let _ = item.story {
+                        subtitleAccessory = .repost
+                    } else if let _ = item.message {
+                        subtitleAccessory = .forward
+                    } else {
+                        subtitleAccessory = .checks
+                    }
+                    
+                    var storyItem: EngineStoryItem?
+                    if let story = item.story {
+                        storyItem = story
+                    } else if let _ = item.message {
+                        storyItem = component.storyItem
+                    }
+                    
                     let _ = visibleItem.update(
                         transition: itemTransition,
                         component: AnyComponent(PeerListItemComponent(
@@ -480,7 +496,7 @@ final class StoryItemSetViewListComponent: Component {
                             peer: item.peer,
                             storyStats: item.storyStats,
                             subtitle: dateText,
-                            subtitleAccessory: item.story != nil ? .repost : .checks,
+                            subtitleAccessory: subtitleAccessory,
                             presence: nil,
                             reaction: item.reaction.flatMap { reaction -> PeerListItemComponent.Reaction in
                                 var animationFileId: Int64?
@@ -507,7 +523,8 @@ final class StoryItemSetViewListComponent: Component {
                                     animationFileId: animationFileId
                                 )
                             },
-                            story: item.story,
+                            story: storyItem,
+                            message: item.message,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1 || itemLayout.premiumFooterSize != nil,
                             action: { [weak self] peer in

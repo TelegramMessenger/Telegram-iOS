@@ -87,8 +87,29 @@ public final class EngineStoryViewListContext {
             }
         }
         
+        public final class Forward: Equatable {
+            public let message: EngineMessage
+            public let storyStats: PeerStoryStats?
+            
+            init(message: EngineMessage, storyStats: PeerStoryStats?) {
+                self.message = message
+                self.storyStats = storyStats
+            }
+            
+            public static func ==(lhs: Forward, rhs: Forward) -> Bool {
+                if lhs.message != rhs.message {
+                    return false
+                }
+                if lhs.storyStats != rhs.storyStats {
+                    return false
+                }
+                return true
+            }
+        }
+        
         case view(View)
         case repost(Repost)
+        case forward(Forward)
         
         public var peer: EnginePeer {
             switch self {
@@ -96,6 +117,8 @@ public final class EngineStoryViewListContext {
                 return view.peer
             case let .repost(repost):
                 return repost.peer
+            case let .forward(forward):
+                return EnginePeer(forward.message.peers[forward.message.id.peerId]!)
             }
         }
         
@@ -105,6 +128,8 @@ public final class EngineStoryViewListContext {
                 return view.timestamp
             case let .repost(repost):
                 return repost.story.timestamp
+            case let .forward(forward):
+                return forward.message.timestamp
             }
         }
         
@@ -113,6 +138,8 @@ public final class EngineStoryViewListContext {
             case let .view(view):
                 return view.reaction
             case .repost:
+                return nil
+            case .forward:
                 return nil
             }
         }
@@ -123,6 +150,19 @@ public final class EngineStoryViewListContext {
                 return nil
             case let .repost(repost):
                 return repost.story
+            case .forward:
+                return nil
+            }
+        }
+
+        public var message: EngineMessage? {
+            switch self {
+            case .view:
+                return nil
+            case .repost:
+                return nil
+            case let .forward(forward):
+                return forward.message
             }
         }
         
@@ -132,20 +172,25 @@ public final class EngineStoryViewListContext {
                 return view.storyStats
             case let .repost(repost):
                 return repost.storyStats
+            case let .forward(forward):
+                return forward.storyStats
             }
         }
         
         public struct ItemHash: Hashable {
             var peerId: EnginePeer.Id
             var storyId: Int32?
+            var messageId: EngineMessage.Id?
         }
         
         public var uniqueId: ItemHash {
             switch self {
             case let .view(view):
-                return ItemHash(peerId: view.peer.id, storyId: nil)
+                return ItemHash(peerId: view.peer.id, storyId: nil, messageId: nil)
             case let .repost(repost):
-                return ItemHash(peerId: repost.peer.id, storyId: repost.story.id)
+                return ItemHash(peerId: repost.peer.id, storyId: repost.story.id, messageId: nil)
+            case let .forward(forward):
+                return ItemHash(peerId: forward.message.id.peerId, storyId: nil, messageId: forward.message.id)
             }
         }
     }
@@ -176,6 +221,8 @@ public final class EngineStoryViewListContext {
         
         struct InternalState: Equatable {
             var totalCount: Int
+            var totalViewsCount: Int
+            var totalForwardsCount: Int
             var totalReactedCount: Int
             var items: [Item]
             var canLoadMore: Bool
@@ -314,6 +361,8 @@ public final class EngineStoryViewListContext {
                             
                             return InternalState(
                                 totalCount: totalCount,
+                                totalViewsCount: 0,
+                                totalForwardsCount: 0,
                                 totalReactedCount: totalReactedCount,
                                 items: items,
                                 canLoadMore: state.canLoadMore
@@ -329,7 +378,7 @@ public final class EngineStoryViewListContext {
                 }))
             } else {
                 let initialState = State(totalCount: listMode == .everyone ? views.seenCount : 100, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
-                let state = InternalState(totalCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
+                let state = InternalState(totalCount: initialState.totalCount, totalViewsCount: initialState.totalCount, totalForwardsCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
                 self.state = state
                 self.statePromise.set(.single(state))
                 
@@ -410,8 +459,9 @@ public final class EngineStoryViewListContext {
                     |> mapToSignal { result -> Signal<InternalState, NoError> in
                         return account.postbox.transaction { transaction -> InternalState in
                             switch result {
-                            case let .storyViewsList(_, count, reactionsCount, views, users, nextOffset):
-                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                            case let .storyViewsList(_, count, viewsCount, forwardsCount, reactionsCount, views, users, nextOffset):
+                                let peers = AccumulatedPeers(users: users)
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                                 
                                 var items: [Item] = []
                                 for view in views {
@@ -452,6 +502,58 @@ public final class EngineStoryViewListContext {
                                                     }
                                                 }
                                             )))
+                                        }
+                                    case let .storyViewPublicForward(flags, message):
+                                        let _ = flags
+                                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
+                                            items.append(.forward(Item.Forward(
+                                                message: EngineMessage(message),
+                                                storyStats: transaction.getPeerStoryStats(peerId: message.id.peerId)
+                                            )))
+                                        }
+                                    case let .storyViewPublicRepost(flags, peerId, story):
+                                        let _ = flags
+                                        if let peer = transaction.getPeer(peerId.peerId) {
+                                            if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peer.id, transaction: transaction), case let .item(item) = storedItem, let media = item.media {
+                                                items.append(.repost(Item.Repost(
+                                                    peer: EnginePeer(peer),
+                                                    story: EngineStoryItem(
+                                                        id: item.id,
+                                                        timestamp: item.timestamp,
+                                                        expirationTimestamp: item.expirationTimestamp,
+                                                        media: EngineMedia(media),
+                                                        mediaAreas: item.mediaAreas,
+                                                        text: item.text,
+                                                        entities: item.entities,
+                                                        views: item.views.flatMap { views in
+                                                            return EngineStoryItem.Views(
+                                                                seenCount: views.seenCount,
+                                                                reactedCount: views.reactedCount,
+                                                                forwardCount: views.forwardCount,
+                                                                seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                    return transaction.getPeer(id).flatMap(EnginePeer.init)
+                                                                },
+                                                                reactions: views.reactions,
+                                                                hasList: views.hasList
+                                                            )
+                                                        },
+                                                        privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                        isPinned: item.isPinned,
+                                                        isExpired: item.isExpired,
+                                                        isPublic: item.isPublic,
+                                                        isPending: false,
+                                                        isCloseFriends: item.isCloseFriends,
+                                                        isContacts: item.isContacts,
+                                                        isSelectedContacts: item.isSelectedContacts,
+                                                        isForwardingDisabled: item.isForwardingDisabled,
+                                                        isEdited: item.isEdited,
+                                                        isMy: item.isMy,
+                                                        myReaction: item.myReaction,
+                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                                    ),
+                                                    storyStats: transaction.getPeerStoryStats(peerId: peer.id)
+                                                )))
+                                            }
                                         }
                                     }
                                 }
@@ -534,9 +636,9 @@ public final class EngineStoryViewListContext {
                                     transaction.setStoryItems(peerId: account.peerId, items: currentItems)
                                 }
                                 
-                                return InternalState(totalCount: Int(count), totalReactedCount: Int(reactionsCount), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
+                                return InternalState(totalCount: Int(count), totalViewsCount: Int(viewsCount), totalForwardsCount: Int(forwardsCount), totalReactedCount: Int(reactionsCount), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
                             case .none:
-                                return InternalState(totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                                return InternalState(totalCount: 0, totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
                             }
                         }
                     }
@@ -564,12 +666,13 @@ public final class EngineStoryViewListContext {
                         return account.postbox.transaction { transaction -> InternalState in
                             switch result {
                             case let .storyReactionsList(_, count, reactions, chats, users, nextOffset):
-                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(chats: chats, users: users))
+                                let peers = AccumulatedPeers(chats: chats, users: users)
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                                 
                                 var items: [Item] = []
                                 for reaction in reactions {
                                     switch reaction {
-                                    case let .storyPeerReaction(peerId, date, reaction):
+                                    case let .storyReaction(peerId, date, reaction):
                                         if let peer = transaction.getPeer(peerId.peerId) {
                                             if let parsedReaction = MessageReaction.Reaction(apiReaction: reaction) {
                                                 let reactionFile: TelegramMediaFile?
@@ -588,7 +691,14 @@ public final class EngineStoryViewListContext {
                                                 )))
                                             }
                                         }
-                                    case let .storyPeerPublicRepost(peerId, story):
+                                    case let .storyReactionPublicForward(message):
+                                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
+                                            items.append(.forward(Item.Forward(
+                                                message: EngineMessage(message),
+                                                storyStats: transaction.getPeerStoryStats(peerId: message.id.peerId)
+                                            )))
+                                        }
+                                    case let .storyReactionPublicRepost(peerId, story):
                                         if let peer = transaction.getPeer(peerId.peerId) {
                                             if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peer.id, transaction: transaction), case let .item(item) = storedItem, let media = item.media {
                                                 items.append(.repost(Item.Repost(
@@ -633,9 +743,9 @@ public final class EngineStoryViewListContext {
                                         }
                                     }
                                 }
-                                return InternalState(totalCount: Int(count), totalReactedCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
+                                return InternalState(totalCount: Int(count), totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
                             case .none:
-                                return InternalState(totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                                return InternalState(totalCount: 0, totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
                             }
                         }
                     }
@@ -652,7 +762,7 @@ public final class EngineStoryViewListContext {
         
         private func updateInternalState(state: InternalState) {
             var currentState = self.state ?? InternalState(
-                totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                totalCount: 0, totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
             
             if self.parentSource != nil {
                 currentState.items.removeAll()

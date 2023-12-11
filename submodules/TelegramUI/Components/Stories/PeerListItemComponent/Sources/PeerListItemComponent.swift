@@ -23,6 +23,7 @@ import PhotoResources
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let repostIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Stories/HeaderRepost"), color: .white)?.withRenderingMode(.alwaysTemplate)
+private let forwardIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Stories/HeaderRepost"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let checkImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let disclosureImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
 
@@ -54,6 +55,7 @@ public final class PeerListItemComponent: Component {
         case none
         case checks
         case repost
+        case forward
     }
     
     public enum RightAccessory: Equatable {
@@ -109,6 +111,7 @@ public final class PeerListItemComponent: Component {
     let rightAccessory: RightAccessory
     let reaction: Reaction?
     let story: EngineStoryItem?
+    let message: EngineMessage?
     let selectionState: SelectionState
     let selectionPosition: SelectionPosition
     let isEnabled: Bool
@@ -133,6 +136,7 @@ public final class PeerListItemComponent: Component {
         rightAccessory: RightAccessory = .none,
         reaction: Reaction? = nil,
         story: EngineStoryItem? = nil,
+        message: EngineMessage? = nil,
         selectionState: SelectionState,
         selectionPosition: SelectionPosition = .left,
         isEnabled: Bool = true,
@@ -156,6 +160,7 @@ public final class PeerListItemComponent: Component {
         self.rightAccessory = rightAccessory
         self.reaction = reaction
         self.story = story
+        self.message = message
         self.selectionState = selectionState
         self.selectionPosition = selectionPosition
         self.isEnabled = isEnabled
@@ -207,6 +212,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.story != rhs.story {
+            return false
+        }
+        if lhs.message != rhs.message {
             return false
         }
         if lhs.selectionState != rhs.selectionState {
@@ -735,6 +743,9 @@ public final class PeerListItemComponent: Component {
                         } else if case .repost = component.subtitleAccessory {
                             image = repostIconImage
                             color = UIColor(rgb: 0x34c759)
+                        } else if case .forward = component.subtitleAccessory {
+                            image = forwardIconImage
+                            color = UIColor(rgb: 0x34c759)
                         }
                         iconView = UIImageView(image: image)
                         iconView.tintColor = color
@@ -857,21 +868,32 @@ public final class PeerListItemComponent: Component {
                 transition.setFrame(layer: reactionLayer, frame: adjustedIconFrame)
             }
             
-            var imageMedia: Media?
-            if let story = component.story {
-                if let image = story.media._asMedia() as? TelegramMediaImage {
-                    imageMedia = image
-                } else if let file = story.media._asMedia() as? TelegramMediaFile {
-                    imageMedia = file
+            
+            var mediaReference: AnyMediaReference?
+            if let peer = component.peer, let peerReference = PeerReference(peer._asPeer()) {
+                if let story = component.story {
+                    mediaReference = .story(peer: peerReference, id: story.id, media: story.media._asMedia())
+                } else if let message = component.message {
+                    var selectedMedia: Media?
+                    for media in message.media {
+                        if let image = media as? TelegramMediaImage {
+                            selectedMedia = image
+                        } else if let file = media as? TelegramMediaFile {
+                            selectedMedia = file
+                        }
+                    }
+                    if let media = selectedMedia {
+                        mediaReference = .message(message: MessageReference(message._asMessage()), media: media)
+                    }
                 }
             }
             
-            if let peer = component.peer, let story = component.story, let imageMedia {
+            if let peer = component.peer, let mediaReference {
                 let contentImageSize = CGSize(width: 30.0, height: 42.0)
                 var dimensions: CGSize?
-                if let imageMedia = imageMedia as? TelegramMediaImage {
+                if let imageMedia = mediaReference.media as? TelegramMediaImage {
                     dimensions = largestRepresentationForPhoto(imageMedia)?.dimensions.cgSize
-                } else if let imageMedia = imageMedia as? TelegramMediaFile {
+                } else if let imageMedia = mediaReference.media as? TelegramMediaFile {
                     dimensions = imageMedia.dimensions?.cgSize
                 }
                 
@@ -894,14 +916,12 @@ public final class PeerListItemComponent: Component {
                     self.addSubview(imageButtonView)
                     
                     var imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-                    if let peerReference = PeerReference(peer._asPeer()) {
-                        if let image = imageMedia as? TelegramMediaImage {
-                            imageSignal = mediaGridMessagePhoto(account: component.context.account, userLocation: .peer(peer.id), photoReference: .story(peer: peerReference, id: story.id, media: image))
-                        } else if let file = imageMedia as? TelegramMediaFile {
-                            imageSignal = mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .peer(peer.id), videoReference: .story(peer: peerReference, id: story.id, media: file), autoFetchFullSizeThumbnail: true)
-                        }
-                    }
                     
+                    if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
+                        imageSignal = mediaGridMessagePhoto(account: component.context.account, userLocation: .peer(peer.id), photoReference: imageReference)
+                    } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+                        imageSignal = mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .peer(peer.id), videoReference: fileReference, autoFetchFullSizeThumbnail: true)
+                    }
                     if let imageSignal {
                         imageNode.setSignal(imageSignal)
                     }

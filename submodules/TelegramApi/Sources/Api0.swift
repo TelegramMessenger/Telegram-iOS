@@ -826,9 +826,12 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1352440415] = { return Api.StoryItem.parse_storyItem($0) }
     dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
     dict[-5388013] = { return Api.StoryItem.parse_storyItemSkipped($0) }
-    dict[-134495875] = { return Api.StoryPeerReaction.parse_storyPeerPublicRepost($0) }
-    dict[2112668723] = { return Api.StoryPeerReaction.parse_storyPeerReaction($0) }
+    dict[1620104917] = { return Api.StoryReaction.parse_storyReaction($0) }
+    dict[-1146411453] = { return Api.StoryReaction.parse_storyReactionPublicForward($0) }
+    dict[-808644845] = { return Api.StoryReaction.parse_storyReactionPublicRepost($0) }
     dict[-1329730875] = { return Api.StoryView.parse_storyView($0) }
+    dict[-1870436597] = { return Api.StoryView.parse_storyViewPublicForward($0) }
+    dict[-1116418231] = { return Api.StoryView.parse_storyViewPublicRepost($0) }
     dict[-1923523370] = { return Api.StoryViews.parse_storyViews($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
@@ -1219,9 +1222,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
     dict[1574486984] = { return Api.stories.Stories.parse_stories($0) }
-    dict[-664005078] = { return Api.stories.StoryReactionsList.parse_storyReactionsList($0) }
+    dict[-1436583780] = { return Api.stories.StoryReactionsList.parse_storyReactionsList($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
-    dict[1189722604] = { return Api.stories.StoryViewsList.parse_storyViewsList($0) }
+    dict[430008454] = { return Api.stories.StoryViewsList.parse_storyViewsList($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
     dict[-1531132162] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
@@ -1803,7 +1806,7 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryItem:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.StoryPeerReaction:
+            case let _1 as Api.StoryReaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryView:
                 _1.serialize(buffer, boxed)

@@ -1,4 +1,194 @@
 public extension Api {
+    enum StoryViews: TypeConstructorDescription {
+        case storyViews(flags: Int32, viewsCount: Int32, forwardsCount: Int32?, reactions: [Api.ReactionCount]?, reactionsCount: Int32?, recentViewers: [Int64]?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyViews(let flags, let viewsCount, let forwardsCount, let reactions, let reactionsCount, let recentViewers):
+                    if boxed {
+                        buffer.appendInt32(-1923523370)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(viewsCount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(forwardsCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions!.count))
+                    for item in reactions! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(reactionsCount!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentViewers!.count))
+                    for item in recentViewers! {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyViews(let flags, let viewsCount, let forwardsCount, let reactions, let reactionsCount, let recentViewers):
+                return ("storyViews", [("flags", flags as Any), ("viewsCount", viewsCount as Any), ("forwardsCount", forwardsCount as Any), ("reactions", reactions as Any), ("reactionsCount", reactionsCount as Any), ("recentViewers", recentViewers as Any)])
+    }
+    }
+    
+        public static func parse_storyViews(_ reader: BufferReader) -> StoryViews? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
+            var _4: [Api.ReactionCount]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ReactionCount.self)
+            } }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
+            var _6: [Int64]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.StoryViews.storyViews(flags: _1!, viewsCount: _2!, forwardsCount: _3, reactions: _4, reactionsCount: _5, recentViewers: _6)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum TextWithEntities: TypeConstructorDescription {
+        case textWithEntities(text: String, entities: [Api.MessageEntity])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .textWithEntities(let text, let entities):
+                    if boxed {
+                        buffer.appendInt32(1964978502)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .textWithEntities(let text, let entities):
+                return ("textWithEntities", [("text", text as Any), ("entities", entities as Any)])
+    }
+    }
+    
+        public static func parse_textWithEntities(_ reader: BufferReader) -> TextWithEntities? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.TextWithEntities.textWithEntities(text: _1!, entities: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum Theme: TypeConstructorDescription {
+        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: [Api.ThemeSettings]?, emoticon: String?, installsCount: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let emoticon, let installsCount):
+                    if boxed {
+                        buffer.appendInt32(-1609668650)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(settings!.count))
+                    for item in settings! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(installsCount!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let emoticon, let installsCount):
+                return ("theme", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("slug", slug as Any), ("title", title as Any), ("document", document as Any), ("settings", settings as Any), ("emoticon", emoticon as Any), ("installsCount", installsCount as Any)])
+    }
+    }
+    
+        public static func parse_theme(_ reader: BufferReader) -> Theme? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.Document?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _7: [Api.ThemeSettings]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ThemeSettings.self)
+            } }
+            var _8: String?
+            if Int(_1!) & Int(1 << 6) != 0 {_8 = parseString(reader) }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_9 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, settings: _7, emoticon: _8, installsCount: _9)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum ThemeSettings: TypeConstructorDescription {
         case themeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, outboxAccentColor: Int32?, messageColors: [Int32]?, wallpaper: Api.WallPaper?)
     
