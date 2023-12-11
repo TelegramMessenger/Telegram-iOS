@@ -427,10 +427,13 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             if (apiFlags & (1 << 0)) != 0 {
                 flags.insert(.onlyNewSubscribers)
             }
-            if (apiFlags & (1 << 2)) != 0 {
-                flags.insert(.showWinners)
-            }
             return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, countries: countries ?? [], quantity: quantity, months: months, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
+        case let .messageMediaGiveawayResults(apiFlags, channelId, launchMsgId, winnersCount, unclaimedCount, winners, months, prizeDescription):
+            var flags: TelegramMediaGiveawayResults.Flags = []
+            if (apiFlags & (1 << 0)) != 0 {
+                flags.insert(.refunded)
+            }
+            return (TelegramMediaGiveawayResults(flags: flags, launchMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: launchMsgId), winnersPeerIds: winners.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, winnersCount: winnersCount, unclaimedCount: unclaimedCount, months: months, prizeDescription: prizeDescription), nil, nil, nil, nil)
         }
     }
     

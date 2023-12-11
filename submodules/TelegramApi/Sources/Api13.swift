@@ -698,6 +698,7 @@ public extension Api {
         case messageMediaGeo(geo: Api.GeoPoint)
         case messageMediaGeoLive(flags: Int32, geo: Api.GeoPoint, heading: Int32?, period: Int32, proximityNotificationRadius: Int32?)
         case messageMediaGiveaway(flags: Int32, channels: [Int64], countriesIso2: [String]?, prizeDescription: String?, quantity: Int32, months: Int32, untilDate: Int32)
+        case messageMediaGiveawayResults(flags: Int32, channelId: Int64, launchMsgId: Int32, winnersCount: Int32, unclaimedCount: Int32, winners: [Int64], months: Int32, prizeDescription: String?)
         case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: Api.MessageExtendedMedia?)
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
@@ -782,6 +783,23 @@ public extension Api {
                     serializeInt32(months, buffer: buffer, boxed: false)
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     break
+                case .messageMediaGiveawayResults(let flags, let channelId, let launchMsgId, let winnersCount, let unclaimedCount, let winners, let months, let prizeDescription):
+                    if boxed {
+                        buffer.appendInt32(-1323305567)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    serializeInt32(launchMsgId, buffer: buffer, boxed: false)
+                    serializeInt32(winnersCount, buffer: buffer, boxed: false)
+                    serializeInt32(unclaimedCount, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(winners.count))
+                    for item in winners {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(months, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(prizeDescription!, buffer: buffer, boxed: false)}
+                    break
                 case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
                     if boxed {
                         buffer.appendInt32(-156940077)
@@ -865,6 +883,8 @@ public extension Api {
                 return ("messageMediaGeoLive", [("flags", flags as Any), ("geo", geo as Any), ("heading", heading as Any), ("period", period as Any), ("proximityNotificationRadius", proximityNotificationRadius as Any)])
                 case .messageMediaGiveaway(let flags, let channels, let countriesIso2, let prizeDescription, let quantity, let months, let untilDate):
                 return ("messageMediaGiveaway", [("flags", flags as Any), ("channels", channels as Any), ("countriesIso2", countriesIso2 as Any), ("prizeDescription", prizeDescription as Any), ("quantity", quantity as Any), ("months", months as Any), ("untilDate", untilDate as Any)])
+                case .messageMediaGiveawayResults(let flags, let channelId, let launchMsgId, let winnersCount, let unclaimedCount, let winners, let months, let prizeDescription):
+                return ("messageMediaGiveawayResults", [("flags", flags as Any), ("channelId", channelId as Any), ("launchMsgId", launchMsgId as Any), ("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any), ("winners", winners as Any), ("months", months as Any), ("prizeDescription", prizeDescription as Any)])
                 case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
                 return ("messageMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("receiptMsgId", receiptMsgId as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("startParam", startParam as Any), ("extendedMedia", extendedMedia as Any)])
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
@@ -1025,6 +1045,40 @@ public extension Api {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.MessageMedia.messageMediaGiveaway(flags: _1!, channels: _2!, countriesIso2: _3, prizeDescription: _4, quantity: _5!, months: _6!, untilDate: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageMediaGiveawayResults(_ reader: BufferReader) -> MessageMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: [Int64]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_8 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 1) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.MessageMedia.messageMediaGiveawayResults(flags: _1!, channelId: _2!, launchMsgId: _3!, winnersCount: _4!, unclaimedCount: _5!, winners: _6!, months: _7!, prizeDescription: _8)
             }
             else {
                 return nil

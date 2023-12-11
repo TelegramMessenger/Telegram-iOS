@@ -3796,21 +3796,6 @@ public extension Api.functions.help {
                 }
 }
 public extension Api.functions.help {
-                static func getAppChangelog(prevAppVersion: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1877938321)
-                    serializeString(prevAppVersion, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "help.getAppChangelog", parameters: [("prevAppVersion", String(describing: prevAppVersion))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.help {
                 static func getAppConfig(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.AppConfig>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1642330196)
@@ -9079,6 +9064,26 @@ public extension Api.functions.stories {
                         var result: Api.stories.StoryViews?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.stories.StoryViews
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stories {
+                static func getStoryReactionsList(flags: Int32, peer: Api.InputPeer, id: Int32, reaction: Api.Reaction?, offset: String?, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryReactionsList>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1179482081)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {reaction!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(offset!, buffer: buffer, boxed: false)}
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stories.getStoryReactionsList", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("id", String(describing: id)), ("reaction", String(describing: reaction)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.StoryReactionsList? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stories.StoryReactionsList?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stories.StoryReactionsList
                         }
                         return result
                     })

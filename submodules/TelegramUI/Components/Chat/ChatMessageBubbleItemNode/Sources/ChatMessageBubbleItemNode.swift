@@ -221,6 +221,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if let _ = media as? TelegramMediaGiveaway {
                 result.append((message, ChatMessageGiveawayBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
+            } else if let _ = media as? TelegramMediaGiveawayResults {
+                result.append((message, ChatMessageGiveawayBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                needReactions = false
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
                 needReactions = false

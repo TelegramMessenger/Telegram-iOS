@@ -657,7 +657,7 @@ private final class PendingInAppPurchaseState: Codable {
                 try container.encode(countries, forKey: .countries)
                 try container.encode(onlyNewSubscribers, forKey: .onlyNewSubscribers)
                 try container.encode(showWinners, forKey: .showWinners)
-                try container.encode(prizeDescription, forKey: .prizeDescription)
+                try container.encodeIfPresent(prizeDescription, forKey: .prizeDescription)
                 try container.encode(randomId, forKey: .randomId)
                 try container.encode(untilDate, forKey: .untilDate)
             }

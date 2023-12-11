@@ -435,6 +435,7 @@ public final class StoryItemSetContainerComponent: Component {
         var preparingToDisplayViewList: Bool = false
         
         var viewListDisplayState: ViewListDisplayState = .hidden
+        
         private var targetViewListDisplayStateIsFull: Bool = false
         private var viewListMetrics: (minHeight: CGFloat, maxHeight: CGFloat, currentHeight: CGFloat)?
         
@@ -1231,6 +1232,8 @@ public final class StoryItemSetContainerComponent: Component {
                             var displayViewLists = false
                             if component.slice.peer.id == component.context.account.peerId {
                                 displayViewLists = true
+                            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+                                displayViewLists = true
                             }
                             
                             if displayViewLists {
@@ -1911,6 +1914,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
+                displayViewLists = true
+            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
                 displayViewLists = true
             }
             
@@ -3123,6 +3128,8 @@ public final class StoryItemSetContainerComponent: Component {
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
                 displayViewLists = true
+            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+                displayViewLists = true
             }
             
             if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
@@ -3496,6 +3503,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.openPeerStories(peer: peer, avatarNode: avatarNode)
+                            },
+                            openStory: { [weak self] peer, id, stories, sourceView in
+                                guard let self else {
+                                    return
+                                }
+                                self.openReposts(peer: peer, id: id, stories: stories, sourceView: sourceView)
                             },
                             openPremiumIntro: { [weak self] in
                                 guard let self else {
@@ -5151,7 +5164,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        func openPeerStories(peer: EnginePeer, avatarNode: AvatarNode) {
+        func openPeerStories(peer: EnginePeer, avatarNode: AvatarNode?) {
             guard let component = self.component else {
                 return
             }
@@ -5160,6 +5173,75 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             StoryContainerScreen.openPeerStories(context: component.context, peerId: peer.id, parentController: controller, avatarNode: avatarNode)
+        }
+        
+        func openReposts(peer: EnginePeer, id: Int32, stories: [(EnginePeer, EngineStoryItem)], sourceView: UIView) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = component.controller() else {
+                return
+            }
+            
+            let context = component.context
+            let storyContent = RepostStoriesContentContextImpl(context: context, storyId: StoryId(peerId: peer.id, id: id), storyItems: stories, readGlobally: false)
+            let _ = (storyContent.state
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak sourceView] _ in
+                guard let controller, let sourceView else {
+                    return
+                }
+                let transitionIn = StoryContainerScreen.TransitionIn(
+                    sourceView: sourceView,
+                    sourceRect: sourceView.bounds,
+                    sourceCornerRadius: sourceView.bounds.width * 0.5,
+                    sourceIsAvatar: false
+                )
+            
+                let storyContainerScreen = StoryContainerScreen(
+                    context: context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { [weak sourceView] peerId, storyIdValue in
+                        if let sourceView {
+                            let destinationView = sourceView
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: destinationView,
+                                transitionView: StoryContainerScreen.TransitionView(
+                                    makeView: { [weak destinationView] in
+                                        let parentView = UIView()
+                                        if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                            parentView.addSubview(copyView)
+                                        }
+                                        return parentView
+                                    },
+                                    updateView: { copyView, state, transition in
+                                        guard let view = copyView.subviews.first else {
+                                            return
+                                        }
+                                        let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                        transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                        transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                    },
+                                    insertCloneTransitionView: nil
+                                ),
+                                destinationRect: destinationView.bounds,
+                                destinationCornerRadius: destinationView.bounds.width * 0.5,
+                                destinationIsAvatar: false,
+                                completed: { [weak sourceView] in
+                                    guard let sourceView else {
+                                        return
+                                    }
+                                    sourceView.isHidden = false
+                                }
+                            )
+                        } else {
+                            return nil
+                        }
+                    }
+                )
+                controller.push(storyContainerScreen)
+            })
         }
         
         private let updateDisposable = MetaDisposable()

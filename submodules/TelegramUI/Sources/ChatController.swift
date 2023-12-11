@@ -740,7 +740,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .full:
                             break
                     }
-                } else if let _ = media as? TelegramMediaGiveaway {
+                } else if media is TelegramMediaGiveaway || media is TelegramMediaGiveawayResults {
                     let progress = params.progress
                     let presentationData = strongSelf.presentationData
                     

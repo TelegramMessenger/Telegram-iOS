@@ -464,7 +464,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     nil
                 )
                 
-                let hasMessages = stats.viewsPerPost.current > 0
+                let hasMessages = stats.viewsPerPost.current > 0 || viewsPerPostDelta.hasValue
                 let hasStories = stats.viewsPerStory.current > 0 || viewsPerStoryDelta.hasValue
                 
                 var items: [Int: (String, String, (String, ValueItemNode.DeltaColor)?)] = [:]

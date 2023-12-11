@@ -120,7 +120,7 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     } else {
                         return .ongoing(startDate: startDate, status: .notQualified)
                     }
-                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount, _):
+                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
                     if (flags & (1 << 1)) != 0 {
                         status = .refunded

@@ -18,9 +18,11 @@ import EmojiStatusComponent
 import ContextUI
 import EmojiTextAttachmentView
 import TextFormat
+import PhotoResources
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
+private let repostIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Stories/HeaderRepost"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let checkImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let disclosureImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
 
@@ -51,6 +53,7 @@ public final class PeerListItemComponent: Component {
     public enum SubtitleAccessory: Equatable {
         case none
         case checks
+        case repost
     }
     
     public enum RightAccessory: Equatable {
@@ -105,6 +108,7 @@ public final class PeerListItemComponent: Component {
     let presence: EnginePeer.Presence?
     let rightAccessory: RightAccessory
     let reaction: Reaction?
+    let story: EngineStoryItem?
     let selectionState: SelectionState
     let selectionPosition: SelectionPosition
     let isEnabled: Bool
@@ -112,6 +116,7 @@ public final class PeerListItemComponent: Component {
     let action: (EnginePeer) -> Void
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
+    let openStory: ((EnginePeer, Int32, UIView) -> Void)?
     
     public init(
         context: AccountContext,
@@ -127,13 +132,15 @@ public final class PeerListItemComponent: Component {
         presence: EnginePeer.Presence?,
         rightAccessory: RightAccessory = .none,
         reaction: Reaction? = nil,
+        story: EngineStoryItem? = nil,
         selectionState: SelectionState,
         selectionPosition: SelectionPosition = .left,
         isEnabled: Bool = true,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
-        openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
+        openStories: ((EnginePeer, AvatarNode) -> Void)? = nil,
+        openStory: ((EnginePeer, Int32, UIView) -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -148,6 +155,7 @@ public final class PeerListItemComponent: Component {
         self.presence = presence
         self.rightAccessory = rightAccessory
         self.reaction = reaction
+        self.story = story
         self.selectionState = selectionState
         self.selectionPosition = selectionPosition
         self.isEnabled = isEnabled
@@ -155,6 +163,7 @@ public final class PeerListItemComponent: Component {
         self.action = action
         self.contextAction = contextAction
         self.openStories = openStories
+        self.openStory = openStory
     }
     
     public static func ==(lhs: PeerListItemComponent, rhs: PeerListItemComponent) -> Bool {
@@ -197,6 +206,9 @@ public final class PeerListItemComponent: Component {
         if lhs.reaction != rhs.reaction {
             return false
         }
+        if lhs.story != rhs.story {
+            return false
+        }
         if lhs.selectionState != rhs.selectionState {
             return false
         }
@@ -231,6 +243,9 @@ public final class PeerListItemComponent: Component {
         private var iconFrame: CGRect?
         private var file: TelegramMediaFile?
         private var fileDisposable: Disposable?
+        
+        private var imageButtonView: HighlightTrackingButton?
+        private var imageNode: TransformImageNode?
         
         private var component: PeerListItemComponent?
         private weak var state: EmptyComponentState?
@@ -338,6 +353,13 @@ public final class PeerListItemComponent: Component {
                 return
             }
             component.openStories?(peer, self.avatarNode)
+        }
+        
+        @objc private func imageButtonPressed() {
+            guard let component = self.component, let peer = component.peer, let story = component.story, let imageNode = self.imageNode else {
+                return
+            }
+            component.openStory?(peer, story.id, imageNode.view)
         }
         
         private func updateReactionLayer() {
@@ -696,24 +718,34 @@ public final class PeerListItemComponent: Component {
             if let labelView = self.label.view {
                 var iconLabelOffset: CGFloat = 0.0
                 
-                if case .checks = component.subtitleAccessory {
+                if case .none = component.subtitleAccessory {
+                    if let iconView = self.iconView {
+                        self.iconView = nil
+                        iconView.removeFromSuperview()
+                    }
+                } else {
                     let iconView: UIImageView
                     if let current = self.iconView {
                         iconView = current
                     } else {
-                        iconView = UIImageView(image: readIconImage)
-                        iconView.tintColor = component.theme.list.itemSecondaryTextColor
+                        var image: UIImage?
+                        var color: UIColor = component.theme.list.itemSecondaryTextColor
+                        if case .checks = component.subtitleAccessory {
+                            image = readIconImage
+                        } else if case .repost = component.subtitleAccessory {
+                            image = repostIconImage
+                            color = UIColor(rgb: 0x34c759)
+                        }
+                        iconView = UIImageView(image: image)
+                        iconView.tintColor = color
                         self.iconView = iconView
                         self.containerButton.addSubview(iconView)
                     }
                     
                     if let image = iconView.image {
                         iconLabelOffset = image.size.width + 4.0
-                        transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + titleSpacing + 3.0 + floor((labelSize.height - image.size.height) * 0.5)), size: image.size))
+                        transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY + titleSpacing + 2.0 + floor((labelSize.height - image.size.height) * 0.5)), size: image.size))
                     }
-                } else if let iconView = self.iconView {
-                    self.iconView = nil
-                    iconView.removeFromSuperview()
                 }
                 
                 if labelView.superview == nil {
@@ -823,6 +855,72 @@ public final class PeerListItemComponent: Component {
                     adjustedIconFrame = adjustedIconFrame.insetBy(dx: -adjustedIconFrame.width * 0.5, dy: -adjustedIconFrame.height * 0.5)
                 }
                 transition.setFrame(layer: reactionLayer, frame: adjustedIconFrame)
+            }
+            
+            var imageMedia: Media?
+            if let story = component.story {
+                if let image = story.media._asMedia() as? TelegramMediaImage {
+                    imageMedia = image
+                } else if let file = story.media._asMedia() as? TelegramMediaFile {
+                    imageMedia = file
+                }
+            }
+            
+            if let peer = component.peer, let story = component.story, let imageMedia {
+                let contentImageSize = CGSize(width: 30.0, height: 42.0)
+                var dimensions: CGSize?
+                if let imageMedia = imageMedia as? TelegramMediaImage {
+                    dimensions = largestRepresentationForPhoto(imageMedia)?.dimensions.cgSize
+                } else if let imageMedia = imageMedia as? TelegramMediaFile {
+                    dimensions = imageMedia.dimensions?.cgSize
+                }
+                
+                let imageButtonView: HighlightTrackingButton
+                let imageNode: TransformImageNode
+                if let current = self.imageNode, let currentButton = self.imageButtonView {
+                    imageNode = current
+                    imageButtonView = currentButton
+                } else {
+                    imageNode = TransformImageNode()
+                    imageNode.displaysAsynchronously = false
+                    imageNode.isUserInteractionEnabled = false
+                    self.imageNode = imageNode
+                    
+                    imageButtonView = HighlightTrackingButton()
+                    imageButtonView.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
+                    self.imageButtonView = imageButtonView
+                    
+                    self.containerButton.addSubview(imageNode.view)
+                    self.addSubview(imageButtonView)
+                    
+                    var imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+                    if let peerReference = PeerReference(peer._asPeer()) {
+                        if let image = imageMedia as? TelegramMediaImage {
+                            imageSignal = mediaGridMessagePhoto(account: component.context.account, userLocation: .peer(peer.id), photoReference: .story(peer: peerReference, id: story.id, media: image))
+                        } else if let file = imageMedia as? TelegramMediaFile {
+                            imageSignal = mediaGridMessageVideo(postbox: component.context.account.postbox, userLocation: .peer(peer.id), videoReference: .story(peer: peerReference, id: story.id, media: file), autoFetchFullSizeThumbnail: true)
+                        }
+                    }
+                    
+                    if let imageSignal {
+                        imageNode.setSignal(imageSignal)
+                    }
+                }
+                
+                if let dimensions {
+                    let makeImageLayout = imageNode.asyncLayout()
+                    let applyImageLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 5.0), imageSize: dimensions.aspectFilled(contentImageSize), boundingSize: contentImageSize, intrinsicInsets: UIEdgeInsets()))
+                    applyImageLayout()
+                    
+                    let imageFrame = CGRect(origin: CGPoint(x: availableSize.width - contentImageSize.width - 10.0 - contextInset, y: floorToScreenPixels((height - contentImageSize.height) / 2.0)), size: contentImageSize)
+                    imageNode.frame = imageFrame
+                    transition.setFrame(view: imageButtonView, frame: imageFrame)
+                }
+            } else {
+                self.imageNode?.removeFromSupernode()
+                self.imageNode = nil
+                self.imageButtonView?.removeFromSuperview()
+                self.imageButtonView = nil
             }
             
             if themeUpdated {

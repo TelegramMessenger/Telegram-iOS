@@ -55,6 +55,11 @@ public func presentGiveawayInfoController(
             dismissImpl?()
         })]
         
+        var additionalPrizes = ""
+        if let prizeDescription = giveaway.prizeDescription, !prizeDescription.isEmpty {
+            additionalPrizes = "\n\n" + presentationData.strings.Chat_Giveaway_Info_AdditionalPrizes(peerName, "\(giveaway.quantity) \(prizeDescription)").string
+        }
+        
         switch giveawayInfo {
         case let .ongoing(start, status):
             let startDate = presentationData.strings.Chat_Giveaway_Info_FullDate(
@@ -124,7 +129,7 @@ public func presentGiveawayInfoController(
                 participation = "\n\n\(participation)"
             }
             
-            text = "\(intro)\n\n\(ending)\(participation)"
+            text = "\(intro)\(additionalPrizes)\n\n\(ending)\(participation)"
         case let .finished(status, start, finish, _, activatedCount):
             let startDate = presentationData.strings.Chat_Giveaway_Info_FullDate(
                 stringForMessageTimestamp(timestamp: start, dateTimeFormat: presentationData.dateTimeFormat),
@@ -156,7 +161,7 @@ public func presentGiveawayInfoController(
             if activatedCount > 0 {
                 ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
             }
-            
+                        
             var result: String
             switch status {
             case .refunded:
@@ -166,9 +171,9 @@ public func presentGiveawayInfoController(
                     dismissImpl?()
                 })]
             case .notWon:
-                result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_DidntWin
+                result = "**\(presentationData.strings.Chat_Giveaway_Info_DidntWin)**\n\n"
             case let .won(slug):
-                result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_Won("🏆").string
+                result = "**\(presentationData.strings.Chat_Giveaway_Info_Won("").string)**\n\n"
                 actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
                     dismissImpl?()
                     openLink(slug)
@@ -177,7 +182,7 @@ public func presentGiveawayInfoController(
                 })]
             }
             
-            text = "\(intro)\n\n\(ending)\(result)"
+            text = "\(result)\(intro)\(additionalPrizes)\n\n\(ending)"
         }
         
         let alertController = giveawayInfoAlertController(

@@ -10364,6 +10364,7 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Info.Won" = "You won a prize in this giveaway. %@";
 "Chat.Giveaway.Info.DidntWin" = "You didn't win a prize in this giveaway.";
 "Chat.Giveaway.Info.ViewPrize" = "View My Prize";
+"Chat.Giveaway.Info.AdditionalPrizes" = "**%1$@** also included **%2$@** in the prizes. Admins of the channel are responsible for delivering these prizes.";
 
 "Chat.Giveaway.Info.FullDate" = "**%1$@** on **%2$@**";
 
@@ -10390,6 +10391,7 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.CountriesLastDelimiter" = " and ";
 "Chat.Giveaway.Message.DateTitle" = "Winners Selection Date";
 "Chat.Giveaway.Message.LearnMore" = "LEARN MORE";
+"Chat.Giveaway.Message.With" = "with";
 
 "GiftLink.Title" = "Gift Link";
 "GiftLink.UsedTitle" = "Used Gift Link";
@@ -10610,11 +10612,28 @@ Sorry for the inconvenience.";
 "Chat.RemoveWallpaper.Text" = "Are you sure you want to reset the wallpaper?";
 "Chat.RemoveWallpaper.Remove" = "Remove";
 
+"Paint.CutOut" = "Cut Out";
+
 "MediaEditor.Shortcut.Image" = "Image";
 "MediaEditor.Shortcut.Location" = "Location";
 "MediaEditor.Shortcut.Reaction" = "Reaction";
 "MediaEditor.Shortcut.Audio" = "Audio";
 
-"BoostGift.WinnersTitle" = "WINNERS";
+"BoostGift.AdditionalPrizes" = "Additional Prizes";
+"BoostGift.AdditionalPrizesPlaceholder" = "Enter Your Prize";
+"BoostGift.AdditionalPrizesInfoOff" = "Turn this on if you want to give the winners your own prizes in addition to Premium subscriptions.";
+"BoostGift.AdditionalPrizesInfoOn" = "All prizes: **%1$@** %2$@ %3$@.";
+
+"BoostGift.AdditionalPrizesInfoSubscriptions_1" = "%@ Telegram Premium subscription";
+"BoostGift.AdditionalPrizesInfoSubscriptions_any" = "%@ Telegram Premium subscriptions";
+
+"BoostGift.AdditionalPrizesInfoWithSubscriptions_1" = "with %@ Telegram Premium subscription";
+"BoostGift.AdditionalPrizesInfoWithSubscriptions_any" = "with %@ Telegram Premium subscriptions";
+
+"BoostGift.AdditionalPrizesInfoForMonths_1" = "for **%@** month";
+"BoostGift.AdditionalPrizesInfoForMonths_any" = "for **%@** months";
+
 "BoostGift.Winners" = "Show Winners";
 "BoostGift.WinnersInfo" = "Choose whether to make the list of winners public when the giveaway ends.";
+
+"Story.ViewList.TitleReactions" = "Reactions";

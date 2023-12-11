@@ -4034,13 +4034,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
             self.expiringStoryList = expiringStoryList
             self.storyUploadProgressDisposable = (
-                combineLatest(context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> distinctUntilChanged,
-                context.engine.messages.allStoriesUploadProgress()
-                |> map { value -> Float? in
-                    return value[peerId]
-                }
-                |> distinctUntilChanged
+                combineLatest(
+                    queue: Queue.mainQueue(),
+                    context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    |> distinctUntilChanged,
+                    context.engine.messages.allStoriesUploadProgress()
+                    |> map { value -> Float? in
+                        return value[peerId]
+                    }
+                    |> distinctUntilChanged
             )).startStrict(next: { [weak self] peer, value in
                 guard let self else {
                     return

@@ -2042,3 +2042,310 @@ private func getCachedStory(storyId: StoryId, transaction: Transaction) -> Engin
         return nil
     }
 }
+
+
+public final class RepostStoriesContentContextImpl: StoryContentContext {
+    private let context: AccountContext
+    private let readGlobally: Bool
+    
+    public private(set) var stateValue: StoryContentContextState?
+    public var state: Signal<StoryContentContextState, NoError> {
+        return self.statePromise.get()
+    }
+    private let statePromise = Promise<StoryContentContextState>()
+    
+    private let updatedPromise = Promise<Void>()
+    public var updated: Signal<Void, NoError> {
+        return self.updatedPromise.get()
+    }
+    
+    private var storyDisposable: Disposable?
+    
+    private var requestedStoryKeys = Set<StoryKey>()
+    private var requestStoryDisposables = DisposableSet()
+    
+    private var currentForwardInfoStories: [StoryId: Promise<EngineStoryItem?>] = [:]
+    
+    public init(
+        context: AccountContext,
+        storyId: StoryId,
+        storyItems: [(EnginePeer, EngineStoryItem)],
+        readGlobally: Bool
+    ) {
+        self.context = context
+        self.readGlobally = readGlobally
+        
+//        let item: Signal<Stories.StoredItem?, NoError>
+//        if let storyItem {
+//            item = .single(.item(storyItem.asStoryItem()))
+//        } else {
+//            item = context.account.postbox.combinedView(keys: [PostboxViewKey.story(id: storyId)])
+//            |> map { views -> Stories.StoredItem? in
+//                return (views.views[PostboxViewKey.story(id: storyId)] as? StoryView)?.item?.get(Stories.StoredItem.self)
+//            }
+//        }
+        
+        self.storyDisposable = (combineLatest(queue: .mainQueue(),
+            context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.Presence(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.CanViewStats(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.NotificationSettings.Global()
+            ),
+            .single(0)
+//            item |> mapToSignal { item -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]), NoError> in
+//                return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]) in
+//                    guard let item else {
+//                        return (nil, [:], [:], [:])
+//                    }
+//                    var peers: [PeerId: Peer] = [:]
+//                    var stories: [StoryId: EngineStoryItem?] = [:]
+//                    var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
+//                    if case let .item(item) = item {
+//                        if let views = item.views {
+//                            for id in views.seenPeerIds {
+//                                if let peer = transaction.getPeer(id) {
+//                                    peers[peer.id] = peer
+//                                }
+//                            }
+//                        }
+//                        if let forwardInfo = item.forwardInfo, case let .known(peerId, id, _) = forwardInfo {
+//                            if let peer = transaction.getPeer(peerId) {
+//                                peers[peer.id] = peer
+//                            }
+//                            let storyId = StoryId(peerId: peerId, id: id)
+//                            if let story = getCachedStory(storyId: storyId, transaction: transaction) {
+//                                stories[storyId] = story
+//                            } else {
+//                                stories.updateValue(nil, forKey: storyId)
+//                            }
+//                        }
+//                        for entity in item.entities {
+//                            if case let .CustomEmoji(_, fileId) = entity.type {
+//                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+//                                if allEntityFiles[mediaId] == nil {
+//                                    if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+//                                        allEntityFiles[file.fileId] = file
+//                                    }
+//                                }
+//                            }
+//                        }
+//                        for mediaArea in item.mediaAreas {
+//                            if case let .reaction(_, reaction, _) = mediaArea {
+//                                if case let .custom(fileId) = reaction {
+//                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+//                                    if allEntityFiles[mediaId] == nil {
+//                                        if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+//                                            allEntityFiles[file.fileId] = file
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                    return (item, peers, allEntityFiles, stories)
+//                }
+//            }
+        )
+        |> deliverOnMainQueue).startStrict(next: { [weak self] data, skip in
+            guard let self else {
+                return
+            }
+            
+            let _ = skip
+            
+            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings) = data
+            
+//            let (item, peers, allEntityFiles, forwardInfoStories) = itemAndPeers
+            guard let peer else {
+                return
+            }
+
+            let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: [])
+            
+            let additionalPeerData = StoryContentContextState.AdditionalPeerData(
+                isMuted: isMuted,
+                areVoiceMessagesAvailable: areVoiceMessagesAvailable,
+                presence: presence,
+                canViewStats: canViewStats
+            )
+            
+            if let first = storyItems.first {
+                let (peer, storyItem) = first
+                let (nextPeer, nextStoryItem) = storyItems[1]
+                
+                let mainItem = StoryContentItem(
+                    position: 0,
+                    dayCounters: nil,
+                    peerId: peer.id,
+                    storyItem: storyItem,
+                    entityFiles: [:] //extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
+                )
+                
+                let nextItem = StoryContentItem(
+                    position: 0,
+                    dayCounters: nil,
+                    peerId: nextPeer.id,
+                    storyItem: nextStoryItem,
+                    entityFiles: [:] //extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
+                )
+                
+                let stateValue = StoryContentContextState(
+                    slice: StoryContentContextState.FocusedSlice(
+                        peer: peer,
+                        additionalPeerData: additionalPeerData,
+                        item: mainItem,
+                        totalCount: 1,
+                        previousItemId: nil,
+                        nextItemId: nil,
+                        allItems: [mainItem],
+                        forwardInfoStories: [:] //self.currentForwardInfoStories
+                    ),
+                    previousSlice: nil,
+                    nextSlice: StoryContentContextState.FocusedSlice(
+                        peer: nextPeer,
+                        additionalPeerData: additionalPeerData,
+                        item: nextItem,
+                        totalCount: 1,
+                        previousItemId: nil,
+                        nextItemId: nil,
+                        allItems: [nextItem],
+                        forwardInfoStories: [:] //self.currentForwardInfoStories
+                    )
+                )
+                
+                if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+                    self.stateValue = stateValue
+                    self.statePromise.set(.single(stateValue))
+                    self.updatedPromise.set(.single(Void()))
+                }
+            }
+            
+//            for (storyId, story) in forwardInfoStories {
+//                let promise: Promise<EngineStoryItem?>
+//                var added = false
+//                if let current = self.currentForwardInfoStories[storyId] {
+//                    promise = current
+//                } else {
+//                    promise = Promise<EngineStoryItem?>()
+//                    self.currentForwardInfoStories[storyId] = promise
+//                    added = true
+//                }
+//                if let story {
+//                    promise.set(.single(story))
+//                } else if added {
+//                    promise.set(self.context.engine.messages.getStory(peerId: storyId.peerId, id: storyId.id))
+//                }
+//            }
+            
+//            if item == nil {
+//                let storyKey = StoryKey(peerId: storyId.peerId, id: storyId.id)
+//                if !self.requestedStoryKeys.contains(storyKey) {
+//                    self.requestedStoryKeys.insert(storyKey)
+//                    
+//                    self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: storyId.peerId, ids: [storyId.id]).startStrict())
+//                }
+//            }
+            
+            
+            
+//            if let item, case let .item(itemValue) = item, let media = itemValue.media {
+//                let mappedItem = EngineStoryItem(
+//                    id: itemValue.id,
+//                    timestamp: itemValue.timestamp,
+//                    expirationTimestamp: itemValue.expirationTimestamp,
+//                    media: EngineMedia(media),
+//                    mediaAreas: itemValue.mediaAreas,
+//                    text: itemValue.text,
+//                    entities: itemValue.entities,
+//                    views: itemValue.views.flatMap { views in
+//                        return EngineStoryItem.Views(
+//                            seenCount: views.seenCount,
+//                            reactedCount: views.reactedCount,
+//                            forwardCount: views.forwardCount,
+//                            seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+//                                return peers[id].flatMap(EnginePeer.init)
+//                            },
+//                            reactions: views.reactions,
+//                            hasList: views.hasList
+//                        )
+//                    },
+//                    privacy: itemValue.privacy.flatMap(EngineStoryPrivacy.init),
+//                    isPinned: itemValue.isPinned,
+//                    isExpired: itemValue.isExpired,
+//                    isPublic: itemValue.isPublic,
+//                    isPending: false,
+//                    isCloseFriends: itemValue.isCloseFriends,
+//                    isContacts: itemValue.isContacts,
+//                    isSelectedContacts: itemValue.isSelectedContacts,
+//                    isForwardingDisabled: itemValue.isForwardingDisabled,
+//                    isEdited: itemValue.isEdited,
+//                    isMy: itemValue.isMy,
+//                    myReaction: itemValue.myReaction,
+//                    forwardInfo: itemValue.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+//                )
+//                
+//                let mainItem = StoryContentItem(
+//                    position: 0,
+//                    dayCounters: nil,
+//                    peerId: peer.id,
+//                    storyItem: mappedItem,
+//                    entityFiles: extractItemEntityFiles(item: mappedItem, allEntityFiles: allEntityFiles)
+//                )
+//                let stateValue = StoryContentContextState(
+//                    slice: StoryContentContextState.FocusedSlice(
+//                        peer: peer,
+//                        additionalPeerData: additionalPeerData,
+//                        item: mainItem,
+//                        totalCount: 1,
+//                        previousItemId: nil,
+//                        nextItemId: nil,
+//                        allItems: [mainItem],
+//                        forwardInfoStories: self.currentForwardInfoStories
+//                    ),
+//                    previousSlice: nil,
+//                    nextSlice: nil
+//                )
+//                
+//                if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+//                    self.stateValue = stateValue
+//                    self.statePromise.set(.single(stateValue))
+//                    self.updatedPromise.set(.single(Void()))
+//                }
+//            } else {
+//                let stateValue = StoryContentContextState(
+//                    slice: nil,
+//                    previousSlice: nil,
+//                    nextSlice: nil
+//                )
+//                
+//                if self.stateValue == nil || self.stateValue?.slice != stateValue.slice {
+//                    self.stateValue = stateValue
+//                    self.statePromise.set(.single(stateValue))
+//                    self.updatedPromise.set(.single(Void()))
+//                }
+//            }
+        })
+    }
+    
+    deinit {
+        self.storyDisposable?.dispose()
+        self.requestStoryDisposables.dispose()
+    }
+    
+    public func resetSideStates() {
+    }
+    
+    public func navigate(navigation: StoryContentContextNavigation) {
+    }
+    
+    public func markAsSeen(id: StoryId) {
+        if self.readGlobally {
+            if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).startStandalone()
+            }
+        }
+    }
+}
