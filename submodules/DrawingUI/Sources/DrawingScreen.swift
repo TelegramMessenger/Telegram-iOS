@@ -3149,13 +3149,27 @@ public final class DrawingToolsInteraction {
             }
             #if DEBUG
             if isRectangleImage {
-                actions.append(ContextMenuAction(content: .text(title: "Cut Out", accessibilityLabel: "Cut Out"), action: { [weak self, weak entityView] in
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_CutOut, accessibilityLabel: presentationData.strings.Paint_CutOut), action: { [weak self, weak entityView] in
                     if let self, let entityView, let entity = entityView.entity as? DrawingStickerEntity, case let .image(image, _) = entity.content {
                         let _ = (cutoutStickerImage(from: image)
-                        |> deliverOnMainQueue).start(next: { result in
-                            if let result {
+                        |> deliverOnMainQueue).start(next: { [weak entity] result in
+                            if let result, let entity {
                                 let newEntity = DrawingStickerEntity(content: .image(result, .sticker))
-                                self.insertEntity(newEntity)
+                                newEntity.referenceDrawingSize = entity.referenceDrawingSize
+                                newEntity.scale = entity.scale
+                                newEntity.position = entity.position
+                                newEntity.rotation = entity.rotation
+                                newEntity.mirrored = entity.mirrored
+                                let newEntityView = self.entitiesView.add(newEntity)
+                                
+                                if let newEntityView = newEntityView as? DrawingStickerEntityView {
+                                    newEntityView.playCutoffAnimation()
+                                }
+                                self.entitiesView.selectEntity(newEntity, animate: false)
+                                if let entityView = entityView as? DrawingStickerEntityView {
+                                    entityView.playDissolveAnimation()
+                                    self.entitiesView.remove(uuid: entity.uuid, animated: false)
+                                }
                             }
                         })
                     }
@@ -3196,6 +3210,11 @@ public final class DrawingToolsInteraction {
                 textEntityView.replaceWithImage = { [weak self] image, isSticker in
                     if let self {
                         self.insertEntity(DrawingStickerEntity(content: .image(image, isSticker ? .sticker : .rectangle)), scale: 2.5)
+                    }
+                }
+                textEntityView.replaceWithAnimatedImage = { [weak self] data, thumbnailImage in
+                    if let self {
+                        self.insertEntity(DrawingStickerEntity(content: .animatedImage(data, thumbnailImage)), scale: 2.5)
                     }
                 }
             } else {

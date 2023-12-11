@@ -72,6 +72,9 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
                 content = .file(file)
             case let .image(image, _):
                 content = .image(image)
+            case let .animatedImage(data, _):
+                let _ = data
+                return []
             case let .video(file):
                 content = .video(file)
             case .dualVideoReference:
@@ -142,6 +145,7 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         case file(TelegramMediaFile)
         case video(TelegramMediaFile)
         case image(UIImage)
+        case animatedImage([UIImage], Double)
         
         var file: TelegramMediaFile? {
             if case let .file(file) = self {
@@ -270,6 +274,10 @@ private class MediaEditorComposerStickerEntity: MediaEditorComposerEntity {
         case let .image(image):
             self.isAnimated = false
             self.imagePromise.set(.single(image))
+        case let .animatedImage(images, duration):
+            self.isAnimated = true
+            let _ = images
+            let _ = duration
         case .video:
             self.isAnimated = true
         }

@@ -13,6 +13,7 @@ import MediaEditor
 import UniversalMediaPlayer
 import TelegramPresentationData
 import TelegramUniversalVideoContent
+import DustEffect
 
 private class BlurView: UIVisualEffectView {
     private func setup() {
@@ -65,6 +66,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     let imageNode: TransformImageNode
     var animationNode: DefaultAnimatedStickerNodeImpl?
     var videoNode: UniversalVideoNode?
+    var animatedImageView: UIImageView?
     var cameraPreviewView: UIView?
     
     let progressDisposable = MetaDisposable()
@@ -143,6 +145,8 @@ public class DrawingStickerEntityView: DrawingEntityView {
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .image(image, _):
             return image.size
+        case let .animatedImage(_, thumbnailImage):
+            return thumbnailImage.size
         case let .video(file):
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
@@ -297,6 +301,14 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.videoNode = videoNode
             self.setNeedsLayout()
             videoNode.play()
+        } else if case let .animatedImage(data, thumbnailImage) = self.stickerEntity.content {
+            let imageView = UIImageView()
+            imageView.contentMode = .scaleAspectFit
+            imageView.image = thumbnailImage
+            imageView.setDrawingAnimatedImage(data: data)
+            self.animatedImageView = imageView
+            self.addSubview(imageView)
+            self.setNeedsLayout()
         }
     }
     
@@ -460,6 +472,106 @@ public class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    public func playDissolveAnimation(completion: @escaping () -> Void = {}) {
+        guard let containerView = self.containerView, case let .image(image, _) = self.stickerEntity.content else {
+            return
+        }
+        
+        let dustEffectLayer = DustEffectLayer()
+        dustEffectLayer.position = containerView.bounds.center
+        dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: containerView.bounds.size)
+        dustEffectLayer.animationSpeed = 2.2
+        dustEffectLayer.becameEmpty = { [weak dustEffectLayer] in
+            dustEffectLayer?.removeFromSuperlayer()
+            completion()
+        }
+        containerView.layer.insertSublayer(dustEffectLayer, below: self.layer)
+        
+        let itemFrame = self.layer.convert(self.bounds, to: dustEffectLayer)
+        dustEffectLayer.addItem(frame: itemFrame, image: image)
+        
+        self.isHidden = true
+    }
+    
+    public func playCutoffAnimation() {
+        let values = [self.entity.scale, self.entity.scale * 1.1, self.entity.scale]
+        let keyTimes = [0.0, 0.67, 1.0]
+        self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.35, keyPath: "transform.scale")
+//        func blob(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
+//            let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
+//            
+//            let rgen = { () -> CGFloat in
+//                let accuracy: UInt32 = 1000
+//                let random = arc4random_uniform(accuracy)
+//                return CGFloat(random) / CGFloat(accuracy)
+//            }
+//            let rangeStart: CGFloat = 1 / (1 + randomness / 10)
+//            
+//            let startAngle = angle * CGFloat(arc4random_uniform(100)) / CGFloat(100)
+//            let points = (0 ..< pointsCount).map { i -> CGPoint in
+//                let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
+//                let angleRandomness: CGFloat = angle * 0.1
+//                let randAngle = angle + angle * ((angleRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - angleRandomness * 0.5)
+//                let pointX = sin(startAngle + CGFloat(i) * randAngle)
+//                let pointY = cos(startAngle + CGFloat(i) * randAngle)
+//                return CGPoint(
+//                    x: pointX * randPointOffset,
+//                    y: pointY * randPointOffset
+//                )
+//            }
+//            return points
+//        }
+//        
+//        func generateNextBlob(for size: CGSize) -> [CGPoint] {
+//            let pointsCount = 8
+//            let minRandomness = 1.0
+//            let maxRandomness = 1.0
+//            let speedLevel = 0.8
+//            let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
+//            return blob(pointsCount: pointsCount, randomness: randomness)
+//                .map {
+//                    return CGPoint(
+//                        x: $0.x * CGFloat(size.width),
+//                        y: $0.y * CGFloat(size.height)
+//                    )
+//                }
+//        }
+//                
+//        guard case let .image(image, _) = self.stickerEntity.content else {
+//            return
+//        }
+//        let maskView = UIImageView()
+//        maskView.frame = self.bounds
+//        maskView.image = image
+//        self.mask = maskView
+//        
+//        let blobLayer = CAShapeLayer()
+//        blobLayer.strokeColor = UIColor.red.cgColor
+//        blobLayer.fillColor = UIColor.clear.cgColor
+//        blobLayer.lineWidth = 2.0
+//        blobLayer.shadowRadius = 3.0
+//        blobLayer.shadowOpacity = 0.8
+//        blobLayer.shadowColor = UIColor.white.cgColor
+//        blobLayer.position = CGPoint(
+//            x: CGFloat.random(in: self.bounds.width * 0.33 ..< self.bounds.width * 0.5),
+//            y: self.bounds.height * 0.5
+//        )
+//        
+//        
+//        let minSide = min(self.bounds.width, self.bounds.height)
+//        let size = CGSize(width: minSide * 0.5, height: minSide * 0.5)
+//        blobLayer.bounds = CGRect(origin: .zero, size: size)
+//        
+//        let points = generateNextBlob(for: size)
+//        blobLayer.path = UIBezierPath.smoothCurve(through: points, length: size.width).cgPath
+//        self.layer.addSublayer(blobLayer)
+//        
+//        blobLayer.animateScale(from: 0.01, to: 3.0, duration: 1.0, removeOnCompletion: false, completion: { _ in
+//            blobLayer.removeFromSuperlayer()
+//            self.mask = nil
+//        })
+    }
+        
     private var didApplyVisibility = false
     public override func layoutSubviews() {
         super.layoutSubviews()
@@ -494,6 +606,10 @@ public class DrawingStickerEntityView: DrawingEntityView {
                 videoNode.cornerRadius = floor(imageSize.width * 0.03)
                 videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
                 videoNode.updateLayout(size: imageSize, transition: .immediate)
+            }
+            
+            if let animatedImageView = self.animatedImageView {
+                animatedImageView.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
             }
             
             if let cameraPreviewView = self.cameraPreviewView {
@@ -557,15 +673,18 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.imageNode.transform = animationSourceTransform
             self.animationNode?.transform = animationSourceTransform
             self.videoNode?.transform = animationSourceTransform
+            self.animatedImageView?.layer.transform = animationSourceTransform
             
             UIView.animate(withDuration: 0.25, animations: {
                 self.imageNode.transform = animationTargetTransform
                 self.animationNode?.transform = animationTargetTransform
                 self.videoNode?.transform = animationTargetTransform
+                self.animatedImageView?.layer.transform = animationTargetTransform
             }, completion: { finished in
                 self.imageNode.transform = staticTransform
                 self.animationNode?.transform = staticTransform
                 self.videoNode?.transform = staticTransform
+                self.animatedImageView?.layer.transform = staticTransform
             })
         } else {
             CATransaction.begin()
@@ -573,6 +692,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.imageNode.transform = staticTransform
             self.animationNode?.transform = staticTransform
             self.videoNode?.transform = staticTransform
+            self.animatedImageView?.layer.transform = staticTransform
             CATransaction.commit()
         }
     }
@@ -1027,5 +1147,113 @@ private final class StickerVideoDecoration: UniversalVideoDecoration {
     }
     
     public func tap() {
+    }
+}
+
+private extension UIBezierPath {
+    static func smoothCurve(
+        through points: [CGPoint],
+        length: CGFloat
+    ) -> UIBezierPath {
+        let angle = (CGFloat.pi * 2) / CGFloat(points.count)
+        let smoothness: CGFloat = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+        
+        var smoothPoints = [SmoothPoint]()
+        for index in (0 ..< points.count) {
+            let prevIndex = index - 1
+            let prev = points[prevIndex >= 0 ? prevIndex : points.count + prevIndex]
+            let curr = points[index]
+            let next = points[(index + 1) % points.count]
+            
+            let angle: CGFloat = {
+                let dx = next.x - prev.x
+                let dy = -next.y + prev.y
+                let angle = atan2(dy, dx)
+                if angle < 0 {
+                    return abs(angle)
+                } else {
+                    return 2 * .pi - angle
+                }
+            }()
+            
+            smoothPoints.append(
+                SmoothPoint(
+                    point: curr,
+                    inAngle: angle + .pi,
+                    inLength: smoothness * distance(from: curr, to: prev),
+                    outAngle: angle,
+                    outLength: smoothness * distance(from: curr, to: next)
+                )
+            )
+        }
+        
+        let resultPath = UIBezierPath()
+        resultPath.move(to: smoothPoints[0].point)
+        for index in (0 ..< smoothPoints.count) {
+            let curr = smoothPoints[index]
+            let next = smoothPoints[(index + 1) % points.count]
+            let currSmoothOut = curr.smoothOut()
+            let nextSmoothIn = next.smoothIn()
+            resultPath.addCurve(to: next.point, controlPoint1: currSmoothOut, controlPoint2: nextSmoothIn)
+        }
+        resultPath.close()
+        return resultPath
+    }
+    
+    static private func distance(from fromPoint: CGPoint, to toPoint: CGPoint) -> CGFloat {
+        return sqrt((fromPoint.x - toPoint.x) * (fromPoint.x - toPoint.x) + (fromPoint.y - toPoint.y) * (fromPoint.y - toPoint.y))
+    }
+    
+    struct SmoothPoint {
+        let point: CGPoint
+        
+        let inAngle: CGFloat
+        let inLength: CGFloat
+        
+        let outAngle: CGFloat
+        let outLength: CGFloat
+        
+        func smoothIn() -> CGPoint {
+            return smooth(angle: inAngle, length: inLength)
+        }
+        
+        func smoothOut() -> CGPoint {
+            return smooth(angle: outAngle, length: outLength)
+        }
+        
+        private func smooth(angle: CGFloat, length: CGFloat) -> CGPoint {
+            return CGPoint(
+                x: point.x + length * cos(angle),
+                y: point.y + length * sin(angle)
+            )
+        }
+    }
+}
+
+
+
+extension UIImageView {
+    func setDrawingAnimatedImage(data: Data) {
+        DispatchQueue.global().async {
+            if let animatedImage = UIImage.animatedImageFromData(data: data) {
+                DispatchQueue.main.async {
+                    self.setImage(with: animatedImage)
+                    self.startAnimating()
+                }
+            }
+        }
+    }
+
+    private func setImage(with animatedImage: DrawingAnimatedImage) {
+        if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
+            self.addSubview(snapshotView)
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                snapshotView.removeFromSuperview()
+            })
+        }
+        self.image = nil
+        self.animationImages = animatedImage.images
+        self.animationDuration = animatedImage.duration
+        self.animationRepeatCount = 0
     }
 }

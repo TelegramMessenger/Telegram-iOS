@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Vision
 import CoreImage
+import CoreImage.CIFilterBuiltins
 import SwiftSignalKit
 import VideoToolbox
 
@@ -13,6 +14,8 @@ func cutoutStickerImage(from image: UIImage) -> Signal<UIImage?, NoError> {
             return .single(nil)
         }
         return Signal { subscriber in
+            let ciContext = CIContext(options: nil)
+            let inputImage = CIImage(cgImage: cgImage)
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             let request = VNGenerateForegroundInstanceMaskRequest { [weak handler] request, error in
                 guard let handler, let result = request.results?.first as? VNInstanceMaskObservation else {
@@ -21,13 +24,20 @@ func cutoutStickerImage(from image: UIImage) -> Signal<UIImage?, NoError> {
                     return
                 }
                 let instances = instances(atPoint: nil, inObservation: result)
-                if let mask = try? result.generateScaledMaskForImage(forInstances: instances, from: handler), let image = UIImage(pixelBuffer: mask) {
-                    subscriber.putNext(image)
-                    subscriber.putCompletion()
-                } else {
-                    subscriber.putNext(nil)
-                    subscriber.putCompletion()
+                if let mask = try? result.generateScaledMaskForImage(forInstances: instances, from: handler) {
+                    let filter = CIFilter.blendWithMask()
+                    filter.inputImage = inputImage
+                    filter.backgroundImage = CIImage(color: .clear)
+                    filter.maskImage = CIImage(cvPixelBuffer: mask)
+                    if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
+                        let image = UIImage(cgImage: cgImage)
+                        subscriber.putNext(image)
+                        subscriber.putCompletion()
+                        return
+                    }
                 }
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
             }
             try? handler.perform([request])
             return ActionDisposable {
