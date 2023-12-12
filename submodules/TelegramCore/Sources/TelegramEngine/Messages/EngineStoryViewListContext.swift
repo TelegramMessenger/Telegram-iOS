@@ -319,6 +319,9 @@ public final class EngineStoryViewListContext {
                                     if (lhs.story == nil) != (rhs.story == nil) {
                                         return lhs.story != nil
                                     }
+                                    if (lhs.message == nil) != (rhs.message == nil) {
+                                        return lhs.message != nil
+                                    }
                                     if lhs.timestamp != rhs.timestamp {
                                         return lhs.timestamp > rhs.timestamp
                                     }
@@ -328,6 +331,9 @@ public final class EngineStoryViewListContext {
                                 items.sort(by: { lhs, rhs in
                                     if (lhs.story == nil) != (rhs.story == nil) {
                                         return lhs.story == nil
+                                    }
+                                    if (lhs.message == nil) != (rhs.message == nil) {
+                                        return lhs.message == nil
                                     }
                                     if (lhs.reaction == nil) != (rhs.reaction == nil) {
                                         return lhs.reaction != nil

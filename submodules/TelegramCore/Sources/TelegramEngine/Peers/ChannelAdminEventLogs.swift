@@ -88,7 +88,6 @@ public enum AdminLogEventAction {
     case toggleForum(isForum: Bool)
     case toggleAntiSpam(isEnabled: Bool)
     case changeNameColor(prev: PeerNameColor, new: PeerNameColor)
-    case changeBackgroundEmojiId(prev: Int64?, new: Int64?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -348,10 +347,19 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     action = .toggleForum(isForum: newValue == .boolTrue)
                                 case let .channelAdminLogEventActionToggleAntiSpam(newValue):
                                     action = .toggleAntiSpam(isEnabled: newValue == .boolTrue)
-                                case let .channelAdminLogEventActionChangeColor(prevValue, newValue):
-                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
-                                case let .channelAdminLogEventActionChangeBackgroundEmoji(prevValue, newValue):
-                                    action = .changeBackgroundEmojiId(prev: prevValue, new: newValue)
+                                case let .channelAdminLogEventActionChangePeerColor(prevValue, newValue):
+                                    let _ = prevValue
+                                    let _ = newValue
+                                    action = nil
+//                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
+                                case let .channelAdminLogEventActionChangeProfilePeerColor(prevValue, newValue):
+                                    let _ = prevValue
+                                    let _ = newValue
+                                    action = nil
+                                case let .channelAdminLogEventActionChangeWallpaper(prevValue, newValue):
+                                    let _ = prevValue
+                                    let _ = newValue
+                                    action = nil
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

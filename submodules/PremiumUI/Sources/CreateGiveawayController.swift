@@ -509,7 +509,9 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             }, updatedFocus: { focused in
                 if focused {
-                    arguments.scrollToDescription()
+                    Queue.mainQueue().after(0.05) {
+                        arguments.scrollToDescription()
+                    }
                 }
             }, action: {
                 arguments.dismissInput()
@@ -1011,7 +1013,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let controller = ItemListController(context: context, state: signal)
     controller.navigationPresentation = .modal
     controller.beganInteractiveDragging = {
-//        dismissInputImpl?()
+        dismissInputImpl?()
     }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
@@ -1307,7 +1309,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 return false
             })
             if let resultItemNode = resultItemNode {
-                controller.ensureItemNodeVisible(resultItemNode)
+                controller.ensureItemNodeVisible(resultItemNode, overflow: 120.0, atTop: false)
             }
         })
     }
