@@ -5630,10 +5630,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     replyThreadType = .replies
                 case let .replyThread(replyThreadMessage):
                     if replyThreadMessage.messageId.peerId == context.account.peerId {
-                        replyThreadId = Int64(replyThreadMessage.messageId.id)
+                        replyThreadId = replyThreadMessage.threadId
                         replyThreadType = .replies
                     } else {
-                        replyThreadId = Int64(replyThreadMessage.messageId.id)
+                        replyThreadId = replyThreadMessage.threadId
                         if replyThreadMessage.isChannelPost {
                             replyThreadType = .comments
                         } else {
@@ -5692,11 +5692,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var messageCount = 0
                         if let summaryView = views.views[countViewKey] as? MessageHistoryTagSummaryView, let count = summaryView.count {
-                            if replyThreadId == 1 {
-                                messageCount += Int(count)
-                            } else {
-                                messageCount += max(Int(count) - 1, 0)
-                            }
+                            messageCount += Int(count)
                         }
                         
                         return (peer, messageCount)
@@ -5822,7 +5818,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 peerPresences: [:],
                                 cachedData: nil
                             )
-                            strongSelf.chatTitleView?.titleContent = .peer(peerView: mappedPeerData, customTitle: nil, onlineMemberCount: nil, isScheduledMessages: false, isMuted: false, customMessageCount: savedMessagesPeer?.messageCount == 0 ? nil : savedMessagesPeer?.messageCount, isEnabled: true)
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: mappedPeerData, customTitle: nil, onlineMemberCount: nil, isScheduledMessages: false, isMuted: false, customMessageCount: savedMessagesPeer?.messageCount ?? 0, isEnabled: true)
                             
                             strongSelf.peerView = peerView
                             
@@ -6785,7 +6781,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let chatLocation: ChatLocation
                 if let threadId {
-                    chatLocation = .replyThread(message: ChatReplyThreadMessage(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                    chatLocation = .replyThread(message: ChatReplyThreadMessage(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                 } else {
                     chatLocation = .peer(id: peerId)
                 }
@@ -7090,7 +7086,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.messageTransitionNode.addContentOffset(offset: offset, itemNode: itemNode)
         }
         
+        var closeOnEmpty = false
         if case .pinnedMessages = self.presentationInterfaceState.subject {
+            closeOnEmpty = true
+        } else if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId.peerId == self.context.account.peerId {
+            closeOnEmpty = true
+        }
+        
+        if closeOnEmpty {
             self.chatDisplayNode.historyNode.setLoadStateUpdated({ [weak self] state, _ in
                 guard let strongSelf = self else {
                     return
@@ -12314,7 +12317,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }))
                 case .replyThread:
-                    if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case let .replyThread(message) = self.chatLocation {
+                    if let peer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId.peerId == self.context.account.peerId {
+                        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: .forumTopic(thread: replyThreadMessage), avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
+                            self.effectiveNavigationController?.pushViewController(infoController)
+                        }
+                    } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case let .replyThread(message) = self.chatLocation {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: channel, mode: .forumTopic(thread: message), avatarInitiallyExpanded: false, fromChat: true, requestsContext: self.inviteRequestsContext) {
                             self.effectiveNavigationController?.pushViewController(infoController)
                         }

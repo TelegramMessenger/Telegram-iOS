@@ -341,19 +341,41 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                         continue
                     }
                     let sourceId = PeerId(threadId)
-                    guard let source = message.peers[sourceId] else {
+                    var sourcePeer = message.peers[sourceId]
+                    if sourcePeer == nil, let forwardInfo = message.forwardInfo, let authorSignature = forwardInfo.authorSignature {
+                        sourcePeer = TelegramUser(
+                            id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(1)),
+                            accessHash: nil,
+                            firstName: authorSignature,
+                            lastName: nil,
+                            username: nil,
+                            phone: nil,
+                            photo: [],
+                            botInfo: nil,
+                            restrictionInfo: nil,
+                            flags: [],
+                            emojiStatus: nil,
+                            usernames: [],
+                            storiesHidden: nil,
+                            nameColor: nil,
+                            backgroundEmojiId: nil,
+                            profileColor: nil,
+                            profileBackgroundEmojiId: nil
+                        )
+                    }
+                    guard let sourcePeer else {
                         continue
                     }
-                    let mappedMessageIndex = MessageIndex(id: MessageId(peerId: source.id, namespace: message.index.id.namespace, id: message.index.id.id), timestamp: message.index.timestamp)
+                    let mappedMessageIndex = MessageIndex(id: MessageId(peerId: sourceId, namespace: message.index.id.namespace, id: message.index.id.id), timestamp: message.index.timestamp)
                     items.append(EngineChatList.Item(
-                        id: .chatList(source.id),
+                        id: .chatList(sourceId),
                         index: .chatList(ChatListIndex(pinningIndex: nil, messageIndex: mappedMessageIndex)),
                         messages: [EngineMessage(message)],
                         readCounters: nil,
                         isMuted: false,
                         draft: nil,
                         threadData: nil,
-                        renderedPeer: EngineRenderedPeer(peer: EnginePeer(source)),
+                        renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
                         presence: nil,
                         hasUnseenMentions: false,
                         hasUnseenReactions: false,

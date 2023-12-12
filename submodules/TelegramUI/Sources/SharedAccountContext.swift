@@ -1973,6 +1973,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var reactionSourceMessageId: MessageId?
         var callMessages: [Message] = []
         var hintGroupInCommon: PeerId?
+        var forumTopicThread: ChatReplyThreadMessage?
 
         switch mode {
         case let .nearbyPeer(distance):
@@ -1985,12 +1986,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             hintGroupInCommon = id
         case let .reaction(messageId):
             reactionSourceMessageId = messageId
-        case .forumTopic:
-            break
+        case let .forumTopic(thread):
+            forumTopicThread = thread
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread)
     } else if peer is TelegramSecretChat {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     }

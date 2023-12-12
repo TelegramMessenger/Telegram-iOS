@@ -1211,7 +1211,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         
         var threadId: Int64?
         if case let .replyThread(message) = chatLocation {
-            threadId = Int64(message.messageId.id)
+            threadId = message.threadId
         }
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
@@ -1673,7 +1673,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         
         var threadId: Int64?
         if case let .replyThread(message) = chatLocation {
-            threadId = Int64(message.messageId.id)
+            threadId = message.threadId
         }
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))

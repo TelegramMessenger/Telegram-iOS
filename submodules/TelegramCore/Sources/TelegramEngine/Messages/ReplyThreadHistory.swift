@@ -555,6 +555,7 @@ public struct ChatReplyThreadMessage: Equatable {
     }
     
     public var messageId: MessageId
+    public var threadId: Int64
     public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var isForumPost: Bool
@@ -566,8 +567,9 @@ public struct ChatReplyThreadMessage: Equatable {
     public var initialAnchor: Anchor
     public var isNotAvailable: Bool
     
-    public init(messageId: MessageId, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    public init(messageId: MessageId, threadId: Int64, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.messageId = messageId
+        self.threadId = threadId
         self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
         self.isForumPost = isForumPost
@@ -582,7 +584,7 @@ public struct ChatReplyThreadMessage: Equatable {
     
     public var normalized: ChatReplyThreadMessage {
         if self.isForumPost {
-            return ChatReplyThreadMessage(messageId: self.messageId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+            return ChatReplyThreadMessage(messageId: self.messageId, threadId: self.threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
         } else {
             return self
         }
@@ -936,6 +938,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                 
                 return .single(ChatReplyThreadMessage(
                     messageId: discussionMessage.messageId,
+                    threadId: Int64(discussionMessage.messageId.id),
                     channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
                     isForumPost: discussionMessage.isForumPost,

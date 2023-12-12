@@ -98,6 +98,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                         peerId: self.context.account.peerId,
                         threadId: peer.id.toInt64()
                     ),
+                    threadId: peer.id.toInt64(),
                     channelMessageId: nil,
                     isChannelPost: false,
                     isForumPost: false,

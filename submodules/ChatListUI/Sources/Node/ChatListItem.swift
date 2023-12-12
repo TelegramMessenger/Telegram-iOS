@@ -1899,7 +1899,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var peerText: String?
                     if case .savedMessagesChats = item.chatListLocation {
                         if let message = messages.last, let forwardInfo = message.forwardInfo, let author = forwardInfo.author {
-                            peerText = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            if author.id != itemPeer.chatMainPeer?.id {
+                                peerText = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            }
                         }
                     } else if case .groupReference = item.content {
                         if let messagePeer = itemPeer.chatMainPeer {
