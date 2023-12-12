@@ -622,9 +622,9 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
-    func peerAvatars(postbox: Postbox, network: Network, background: Bool, peer: PeerReference) -> Signal<[TelegramPeerPhoto], RevalidateMediaReferenceError> {
+    func peerAvatars(accountPeerId: PeerId, postbox: Postbox, network: Network, background: Bool, peer: PeerReference) -> Signal<[TelegramPeerPhoto], RevalidateMediaReferenceError> {
         return self.genericItem(key: .peerAvatars(peer: peer), background: background, request: { next, error in
-            return (_internal_requestPeerPhotos(postbox: postbox, network: network, peerId: peer.id)
+            return (_internal_requestPeerPhotos(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: peer.id)
             |> mapError { _ -> RevalidateMediaReferenceError in
             }).start(next: { value in
                 next(value)
@@ -812,7 +812,7 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         return .fail(.generic)
                     }
                 case let .avatarList(peer, media):
-                    return revalidationContext.peerAvatars(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
+                    return revalidationContext.peerAvatars(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
                     |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                         for photo in result {
                             if let updatedResource = findUpdatedMediaResource(media: photo.image, previousMedia: media, resource: resource) {
@@ -911,7 +911,7 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                 return .fail(.generic)
             }
         case let .avatarList(peer, _):
-            return revalidationContext.peerAvatars(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
+            return revalidationContext.peerAvatars(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
             |> mapToSignal { updatedPeerAvatars -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for photo in updatedPeerAvatars {
                     if let updatedResource = findUpdatedMediaResource(media: photo.image, previousMedia: nil, resource: resource) {

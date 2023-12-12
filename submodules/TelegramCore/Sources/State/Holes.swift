@@ -297,7 +297,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                     for (peer, messages, chats, users) in results {
                         if !messages.isEmpty {
                             for message in messages {
-                                if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
+                                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum) {
                                     additionalMessages.append(message)
                                 }
                             }
@@ -732,7 +732,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     var storeMessages: [StoreMessage] = []
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum, namespace: namespace) {
+                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum, namespace: namespace) {
                             if let channelPts = channelPts {
                                 var attributes = storeMessage.attributes
                                 attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
@@ -870,7 +870,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
         case .group:
             location = .group(groupId)
     }
-    return fetchChatList(postbox: postbox, network: network, location: location, upperBound: hole.index, hash: 0, limit: 100)
+    return fetchChatList(accountPeerId: accountPeerId, postbox: postbox, network: network, location: location, upperBound: hole.index, hash: 0, limit: 100)
     |> mapToSignal { fetchedChats -> Signal<Never, NoError> in
         guard let fetchedChats = fetchedChats else {
             return postbox.transaction { transaction -> Void in
@@ -1009,7 +1009,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                     if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
                         peerIsForum = true
                     }
-                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
+                    if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
                         storeMessages.append(storeMessage)
                         if let index = storeMessage.index, topIndex == nil || index < topIndex! {
                             topIndex = index

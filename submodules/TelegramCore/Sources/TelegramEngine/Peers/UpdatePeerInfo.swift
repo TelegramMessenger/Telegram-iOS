@@ -100,9 +100,9 @@ func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
                 let flagsReplies: Int32 = (1 << 0) | (1 << 2)
                 
-                var flagsProfile: Int32 = (1 << 0) | (1 << 1)
+                var flagsProfile: Int32 = (1 << 0) | (1 << 2)
                 if profileColor != nil {
-                    flagsProfile |= (1 << 2)
+                    flagsProfile |= (1 << 1)
                 }
                 
                 return combineLatest(

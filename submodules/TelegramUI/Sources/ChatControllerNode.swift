@@ -3484,7 +3484,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
                         var replyThreadId: Int64?
                         if case let .replyThread(replyThreadMessage) = self.chatPresentationInterfaceState.chatLocation {
-                            replyThreadId = Int64(replyThreadMessage.messageId.id)
+                            replyThreadId = replyThreadMessage.threadId
                         }
                         
                         for id in forwardMessageIds.sorted() {

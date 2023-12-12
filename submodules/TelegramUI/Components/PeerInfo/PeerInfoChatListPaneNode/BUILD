@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ChatChannelSubscriberInputPanelNode",
-    module_name = "ChatChannelSubscriberInputPanelNode",
+    name = "PeerInfoChatListPaneNode",
+    module_name = "PeerInfoChatListPaneNode",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,19 +10,18 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AsyncDisplayKit",
-        "//submodules/Display",
         "//submodules/TelegramCore",
         "//submodules/Postbox",
-        "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramPresentationData",
-        "//submodules/AlertUI",
-        "//submodules/PresentationDataUtils",
-        "//submodules/PeerInfoUI",
-        "//submodules/UndoUI",
-        "//submodules/ChatPresentationInterfaceState",
-        "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
         "//submodules/AccountContext",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/ShimmerEffect",
+        "//submodules/ComponentFlow",
+        "//submodules/AppBundle",
+        "//submodules/ChatListUI",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode",
     ],
     visibility = [
         "//visibility:public",

@@ -803,7 +803,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     chatThreadInfo = nil
                     var displayAsMessage = false
                     switch location {
-                    case .chatList:
+                    case .chatList, .savedMessagesChats:
                         index = .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index))
                     case let .forum(peerId):
                         let _ = peerId

@@ -28,6 +28,7 @@ import MediaPickerUI
 import StoryContainerScreen
 import EmptyStateIndicatorComponent
 import UIKitRuntimeUtils
+import PeerInfoPaneNode
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white

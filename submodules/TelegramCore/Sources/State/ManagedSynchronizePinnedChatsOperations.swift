@@ -192,7 +192,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                     if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
                         peerIsForum = true
                     }
-                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
+                    if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
                         storeMessages.append(storeMessage)
                     }
                 }

@@ -18,6 +18,7 @@ import StoryContainerScreen
 import CameraScreen
 import MediaEditorScreen
 import ChatControllerInteraction
+import SavedMessagesScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation {
@@ -82,6 +83,13 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             
             return
         }
+        
+        /*if case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {
+            let savedMessagesScreen = SavedMessagesScreen(context: params.context)
+            params.navigationController.pushViewController(savedMessagesScreen, completion: {
+            })
+            return
+        }*/
         
         var found = false
         var isFirst = true

@@ -77,7 +77,7 @@ public extension TelegramEngine {
         }
 
         public func downloadMessage(messageId: MessageId) -> Signal<Message?, NoError> {
-            return _internal_downloadMessage(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
+            return _internal_downloadMessage(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, messageId: messageId)
         }
 
         public func searchMessageIdByTimestamp(peerId: PeerId, threadId: Int64?, timestamp: Int32) -> Signal<MessageId?, NoError> {

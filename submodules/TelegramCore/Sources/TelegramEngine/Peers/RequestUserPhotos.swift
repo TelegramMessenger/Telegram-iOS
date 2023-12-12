@@ -23,7 +23,7 @@ public struct TelegramPeerPhoto {
     }
 }
 
-func _internal_requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
+func _internal_requestPeerPhotos(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
     return postbox.transaction{ transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
@@ -114,7 +114,7 @@ func _internal_requestPeerPhotos(postbox: Postbox, network: Network, peerId: Pee
                         
                         var renderedMessages: [Message] = []
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                                 renderedMessages.append(renderedMessage)
                             }
                         }

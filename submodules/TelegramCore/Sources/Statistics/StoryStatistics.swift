@@ -294,7 +294,7 @@ private final class StoryStatsPublicForwardsContextImpl {
                             for forward in forwards {
                                 switch forward {
                                 case let .publicForwardMessage(apiMessage):
-                                    if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: false), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: false), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                                         resultForwards.append(.message(EngineMessage(renderedMessage)))
                                     }
                                 case let .publicForwardStory(apiPeer, apiStory):
