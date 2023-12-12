@@ -591,7 +591,7 @@ open class ItemListControllerNode: ASDisplayNode {
         var footerHeight: CGFloat = 0.0
         if let footerItemNode = self.footerItemNode {
             footerHeight = footerItemNode.updateLayout(layout: layout, transition: transition)
-            insets.bottom = footerHeight
+            insets.bottom = max(footerHeight, insets.bottom)
         }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)

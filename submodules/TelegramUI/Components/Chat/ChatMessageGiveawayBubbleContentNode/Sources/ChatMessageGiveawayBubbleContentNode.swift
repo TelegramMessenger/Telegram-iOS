@@ -516,9 +516,11 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             channelPeers.append(EnginePeer(peer))
                         }
                     }
-                } else {
-                    if let peer = item.message.peers[item.message.id.peerId] {
-                        channelPeers.append(EnginePeer(peer))
+                } else if let winnerPeerIds = giveawayResults?.winnersPeerIds {
+                    for peerId in winnerPeerIds {
+                        if let peer = item.message.peers[peerId] {
+                            channelPeers.append(EnginePeer(peer))
+                        }
                     }
                 }
                 let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1), incoming, item.presentationData.theme.theme.overallDarkAppearance)

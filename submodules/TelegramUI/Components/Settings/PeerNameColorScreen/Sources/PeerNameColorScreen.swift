@@ -696,12 +696,7 @@ public func PeerNameColorScreen(
             emojiContent: emojiContent
         )
         
-        let title: ItemListControllerTitle
-        if case .user = peer {
-            title = .sectionControl([presentationData.strings.ProfileColorSetup_TitleName, presentationData.strings.ProfileColorSetup_TitleProfile], state.selectedTabIndex)
-        } else {
-            title = .text(presentationData.strings.ProfileColorSetup_TitleChannelColor)
-        }
+        let title: ItemListControllerTitle = .sectionControl([presentationData.strings.ProfileColorSetup_TitleName, presentationData.strings.ProfileColorSetup_TitleProfile], state.selectedTabIndex)
         
         let controllerState = ItemListControllerState(
             presentationData: ItemListPresentationData(presentationData),

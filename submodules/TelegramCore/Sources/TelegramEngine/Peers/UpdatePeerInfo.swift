@@ -98,25 +98,59 @@ func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.
     return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
         if let peer = transaction.getPeer(peerId) {
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                let flags: Int32 = (1 << 0)
-                return account.network.request(Api.functions.channels.updateColor(flags: flags, channel: inputChannel, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
-                    |> mapError { error -> UpdatePeerNameColorAndEmojiError in
-                        if error.errorDescription.hasPrefix("BOOSTS_REQUIRED") {
-                            return .channelBoostRequired
+                let flagsReplies: Int32 = (1 << 0) | (1 << 2)
+                
+                var flagsProfile: Int32 = (1 << 0) | (1 << 1)
+                if profileColor != nil {
+                    flagsProfile |= (1 << 2)
+                }
+                
+                return combineLatest(
+                    account.network.request(Api.functions.channels.updateColor(flags: flagsReplies, channel: inputChannel, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
+                    |> map(Optional.init)
+                    |> `catch` { error -> Signal<Api.Updates?, MTRpcError> in
+                        if error.errorDescription.hasPrefix("CHAT_NOT_MODIFIED") {
+                            return .single(nil)
+                        } else {
+                            return .fail(error)
                         }
-                        return .generic
+                    },
+                    account.network.request(Api.functions.channels.updateColor(flags: flagsProfile, channel: inputChannel, color: profileColor?.rawValue, backgroundEmojiId: profileBackgroundEmojiId ?? 0))
+                    |> map(Optional.init)
+                    |> `catch` { error -> Signal<Api.Updates?, MTRpcError> in
+                        if error.errorDescription.hasPrefix("CHAT_NOT_MODIFIED") {
+                            return .single(nil)
+                        } else {
+                            return .fail(error)
+                        }
                     }
-                    |> mapToSignal { result -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
-                        account.stateManager.addUpdates(result)
-                        
-                        return account.postbox.transaction { transaction -> Void in
-                            if let apiChat = apiUpdatesGroups(result).first {
-                                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
-                                updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
-                            }
-                        } 
-                        |> mapError { _ -> UpdatePeerNameColorAndEmojiError in }
+                )
+                |> mapError { error -> UpdatePeerNameColorAndEmojiError in
+                    if error.errorDescription.hasPrefix("BOOSTS_REQUIRED") {
+                        return .channelBoostRequired
                     }
+                    return .generic
+                }
+                |> mapToSignal { repliesResult, profileResult -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
+                    if let repliesResult = repliesResult {
+                        account.stateManager.addUpdates(repliesResult)
+                    }
+                    if let profileResult = profileResult {
+                        account.stateManager.addUpdates(profileResult)
+                    }
+                    
+                    return account.postbox.transaction { transaction -> Void in
+                        if let repliesResult = repliesResult, let apiChat = apiUpdatesGroups(repliesResult).first {
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
+                            updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
+                        }
+                        if let profileResult = profileResult, let apiChat = apiUpdatesGroups(profileResult).first {
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
+                            updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
+                        }
+                    }
+                    |> mapError { _ -> UpdatePeerNameColorAndEmojiError in }
+                }
             } else {
                 return .fail(.generic)
             }
