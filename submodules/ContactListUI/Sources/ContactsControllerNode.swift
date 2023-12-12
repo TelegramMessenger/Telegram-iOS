@@ -107,7 +107,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 case .presence:
                     return .orderedByPresence(options: options)
                 case .natural:
-                    return .natural(options: options, includeChatList: false)
+                    return .natural(options: options, includeChatList: false, topPeers: false)
             }
         }
         

@@ -1707,6 +1707,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     context: component.context,
                                     theme: component.theme,
                                     strings: component.strings,
+                                    peer: component.slice.peer,
                                     storyItem: item.storyItem,
                                     myReaction: item.storyItem.myReaction.flatMap { value -> StoryFooterPanelComponent.MyReaction? in
                                         var centerAnimation: TelegramMediaFile?
@@ -3326,6 +3327,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.navigateToPeer(peer: peer, chat: false)
+                            },
+                            openMessage: { [weak self] peer, messageId in
+                                guard let self else {
+                                    return
+                                }
+                                self.navigateToPeer(peer: peer, chat: true, subject: .message(id: .id(messageId), highlight: nil, timecode: nil))
                             },
                             peerContextAction: { [weak self] peer, sourceView, gesture in
                                 guard let self, let component = self.component else {

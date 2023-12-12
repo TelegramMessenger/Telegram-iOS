@@ -1330,7 +1330,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let buttonSpacing: CGFloat = 18.0
         
         var toolbarHeight: CGFloat = 66.0
-        if let mode = self.mode, case .peer = mode {
+        if let mode = self.mode, case let .peer(peer, _) = mode, case .user = peer {
             toolbarHeight += 58.0
         }
         
@@ -1482,7 +1482,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.nativeNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
         
         var bottomInset: CGFloat = 132.0
-        if let mode = self.mode, case .peer = mode {
+        if let mode = self.mode, case let .peer(peer, _) = mode, case .user = peer {
             bottomInset += 58.0
         }
 

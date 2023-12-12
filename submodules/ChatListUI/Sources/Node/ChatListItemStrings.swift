@@ -311,6 +311,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         } else {
                             messageText = strings.Message_GiveawayStarted
                         }
+                    case let results as TelegramMediaGiveawayResults:
+                        if results.winnersCount == 0 {
+                            messageText = strings.Message_GiveawayEndedNoWinners
+                        } else {
+                            messageText = strings.Message_GiveawayEndedWinners(results.winnersCount)
+                        }
                     case let webpage as TelegramMediaWebpage:
                         if messageText.isEmpty, case let .Loaded(content) = webpage.content {
                             messageText = content.displayUrl

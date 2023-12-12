@@ -588,6 +588,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.cachedChatMessageText = updatedCachedChatMessageText
                             }
                             
+                            strongSelf.textNode.textNode.displaysAsynchronously = !item.presentationData.isPreview
                             strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: boundingSize)
                             
                             let cachedLayout = strongSelf.textNode.textNode.cachedLayout

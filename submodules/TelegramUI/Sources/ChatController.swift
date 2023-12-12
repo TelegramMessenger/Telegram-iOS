@@ -7310,8 +7310,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let chatWallpaper = self.context.account.viewTracker.peerView(peerId)
             |> take(1)
             |> map { view -> TelegramWallpaper? in
-                if let cachedUserData = view.cachedData as? CachedUserData {
-                    return cachedUserData.wallpaper
+                if let cachedData = view.cachedData as? CachedUserData {
+                    return cachedData.wallpaper
+                } else if let cachedData = view.cachedData as? CachedChannelData {
+                    return cachedData.wallpaper
                 } else {
                     return nil
                 }
@@ -7463,6 +7465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             themeEmoticon = cachedData.themeEmoticon
                         } else if let cachedData = cachedData as? CachedChannelData {
                             themeEmoticon = cachedData.themeEmoticon
+                            chatWallpaper = cachedData.wallpaper
                         }
                         
                         strongSelf.chatThemeEmoticonPromise.set(.single(themeEmoticon))
@@ -13274,7 +13277,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case .gift:
                     let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
                     if !premiumGiftOptions.isEmpty {
-                        let controller = PremiumGiftAttachmentScreen(context: context, peerId: peer.id, options: premiumGiftOptions, source: .attachMenu, pushController: { [weak self] c in
+                        let controller = PremiumGiftAttachmentScreen(context: context, peerIds: [peer.id], options: premiumGiftOptions, source: .attachMenu, pushController: { [weak self] c in
                             if let strongSelf = self {
                                 strongSelf.push(c)
                             }

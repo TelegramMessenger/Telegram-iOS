@@ -69,6 +69,7 @@ public enum ContactMultiselectionControllerMode {
     case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation
     case chatSelection(ChatSelection)
+    case premiumGifting
 }
 
 public enum ContactListFilter {

@@ -69,6 +69,7 @@ final class StoryItemSetViewListComponent: Component {
     let deleteAction: () -> Void
     let moreAction: (UIView, ContextGesture?) -> Void
     let openPeer: (EnginePeer) -> Void
+    let openMessage: (EnginePeer, EngineMessage.Id) -> Void
     let peerContextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
     let openPeerStories: (EnginePeer, AvatarNode) -> Void
     let openStory: (EnginePeer, Int32, [(EnginePeer, EngineStoryItem)], UIView) -> Void
@@ -94,6 +95,7 @@ final class StoryItemSetViewListComponent: Component {
         deleteAction: @escaping () -> Void,
         moreAction: @escaping (UIView, ContextGesture?) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
+        openMessage: @escaping (EnginePeer, EngineMessage.Id) -> Void,
         peerContextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void,
         openPeerStories: @escaping (EnginePeer, AvatarNode) -> Void,
         openStory: @escaping (EnginePeer, Int32, [(EnginePeer, EngineStoryItem)], UIView) -> Void,
@@ -118,6 +120,7 @@ final class StoryItemSetViewListComponent: Component {
         self.deleteAction = deleteAction
         self.moreAction = moreAction
         self.openPeer = openPeer
+        self.openMessage = openMessage
         self.peerContextAction = peerContextAction
         self.openPeerStories = openPeerStories
         self.openStory = openStory
@@ -237,6 +240,17 @@ final class StoryItemSetViewListComponent: Component {
         case repostsFirst = 0
         case reactionsFirst = 1
         case recentFirst = 2
+        
+        var sortMode: EngineStoryViewListContext.SortMode {
+            switch self {
+            case .repostsFirst:
+                return .repostsFirst
+            case .reactionsFirst:
+                return .reactionsFirst
+            case .recentFirst:
+                return .recentFirst
+            }
+        }
     }
     
     private struct ContentConfigurationKey: Equatable {
@@ -527,11 +541,15 @@ final class StoryItemSetViewListComponent: Component {
                             message: item.message,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1 || itemLayout.premiumFooterSize != nil,
-                            action: { [weak self] peer in
+                            action: { [weak self] peer, messageId in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.openPeer(peer)
+                                if let messageId {
+                                    component.openMessage(peer, messageId)
+                                } else {
+                                    component.openPeer(peer)
+                                }
                             },
                             contextAction: { peer, view, gesture in
                                 component.peerContextAction(peer, view, gesture)
@@ -727,15 +745,6 @@ final class StoryItemSetViewListComponent: Component {
                             case .contacts:
                                 mappedListMode = .contacts
                             }
-                            let mappedSortMode: EngineStoryViewListContext.SortMode
-                            switch self.configuration.sortMode {
-                            case .repostsFirst:
-                                mappedSortMode = .repostsFirst
-                            case .reactionsFirst:
-                                mappedSortMode = .reactionsFirst
-                            case .recentFirst:
-                                mappedSortMode = .recentFirst
-                            }
                             
                             var parentSource: EngineStoryViewListContext?
                             if let baseContentView, baseContentView.configuration == self.configuration, baseContentView.query == nil {
@@ -745,16 +754,22 @@ final class StoryItemSetViewListComponent: Component {
                                 parentSource = nil
                             }
                             
-                            self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, searchQuery: query, parentSource: parentSource)
+                            self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: self.configuration.sortMode.sortMode, searchQuery: query, parentSource: parentSource)
                         }
                     }
                 } else {
-                    if self.configuration == ContentConfigurationKey(listMode: .everyone, sortMode: .reactionsFirst) {
+                    let defaultSortMode: SortMode
+                    if component.peerId.isGroupOrChannel {
+                        defaultSortMode = .recentFirst
+                    } else {
+                        defaultSortMode = .reactionsFirst
+                    }
+                    if self.configuration == ContentConfigurationKey(listMode: .everyone, sortMode: defaultSortMode) {
                         let viewList: EngineStoryViewListContext
                         if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
                             viewList = current
                         } else {
-                            viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                            viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: .everyone, sortMode: defaultSortMode.sortMode)
                             component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] = viewList
                         }
                         self.viewList = viewList
@@ -766,16 +781,7 @@ final class StoryItemSetViewListComponent: Component {
                         case .contacts:
                             mappedListMode = .contacts
                         }
-                        let mappedSortMode: EngineStoryViewListContext.SortMode
-                        switch self.configuration.sortMode {
-                        case .repostsFirst:
-                            mappedSortMode = .repostsFirst
-                        case .reactionsFirst:
-                            mappedSortMode = .reactionsFirst
-                        case .recentFirst:
-                            mappedSortMode = .recentFirst
-                        }
-                        self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, parentSource: component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)])
+                        self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: self.configuration.sortMode.sortMode, parentSource: component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)])
                     }
                 }
             }
@@ -886,7 +892,7 @@ final class StoryItemSetViewListComponent: Component {
                     presence: nil,
                     selectionState: .none,
                     hasNext: true,
-                    action: { _ in
+                    action: { _, _ in
                     }
                 )),
                 environment: {},
@@ -1351,25 +1357,26 @@ final class StoryItemSetViewListComponent: Component {
                         self.state?.updated(transition: .immediate)
                     }
                 })))
+            } else {
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReactions, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
+                }, additionalLeftIcon: { theme in
+                    if sortMode != .reactionsFirst {
+                        return nil
+                    }
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    if self.sortMode != .reactionsFirst {
+                        self.sortMode = .reactionsFirst
+                        self.state?.updated(transition: .immediate)
+                    }
+                })))
             }
-            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortReactions, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.contextMenu.primaryColor)
-            }, additionalLeftIcon: { theme in
-                if sortMode != .reactionsFirst {
-                    return nil
-                }
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                guard let self else {
-                    return
-                }
-                if self.sortMode != .reactionsFirst {
-                    self.sortMode = .reactionsFirst
-                    self.state?.updated(transition: .immediate)
-                }
-            })))
             items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortRecent, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Time"), color: theme.contextMenu.primaryColor)
             }, additionalLeftIcon: { theme in
@@ -1392,7 +1399,8 @@ final class StoryItemSetViewListComponent: Component {
             items.append(.separator)
                                         
             let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
-            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ViewList_ContextSortInfo, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
+            
+            items.append(.action(ContextMenuActionItem(text: component.peerId.isGroupOrChannel ? component.strings.Story_ViewList_ContextSortChannelInfo : component.strings.Story_ViewList_ContextSortInfo, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
             
             let contextItems = ContextController.Items(content: .list(items))
             
@@ -1432,6 +1440,12 @@ final class StoryItemSetViewListComponent: Component {
             var updateSubState = false
             
             if self.mainViewList == nil {
+                if component.peerId.isGroupOrChannel {
+                    self.sortMode = .recentFirst
+                } else {
+                    self.sortMode = .reactionsFirst
+                }
+                
                 self.mainViewListDisposable?.dispose()
                 self.mainViewListDisposable = nil
                 

@@ -201,6 +201,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.rightNavigationButton = rightNavigationButton
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = true //count != 0 || self.params.alwaysEnabled
+        case .premiumGifting:
+            let maxCount: Int32 = 10
+            var count = 0
+            if case let .contacts(contactsNode) = self.contactsNode.contentNode {
+                count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
+            }
+            self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(count)/\(maxCount)")
         case .channelCreation:
             self.titleView.title = CounterContollerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
@@ -310,7 +317,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     switch strongSelf.mode {
                         case .groupCreation, .peerSelection, .chatSelection:
                             strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0 || strongSelf.params.alwaysEnabled
-                        case .channelCreation:
+                        case .channelCreation, .premiumGifting:
                             break
                     }
                     
@@ -318,6 +325,9 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         case .groupCreation:
                             let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
                             strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroupTitle, counter: "\(updatedCount)/\(maxCount)")
+                        case .premiumGifting:
+                            let maxCount: Int32 = 10
+                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(updatedCount)/\(maxCount)")
                         case .peerSelection, .channelCreation, .chatSelection:
                             break
                     }
@@ -389,13 +399,16 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     switch strongSelf.mode {
                         case .groupCreation, .peerSelection, .chatSelection:
                             strongSelf.rightNavigationButton?.isEnabled = updatedCount != 0 || strongSelf.params.alwaysEnabled
-                        case .channelCreation:
+                        case .channelCreation, .premiumGifting:
                             break
                     }
                     switch strongSelf.mode {
                         case .groupCreation:
                             let maxCount: Int32 = strongSelf.limitsConfiguration?.maxSupergroupMemberCount ?? 5000
                             strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Compose_NewGroupTitle, counter: "\(updatedCount)/\(maxCount)")
+                        case .premiumGifting:
+                            let maxCount: Int32 = 10
+                            strongSelf.titleView.title = CounterContollerTitle(title: strongSelf.presentationData.strings.Premium_Gift_ContactSelection_Title, counter: "\(updatedCount)/\(maxCount)")
                         case .peerSelection, .channelCreation, .chatSelection:
                             break
                     }
@@ -500,8 +513,14 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
         }
         self.contactsNode.complete = { [weak self] in
-            if let strongSelf = self, let rightBarButtonItem = strongSelf.navigationItem.rightBarButtonItem, rightBarButtonItem.isEnabled {
-                strongSelf.rightNavigationButtonPressed()
+            if let strongSelf = self {
+                var available = true
+                if let rightBarButtonItem = strongSelf.navigationItem.rightBarButtonItem {
+                    available = rightBarButtonItem.isEnabled
+                }
+                if available {
+                    strongSelf.rightNavigationButtonPressed()
+                }
             }
         }
         

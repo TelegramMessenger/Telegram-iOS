@@ -98,6 +98,8 @@ import PeerNameColorScreen
 import PeerAllowedReactionsScreen
 import ChatMessageSelectionInputPanelNode
 import ChatHistorySearchContainerNode
+import MediaPickerUI
+import AttachmentUI
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -483,6 +485,7 @@ private enum PeerInfoSettingsSection {
     case language
     case stickers
     case premium
+    case premiumGift
     case passport
     case watch
     case support
@@ -527,6 +530,7 @@ private final class PeerInfoInteraction {
     let performBotCommand: (PeerInfoBotCommand) -> Void
     let editingOpenPublicLinkSetup: () -> Void
     let editingOpenNameColorSetup: () -> Void
+    let editingOpenPeerWallpaperSetup: () -> Void
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingToggleMessageSignatures: (Bool) -> Void
@@ -582,6 +586,7 @@ private final class PeerInfoInteraction {
         performBotCommand: @escaping (PeerInfoBotCommand) -> Void,
         editingOpenPublicLinkSetup: @escaping () -> Void,
         editingOpenNameColorSetup: @escaping () -> Void,
+        editingOpenPeerWallpaperSetup: @escaping () -> Void,
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
@@ -636,6 +641,7 @@ private final class PeerInfoInteraction {
         self.performBotCommand = performBotCommand
         self.editingOpenPublicLinkSetup = editingOpenPublicLinkSetup
         self.editingOpenNameColorSetup = editingOpenNameColorSetup
+        self.editingOpenPeerWallpaperSetup = editingOpenPeerWallpaperSetup
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
@@ -909,6 +915,9 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     if !premiumConfiguration.isPremiumDisabled {
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
+        }))
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
+            interaction.openSettings(.premiumGift)
         }))
     }
     
@@ -1570,19 +1579,20 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             switch channel.info {
             case .broadcast:
                 let ItemUsername = 1
-                let ItemNameColor = 2
-                let ItemInviteLinks = 3
-                let ItemDiscussionGroup = 4
-                let ItemSignMessages = 5
-                let ItemSignMessagesHelp = 6
-                let ItemDeleteChannel = 7
-                let ItemReactions = 8
-                let ItemAdmins = 9
-                let ItemMembers = 10
-                let ItemMemberRequests = 11
-                let ItemStats = 12
-                let ItemBanned = 13
-                let ItemRecentActions = 14
+                let ItemPeerColor = 2
+                let ItemPeerWallpaper = 3
+                let ItemInviteLinks = 4
+                let ItemDiscussionGroup = 5
+                let ItemSignMessages = 6
+                let ItemSignMessagesHelp = 7
+                let ItemDeleteChannel = 8
+                let ItemReactions = 9
+                let ItemAdmins = 10
+                let ItemMembers = 11
+                let ItemMemberRequests = 12
+                let ItemStats = 13
+                let ItemBanned = 14
+                let ItemRecentActions = 15
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1655,9 +1665,21 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
-                    let colors = context.peerNameColors.get(data.peer?.nameColor ?? .blue, dark: presentationData.theme.overallDarkAppearance)
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemNameColor, label: .semitransparentBadge(EnginePeer(channel).compactDisplayTitle, colors.main), text: presentationData.strings.Channel_ChannelColor, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
+                    var colors: [PeerNameColors.Colors] = []
+                    if let nameColor = channel.nameColor.flatMap({ context.peerNameColors.get($0, dark: presentationData.theme.overallDarkAppearance) }) {
+                        colors.append(nameColor)
+                    }
+                    if let profileColor = channel.profileColor.flatMap({ context.peerNameColors.getProfile($0, dark: presentationData.theme.overallDarkAppearance, subject: .palette) }) {
+                        colors.append(profileColor)
+                    }
+                    let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: presentationData.strings.Channel_ChannelColor, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
+                    }))
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerWallpaper, label: .none, text: "Wallpaper", icon: UIImage(bundleImageName: "Settings/Menu/Appearance"), action: {
+                        interaction.editingOpenPeerWallpaperSetup()
                     }))
                 }
                 
@@ -2335,6 +2357,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             editingOpenNameColorSetup: { [weak self] in
                 self?.editingOpenNameColorSetup()
+            },
+            editingOpenPeerWallpaperSetup: { [weak self] in
+                self?.editingOpenPeerWallpaperSetup()
             },
             editingOpenInviteLinksSetup: { [weak self] in
                 self?.editingOpenInviteLinksSetup()
@@ -5412,7 +5437,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             
                             if let strongSelf = self {
                                 var pushControllerImpl: ((ViewController) -> Void)?
-                                let controller = PremiumGiftScreen(context: strongSelf.context, peerId: strongSelf.peerId, options: cachedData.premiumGiftOptions, source: .profile, pushController: { c in
+                                let controller = PremiumGiftScreen(context: strongSelf.context, peerIds: [strongSelf.peerId], options: cachedData.premiumGiftOptions, source: .profile, pushController: { c in
                                     pushControllerImpl?(c)
                                 }, completion: { [weak self] in
                                     if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
@@ -7180,6 +7205,79 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    private func editingOpenPeerWallpaperSetup() {      
+//        let link = status.url
+//        let controller = PremiumLimitScreen(context: context, subject: .storiesChannelBoost(peer: peer, boostSubject: .nameColors, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: {
+//            UIPasteboard.general.string = link
+//            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+//            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
+//            return true
+//        }, openStats: nil, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? {
+//            let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
+//            pushImpl?(controller)
+//        } : nil)
+//        pushImpl?(controller)
+        
+        let dismissControllers = { [weak self] in
+            if let self, let navigationController = self.controller?.navigationController as? NavigationController {
+                let controllers = navigationController.viewControllers.filter({ controller in
+                    if controller is WallpaperGalleryController || controller is AttachmentController || controller is PeerInfoScreenImpl {
+                        return false
+                    }
+                    return true
+                })
+                navigationController.setViewControllers(controllers, animated: true)
+            }
+        }
+        var openWallpaperPickerImpl: ((Bool) -> Void)?
+        let openWallpaperPicker: (Bool) -> Void = { [weak self] animateAppearance in
+            guard let self, let peer = self.data?.peer else {
+                return
+            }
+            let controller = wallpaperMediaPickerController(
+                context: self.context,
+                updatedPresentationData: self.controller?.updatedPresentationData,
+                peer: EnginePeer(peer),
+                animateAppearance: true,
+                completion: { [weak self] _, result in
+                    guard let strongSelf = self, let asset = result as? PHAsset else {
+                        return
+                    }
+                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
+                    controller.navigationPresentation = .modal
+                    controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness, forBoth in
+                        if let strongSelf = self {
+                            uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peer.id, forBoth: forBoth, completion: {
+                                Queue.mainQueue().after(0.3, {
+                                    dismissControllers()
+                                })
+                            })
+                        }
+                    }
+                    strongSelf.controller?.push(controller)
+                },
+                openColors: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), push: { [weak self] controller in
+                        if let strongSelf = self {
+                            strongSelf.controller?.push(controller)
+                        }
+                    }, openGallery: {
+                        openWallpaperPickerImpl?(false)
+                    })
+                    controller.navigationPresentation = .flatModal
+                    strongSelf.controller?.push(controller)
+                }
+            )
+            controller.navigationPresentation = .flatModal
+            self.controller?.push(controller)
+        }
+        openWallpaperPickerImpl = openWallpaperPicker
+        openWallpaperPicker(true)
+    }
+    
     private func editingOpenInviteLinksSetup() {
         self.controller?.push(inviteLinkListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, admin: nil))
     }
@@ -8626,6 +8724,63 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 push(LocalizationListController(context: self.context))
             case .premium:
                 self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
+            case .premiumGift:
+                let controller = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
+                    if case let .user(user) = peer, user.botInfo == nil {
+                        return true
+                    } else {
+                        return false
+                    }
+                }))
+                self.controller?.push(controller)
+                self.activeActionDisposable.set((controller.result
+                |> deliverOnMainQueue).startStrict(next: { [weak self, weak controller] result in
+                    guard let self, let controller else {
+                        return
+                    }
+                    var peerIds: [PeerId] = []
+                    if case let .result(peerIdsValue, _) = result {
+                        peerIds = peerIdsValue.compactMap({ peerId in
+                            if case let .peer(peerId) = peerId {
+                                return peerId
+                            } else {
+                                return nil
+                            }
+                        })
+                    }
+                    
+                    let maxCount = 10
+                    if peerIds.count > maxCount {
+                        self.hapticFeedback.error()
+                        
+                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(maxCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        return
+                    }
+                    
+                    let giftController = PremiumGiftScreen(context: self.context, peerIds: peerIds, options: [], source: .settings, pushController: { [weak self] c in
+                        self?.controller?.push(c)
+                    }, completion: { [weak self] in
+                        if let self, let navigationController = self.controller?.navigationController as? NavigationController, peerIds.count == 1, let peerId = peerIds.first {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let chatController = controller as? ChatController, case .peer(id: peerId) = chatController.chatLocation {
+                                    chatController.hintPlayNextOutgoingGift()
+                                    foundController = true
+                                    break
+                                }
+                            }
+                            if !foundController {
+                                let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                                chatController.hintPlayNextOutgoingGift()
+                                controllers.append(chatController)
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    })
+                    controller.push(giftController)
+                }))
             case .stickers:
                 if let settings = self.data?.globalSettings {
                     push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in

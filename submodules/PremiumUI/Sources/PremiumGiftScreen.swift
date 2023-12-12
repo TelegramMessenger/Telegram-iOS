@@ -23,6 +23,7 @@ import UniversalMediaPlayer
 public enum PremiumGiftSource: Equatable {
     case profile
     case attachMenu
+    case settings
     
     var identifier: String? {
         switch self {
@@ -30,6 +31,8 @@ public enum PremiumGiftSource: Equatable {
             return "profile"
         case .attachMenu:
             return "attach"
+        case .settings:
+            return "settings"
         }
     }
 }
@@ -39,7 +42,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     
     let context: AccountContext
     let source: PremiumGiftSource
-    let peer: EnginePeer?
+    let peers: [EnginePeer]
     let products: [PremiumGiftProduct]?
     let selectedProductId: String?
     
@@ -47,10 +50,10 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     let selectProduct: (String) -> Void
     let buy: () -> Void
     
-    init(context: AccountContext, source: PremiumGiftSource, peer: EnginePeer?, products: [PremiumGiftProduct]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumGiftSource, peers: [EnginePeer], products: [PremiumGiftProduct]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
         self.context = context
         self.source = source
-        self.peer = peer
+        self.peers = peers
         self.products = products
         self.selectedProductId = selectedProductId
         self.present = present
@@ -65,7 +68,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         if lhs.source != rhs.source {
             return false
         }
-        if lhs.peer != rhs.peer {
+        if lhs.peers != rhs.peers {
             return false
         }
         if lhs.products != rhs.products {
@@ -87,6 +90,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         
         private var stickersDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
+        
+        var cachedBoostIcon: UIImage?
         
         var price: String?
         
@@ -186,7 +191,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             var size = CGSize(width: context.availableSize.width, height: 0.0)
             
             let overscroll = overscroll.update(
-                component: Rectangle(color: theme.list.plainBackgroundColor),
+                component: Rectangle(color: theme.list.blocksBackgroundColor),
                 availableSize: CGSize(width: context.availableSize.width, height: 1000),
                 transition: context.transition
             )
@@ -205,15 +210,63 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
+            
+            var descriptionString: String = ""
+            if context.component.peers.count > 1 {
+                if context.component.peers.count < 4 {
+                    var names = ""
+                    for i in 0 ..< context.component.peers.count {
+                        if i == 0 {
+                        } else if i < context.component.peers.count - 1 {
+                            names.append(environment.strings.CreateGroup_PeersTitleDelimeter)
+                        } else {
+                            names.append(environment.strings.CreateGroup_PeersTitleLastDelimeter)
+                        }
+                        names.append(context.component.peers[i].compactDisplayTitle)
+                    }
+                    descriptionString = environment.strings.Premium_Gift_MultipleDescription(names, "").string
+                } else {
+                    var names = ""
+                    for i in 0 ..< min(3, context.component.peers.count) {
+                        if i == 0 {
+                          
+                        } else {
+                            names.append(environment.strings.CreateGroup_PeersTitleDelimeter)
+                        }
+                        names.append(context.component.peers[i].compactDisplayTitle)
+                    }
+                    let more = environment.strings.Premium_Gift_NamesAndMore(Int32(context.component.peers.count - 3))
+                    
+                    descriptionString = environment.strings.Premium_Gift_MultipleDescription(names, more).string
+                }
+            } else {
+                descriptionString = strings.Premium_Gift_Description(component.peers.first?.compactDisplayTitle ?? "").string
+            }
+            
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.component.context.currentAppConfiguration.with { $0 })
+            
+            descriptionString += "\n\n"
+            descriptionString += environment.strings.Premium_Gift_YouWillReceiveBoosts(Int32(context.component.peers.count) * premiumConfiguration.boostsPerGiftCount).replacingOccurrences(of: "[]()", with: "  [ ]() ")
+            
+            let boostIcon: UIImage
+            if let current = context.state.cachedBoostIcon {
+                boostIcon = current
+            } else {
+                boostIcon = generateImage(CGSize(width: 14.0, height: 20.0), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    if let cgImage = UIImage(bundleImageName: "Premium/BoostChannel")?.cgImage {
+                        context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)
+                    }
+                })!
+                context.state.cachedBoostIcon = boostIcon
+            }
+            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: environment.theme.list.itemAccentColor, additionalAttributes: [NSAttributedString.Key.attachment.rawValue: boostIcon]), linkAttribute: { _ in
                 return nil
             })
+            let descriptionText = parseMarkdownIntoAttributedString(descriptionString, attributes: markdownAttributes, textAlignment: .center)
             let text = text.update(
                 component: MultilineTextComponent(
-                    text: .markdown(
-                        text: strings.Premium_Gift_Description(component.peer?.compactDisplayTitle ?? "").string,
-                        attributes: markdownAttributes
-                    ),
+                    text: .plain(descriptionText),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -489,7 +542,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peerId: PeerId
+    let peerIds: [EnginePeer.Id]
     let options: [CachedPremiumGiftOption]
     let source: PremiumGiftSource
     let buttonStatePromise: Promise<AttachmentMainButtonState?>
@@ -502,7 +555,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
-        peerId: PeerId,
+        peerIds: [EnginePeer.Id],
         options: [CachedPremiumGiftOption],
         source: PremiumGiftSource,
         buttonStatePromise: Promise<AttachmentMainButtonState?>,
@@ -514,7 +567,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         completion: @escaping (Int32) -> Void)
     {
         self.context = context
-        self.peerId = peerId
+        self.peerIds = peerIds
         self.options = options
         self.source = source
         self.buttonStatePromise = buttonStatePromise
@@ -530,7 +583,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.peerId != rhs.peerId {
+        if lhs.peerIds != rhs.peerIds {
             return false
         }
         if lhs.options != rhs.options {
@@ -544,7 +597,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     
     final class State: ComponentState {
         private let context: AccountContext
-        private let peerId: PeerId
+        private let peerIds: [EnginePeer.Id]
         private let options: [CachedPremiumGiftOption]
         private let source: PremiumGiftSource
         private let buttonStatePromise: Promise<AttachmentMainButtonState?>
@@ -564,7 +617,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             }
         }
         
-        var peer: EnginePeer?
+        var peers: [EnginePeer.Id: EnginePeer] = [:]
         var products: [PremiumGiftProduct]?
         var selectedProductId: String?
                         
@@ -574,7 +627,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         
         init(
             context: AccountContext,
-            peerId: PeerId,
+            peerIds: [EnginePeer.Id],
             options: [CachedPremiumGiftOption],
             source: PremiumGiftSource,
             buttonStatePromise: Promise<AttachmentMainButtonState?>,
@@ -584,7 +637,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             completion: @escaping (Int32) -> Void)
         {
             self.context = context
-            self.peerId = peerId
+            self.peerIds = peerIds
             self.options = options
             self.source = source
             self.buttonAction = buttonAction
@@ -605,8 +658,10 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.disposable = combineLatest(
                 queue: Queue.mainQueue(),
                 availableProducts,
-                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            ).start(next: { [weak self] products, peer in
+                context.engine.data.get(
+                    EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+                )
+            ).start(next: { [weak self] products, peers in
                 if let strongSelf = self {
                     var gifts: [PremiumGiftProduct] = []
                     for option in strongSelf.options {
@@ -619,7 +674,15 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                     if strongSelf.selectedProductId == nil && strongSelf.source != .attachMenu {
                         strongSelf.selectedProductId = strongSelf.products?.first?.id
                     }
-                    strongSelf.peer = peer
+                    
+                    var unwrappedPeers: [EnginePeer.Id: EnginePeer] = [:]
+                    for (peerId, maybePeer) in peers {
+                        if let peer = maybePeer {
+                            unwrappedPeers[peerId] = peer
+                        }
+                    }
+                    
+                    strongSelf.peers = unwrappedPeers
                     strongSelf.updated(transition: .immediate)
                 }
             })
@@ -675,7 +738,9 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
             
-            let purpose: AppStoreTransactionPurpose = .gift(peerId: self.peerId, currency: currency, amount: amount)
+            //TODO:update buy when api arrives
+            
+            let purpose: AppStoreTransactionPurpose = .gift(peerId: self.peerIds.first!, currency: currency, amount: amount)
             let _ = (self.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
@@ -741,7 +806,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     func makeState() -> State {
         return State(
             context: self.context,
-            peerId: self.peerId,
+            peerIds: self.peerIds,
             options: self.options,
             source: self.source,
             buttonStatePromise: self.buttonStatePromise,
@@ -823,12 +888,19 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
             
+            var peers: [EnginePeer] = []
+            for peerId in context.component.peerIds {
+                if let peer = state.peers[peerId] {
+                    peers.append(peer)
+                }
+            }
+            
             let scrollContent = scrollContent.update(
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(PremiumGiftScreenContentComponent(
                         context: context.component.context,
                         source: context.component.source,
-                        peer: state.peer,
+                        peers: peers,
                         products: state.products,
                         selectedProductId: state.selectedProductId,
                         present: context.component.present,
@@ -887,7 +959,8 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             let star = star.update(
                 component: GiftAvatarComponent(
                     context: context.component.context,
-                    peer: context.state.peer,
+                    theme: environment.theme,
+                    peers: peers,
                     isVisible: starIsVisible,
                     hasIdleAnimations: state.hasIdleAnimations
                 ),
@@ -939,9 +1012,18 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 context.component.updateTabBarAlpha(bottomPanelAlpha, .immediate)
             } else {
                 let sideInset: CGFloat = 16.0
+                
+                let buttonText: String
+                if context.component.peerIds.count > 1 {
+                    let subscriptions = environment.strings.Premium_Gift_GiftMultipleSubscriptions(Int32(context.component.peerIds.count))
+                    buttonText = environment.strings.Premium_Gift_GiftMultipleSubscriptionsFormat(subscriptions, price ?? "—").string
+                } else {
+                    buttonText = environment.strings.Premium_Gift_GiftSubscription(price ?? "—").string
+                }
+                
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
-                        title: environment.strings.Premium_Gift_GiftSubscription(price ?? "—").string,
+                        title: buttonText,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: UIColor(rgb: 0x8878ff),
                             backgroundColors: [
@@ -1015,7 +1097,7 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
     public let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
     private let mainButtonActionSlot = ActionSlot<Void>()
     
-    public init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption], source: PremiumGiftSource, pushController: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+    public init(context: AccountContext, peerIds: [EnginePeer.Id], options: [CachedPremiumGiftOption], source: PremiumGiftSource, pushController: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
@@ -1025,7 +1107,7 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
         var updateTabBarAlphaImpl: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
         super.init(context: context, component: PremiumGiftScreenComponent(
             context: context,
-            peerId: peerId,
+            peerIds: peerIds,
             options: options,
             source: source,
             buttonStatePromise: self.mainButtonStatePromise,

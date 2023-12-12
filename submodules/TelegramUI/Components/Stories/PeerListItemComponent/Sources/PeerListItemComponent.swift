@@ -23,7 +23,7 @@ import PhotoResources
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let repostIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Stories/HeaderRepost"), color: .white)?.withRenderingMode(.alwaysTemplate)
-private let forwardIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Stories/HeaderRepost"), color: .white)?.withRenderingMode(.alwaysTemplate)
+private let forwardIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Stories/HeaderForward"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let checkImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)?.withRenderingMode(.alwaysTemplate)
 private let disclosureImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
 
@@ -116,7 +116,7 @@ public final class PeerListItemComponent: Component {
     let selectionPosition: SelectionPosition
     let isEnabled: Bool
     let hasNext: Bool
-    let action: (EnginePeer) -> Void
+    let action: (EnginePeer, EngineMessage.Id?) -> Void
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
     let openStory: ((EnginePeer, Int32, UIView) -> Void)?
@@ -141,7 +141,7 @@ public final class PeerListItemComponent: Component {
         selectionPosition: SelectionPosition = .left,
         isEnabled: Bool = true,
         hasNext: Bool,
-        action: @escaping (EnginePeer) -> Void,
+        action: @escaping (EnginePeer, EngineMessage.Id?) -> Void,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
         openStories: ((EnginePeer, AvatarNode) -> Void)? = nil,
         openStory: ((EnginePeer, Int32, UIView) -> Void)? = nil
@@ -353,7 +353,7 @@ public final class PeerListItemComponent: Component {
             guard let component = self.component, let peer = component.peer else {
                 return
             }
-            component.action(peer)
+            component.action(peer, component.message?.id)
         }
         
         @objc private func avatarButtonPressed() {

@@ -150,7 +150,11 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+            if case .user = peer {
+                item.controllerInteraction.openPeer(peer, .info(nil), nil, .default)
+            } else {
+                item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+            }
         }
     }
 
@@ -252,9 +256,28 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
             }
             
-            let badgeString = NSAttributedString(string: "X\(giveaway?.quantity ?? 2)", font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: badgeTextColor)
+            let badgeText: String
+            if let giveaway {
+                badgeText = "X\(giveaway.quantity)"
+            } else if let giveawayResults {
+                badgeText = "X\(giveawayResults.winnersCount)"
+            } else {
+                badgeText = ""
+            }
+            let badgeString = NSAttributedString(string: badgeText, font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: badgeTextColor)
                         
-            let prizeTitleString = NSAttributedString(string: giveawayResults != nil ? "Winners Selected!" : item.presentationData.strings.Chat_Giveaway_Message_PrizeTitle, font: titleFont, textColor: textColor)
+            let prizeTitleText: String
+            if let giveawayResults {
+                if giveawayResults.winnersCount > 1 {
+                    prizeTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersSelectedTitle_Many
+                } else {
+                    prizeTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersSelectedTitle_One
+                }
+            } else {
+                prizeTitleText = item.presentationData.strings.Chat_Giveaway_Message_PrizeTitle
+            }
+            
+            let prizeTitleString = NSAttributedString(string: prizeTitleText, font: titleFont, textColor: textColor)
             var prizeTextString: NSAttributedString?
             var additionalPrizeSeparatorString: NSAttributedString?
             var additionalPrizeTextString: NSAttributedString?
@@ -294,7 +317,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     }
                 ), textAlignment: .center)
             } else if let giveawayResults {
-                prizeTextString = parseMarkdownIntoAttributedString("**\(giveawayResults.winnersCount)** winners of the [Giveaway]() were randomly selected by Telegram.", attributes: MarkdownAttributes(
+                prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_WinnersSelectedText(giveawayResults.winnersCount), attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: textFont, textColor: textColor),
                     bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
                     link: MarkdownAttributeSet(font: textFont, textColor: accentColor),
@@ -304,7 +327,18 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 ), textAlignment: .center)
             }
             
-            let participantsTitleString = NSAttributedString(string: giveawayResults != nil ? "Winners" : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsTitle, font: titleFont, textColor: textColor)
+            let participantsTitleText: String
+            if let giveawayResults {
+                if giveawayResults.winnersCount > 1 {
+                    participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersTitle_Many
+                } else {
+                    participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersTitle_One
+                }
+            } else {
+                participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsTitle
+            }
+            
+            let participantsTitleString = NSAttributedString(string: participantsTitleText, font: titleFont, textColor: textColor)
             let participantsText: String
             let countriesText: String
             
@@ -360,7 +394,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             if let giveawayResults {
                 if giveawayResults.winnersCount > giveawayResults.winnersPeerIds.count {
                     let moreCount = giveawayResults.winnersCount - Int32(giveawayResults.winnersPeerIds.count)
-                    dateTitleText = "and \(moreCount) more!"
+                    dateTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersMore(moreCount)
                 } else {
                     dateTitleText = ""
                 }
@@ -370,8 +404,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             var dateTextString: NSAttributedString?
             if let giveaway {
                 dateTextString = NSAttributedString(string: stringForFullDate(timestamp: giveaway.untilDate, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), font: textFont, textColor: textColor)
-            } else if let _ = giveawayResults {
-                dateTextString = NSAttributedString(string: "All winners received gift links in private messages.", font: textFont, textColor: textColor)
+            } else if let giveawayResults {
+                dateTextString = NSAttributedString(string: giveawayResults.winnersCount > 1 ? item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Many : item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_One, font: textFont, textColor: textColor)
             }
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, hidesHeaders: true)
             

@@ -1337,7 +1337,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         self.controller?.containerLayoutUpdated(layout, transition: .immediate)
                     }
                 } else {
-                    let contactListNode = ContactListNode(context: self.context, updatedPresentationData: self.updatedPresentationData, presentation: .single(.natural(options: [], includeChatList: false)))
+                    let contactListNode = ContactListNode(context: self.context, updatedPresentationData: self.updatedPresentationData, presentation: .single(.natural(options: [], includeChatList: false, topPeers: false)))
                     self.contactListNode = contactListNode
                     contactListNode.enableUpdates = true
                     contactListNode.selectionStateUpdated = { [weak self] selectionState in

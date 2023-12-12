@@ -265,6 +265,7 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                 }
                 
                 let fromYou = item.message.author?.id == item.context.account.peerId
+                let isChannel = item.message.id.peerId.isGroupOrChannel
                 
                 let peerName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
                 let text: String
@@ -281,7 +282,11 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                         }
                     }
                 } else {
-                    text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string
+                    if item.message.id.peerId.isGroupOrChannel {
+                        text = item.presentationData.strings.Notification_ChannelChangedWallpaper
+                    } else {
+                        text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string
+                    }
                 }
                 
                 let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor)
@@ -311,15 +316,15 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                 if displayTrailingAnimatedDots {
                     textHeight += subtitleLayout.size.height
                 }
-                let backgroundSize = CGSize(width: width, height: textHeight + 140.0 + (fromYou ? 0.0 : 42.0))
+                let backgroundSize = CGSize(width: width, height: textHeight + 140.0 + (fromYou || isChannel ? 0.0 : 42.0))
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            strongSelf.buttonNode.isHidden = fromYou
-                            strongSelf.buttonTitleNode.isHidden = fromYou
+                            strongSelf.buttonNode.isHidden = fromYou || isChannel
+                            strongSelf.buttonTitleNode.isHidden = fromYou || isChannel
                             
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
                             if let media, mediaUpdated {     

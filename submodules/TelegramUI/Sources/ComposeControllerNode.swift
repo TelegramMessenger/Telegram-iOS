@@ -51,7 +51,7 @@ final class ComposeControllerNode: ASDisplayNode {
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
                 openCreateNewChannelImpl?()
             })
-        ], includeChatList: false)), displayPermissionPlaceholder: false)
+        ], includeChatList: false, topPeers: false)), displayPermissionPlaceholder: false)
         
         super.init()
         

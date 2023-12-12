@@ -38,6 +38,7 @@ public final class StoryFooterPanelComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let peer: EnginePeer
     public let storyItem: EngineStoryItem
     public let myReaction: MyReaction?
     public let isChannel: Bool
@@ -56,6 +57,7 @@ public final class StoryFooterPanelComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        peer: EnginePeer,
         storyItem: EngineStoryItem,
         myReaction: MyReaction?,
         isChannel: Bool,
@@ -73,6 +75,7 @@ public final class StoryFooterPanelComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.peer = peer
         self.storyItem = storyItem
         self.myReaction = myReaction
         self.isChannel = isChannel
@@ -96,6 +99,9 @@ public final class StoryFooterPanelComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
@@ -186,6 +192,7 @@ public final class StoryFooterPanelComponent: Component {
                     self.avatarsView.alpha = 0.7
                     self.viewStatsCountText.alpha = 0.7
                     self.viewStatsLabelText.view?.alpha = 0.7
+                    self.viewsIconView.alpha = 0.7
                     self.reactionStatsIcon?.alpha = 0.7
                     self.reactionStatsText?.alpha = 0.7
                     self.repostStatsIcon?.alpha = 0.7
@@ -194,6 +201,7 @@ public final class StoryFooterPanelComponent: Component {
                     self.avatarsView.alpha = 1.0
                     self.viewStatsCountText.alpha = 1.0
                     self.viewStatsLabelText.view?.alpha = 1.0
+                    self.viewsIconView.alpha = 1.0
                     self.reactionStatsIcon?.alpha = 1.0
                     self.reactionStatsText?.alpha = 1.0
                     self.repostStatsIcon?.alpha = 1.0
@@ -202,6 +210,7 @@ public final class StoryFooterPanelComponent: Component {
                     self.avatarsView.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.viewStatsCountText.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.viewStatsLabelText.view?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                    self.viewsIconView.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.reactionStatsIcon?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.reactionStatsText?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                     self.repostStatsIcon?.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
@@ -383,7 +392,14 @@ public final class StoryFooterPanelComponent: Component {
                 }
             }
             
-            self.viewStatsButton.isEnabled = viewCount != 0 && !component.isChannel
+            var displayViewLists = false
+            if case let .channel(channel) = component.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+                displayViewLists = reactionCount != 0 || forwardCount != 0
+            } else {
+                displayViewLists = viewCount != 0 && !component.isChannel
+            }
+            
+            self.viewStatsButton.isEnabled = displayViewLists
             
             var rightContentOffset: CGFloat = availableSize.width - 12.0
             
