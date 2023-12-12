@@ -69,7 +69,7 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
                 flags |= (1 << 0)
             }
             if showWinners {
-                flags |= (1 << 0)
+                flags |= (1 << 3)
             }
             var additionalPeers: [Api.InputPeer] = []
             if !additionalPeerIds.isEmpty {
