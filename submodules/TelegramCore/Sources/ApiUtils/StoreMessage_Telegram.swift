@@ -569,7 +569,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 }
 
 extension StoreMessage {
-    convenience init?(apiMessage: Api.Message, peerIsForum: Bool, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
+    convenience init?(apiMessage: Api.Message, accountPeerId: PeerId, peerIsForum: Bool, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
             case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, reactions, restrictionReason, ttlPeriod):
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
@@ -652,6 +652,7 @@ extension StoreMessage {
                 }
                 
                 var forwardInfo: StoreMessageForwardInfo?
+                var savedFromPeerId: PeerId?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
                         case let .messageFwdHeader(flags, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
@@ -681,6 +682,7 @@ extension StoreMessage {
                             
                             if let savedFromPeer = savedFromPeer, let savedFromMsgId = savedFromMsgId {
                                 let peerId: PeerId = savedFromPeer.peerId
+                                savedFromPeerId = peerId
                                 let messageId: MessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: savedFromMsgId)
                                 attributes.append(SourceReferenceMessageAttribute(messageId: messageId))
                             }
@@ -693,6 +695,10 @@ extension StoreMessage {
                                 forwardInfo = StoreMessageForwardInfo(authorId: nil, sourceId: nil, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             }
                     }
+                }
+            
+                if peerId == accountPeerId, let savedFromPeerId = savedFromPeerId {
+                    threadId = savedFromPeerId.toInt64()
                 }
                 
                 let messageText = message

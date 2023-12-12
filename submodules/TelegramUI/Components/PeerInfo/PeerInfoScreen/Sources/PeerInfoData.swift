@@ -14,6 +14,7 @@ import AccountUtils
 import DeviceAccess
 import PeerInfoVisualMediaPaneNode
 import PhotoResources
+import PeerInfoPaneNode
 
 enum PeerInfoUpdatingAvatar {
     case none
@@ -814,6 +815,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         if cachedData.commonGroupCount != 0 {
                             availablePanes?.append(.groupsInCommon)
                         }
+                    }
+                    
+                    if peerId == context.account.peerId {
+                        availablePanes?.insert(.savedMessagesChats, at: 0)
                     }
                 } else {
                     availablePanes = nil

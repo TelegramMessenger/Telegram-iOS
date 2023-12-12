@@ -27,12 +27,65 @@ private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibol
 private let subtitleFont = Font.regular(13.0)
 
 public enum ChatTitleContent: Equatable {
+    public struct PeerData: Equatable {
+        public var peerId: PeerId
+        public var peer: Peer?
+        public var isContact: Bool
+        public var notificationSettings: TelegramPeerNotificationSettings?
+        public var peerPresences: [PeerId: PeerPresence]
+        public var cachedData: CachedPeerData?
+        
+        public init(peerId: PeerId, peer: Peer?, isContact: Bool, notificationSettings: TelegramPeerNotificationSettings?, peerPresences: [PeerId: PeerPresence], cachedData: CachedPeerData?) {
+            self.peerId = peerId
+            self.peer = peer
+            self.isContact = isContact
+            self.notificationSettings = notificationSettings
+            self.peerPresences = peerPresences
+            self.cachedData = cachedData
+        }
+        
+        public init(peerView: PeerView) {
+            self.init(peerId: peerView.peerId, peer: peerViewMainPeer(peerView), isContact: peerView.peerIsContact, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, peerPresences: peerView.peerPresences, cachedData: peerView.cachedData)
+        }
+        
+        public static func ==(lhs: PeerData, rhs: PeerData) -> Bool {
+            if let lhsPeer = lhs.peer, let rhsPeer = rhs.peer {
+                if !lhsPeer.isEqual(rhsPeer) {
+                    return false
+                }
+            } else if (lhs.peer == nil) != (rhs.peer == nil) {
+                return false
+            }
+            if lhs.isContact != rhs.isContact {
+                return false
+            }
+            if lhs.notificationSettings != rhs.notificationSettings {
+                return false
+            }
+            if lhs.peerPresences.count != rhs.peerPresences.count {
+                for (key, value) in lhs.peerPresences {
+                    if let rhsValue = rhs.peerPresences[key] {
+                        if !value.isEqual(to: rhsValue) {
+                            return false
+                        }
+                    } else {
+                        return false
+                    }
+                }
+            }
+            if lhs.cachedData !== rhs.cachedData {
+                return false
+            }
+            return true
+        }
+    }
+    
     public enum ReplyThreadType {
         case comments
         case replies
     }
     
-    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?, isEnabled: Bool)
+    case peer(peerView: PeerData, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?, isEnabled: Bool)
     case replyThread(type: ReplyThreadType, count: Int)
     case custom(String, String?, Bool)
     
@@ -40,7 +93,7 @@ public enum ChatTitleContent: Equatable {
         switch lhs {
         case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, isMuted, customMessageCount, isEnabled):
             if case let .peer(rhsPeerView, rhsCustomTitle, rhsOnlineMemberCount, rhsIsScheduledMessages, rhsIsMuted, rhsCustomMessageCount, rhsIsEnabled) = rhs {
-                if peerView !== rhsPeerView {
+                if peerView != rhsPeerView {
                     return false
                 }
                 if customTitle != rhsCustomTitle {
@@ -186,13 +239,13 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                             }
                             isEnabled = false
                         } else {
-                            if let peer = peerViewMainPeer(peerView) {
+                            if let peer = peerView.peer {
                                 if let customTitle = customTitle {
                                     segments = [.text(0, NSAttributedString(string: customTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else if peerView.peerId == self.context.account.peerId {
                                     segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else {
-                                    if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
+                                    if !peerView.isContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
                                         segments = [.text(0, NSAttributedString(string: formatPhoneNumber(context: self.context, number: phone), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     } else {
                                         segments = [.text(0, NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
@@ -221,7 +274,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     titleRightIcon = .mute
                                 }
                             } else {
-                                if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                if let notificationSettings = peerView.notificationSettings {
                                     if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
                                         if titleCredibilityIcon != .verified {
                                             titleRightIcon = .mute
@@ -371,7 +424,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         if let titleContent = self.titleContent {
             switch titleContent {
             case let .peer(peerView, _, _, isScheduledMessages, _, _, _):
-                if let peer = peerViewMainPeer(peerView) {
+                if let peer = peerView.peer {
                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
                     }
@@ -475,7 +528,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                             if let customMessageCount = customMessageCount, customMessageCount != 0 {
                                 let string = NSAttributedString(string: self.strings.Conversation_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                 state = .info(string, .generic)
-                            } else if let peer = peerViewMainPeer(peerView) {
+                            } else if let peer = peerView.peer {
                                 let servicePeer = isServicePeer(peer)
                                 if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                                     let string = NSAttributedString(string: "", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
@@ -496,7 +549,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         
                                         let string = NSAttributedString(string: statusText, font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
-                                    } else if let peer = peerViewMainPeer(peerView) {
+                                    } else if let peer = peerView.peer {
                                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                                         let userPresence: TelegramUserPresence
                                         if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {

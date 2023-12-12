@@ -64,7 +64,7 @@ public struct SearchMessagesState: Equatable {
     fileprivate let additional: SearchMessagesPeerState?
 }
 
-private func mergedState(transaction: Transaction, seedConfiguration: SeedConfiguration, state: SearchMessagesPeerState?, result: Api.messages.Messages?) -> SearchMessagesPeerState? {
+private func mergedState(transaction: Transaction, seedConfiguration: SeedConfiguration, accountPeerId: PeerId, state: SearchMessagesPeerState?, result: Api.messages.Messages?) -> SearchMessagesPeerState? {
     guard let result = result else {
         return state
     }
@@ -128,7 +128,7 @@ private func mergedState(transaction: Transaction, seedConfiguration: SeedConfig
         if let peerId = message.peerId, let peer = peers[peerId], peer.isForum {
             peerIsForum = true
         }
-        if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
+        if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
             var associatedThreadInfo: Message.AssociatedThreadInfo?
             if let threadId = message.threadId, let threadInfo = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId) {
                 associatedThreadInfo = seedConfiguration.decodeMessageThreadInfo(threadInfo.data)
@@ -413,7 +413,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
     return remoteSearchResult
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
-            var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, state: state?.additional, result: additionalResult)
+            var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, accountPeerId: account.peerId, state: state?.additional, result: additionalResult)
             
             if state?.additional == nil {
                 switch location {
@@ -454,13 +454,13 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 }
             }
             
-            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
+            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, accountPeerId: account.peerId, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
             return (mergedResult(updatedState), updatedState)
         }
     }
 }
 
-func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Message?, NoError> {
+func _internal_downloadMessage(accountPeerId: PeerId, postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Message?, NoError> {
     return postbox.transaction { transaction -> Message? in
         return transaction.getMessage(messageId)
     } |> mapToSignal { message in
@@ -529,7 +529,7 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
                         
                         var renderedMessages: [Message] = []
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                                 renderedMessages.append(renderedMessage)
                             }
                         }
@@ -607,7 +607,7 @@ func fetchRemoteMessage(accountPeerId: PeerId, postbox: Postbox, source: FetchMe
                 if let peerId = message.peerId, let peer = transaction.getPeer(peerId) ?? parsedPeers.get(peerId), peer.isForum {
                     peerIsForum = true
                 }
-                if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum, namespace: id.namespace), case let .Id(updatedId) = message.id {
+                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum, namespace: id.namespace), case let .Id(updatedId) = message.id {
                     var addedExisting = false
                     if transaction.getMessage(updatedId) != nil {
                         transaction.updateMessage(updatedId, update: { _ in
@@ -658,7 +658,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                     }
                     for message in messages {
-                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
+                        if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
                             return message.index
                         }
                     }
@@ -688,7 +688,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                                 messages = []
                         }
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message, peerIsForum: secondaryPeer.isForum) {
+                            if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: secondaryPeer.isForum) {
                                 return message.index
                             }
                         }
@@ -712,7 +712,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                     }
                     for message in messages {
-                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
+                        if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
                             return message.index
                         }
                     }

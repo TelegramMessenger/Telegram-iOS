@@ -98,6 +98,7 @@ import PeerNameColorScreen
 import PeerAllowedReactionsScreen
 import ChatMessageSelectionInputPanelNode
 import ChatHistorySearchContainerNode
+import PeerInfoPaneNode
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -10028,7 +10029,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if self.state.selectedMessageIds == nil {
                     if let currentPaneKey = self.paneContainerNode.currentPaneKey {
                         switch currentPaneKey {
-                        case .files, .music, .links, .members:
+                        case .files, .music, .links, .members, .savedMessagesChats:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
                         case .media:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))

@@ -117,6 +117,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
         }
         
+        if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation, message.messageId.peerId == context.account.peerId {
+            if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                return (currentPanel, nil)
+            } else {
+                let panel = ChatChannelSubscriberInputPanelNode()
+                panel.interfaceInteraction = interfaceInteraction
+                panel.context = context
+                return (panel, nil)
+            }
+        }
+        
         if let secretChat = peer as? TelegramSecretChat {
             switch secretChat.embeddedState {
                 case .handshake:

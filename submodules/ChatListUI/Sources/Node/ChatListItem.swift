@@ -527,6 +527,8 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
         }
     case .forum:
        return []
+    case .savedMessagesChats:
+        return []
     }
 }
 
@@ -1727,6 +1729,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let useChatListLayout: Bool
             if case .chatList = item.chatListLocation {
                 useChatListLayout = true
+            } else if case .savedMessagesChats = item.chatListLocation {
+                useChatListLayout = true
             } else if displayAsMessage {
                 useChatListLayout = true
             } else {
@@ -1893,7 +1897,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
 
                     var peerText: String?
-                    if case .groupReference = item.content {
+                    if case .savedMessagesChats = item.chatListLocation {
+                        if let message = messages.last, let forwardInfo = message.forwardInfo, let author = forwardInfo.author {
+                            peerText = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        }
+                    } else if case .groupReference = item.content {
                         if let messagePeer = itemPeer.chatMainPeer {
                             peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         }
@@ -2118,7 +2126,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         attributedText = composedString
                         
-                        if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
+                        if case .savedMessagesChats = item.chatListLocation {
+                            displayForwardedIcon = false
+                        } else if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
                             displayForwardedIcon = true
                         } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
                             displayStoryReplyIcon = true

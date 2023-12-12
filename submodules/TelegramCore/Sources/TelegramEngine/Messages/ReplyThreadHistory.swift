@@ -161,7 +161,7 @@ private class ReplyThreadHistoryContextImpl {
                     switch discussionMessage {
                     case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                         let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                            StoreMessage(apiMessage: message, peerIsForum: peer.isForum)
+                            StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum)
                         }
                         
                         guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
@@ -626,7 +626,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                 switch discussionMessage {
                 case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, unreadCount, chats, users):
                     let parsedMessages = messages.compactMap { message -> StoreMessage? in
-                        StoreMessage(apiMessage: message, peerIsForum: peer.isForum)
+                        StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum)
                     }
                     
                     guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {

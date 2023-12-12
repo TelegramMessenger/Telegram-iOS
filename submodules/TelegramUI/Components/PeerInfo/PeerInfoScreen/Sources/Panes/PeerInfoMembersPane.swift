@@ -13,6 +13,7 @@ import ItemListPeerActionItem
 import MergeLists
 import ItemListUI
 import PeerInfoVisualMediaPaneNode
+import PeerInfoPaneNode
 
 private struct PeerMembersListTransaction {
     let deletions: [ListViewDeleteItem]

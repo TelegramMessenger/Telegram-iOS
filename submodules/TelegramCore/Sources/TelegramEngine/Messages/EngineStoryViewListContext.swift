@@ -505,7 +505,7 @@ public final class EngineStoryViewListContext {
                                         }
                                     case let .storyViewPublicForward(flags, message):
                                         let _ = flags
-                                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
+                                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
                                             items.append(.forward(Item.Forward(
                                                 message: EngineMessage(message),
                                                 storyStats: transaction.getPeerStoryStats(peerId: message.id.peerId)
@@ -692,7 +692,7 @@ public final class EngineStoryViewListContext {
                                             }
                                         }
                                     case let .storyReactionPublicForward(message):
-                                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
+                                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
                                             items.append(.forward(Item.Forward(
                                                 message: EngineMessage(message),
                                                 storyStats: transaction.getPeerStoryStats(peerId: message.id.peerId)

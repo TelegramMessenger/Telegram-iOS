@@ -224,7 +224,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
             for update in result.allUpdates {
                 switch update {
                 case let .updateNewChannelMessage(message, _, _):
-                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
+                    if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
                         if case let .Id(id) = message.id {
                             topicId = Int64(id.id)
                         }
@@ -613,7 +613,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                 var pinnedIds: [Int64] = []
                 
                 let addedMessages = messages.compactMap { message -> StoreMessage? in
-                    return StoreMessage(apiMessage: message, peerIsForum: true)
+                    return StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: true)
                 }
                 
                 let _ = pts

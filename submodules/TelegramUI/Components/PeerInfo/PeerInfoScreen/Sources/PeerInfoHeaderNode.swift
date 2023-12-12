@@ -36,6 +36,7 @@ import ComponentDisplayAdapters
 import ChatAvatarNavigationNode
 import MultiScaleTextNode
 import PeerInfoCoverComponent
+import PeerInfoPaneNode
 
 final class PeerInfoHeaderNavigationTransition {
     let sourceNavigationBar: NavigationBar
@@ -616,8 +617,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings {
                 backgroundTransitionDistance -= 100.0
             }
-            let contentOffset = max(0.0, contentOffset - backgroundTransitionDistance)
-            innerBackgroundTransitionFraction = max(0.0, min(1.0, contentOffset / backgroundTransitionStepDistance))
+            if isMediaOnly {
+                innerBackgroundTransitionFraction = 1.0
+            } else {
+                let contentOffset = max(0.0, contentOffset - backgroundTransitionDistance)
+                innerBackgroundTransitionFraction = max(0.0, min(1.0, contentOffset / backgroundTransitionStepDistance))
+            }
             
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - innerBackgroundTransitionFraction), forceKeepBlur: true, transition: transition)
             
@@ -827,7 +832,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.navigationBackgroundBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
 
-        let navigationSeparatorAlpha: CGFloat = state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0
+        let navigationSeparatorAlpha: CGFloat
+        if isMediaOnly {
+            navigationSeparatorAlpha = 0.0
+        } else {
+            navigationSeparatorAlpha = state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0
+        }
         transition.updateAlpha(node: self.navigationBackgroundBackgroundNode, alpha: 1.0 - navigationSeparatorAlpha)
         transition.updateAlpha(node: self.navigationSeparatorNode, alpha: navigationSeparatorAlpha)
 

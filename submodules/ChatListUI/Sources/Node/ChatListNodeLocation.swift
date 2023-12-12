@@ -311,5 +311,79 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             isFirst = false
             return ChatListNodeViewUpdate(list: list, type: type, scrollPosition: nil)
         }
+    case .savedMessagesChats:
+        var isFirst = true
+        
+        return account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 1000, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])), orderStatistics: [])
+        |> map { view, _, _ -> ChatListNodeViewUpdate in
+            let isLoading = view.isLoading
+            
+            var items: [EngineChatList.Item] = []
+            
+            var topMessageByPeerId: [EnginePeer.Id: Message] = [:]
+            if !isLoading {
+                for entry in view.entries {
+                    guard let threadId = entry.message.threadId else {
+                        continue
+                    }
+                    let sourcePeerId = PeerId(threadId)
+                    
+                    if let currentTopMessage = topMessageByPeerId[sourcePeerId] {
+                        if currentTopMessage.index < entry.index {
+                            topMessageByPeerId[sourcePeerId] = entry.message
+                        }
+                    } else {
+                        topMessageByPeerId[sourcePeerId] = entry.message
+                    }
+                }
+                for (_, message) in topMessageByPeerId.sorted(by: { $0.value.index > $1.value.index }) {
+                    guard let threadId = message.threadId else {
+                        continue
+                    }
+                    let sourceId = PeerId(threadId)
+                    guard let source = message.peers[sourceId] else {
+                        continue
+                    }
+                    let mappedMessageIndex = MessageIndex(id: MessageId(peerId: source.id, namespace: message.index.id.namespace, id: message.index.id.id), timestamp: message.index.timestamp)
+                    items.append(EngineChatList.Item(
+                        id: .chatList(source.id),
+                        index: .chatList(ChatListIndex(pinningIndex: nil, messageIndex: mappedMessageIndex)),
+                        messages: [EngineMessage(message)],
+                        readCounters: nil,
+                        isMuted: false,
+                        draft: nil,
+                        threadData: nil,
+                        renderedPeer: EngineRenderedPeer(peer: EnginePeer(source)),
+                        presence: nil,
+                        hasUnseenMentions: false,
+                        hasUnseenReactions: false,
+                        forumTopicData: nil,
+                        topForumTopicItems: [],
+                        hasFailed: false,
+                        isContact: false,
+                        autoremoveTimeout: nil,
+                        storyStats: nil
+                    ))
+                }
+            }
+            
+            let list = EngineChatList(
+                items: items.reversed(),
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: isLoading
+            )
+            
+            let type: ViewUpdateType
+            if isFirst {
+                type = .Initial
+            } else {
+                type = .Generic
+            }
+            isFirst = false
+            return ChatListNodeViewUpdate(list: list, type: type, scrollPosition: nil)
+        }
     }
 }

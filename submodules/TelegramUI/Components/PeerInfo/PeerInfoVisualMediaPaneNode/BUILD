@@ -38,6 +38,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
         "//submodules/TelegramUI/Components/EmptyStateIndicatorComponent",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode",
     ],
     visibility = [
         "//visibility:public",

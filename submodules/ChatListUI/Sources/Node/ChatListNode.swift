@@ -2606,6 +2606,8 @@ public final class ChatListNode: ListView {
                             continue
                         }
                         threadId = threadIdValue
+                    case .savedMessagesChats:
+                        return
                     }
                     var cachedChatResult: [(EnginePeer, PeerInputActivity)] = []
                     for (peerId, activity) in activities {
@@ -2656,6 +2658,8 @@ public final class ChatListNode: ListView {
                                 continue
                             }
                             itemId = ChatListNodePeerInputActivities.ItemId(peerId: chatPeerId.peerId, threadId: threadIdValue)
+                        case .savedMessagesChats:
+                            return [:]
                         }
                         
                         var chatResult: [(EnginePeer, PeerInputActivity)] = []
@@ -2882,6 +2886,8 @@ public final class ChatListNode: ListView {
                 } else {
                     return .single(false)
                 }
+            case .savedMessagesChats:
+                return .single(false)
             }
         }
         var startedScrollingWithCanExpandHiddenItems = false
@@ -3195,8 +3201,17 @@ public final class ChatListNode: ListView {
                     if case .chatList = strongSelf.mode {
                         let entryCount = transition.chatListView.filteredEntries.count
                         if entryCount >= 1 {
-                            if case let .index(index) = transition.chatListView.filteredEntries[entryCount - 1].sortIndex, case let .chatList(chatListIndex) = index, chatListIndex.pinningIndex != nil {
-                                pinnedOverscroll = true
+                            for i in 0 ..< 2 {
+                                if entryCount - 1 - i < 0 {
+                                    continue
+                                }
+                                if case .PeerEntry = transition.chatListView.filteredEntries[entryCount - 1 - i] {
+                                } else {
+                                    continue
+                                }
+                                if case let .index(index) = transition.chatListView.filteredEntries[entryCount - 1 - i].sortIndex, case let .chatList(chatListIndex) = index, chatListIndex.pinningIndex != nil {
+                                    pinnedOverscroll = true
+                                }
                             }
                         }
                     }
@@ -3788,6 +3803,8 @@ public final class ChatListNode: ListView {
                         self.threadSelectionPanState = (selecting, threadId, [])
                         self.interaction?.toggleThreadsSelection([threadId], selecting)
                     }
+                case .savedMessagesChats:
+                    break
                 }
             case .changed:
                 self.handlePanSelection(location: location)
@@ -3894,6 +3911,8 @@ public final class ChatListNode: ListView {
                     }
                 }
             }
+        case .savedMessagesChats:
+            break
         }
         guard hasState else {
             return
