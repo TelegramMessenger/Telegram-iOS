@@ -1101,7 +1101,7 @@ public protocol AccountContext: AnyObject {
 
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
-        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false, giveawayGiftsPurchaseAvailable: false, boostsPerGiftCount: 3, minChannelNameColorLevel: 5, audioTransciptionTrialMaxDuration: 300, audioTransciptionTrialCount: 2)
+        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false, giveawayGiftsPurchaseAvailable: false, boostsPerGiftCount: 3, minChannelNameColorLevel: 5, audioTransciptionTrialMaxDuration: 300, audioTransciptionTrialCount: 2, minChannelWallpaperLevel: 5)
     }
     
     public let isPremiumDisabled: Bool
@@ -1112,8 +1112,9 @@ public struct PremiumConfiguration {
     public let minChannelNameColorLevel: Int32
     public let audioTransciptionTrialMaxDuration: Int32
     public let audioTransciptionTrialCount: Int32
+    public let minChannelWallpaperLevel: Int32
     
-    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool, giveawayGiftsPurchaseAvailable: Bool, boostsPerGiftCount: Int32, minChannelNameColorLevel: Int32, audioTransciptionTrialMaxDuration: Int32, audioTransciptionTrialCount: Int32) {
+    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool, giveawayGiftsPurchaseAvailable: Bool, boostsPerGiftCount: Int32, minChannelNameColorLevel: Int32, audioTransciptionTrialMaxDuration: Int32, audioTransciptionTrialCount: Int32, minChannelWallpaperLevel: Int32) {
         self.isPremiumDisabled = isPremiumDisabled
         self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
         self.showPremiumGiftInTextField = showPremiumGiftInTextField
@@ -1122,6 +1123,7 @@ public struct PremiumConfiguration {
         self.minChannelNameColorLevel = minChannelNameColorLevel
         self.audioTransciptionTrialMaxDuration = audioTransciptionTrialMaxDuration
         self.audioTransciptionTrialCount = audioTransciptionTrialCount
+        self.minChannelWallpaperLevel = minChannelWallpaperLevel
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
@@ -1134,7 +1136,8 @@ public struct PremiumConfiguration {
                 boostsPerGiftCount: Int32(data["boosts_per_sent_gift"] as? Double ?? 3),
                 minChannelNameColorLevel: Int32(data["channel_color_level_min"] as? Double ?? 5),
                 audioTransciptionTrialMaxDuration: Int32(data["transcribe_audio_trial_duration_max"] as? Double ?? 300),
-                audioTransciptionTrialCount: Int32(data["transcribe_audio_trial_weekly_number"] as? Double ?? 2)
+                audioTransciptionTrialCount: Int32(data["transcribe_audio_trial_weekly_number"] as? Double ?? 2),
+                minChannelWallpaperLevel: Int32(data["channel_wallpaper_level_min"] as? Double ?? 5)
             )
         } else {
             return .defaultValue

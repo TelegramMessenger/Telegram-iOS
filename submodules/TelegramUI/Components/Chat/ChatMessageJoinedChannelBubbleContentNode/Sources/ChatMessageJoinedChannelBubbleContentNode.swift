@@ -27,6 +27,7 @@ import BundleIconComponent
 import ChatMessageBackground
 import ContextUI
 import UndoUI
+import MergedAvatarsNode
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)
@@ -776,7 +777,7 @@ private final class ChannelItemComponent: Component {
                     self.mergedAvatarsNode = mergedAvatarsNode
                 }
                 
-                mergedAvatarsNode.update(context: component.context, peers: component.peers.map { $0._asPeer() }, synchronousLoad: false, imageSize: 60.0, imageSpacing: 10.0, borderWidth: 2.0)
+                mergedAvatarsNode.update(context: component.context, peers: component.peers.map { $0._asPeer() }, synchronousLoad: false, imageSize: 60.0, imageSpacing: 10.0, borderWidth: 2.0, avatarFontSize: 26.0)
                 let avatarsSize = CGSize(width: avatarSize.width + 20.0, height: avatarSize.height)
                 mergedAvatarsNode.updateLayout(size: avatarsSize)
                 mergedAvatarsNode.frame = CGRect(origin: CGPoint(x: avatarFrame.midX - avatarsSize.width / 2.0, y: avatarFrame.minY), size: avatarsSize)

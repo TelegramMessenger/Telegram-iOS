@@ -229,7 +229,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                 selectionPosition: .right,
                                 isEnabled: isEnabled,
                                 hasNext: i != occupiedBoosts.count - 1,
-                                action: { [weak state] _ in
+                                action: { [weak state] _, _ in
                                     guard let state, hasSelection else {
                                         return
                                     }

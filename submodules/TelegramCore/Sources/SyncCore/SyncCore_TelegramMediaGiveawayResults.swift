@@ -9,6 +9,7 @@ public final class TelegramMediaGiveawayResults: Media, Equatable {
         }
         
         public static let refunded = Flags(rawValue: 1 << 0)
+        public static let onlyNewSubscribers = Flags(rawValue: 1 << 1)
     }
     
     public var id: MediaId? {
@@ -20,29 +21,35 @@ public final class TelegramMediaGiveawayResults: Media, Equatable {
     
     public let flags: Flags
     public let launchMessageId: MessageId
+    public let additionalChannelsCount: Int32
     public let winnersPeerIds: [PeerId]
     public let winnersCount: Int32
     public let unclaimedCount: Int32
     public let months: Int32
+    public let untilDate: Int32
     public let prizeDescription: String?
     
-    public init(flags: Flags, launchMessageId: MessageId, winnersPeerIds: [PeerId], winnersCount: Int32, unclaimedCount: Int32, months: Int32, prizeDescription: String?) {
+    public init(flags: Flags, launchMessageId: MessageId, additionalChannelsCount: Int32, winnersPeerIds: [PeerId], winnersCount: Int32, unclaimedCount: Int32, months: Int32, untilDate: Int32, prizeDescription: String?) {
         self.flags = flags
         self.launchMessageId = launchMessageId
+        self.additionalChannelsCount = additionalChannelsCount
         self.winnersPeerIds = winnersPeerIds
         self.winnersCount = winnersCount
         self.unclaimedCount = unclaimedCount
         self.months = months
+        self.untilDate = untilDate
         self.prizeDescription = prizeDescription
     }
     
     public init(decoder: PostboxDecoder) {
         self.flags = Flags(rawValue: decoder.decodeInt32ForKey("flg", orElse: 0))
         self.launchMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("msgp", orElse: 0)), namespace: Namespaces.Message.Cloud, id: decoder.decodeInt32ForKey("msgi", orElse: 0))
+        self.additionalChannelsCount = decoder.decodeInt32ForKey("chn", orElse: 0)
         self.winnersPeerIds = decoder.decodeInt64ArrayForKey("wnr").map { PeerId($0) }
         self.winnersCount = decoder.decodeInt32ForKey("wnc", orElse: 0)
         self.unclaimedCount = decoder.decodeInt32ForKey("unc", orElse: 0)
         self.months = decoder.decodeInt32ForKey("mts", orElse: 0)
+        self.untilDate = decoder.decodeInt32ForKey("unt", orElse: 0)
         self.prizeDescription = decoder.decodeOptionalStringForKey("des")
     }
     
@@ -50,10 +57,12 @@ public final class TelegramMediaGiveawayResults: Media, Equatable {
         encoder.encodeInt32(self.flags.rawValue, forKey: "flg")
         encoder.encodeInt64(self.launchMessageId.peerId.toInt64(), forKey: "msgp")
         encoder.encodeInt32(self.launchMessageId.id, forKey: "msgi")
+        encoder.encodeInt32(self.additionalChannelsCount, forKey: "chn")
         encoder.encodeInt64Array(self.winnersPeerIds.map { $0.toInt64() }, forKey: "wnr")
         encoder.encodeInt32(self.winnersCount, forKey: "wnc")
         encoder.encodeInt32(self.unclaimedCount, forKey: "unc")
         encoder.encodeInt32(self.months, forKey: "mts")
+        encoder.encodeInt32(self.untilDate, forKey: "unt")
         if let prizeDescription = self.prizeDescription {
             encoder.encodeString(prizeDescription, forKey: "des")
         } else {
@@ -75,6 +84,9 @@ public final class TelegramMediaGiveawayResults: Media, Equatable {
         if self.launchMessageId != other.launchMessageId {
             return false
         }
+        if self.additionalChannelsCount != other.additionalChannelsCount {
+            return false
+        }
         if self.winnersPeerIds != other.winnersPeerIds {
             return false
         }
@@ -85,6 +97,9 @@ public final class TelegramMediaGiveawayResults: Media, Equatable {
             return false
         }
         if self.months != other.months {
+            return false
+        }
+        if self.untilDate != other.untilDate {
             return false
         }
         if self.prizeDescription != other.prizeDescription {

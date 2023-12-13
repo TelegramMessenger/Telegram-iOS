@@ -894,8 +894,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
                     }
                 } else {
-                    let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
-                    attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    if message.id.peerId.isGroupOrChannel {
+                        attributedString = NSAttributedString(string: strings.Notification_ChannelChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    }
                 }
             case .setSameChatWallpaper:
                 if message.author?.id == accountPeerId {

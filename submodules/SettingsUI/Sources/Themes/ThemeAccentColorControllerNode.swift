@@ -308,7 +308,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if case .edit(_, _, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
         } else if case let .peer(peer) = resultMode {
-            doneButtonType = .setPeer(peer.compactDisplayTitle, context.isPremium)
+            if peer.id.namespace == Namespaces.Peer.CloudUser {
+                doneButtonType = .setPeer(peer.compactDisplayTitle, context.isPremium)
+            } else {
+               doneButtonType = .setChannel
+            }
         } else {
             doneButtonType = .set
         }
@@ -775,7 +779,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 if case .edit(_, _, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
                 } else if case let .peer(peer) = self.resultMode {
-                    doneButtonType = .setPeer(peer.compactDisplayTitle, self.context.isPremium)
+                    if peer.id.namespace == Namespaces.Peer.CloudUser {
+                        doneButtonType = .setPeer(peer.compactDisplayTitle, self.context.isPremium)
+                    } else {
+                        doneButtonType = .setChannel
+                    }
                 } else {
                     doneButtonType = .set
                 }
@@ -1182,7 +1190,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if case .background = self.mode, toolbarBottomInset.isZero {
             toolbarBottomInset = 16.0
         }
-        if case .peer = self.resultMode, !self.state.displayPatternPanel {
+        if case let .peer(peer) = self.resultMode, case .user = peer, !self.state.displayPatternPanel {
             toolbarBottomInset += 58.0
         }
         let toolbarHeight = 49.0 + toolbarBottomInset

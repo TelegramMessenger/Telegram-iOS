@@ -244,7 +244,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     }
                 case let .messageActionRequestedPeer(_, peer):
                     result.append(peer.peerId)
-                case let .messageActionGiftCode(_, boostPeer, _, _):
+                case let .messageActionGiftCode(_, boostPeer, _, _, _, _, _, _):
                     if let boostPeer = boostPeer {
                         result.append(boostPeer.peerId)
                     }
@@ -428,12 +428,15 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 flags.insert(.onlyNewSubscribers)
             }
             return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, countries: countries ?? [], quantity: quantity, months: months, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
-        case let .messageMediaGiveawayResults(apiFlags, channelId, launchMsgId, winnersCount, unclaimedCount, winners, months, prizeDescription):
+        case let .messageMediaGiveawayResults(apiFlags, channelId, additionalPeersCount, launchMsgId, winnersCount, unclaimedCount, winners, months, prizeDescription, untilDate):
             var flags: TelegramMediaGiveawayResults.Flags = []
             if (apiFlags & (1 << 0)) != 0 {
+                flags.insert(.onlyNewSubscribers)
+            }
+            if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.refunded)
             }
-            return (TelegramMediaGiveawayResults(flags: flags, launchMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: launchMsgId), winnersPeerIds: winners.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, winnersCount: winnersCount, unclaimedCount: unclaimedCount, months: months, prizeDescription: prizeDescription), nil, nil, nil, nil)
+            return (TelegramMediaGiveawayResults(flags: flags, launchMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: launchMsgId), additionalChannelsCount: additionalPeersCount ?? 0, winnersPeerIds: winners.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, winnersCount: winnersCount, unclaimedCount: unclaimedCount, months: months, untilDate: untilDate, prizeDescription: prizeDescription), nil, nil, nil, nil)
         }
     }
     

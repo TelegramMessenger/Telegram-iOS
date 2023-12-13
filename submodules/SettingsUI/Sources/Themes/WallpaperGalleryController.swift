@@ -498,7 +498,11 @@ public class WallpaperGalleryController: ViewController {
             break
         }
         if case let .peer(peer, _) = self.mode {
-            doneButtonType = .setPeer(peer.compactDisplayTitle, self.context.isPremium)
+            if case .user = peer {
+                doneButtonType = .setPeer(peer.compactDisplayTitle, self.context.isPremium)
+            } else {
+                doneButtonType = .setChannel
+            }
         }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
@@ -969,7 +973,7 @@ public class WallpaperGalleryController: ViewController {
         self.overlayNode?.frame = self.galleryNode.bounds
         
         var toolbarHeight: CGFloat = 66.0
-        if case .peer = self.mode {
+        if case let .peer(peer, _) = self.mode, case .user = peer {
             toolbarHeight += 58.0
         }
         transition.updateFrame(node: self.toolbarNode!, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: toolbarHeight + layout.intrinsicInsets.bottom)))

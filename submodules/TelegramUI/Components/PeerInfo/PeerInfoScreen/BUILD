@@ -133,6 +133,8 @@ swift_library(
         "//submodules/SolidRoundedButtonNode",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoChatListPaneNode",
+        "//submodules/MediaPickerUI",
+        "//submodules/AttachmentUI",
     ],
     visibility = [
         "//visibility:public",

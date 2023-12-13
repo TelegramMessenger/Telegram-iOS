@@ -252,7 +252,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         case let .giftPremium(_, _, monthsValue, _, _):
                             months = monthsValue
                             text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
-                        case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue):
+                        case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue, _, _, _, _):
                             giftSize.width += 34.0
                             textSpacing += 13.0
                             

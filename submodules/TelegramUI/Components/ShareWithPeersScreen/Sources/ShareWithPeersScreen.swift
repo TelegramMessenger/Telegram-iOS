@@ -1066,7 +1066,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 rightAccessory: accessory,
                                 selectionState: .none,
                                 hasNext: i < peers.count - 1,
-                                action: { [weak self] peer in
+                                action: { [weak self] peer, _ in
                                     guard let self, let component = self.component else {
                                         return
                                     }
@@ -1414,7 +1414,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 presence: stateValue.presences[peer.id],
                                 selectionState: .editing(isSelected: isSelected, isTinted: false),
                                 hasNext: true,
-                                action: { [weak self] peer in
+                                action: { [weak self] peer, _ in
                                     guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
@@ -2143,7 +2143,7 @@ final class ShareWithPeersScreenComponent: Component {
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
                     hasNext: true,
-                    action: { _ in
+                    action: { _, _ in
                     }
                 )),
                 environment: {},

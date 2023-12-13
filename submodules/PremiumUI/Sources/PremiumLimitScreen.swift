@@ -1195,6 +1195,9 @@ private final class LimitSheetContent: CombinedComponent {
                         case let .channelReactions(reactionCount):
                             titleText = strings.ChannelBoost_CustomReactions
                             string = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
+                        case .wallpaper:
+                            titleText = strings.ChannelBoost_Wallpaper
+                            string = strings.ChannelBoost_WallpaperText("\(premiumConfiguration.minChannelWallpaperLevel)").string
                         }
                     } else {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level)
@@ -1780,6 +1783,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
             case stories
             case nameColors
             case channelReactions(reactionCount: Int)
+            case wallpaper
         }
         
         case storiesChannelBoost(peer: EnginePeer, boostSubject: BoostSubject, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32, canBoostAgain: Bool)

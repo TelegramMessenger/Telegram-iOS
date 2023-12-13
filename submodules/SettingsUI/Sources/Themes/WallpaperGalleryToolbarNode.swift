@@ -13,6 +13,7 @@ enum WallpaperGalleryToolbarCancelButtonType {
 enum WallpaperGalleryToolbarDoneButtonType {
     case set
     case setPeer(String, Bool)
+    case setChannel
     case proceed
     case apply
     case none
@@ -284,6 +285,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
             applyTitle = strings.Wallpaper_ApplyForMe
             applyForBothTitle = strings.Wallpaper_ApplyForBoth(name).string
             applyForBothLocked = !isPremium
+        case .setChannel:
+            applyTitle = strings.Wallpaper_ApplyForChannel
         case .proceed:
             applyTitle = strings.Theme_Colors_Proceed
         case .apply:
@@ -423,7 +426,7 @@ final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalleryToolb
         }
         let doneTitle: String
         switch self.doneButtonType {
-            case .set, .setPeer:
+            case .set, .setPeer, .setChannel:
                 doneTitle = strings.Wallpaper_Set
             case .proceed:
                 doneTitle = strings.Theme_Colors_Proceed

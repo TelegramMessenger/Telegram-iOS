@@ -10637,3 +10637,50 @@ Sorry for the inconvenience.";
 "BoostGift.WinnersInfo" = "Choose whether to make the list of winners public when the giveaway ends.";
 
 "Story.ViewList.TitleReactions" = "Reactions";
+
+"Wallpaper.ApplyForChannel" = "Apply For This Channel";
+
+"Notification.ChannelChangedWallpaper" = "Channel set a new wallpaper";
+
+"Chat.Giveaway.Message.WinnersSelectedTitle.One" = "Winner Selected!";
+"Chat.Giveaway.Message.WinnersSelectedTitle.Many" = "Winners Selected!";
+"Chat.Giveaway.Message.WinnersSelectedText_1" = "**%@** winner of the [Giveaway]() was randomly selected by Telegram.";
+"Chat.Giveaway.Message.WinnersSelectedText_any" = "**%@** winners of the [Giveaway]() were randomly selected by Telegram.";
+
+"Chat.Giveaway.Message.WinnersTitle.One" = "Winner";
+"Chat.Giveaway.Message.WinnersTitle.Many" = "Winners";
+
+"Chat.Giveaway.Message.WinnersMore_1" = "and %@ more!";
+"Chat.Giveaway.Message.WinnersMore_any" = "and %@ more!";
+
+"Chat.Giveaway.Message.WinnersInfo.One" = "The winner received their gift link in a private message.";
+"Chat.Giveaway.Message.WinnersInfo.Many" = "All winners received gift links in private messages.";
+
+"ChannelBoost.Wallpaper" = "Set Wallpaper";
+"ChannelBoost.WallpaperText" = "Your channel needs **Level %1$@** to set custom wallpaper.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+
+"Settings.PremiumGift" = "Premium Gifting";
+
+"Story.ViewList.ContextSortChannelInfo" = "Choose the order for the list of reactions.";
+
+"Premium.Gift.MultipleDescription" = "Get **%1$@**%2$@ access to exclusive features with **Telegram Premium**.";
+
+"Premium.Gift.NamesAndMore_1" = " and %@ more";
+"Premium.Gift.NamesAndMore_any" = " and %@ more";
+
+"Premium.Gift.YouWillReceiveBoosts_1" = "You will receive []() **%@ Boost**!";
+"Premium.Gift.YouWillReceiveBoosts_any" = "You will receive []() **%@ Boosts**!";
+
+"Premium.Gift.ContactSelection.Title" = "Gift Premium";
+"Premium.Gift.ContactSelection.Placeholder" = "Search people to gift Premium to...";
+"Premium.Gift.ContactSelection.Proceed" = "Proceed";
+"Premium.Gift.ContactSelection.FrequentContacts" = "FREQUENT CONTACTS";
+"Premium.Gift.ContactSelection.MaximumReached" = "You can select up to %@ users.";
+
+"Premium.Gift.GiftMultipleSubscriptionsFormat" = "%1$@ for %2$@";
+"Premium.Gift.GiftMultipleSubscriptions_1" = "Gift %@ Subscription";
+"Premium.Gift.GiftMultipleSubscriptions_any" = "Gift %@ Subscriptions";
+
+"Message.GiveawayEndedWinners_1" = "%@ winner of the giveaway was randomly selected by Telegram";
+"Message.GiveawayEndedWinners_any" = "%@ winners of the giveaway was randomly selected by Telegram";
+"Message.GiveawayEndedNoWinners" = "Due to the giveaway terms, no winners could be selected by Telegram";
