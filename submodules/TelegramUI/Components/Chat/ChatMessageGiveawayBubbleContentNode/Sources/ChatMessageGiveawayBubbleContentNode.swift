@@ -24,7 +24,7 @@ private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
-public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode, UIGestureRecognizerDelegate {
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private let placeholderNode: StickerShimmerEffectNode
@@ -170,12 +170,21 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.bubbleTap(_:)))
+        tapRecognizer.delegate = self
         self.view.addGestureRecognizer(tapRecognizer)
     }
 
     override public func accessibilityActivate() -> Bool {
         self.buttonPressed()
         return true
+    }
+    
+    override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let point = gestureRecognizer.location(in: self.view)
+        if case .ignore = self.tapActionAtPoint(point, gesture: .tap, isEstimating: false).content {
+            return false
+        }
+        return self.bounds.contains(point)
     }
     
     @objc private func bubbleTap(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -327,12 +336,21 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 ), textAlignment: .center)
             }
             
+            var showWinners = false
+            if let giveawayResults, !giveawayResults.winnersPeerIds.isEmpty {
+                showWinners = true
+            }
+            
             let participantsTitleText: String
             if let giveawayResults {
-                if giveawayResults.winnersCount > 1 {
-                    participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersTitle_Many
+                if showWinners {
+                    if giveawayResults.winnersCount > 1 {
+                        participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersTitle_Many
+                    } else {
+                        participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersTitle_One
+                    }
                 } else {
-                    participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_WinnersTitle_One
+                    participantsTitleText = ""
                 }
             } else {
                 participantsTitleText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsTitle
@@ -511,7 +529,6 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 
                 let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
                 
-                
                 let animationName: String
                 let months = giveaway?.months ?? 0
                 if let _ = giveaway {
@@ -543,21 +560,24 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 maxContentWidth = max(maxContentWidth, dateTextLayout.size.width)
                 maxContentWidth = max(maxContentWidth, buttonWidth)
 
-                var channelPeers: [EnginePeer] = []
+                var chipPeers: [EnginePeer] = []
                 if let channelPeerIds = giveaway?.channelPeerIds {
                     for peerId in channelPeerIds {
                         if let peer = item.message.peers[peerId] {
-                            channelPeers.append(EnginePeer(peer))
+                            chipPeers.append(EnginePeer(peer))
                         }
                     }
                 } else if let winnerPeerIds = giveawayResults?.winnersPeerIds {
                     for peerId in winnerPeerIds {
                         if let peer = item.message.peers[peerId] {
-                            channelPeers.append(EnginePeer(peer))
+                            chipPeers.append(EnginePeer(peer))
                         }
                     }
                 }
-                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1), incoming, item.presentationData.theme.theme.overallDarkAppearance)
+                if !showWinners {
+                    chipPeers = []
+                }
+                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, chipPeers, accentColor, accentColor.withAlphaComponent(0.1), incoming, item.presentationData.theme.theme.overallDarkAppearance)
                 maxContentWidth = max(maxContentWidth, channelsWidth)
                 maxContentWidth += 30.0
                 
@@ -571,7 +591,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
-                    var layoutSize = CGSize(width: boundingWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 120.0)
+                    let smallSpacing: CGFloat = 2.0
+                    let largeSpacing: CGFloat = 14.0
+                    
+                    var layoutSize = CGSize(width: boundingWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTextLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 106.0)
                     
                     if additionalPrizeTextLayout.size.height > 0.0 {
                         layoutSize.height += additionalPrizeSeparatorLayout.size.height + additionalPrizeTextLayout.size.height + 7.0
@@ -581,6 +604,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     }
                     if dateTitleLayout.size.height > 0.0 {
                         layoutSize.height += dateTitleLayout.size.height
+                    }
+                    if participantsTitleLayout.size.height > 0.0 {
+                        layoutSize.height += participantsTitleLayout.size.height + largeSpacing
                     }
                     layoutSize.height += channelButtonsSize.height
                     
@@ -612,10 +638,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             let _ = dateTextApply()
                             let _ = channelButtonsApply()
                             let _ = buttonApply(animation)
-                            
-                            let smallSpacing: CGFloat = 2.0
-                            let largeSpacing: CGFloat = 14.0
-                            
+                                                        
                             var originY: CGFloat = 0.0
                             
                             let animationOffset: CGFloat = giveaway != nil ? -40.0 : 15.0
@@ -664,7 +687,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             originY += prizeTextLayout.size.height + largeSpacing
                             
                             strongSelf.participantsTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTitleLayout.size.width) / 2.0), y: originY), size: participantsTitleLayout.size)
-                            originY += participantsTitleLayout.size.height + smallSpacing
+                            if participantsTitleLayout.size.height > 0.0 {
+                                originY += participantsTitleLayout.size.height + smallSpacing
+                            }
+                            
                             strongSelf.participantsTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTextLayout.size.width) / 2.0), y: originY), size: participantsTextLayout.size)
                             originY += participantsTextLayout.size.height + smallSpacing * 2.0 + 3.0
                             
@@ -676,7 +702,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                                 strongSelf.countriesTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - countriesTextLayout.size.width) / 2.0), y: originY), size: countriesTextLayout.size)
                                 originY += countriesTextLayout.size.height
                             }
-                            originY += largeSpacing
+                            if participantsTitleLayout.size.height > 0.0 {
+                                originY += largeSpacing
+                            }
                             
                             strongSelf.dateTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - dateTitleLayout.size.width) / 2.0), y: originY), size: dateTitleLayout.size)
                             originY += dateTitleLayout.size.height + smallSpacing
@@ -749,6 +777,12 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         }
         if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
+        if self.prizeTextNode.frame.contains(point), let item = self.item {
+            if let giveawayResults = item.message.media.first(where: { $0 is TelegramMediaGiveawayResults }) as? TelegramMediaGiveawayResults {
+                item.controllerInteraction.navigateToMessageStandalone(giveawayResults.launchMessageId)
+                return ChatMessageBubbleContentTapAction(content: .ignore)
+            }
         }
         return ChatMessageBubbleContentTapAction(content: .none)
     }
@@ -900,7 +934,7 @@ private final class PeerButtonsStackNode: ASDisplayNode {
                     buttonLayoutsAndApply.append(buttonApply(maxWidth))
                 }
                 
-                return (CGSize(width: maxWidth, height: originY - verticalButtonSpacing), {
+                return (CGSize(width: maxWidth, height: max(0, originY - verticalButtonSpacing)), {
                     targetNode.buttonNodes = buttonNodes
                     
                     for i in 0 ..< buttonNodes.count {
