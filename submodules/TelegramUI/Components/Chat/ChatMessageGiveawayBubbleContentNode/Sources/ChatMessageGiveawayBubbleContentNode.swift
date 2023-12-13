@@ -574,9 +574,6 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                         }
                     }
                 }
-                if !showWinners {
-                    chipPeers = []
-                }
                 let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, chipPeers, accentColor, accentColor.withAlphaComponent(0.1), incoming, item.presentationData.theme.theme.overallDarkAppearance)
                 maxContentWidth = max(maxContentWidth, channelsWidth)
                 maxContentWidth += 30.0
