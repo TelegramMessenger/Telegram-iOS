@@ -265,7 +265,14 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
                         return false
                     }
                 })
-                return accountWithId(accountManager: manager, networkArguments: networkArguments, id: record.0, encryptionParameters: encryptionParameters, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods)
+                let isSupportAccount = record.1.contains(where: { attribute in
+                    if case let .environment(environment) = attribute, case true = environment.isSupportAccount {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                return accountWithId(accountManager: manager, networkArguments: networkArguments, id: record.0, encryptionParameters: encryptionParameters, supplementary: supplementary, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods, isSupportAccount: isSupportAccount)
                 |> mapToSignal { accountResult -> Signal<AccountResult?, NoError> in
                     let postbox: Postbox
                     let initialKind: AccountKind
@@ -435,7 +442,15 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
             return false
         }
     })
-    return accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods)
+
+    let isSupportAccount = attributes.contains(where: { attribute in
+        if case let .environment(environment) = attribute, case true = environment.isSupportAccount {
+            return true
+        } else {
+            return false
+        }
+    })
+    return accountWithId(accountManager: accountManager, networkArguments: networkArguments, id: id, encryptionParameters: encryptionParameters, supplementary: true, rootPath: rootPath, beginWithTestingEnvironment: beginWithTestingEnvironment, backupData: nil, auxiliaryMethods: auxiliaryMethods, isSupportAccount: isSupportAccount)
     |> mapToSignal { account -> Signal<Void, NoError> in
         switch account {
             case .upgrading:

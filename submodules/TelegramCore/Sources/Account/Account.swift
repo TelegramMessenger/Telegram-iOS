@@ -175,7 +175,7 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public func accountWithId(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
+public func accountWithId(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, isSupportAccount: Bool, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
     let postbox = openPostbox(
@@ -210,7 +210,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?, AppConfiguration) in
                         var state = transaction.getState()
                         if state == nil, let backupData = backupData {
-                            let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil, invalidatedChannels: [])
+                            let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), isSupportAccount: isSupportAccount, state: nil, invalidatedChannels: [])
                             state = backupState
                             let dict = NSMutableDictionary()
                             dict.setObject(MTDatacenterAuthInfo(authKey: backupData.masterDatacenterKey, authKeyId: backupData.masterDatacenterKeyId, validUntilTimestamp: Int32.max, saltSet: [], authKeyAttributes: [:])!, forKey: backupData.masterDatacenterId as NSNumber)
@@ -259,7 +259,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber, useRequestTimeoutTimers: useRequestTimeoutTimers)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, isSupportAccount: authorizedState.isSupportAccount, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary))
                                         }
                                     }
                                 case _:
@@ -900,6 +900,7 @@ public class Account {
     public let network: Network
     public let networkArguments: NetworkInitializationArguments
     public let peerId: PeerId
+    public let isSupportAccount: Bool
     
     public let auxiliaryMethods: AccountAuxiliaryMethods
     
@@ -979,7 +980,7 @@ public class Account {
     public let filteredStorySubscriptionsContext: StorySubscriptionsContext?
     public let hiddenStorySubscriptionsContext: StorySubscriptionsContext?
     
-    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
+    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, isSupportAccount: Bool, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
         self.accountManager = accountManager
         self.id = id
         self.basePath = basePath
@@ -988,6 +989,7 @@ public class Account {
         self.network = network
         self.networkArguments = networkArguments
         self.peerId = peerId
+        self.isSupportAccount = isSupportAccount
         
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
@@ -1007,6 +1009,12 @@ public class Account {
         self.callSessionManager = CallSessionManager(postbox: postbox, network: network, accountPeerId: peerId, maxLayer: networkArguments.voipMaxLayer, versions: networkArguments.voipVersions, addUpdates: { [weak self] updates in
             self?.stateManager?.addUpdates(updates)
         })
+
+        // If isSupportAccount is true, create a file in basePath to indicate that this is a support account
+        if isSupportAccount {
+            let supportAccountFile = basePath + "/support_account"
+            FileManager.default.createFile(atPath: supportAccountFile, contents: nil, attributes: nil)
+        }
         
         self.mediaReferenceRevalidationContext = MediaReferenceRevalidationContext()
         
