@@ -109,7 +109,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case requestedPeer(buttonId: Int32, peerId: PeerId)
     case setChatWallpaper(wallpaper: TelegramWallpaper, forBoth: Bool)
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
-    case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32)
+    case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?)
     case giveawayLaunched
     case joinedChannel
     case giveawayResults(winners: Int32, unclaimed: Int32)
@@ -208,7 +208,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 35:
             self = .botAppAccessGranted(appName: decoder.decodeOptionalStringForKey("app"), type: decoder.decodeOptionalInt32ForKey("atp").flatMap { BotSendMessageAccessGrantedType(rawValue: $0) })
         case 36:
-            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0))
+            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0), currency: decoder.decodeOptionalStringForKey("currency"), amount: decoder.decodeOptionalInt64ForKey("amount"), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"))
         case 37:
             self = .giveawayLaunched
         case 38:
@@ -395,7 +395,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "atp")
             }
-        case let .giftCode(slug, fromGiveaway, unclaimed, boostPeerId, months):
+        case let .giftCode(slug, fromGiveaway, unclaimed, boostPeerId, months, currency, amount, cryptoCurrency, cryptoAmount):
             encoder.encodeInt32(36, forKey: "_rawValue")
             encoder.encodeString(slug, forKey: "slug")
             encoder.encodeBool(fromGiveaway, forKey: "give")
@@ -406,6 +406,26 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeNil(forKey: "pi")
             }
             encoder.encodeInt32(months, forKey: "months")
+            if let currency = currency {
+                encoder.encodeString(currency, forKey: "currency")
+            } else {
+                encoder.encodeNil(forKey: "currency")
+            }
+            if let amount = amount {
+                encoder.encodeInt64(amount, forKey: "amount")
+            } else {
+                encoder.encodeNil(forKey: "amount")
+            }
+            if let cryptoCurrency = cryptoCurrency {
+                encoder.encodeString(cryptoCurrency, forKey: "cryptoCurrency")
+            } else {
+                encoder.encodeNil(forKey: "cryptoCurrency")
+            }
+            if let cryptoAmount = cryptoAmount {
+                encoder.encodeInt64(cryptoAmount, forKey: "cryptoAmount")
+            } else {
+                encoder.encodeNil(forKey: "cryptoAmount")
+            }
         case .giveawayLaunched:
             encoder.encodeInt32(37, forKey: "_rawValue")
         case .joinedChannel:
@@ -435,7 +455,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return peerIds
         case let .requestedPeer(_, peerId):
             return [peerId]
-        case let .giftCode(_, _, _, boostPeerId, _):
+        case let .giftCode(_, _, _, boostPeerId, _, _, _, _, _):
             return boostPeerId.flatMap { [$0] } ?? []
         default:
             return []

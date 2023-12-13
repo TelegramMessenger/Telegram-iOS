@@ -68,18 +68,22 @@ public func presentGiveawayInfoController(
         var untilDateValue: Int32 = 0
         if let giveaway {
             untilDateValue = giveaway.untilDate
-        } else if let _ = giveawayResults {
-            untilDateValue = message.timestamp
+        } else if let giveawayResults {
+            untilDateValue = giveawayResults.untilDate
         }
         
         var onlyNewSubscribers = false
         if let giveaway, giveaway.flags.contains(.onlyNewSubscribers) {
             onlyNewSubscribers = true
+        } else if let giveawayResults, giveawayResults.flags.contains(.onlyNewSubscribers) {
+            onlyNewSubscribers = true
         }
         
-        var channelsCount = 1
+        var channelsCount: Int32 = 1
         if let giveaway {
-            channelsCount = giveaway.channelPeerIds.count
+            channelsCount = Int32(giveaway.channelPeerIds.count)
+        } else if let giveawayResults {
+            channelsCount = 1 + giveawayResults.additionalChannelsCount
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

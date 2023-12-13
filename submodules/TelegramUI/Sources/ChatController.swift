@@ -958,7 +958,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
                             strongSelf.push(controller)
                             return true
-                        case let .giftCode(slug, _, _, _, _):
+                        case let .giftCode(slug, _, _, _, _, _, _, _, _):
                             strongSelf.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
                             return true
                         case let .suggestedProfilePhoto(image):

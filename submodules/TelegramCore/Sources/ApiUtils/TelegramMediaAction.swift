@@ -129,8 +129,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         } else {
             return TelegramMediaAction(action: .setChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper), forBoth: (flags & (1 << 1)) != 0))
         }
-    case let .messageActionGiftCode(flags, boostPeer, months, slug):
-        return TelegramMediaAction(action: .giftCode(slug: slug, fromGiveaway: (flags & (1 << 0)) != 0, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer?.peerId, months: months))
+    case let .messageActionGiftCode(flags, boostPeer, months, slug, currency, amount, cryptoCurrency, cryptoAmount):
+        return TelegramMediaAction(action: .giftCode(slug: slug, fromGiveaway: (flags & (1 << 0)) != 0, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer?.peerId, months: months, currency: currency, amount: amount, cryptoCurrency: cryptoCurrency, cryptoAmount: cryptoAmount))
     case .messageActionGiveawayLaunch:
         return TelegramMediaAction(action: .giveawayLaunched)
     case let .messageActionGiveawayResults(winners, unclaimed):
