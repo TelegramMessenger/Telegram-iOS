@@ -8726,6 +8726,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .premium:
                 self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
             case .premiumGift:
+                let options = Promise<[PremiumGiftCodeOption]>()
+                options.set(self.context.engine.payments.premiumGiftCodeOptions(peerId: nil))
+
                 let controller = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
                     if case let .user(user) = peer, user.botInfo == nil {
                         return true
@@ -8734,8 +8737,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 }))
                 self.controller?.push(controller)
-                self.activeActionDisposable.set((controller.result
-                |> deliverOnMainQueue).startStrict(next: { [weak self, weak controller] result in
+                self.activeActionDisposable.set(combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
+                .startStrict(next: { [weak self, weak controller] result, options in
                     guard let self, let controller else {
                         return
                     }
@@ -8758,7 +8761,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return
                     }
                     
-                    let giftController = PremiumGiftScreen(context: self.context, peerIds: peerIds, options: [], source: .settings, pushController: { [weak self] c in
+                    let mappedOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                    
+                    let giftController = PremiumGiftScreen(context: self.context, peerIds: peerIds, options: mappedOptions, source: .settings, pushController: { [weak self] c in
                         self?.controller?.push(c)
                     }, completion: { [weak self] in
                         if let self, let navigationController = self.controller?.navigationController as? NavigationController, peerIds.count == 1, let peerId = peerIds.first {
