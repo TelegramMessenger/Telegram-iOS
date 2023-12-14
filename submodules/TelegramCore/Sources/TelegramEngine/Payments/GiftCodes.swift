@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
@@ -138,13 +139,19 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
     }
 }
 
-func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id) -> Signal<[PremiumGiftCodeOption], NoError> {
-    let flags: Int32 = 1 << 0
-    return account.postbox.loadedPeerWithId(peerId)
-    |> mapToSignal { peer in
-        guard let inputPeer = apiInputPeer(peer) else {
-            return .complete()
+func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?) -> Signal<[PremiumGiftCodeOption], NoError> {
+    var flags: Int32 = 0
+    if let _ = peerId {
+        flags |= 1 << 0
+    }
+    return account.postbox.transaction { transaction -> Peer? in
+        if let peerId = peerId {
+            return transaction.getPeer(peerId)
         }
+        return nil
+    }
+    |> mapToSignal { peer in
+        let inputPeer = peer.flatMap(apiInputPeer)
         return account.network.request(Api.functions.payments.getPremiumGiftCodeOptions(flags: flags, boostPeer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Api.PremiumGiftCodeOption]?, NoError> in

@@ -1092,7 +1092,7 @@ func _internal_uploadStoryImpl(
                             flags |= 1 << 4
                         }
                         
-                        let inputMediaAreas: [Api.MediaArea] = apiMediaAreasFromMediaAreas(mediaAreas)
+                        let inputMediaAreas: [Api.MediaArea] = apiMediaAreasFromMediaAreas(mediaAreas, transaction: transaction)
                         if !inputMediaAreas.isEmpty {
                             flags |= 1 << 5
                         }
@@ -1281,7 +1281,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                 flags |= 1 << 2
             }
             
-            let inputMediaAreas: [Api.MediaArea]? = mediaAreas.flatMap(apiMediaAreasFromMediaAreas)
+            let inputMediaAreas: [Api.MediaArea]? = mediaAreas.flatMap { apiMediaAreasFromMediaAreas($0, transaction: transaction) }
             if let inputMediaAreas = inputMediaAreas, !inputMediaAreas.isEmpty {
                 flags |= 1 << 3
             }
