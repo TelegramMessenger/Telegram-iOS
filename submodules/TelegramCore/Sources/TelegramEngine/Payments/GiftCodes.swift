@@ -5,7 +5,7 @@ import TelegramApi
 
 public struct PremiumGiftCodeInfo: Equatable {
     public let slug: String
-    public let fromPeerId: EnginePeer.Id
+    public let fromPeerId: EnginePeer.Id?
     public let messageId: EngineMessage.Id?
     public let toPeerId: EnginePeer.Id?
     public let date: Int32
@@ -259,8 +259,8 @@ extension PremiumGiftCodeInfo {
         switch apiCheckedGiftCode {
         case let .checkedGiftCode(flags, fromId, giveawayMsgId, toId, date, months, usedDate, _, _):
             self.slug = slug
-            self.fromPeerId = fromId.peerId
-            self.messageId = giveawayMsgId.flatMap { EngineMessage.Id(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: $0) }
+            self.fromPeerId = fromId?.peerId
+            self.messageId = giveawayMsgId.flatMap { giveawayMsgId in fromId.flatMap { fromId in EngineMessage.Id(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId) } }
             self.toPeerId = toId.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }
             self.date = date
             self.months = months

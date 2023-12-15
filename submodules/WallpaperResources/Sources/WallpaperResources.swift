@@ -1398,7 +1398,7 @@ private let messageImage: UIImage = {
     return messageBubbleImage(maxCornerRadius: 16.0, minCornerRadius: 16.0, incoming: true, fillColor: .white, strokeColor: .clear, neighbors: .none, shadow: nil, wallpaper: .color(0x000000), knockout: false)
 }()
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false, message: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, channelMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false, message: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1693,6 +1693,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                             c.translateBy(x: -114.0, y: -32.0)
                             
                             let _ = try? drawSvgPath(c, path: "M12.8304,29.8712 C10.0551,31.8416 6.6628,33 2.99998,33 C1.98426,33 0.989361,32.9109 0.022644,32.7402 C2.97318,31.9699 5.24596,29.5785 5.84625,26.5607 C5.99996,25.7879 5.99996,24.8586 5.99996,23 V16.0 H6.00743 C6.27176,7.11861 13.5546,0 22.5,0 H61.5 C70.6127,0 78,7.3873 78,16.5 C78,25.6127 70.6127,33 61.5,33 H22.5 C18.8883,33 15.5476,31.8396 12.8304,29.8712 ")
+                            
                             if Set(incomingColors.map(\.rgb)).count > 1 {
                                 c.clip()
 
@@ -1748,7 +1749,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                         c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
                     }
                     
-                    let outgoingColors = colors.2
+                    let outgoingColors = channelMode == true ? colors.1 : colors.2
                     if emoticon {
                         if large {
                             c.saveGState()
@@ -1780,7 +1781,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                             
                             c.restoreGState()
                         } else {
-                            let rect = CGRect(x: 8.0, y: 72.0, width: 48.0, height: 24.0)
+                            let rect = CGRect(x: 8.0, y: arguments.drawingSize.height - 24.0 - 9.0 - 3.0, width: arguments.drawingSize.width - 8.0 * 2.0, height: 24.0)
                             c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
                             c.clip()
                             

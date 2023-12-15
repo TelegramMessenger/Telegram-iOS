@@ -316,7 +316,8 @@ private class AdMessagesHistoryContextImpl {
                     backgroundEmojiId: nil,
                     profileColor: nil,
                     profileBackgroundEmojiId: nil,
-                    emojiStatus: nil
+                    emojiStatus: nil,
+                    approximateBoostLevel: nil
                 )
             case let .webPage(webPage):
                 author = TelegramChannel(
@@ -340,7 +341,8 @@ private class AdMessagesHistoryContextImpl {
                     backgroundEmojiId: nil,
                     profileColor: nil,
                     profileBackgroundEmojiId: nil,
-                    emojiStatus: nil
+                    emojiStatus: nil,
+                    approximateBoostLevel: nil
                 )
             }
             

@@ -299,7 +299,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     
-                    if let currentItem, currentItem.messageItems.first?.nameColor != item.messageItems.first?.nameColor || currentItem.messageItems.first?.backgroundEmojiId != item.messageItems.first?.backgroundEmojiId {
+                    if let currentItem, currentItem.messageItems.first?.nameColor != item.messageItems.first?.nameColor || currentItem.messageItems.first?.backgroundEmojiId != item.messageItems.first?.backgroundEmojiId || currentItem.theme !== item.theme || currentItem.wallpaper != item.wallpaper {
                         if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
                             snapshot.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: snapshot.frame.size)
                             strongSelf.view.addSubview(snapshot)

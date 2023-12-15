@@ -42,6 +42,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent",
         "//submodules/TelegramUI/Components/DynamicCornerRadiusView",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/WallpaperResources",
     ],
     visibility = [
         "//visibility:public",

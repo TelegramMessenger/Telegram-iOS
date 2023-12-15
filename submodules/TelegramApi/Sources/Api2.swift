@@ -724,6 +724,7 @@ public extension Api {
     indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAvailableReactions(prevValue: Api.ChatReactions, newValue: Api.ChatReactions)
+        case channelAdminLogEventActionChangeEmojiStatus(prevValue: Api.EmojiStatus, newValue: Api.EmojiStatus)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionChangeLinkedChat(prevValue: Int64, newValue: Int64)
         case channelAdminLogEventActionChangeLocation(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation)
@@ -781,6 +782,13 @@ public extension Api {
                 case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
                     if boxed {
                         buffer.appendInt32(-1102180616)
+                    }
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionChangeEmojiStatus(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1051328177)
                     }
                     prevValue.serialize(buffer, true)
                     newValue.serialize(buffer, true)
@@ -1088,6 +1096,8 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeAbout", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
+                case .channelAdminLogEventActionChangeEmojiStatus(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeEmojiStatus", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeLinkedChat(let prevValue, let newValue):
@@ -1206,6 +1216,24 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAvailableReactions(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeEmojiStatus(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.EmojiStatus?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.EmojiStatus
+            }
+            var _2: Api.EmojiStatus?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.EmojiStatus
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeEmojiStatus(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil

@@ -155,14 +155,24 @@ public extension Api {
     }
 }
 public extension Api {
-    enum MediaArea: TypeConstructorDescription {
+    indirect enum MediaArea: TypeConstructorDescription {
+        case inputMediaAreaChannelPost(coordinates: Api.MediaAreaCoordinates, channel: Api.InputChannel, msgId: Int32)
         case inputMediaAreaVenue(coordinates: Api.MediaAreaCoordinates, queryId: Int64, resultId: String)
+        case mediaAreaChannelPost(coordinates: Api.MediaAreaCoordinates, channelId: Int64, msgId: Int32)
         case mediaAreaGeoPoint(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint)
         case mediaAreaSuggestedReaction(flags: Int32, coordinates: Api.MediaAreaCoordinates, reaction: Api.Reaction)
         case mediaAreaVenue(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputMediaAreaChannelPost(let coordinates, let channel, let msgId):
+                    if boxed {
+                        buffer.appendInt32(577893055)
+                    }
+                    coordinates.serialize(buffer, true)
+                    channel.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
                 case .inputMediaAreaVenue(let coordinates, let queryId, let resultId):
                     if boxed {
                         buffer.appendInt32(-1300094593)
@@ -170,6 +180,14 @@ public extension Api {
                     coordinates.serialize(buffer, true)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     serializeString(resultId, buffer: buffer, boxed: false)
+                    break
+                case .mediaAreaChannelPost(let coordinates, let channelId, let msgId):
+                    if boxed {
+                        buffer.appendInt32(1996756655)
+                    }
+                    coordinates.serialize(buffer, true)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
                     break
                 case .mediaAreaGeoPoint(let coordinates, let geo):
                     if boxed {
@@ -203,8 +221,12 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputMediaAreaChannelPost(let coordinates, let channel, let msgId):
+                return ("inputMediaAreaChannelPost", [("coordinates", coordinates as Any), ("channel", channel as Any), ("msgId", msgId as Any)])
                 case .inputMediaAreaVenue(let coordinates, let queryId, let resultId):
                 return ("inputMediaAreaVenue", [("coordinates", coordinates as Any), ("queryId", queryId as Any), ("resultId", resultId as Any)])
+                case .mediaAreaChannelPost(let coordinates, let channelId, let msgId):
+                return ("mediaAreaChannelPost", [("coordinates", coordinates as Any), ("channelId", channelId as Any), ("msgId", msgId as Any)])
                 case .mediaAreaGeoPoint(let coordinates, let geo):
                 return ("mediaAreaGeoPoint", [("coordinates", coordinates as Any), ("geo", geo as Any)])
                 case .mediaAreaSuggestedReaction(let flags, let coordinates, let reaction):
@@ -214,6 +236,27 @@ public extension Api {
     }
     }
     
+        public static func parse_inputMediaAreaChannelPost(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: Api.InputChannel?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputChannel
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MediaArea.inputMediaAreaChannelPost(coordinates: _1!, channel: _2!, msgId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputMediaAreaVenue(_ reader: BufferReader) -> MediaArea? {
             var _1: Api.MediaAreaCoordinates?
             if let signature = reader.readInt32() {
@@ -228,6 +271,25 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MediaArea.inputMediaAreaVenue(coordinates: _1!, queryId: _2!, resultId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaChannelPost(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MediaArea.mediaAreaChannelPost(coordinates: _1!, channelId: _2!, msgId: _3!)
             }
             else {
                 return nil

@@ -28,6 +28,7 @@ import EmojiStatusSelectionComponent
 import EmojiStatusComponent
 import DynamicCornerRadiusView
 import ComponentDisplayAdapters
+import WallpaperResources
 
 private final class EmojiActionIconComponent: Component {
     let context: AccountContext
@@ -285,6 +286,25 @@ final class ChannelAppearanceScreenComponent: Component {
         }
     }
     
+    private struct ResolvedState {
+        var nameColor: PeerNameColor
+        var profileColor: PeerNameColor?
+        var replyFileId: Int64?
+        var backgroundFileId: Int64?
+        var emojiStatus: PeerEmojiStatus?
+        
+        var hasChanges: Bool
+        
+        init(nameColor: PeerNameColor, profileColor: PeerNameColor?, replyFileId: Int64?, backgroundFileId: Int64?, emojiStatus: PeerEmojiStatus?, hasChanges: Bool) {
+            self.nameColor = nameColor
+            self.profileColor = profileColor
+            self.replyFileId = replyFileId
+            self.backgroundFileId = backgroundFileId
+            self.emojiStatus = emojiStatus
+            self.hasChanges = hasChanges
+        }
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: ScrollView
         private let actionButton = ComponentView<Empty>()
@@ -315,12 +335,15 @@ final class ChannelAppearanceScreenComponent: Component {
         private var updatedPeerNameEmoji: Int64??
         private var updatedPeerProfileColor: PeerNameColor??
         private var updatedPeerProfileEmoji: Int64??
-        private var updatedPeerStatusEmoji: Int64??
+        private var updatedPeerStatus: PeerEmojiStatus??
         
         private var requiredLevel: Int?
         
         private var currentTheme: PresentationThemeReference?
+        private var resolvedCurrentTheme: (reference: PresentationThemeReference, isDark: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper?)?
+        private var resolvingCurrentTheme: (reference: PresentationThemeReference, isDark: Bool, disposable: Disposable)?
         
+        private var boostLevel: Int?
         private var boostStatus: ChannelBoostStatus?
         private var boostStatusDisposable: Disposable?
         
@@ -363,6 +386,7 @@ final class ChannelAppearanceScreenComponent: Component {
             self.contentsDataDisposable?.dispose()
             self.applyDisposable?.dispose()
             self.boostStatusDisposable?.dispose()
+            self.resolvingCurrentTheme?.disposable.dispose()
         }
 
         func scrollToTop() {
@@ -392,23 +416,12 @@ final class ChannelAppearanceScreenComponent: Component {
             transition.setAlpha(layer: self.bottomPanelSeparator, alpha: bottomNavigationAlpha)
         }
         
-        private func applySettings() {
-            guard let component = self.component, let contentsData = self.contentsData, let peer = contentsData.peer, let requiredLevel = self.requiredLevel else {
-                return
-            }
-            if self.isApplyingSettings {
-                return
+        private func resolveState() -> ResolvedState? {
+            guard let contentsData = self.contentsData, let peer = contentsData.peer else {
+                return nil
             }
             
-            if let boostStatus = self.boostStatus, requiredLevel > boostStatus.level {
-                self.displayPremiumScreen(requiredLevel: requiredLevel)
-                return
-            }
-            
-            self.isApplyingSettings = true
-            self.state?.updated(transition: .immediate)
-            
-            self.applyDisposable?.dispose()
+            var hasChanges = false
             
             let nameColor: PeerNameColor
             if let updatedPeerNameColor = self.updatedPeerNameColor {
@@ -417,6 +430,9 @@ final class ChannelAppearanceScreenComponent: Component {
                 nameColor = peerNameColor
             } else {
                 nameColor = .blue
+            }
+            if nameColor != peer.nameColor {
+                hasChanges = true
             }
             
             let profileColor: PeerNameColor?
@@ -427,49 +443,98 @@ final class ChannelAppearanceScreenComponent: Component {
             } else {
                 profileColor = nil
             }
+            if profileColor != peer.profileColor {
+                hasChanges = true
+            }
             
             let replyFileId: Int64?
             if case let .some(value) = self.updatedPeerNameEmoji {
                 replyFileId = value
             } else {
-                replyFileId = contentsData.peer?.backgroundEmojiId
+                replyFileId = peer.backgroundEmojiId
+            }
+            if replyFileId != peer.backgroundEmojiId {
+                hasChanges = true
             }
             
             let backgroundFileId: Int64?
             if case let .some(value) = self.updatedPeerProfileEmoji {
                 backgroundFileId = value
             } else {
-                backgroundFileId = contentsData.peer?.profileBackgroundEmojiId
+                backgroundFileId = peer.profileBackgroundEmojiId
+            }
+            if backgroundFileId != peer.profileBackgroundEmojiId {
+                hasChanges = true
             }
             
             let emojiStatus: PeerEmojiStatus?
-            if case let .some(value) = self.updatedPeerStatusEmoji {
-                if let value {
-                    emojiStatus = PeerEmojiStatus(fileId: value, expirationDate: nil)
-                } else {
-                    emojiStatus = nil
-                }
+            if case let .some(value) = self.updatedPeerStatus {
+                emojiStatus = value
             } else {
-                emojiStatus = contentsData.peer?.emojiStatus
+                emojiStatus = peer.emojiStatus
             }
-            let statusFileId = emojiStatus?.fileId
+            if emojiStatus != peer.emojiStatus {
+                hasChanges = true
+            }
             
-            let _ = statusFileId
+            return ResolvedState(
+                nameColor: nameColor,
+                profileColor: profileColor,
+                replyFileId: replyFileId,
+                backgroundFileId: backgroundFileId,
+                emojiStatus: emojiStatus,
+                hasChanges: hasChanges
+            )
+        }
+        
+        private func applySettings() {
+            guard let component = self.component, let resolvedState = self.resolveState(), let requiredLevel = self.requiredLevel else {
+                return
+            }
+            if self.isApplyingSettings {
+                return
+            }
+            
+            if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
+                self.displayPremiumScreen(requiredLevel: requiredLevel)
+                return
+            }
+            
+            if !resolvedState.hasChanges {
+                self.environment?.controller()?.dismiss()
+                return
+            }
+            
+            self.isApplyingSettings = true
+            self.state?.updated(transition: .immediate)
+            
+            self.applyDisposable?.dispose()
+            
+            let statusFileId = resolvedState.emojiStatus?.fileId
             
             enum ApplyError {
                 case generic
             }
             
             self.applyDisposable = (combineLatest([
-                component.context.engine.peers.updatePeerNameColorAndEmoji(peerId: component.peerId, nameColor: nameColor, backgroundEmojiId: replyFileId, profileColor: profileColor, profileBackgroundEmojiId: backgroundFileId)
+                component.context.engine.peers.updatePeerNameColorAndEmoji(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
+                |> ignoreValues
+                |> mapError { _ -> ApplyError in
+                    return .generic
+                },
+                component.context.engine.peers.updatePeerEmojiStatus(peerId: component.peerId, fileId: statusFileId, expirationDate: nil)
                 |> mapError { _ -> ApplyError in
                     return .generic
                 }
             ])
             |> deliverOnMainQueue).start(error: { [weak self] _ in
-                guard let self else {
+                guard let self, let component = self.component else {
                     return
                 }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                
                 self.isApplyingSettings = false
                 self.state?.updated(transition: .immediate)
             }, completed: { [weak self] in
@@ -553,29 +618,62 @@ final class ChannelAppearanceScreenComponent: Component {
                 selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: currentFileId))
             }
             
-            let controller = EmojiStatusSelectionController(
-                context: component.context,
-                mode: .backgroundSelection(completion: { [weak self] result in
+            let mappedSubject: EmojiPagerContentComponent.Subject
+            switch subject {
+            case .reply, .profile:
+                mappedSubject = .backgroundIcon
+            case .status:
+                mappedSubject = .channelStatus
+            }
+            
+            let mappedMode: EmojiStatusSelectionController.Mode
+            switch subject {
+            case .status:
+                mappedMode = .customStatusSelection(completion: { [weak self] result, timestamp in
                     guard let self else {
                         return
                     }
+                    if let result {
+                        self.cachedIconFiles[result.fileId.id] = result
+                    }
                     switch subject {
-                    case .reply:
-                        self.updatedPeerNameEmoji = result
-                    case .profile:
-                        self.updatedPeerProfileEmoji = result
                     case .status:
-                        self.updatedPeerStatusEmoji = result
+                        self.updatedPeerStatus = (result?.fileId.id).flatMap { PeerEmojiStatus(fileId: $0, expirationDate: timestamp) }
+                    default:
+                        break
                     }
                     self.state?.updated(transition: .spring(duration: 0.4))
-                }),
+                })
+            default:
+                mappedMode = .backgroundSelection(completion: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    if let result {
+                        self.cachedIconFiles[result.fileId.id] = result
+                    }
+                    switch subject {
+                    case .reply:
+                        self.updatedPeerNameEmoji = (result?.fileId.id)
+                    case .profile:
+                        self.updatedPeerProfileEmoji = (result?.fileId.id)
+                    case .status:
+                        self.updatedPeerStatus = (result?.fileId.id).flatMap { PeerEmojiStatus(fileId: $0, expirationDate: nil) }
+                    }
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                })
+            }
+            
+            let controller = EmojiStatusSelectionController(
+                context: component.context,
+                mode: mappedMode,
                 sourceView: sourceView,
                 emojiContent: EmojiPagerContentComponent.emojiInputData(
                     context: component.context,
                     animationCache: component.context.animationCache,
                     animationRenderer: component.context.animationRenderer,
                     isStandalone: false,
-                    subject: subject == .status ? .status : .backgroundIcon,
+                    subject: mappedSubject,
                     hasTrending: false,
                     topReactionItems: [],
                     areUnicodeEmojiEnabled: false,
@@ -588,6 +686,9 @@ final class ChannelAppearanceScreenComponent: Component {
                 currentSelection: currentFileId,
                 color: color,
                 destinationItemView: { [weak sourceView] in
+                    guard let sourceView else {
+                        return nil
+                    }
                     return sourceView
                 }
             )
@@ -618,6 +719,9 @@ final class ChannelAppearanceScreenComponent: Component {
                     guard let self else {
                         return
                     }
+                    if self.contentsData == nil, case let .channel(channel) = contentsData.peer {
+                        self.boostLevel = channel.approximateBoostLevel.flatMap(Int.init)
+                    }
                     self.contentsData = contentsData
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
@@ -631,6 +735,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     guard let self else {
                         return
                     }
+                    self.boostLevel = boostStatus?.level
                     self.boostStatus = boostStatus
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
@@ -638,65 +743,40 @@ final class ChannelAppearanceScreenComponent: Component {
                 })
             }
             
-            guard let contentsData = self.contentsData, var peer = contentsData.peer else {
+            guard let contentsData = self.contentsData, var peer = contentsData.peer, let resolvedState = self.resolveState() else {
                 return availableSize
             }
             
             var requiredLevel = 1
             
             let replyIconLevel = 5
-            let profileIconLevel = 7
-            let emojiStatusLevel = 8
+            var profileIconLevel = 7
+            var emojiStatusLevel = 8
             let themeLevel = 9
             
-            let nameColor: PeerNameColor
-            if let updatedPeerNameColor = self.updatedPeerNameColor {
-                nameColor = updatedPeerNameColor
-            } else if let peerNameColor = peer.nameColor {
-                nameColor = peerNameColor
-            } else {
-                nameColor = .blue
+            if let data = component.context.currentAppConfiguration.with({ $0 }).data {
+                if let value = data["channel_profile_color_level_min"] as? Double {
+                    profileIconLevel = Int(value)
+                }
+                if let value = data["channel_emoji_status_level_min"] as? Double {
+                    emojiStatusLevel = Int(value)
+                }
             }
             
-            let profileColor: PeerNameColor?
-            if case let .some(value) = self.updatedPeerProfileColor {
-                profileColor = value
-            } else if let peerProfileColor = peer.profileColor {
-                profileColor = peerProfileColor
-            } else {
-                profileColor = nil
-            }
+            let profileColor = resolvedState.profileColor
             
-            let replyFileId: Int64?
-            if case let .some(value) = self.updatedPeerNameEmoji {
-                replyFileId = value
-            } else {
-                replyFileId = contentsData.peer?.backgroundEmojiId
-            }
+            let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
                 requiredLevel = max(requiredLevel, replyIconLevel)
             }
             
-            let backgroundFileId: Int64?
-            if case let .some(value) = self.updatedPeerProfileEmoji {
-                backgroundFileId = value
-            } else {
-                backgroundFileId = contentsData.peer?.profileBackgroundEmojiId
-            }
-            if backgroundFileId != nil {
+            let backgroundFileId = resolvedState.backgroundFileId
+            if profileColor != nil || backgroundFileId != nil {
                 requiredLevel = max(requiredLevel, profileIconLevel)
             }
             
-            let emojiStatus: PeerEmojiStatus?
-            if case let .some(value) = self.updatedPeerStatusEmoji {
-                if let value {
-                    emojiStatus = PeerEmojiStatus(fileId: value, expirationDate: nil)
-                } else {
-                    emojiStatus = nil
-                }
-            } else {
-                emojiStatus = contentsData.peer?.emojiStatus
-            }
+            let emojiStatus = resolvedState.emojiStatus
+            
             if emojiStatus != nil {
                 requiredLevel = max(requiredLevel, emojiStatusLevel)
             }
@@ -712,13 +792,51 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
+            if let currentTheme = self.currentTheme, (self.resolvedCurrentTheme?.reference != currentTheme || self.resolvedCurrentTheme?.isDark != environment.theme.overallDarkAppearance), (self.resolvingCurrentTheme?.reference != currentTheme || self.resolvingCurrentTheme?.isDark != environment.theme.overallDarkAppearance) {
+                self.resolvingCurrentTheme?.disposable.dispose()
+                
+                let disposable = MetaDisposable()
+                self.resolvingCurrentTheme = (currentTheme, environment.theme.overallDarkAppearance, disposable)
+                
+                var presentationTheme: PresentationTheme?
+                switch currentTheme {
+                case .builtin:
+                    presentationTheme = makePresentationTheme(mediaBox: component.context.sharedContext.accountManager.mediaBox, themeReference: .builtin(environment.theme.overallDarkAppearance ? .night : .dayClassic))
+                case let .cloud(cloudTheme):
+                    presentationTheme = makePresentationTheme(cloudTheme: cloudTheme.theme, dark: environment.theme.overallDarkAppearance)
+                default:
+                    presentationTheme = makePresentationTheme(mediaBox: component.context.sharedContext.accountManager.mediaBox, themeReference: currentTheme)
+                }
+                if let presentationTheme {
+                    let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
+                    if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+                        resolvedWallpaper = cachedWallpaper(account: component.context.account, slug: file.slug, settings: file.settings)
+                        |> map { wallpaper -> TelegramWallpaper? in
+                            return wallpaper?.wallpaper
+                        }
+                    } else {
+                        resolvedWallpaper = .single(presentationTheme.chat.defaultWallpaper)
+                    }
+                    disposable.set((resolvedWallpaper
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] resolvedWallpaper in
+                        guard let self, let environment = self.environment else {
+                            return
+                        }
+                        self.resolvedCurrentTheme = (currentTheme, environment.theme.overallDarkAppearance, presentationTheme, resolvedWallpaper)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }))
+                }
+            }
+            
             if self.currentTheme != nil && self.currentTheme != chatThemes.first {
                 requiredLevel = max(requiredLevel, themeLevel)
             }
             
             if case let .user(user) = peer {
                 peer = .user(user
-                    .withUpdatedNameColor(nameColor)
+                    .withUpdatedNameColor(resolvedState.nameColor)
                     .withUpdatedProfileColor(profileColor)
                     .withUpdatedEmojiStatus(emojiStatus)
                     .withUpdatedBackgroundEmojiId(replyFileId)
@@ -726,7 +844,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )
             } else if case let .channel(channel) = peer {
                 peer = .channel(channel
-                    .withUpdatedNameColor(nameColor)
+                    .withUpdatedNameColor(resolvedState.nameColor)
                     .withUpdatedProfileColor(profileColor)
                     .withUpdatedEmojiStatus(emojiStatus)
                     .withUpdatedBackgroundEmojiId(replyFileId)
@@ -750,16 +868,17 @@ final class ChannelAppearanceScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
+            //TODO:localize
             let messageItem = PeerNameColorChatPreviewItem.MessageItem(
                 outgoing: false,
                 peerId: EnginePeer.Id(namespace: peer.id.namespace, id: PeerId.Id._internalFromInt64Value(0)),
                 author: peer.compactDisplayTitle,
                 photo: peer.profileImageRepresentations,
-                nameColor: nameColor,
+                nameColor: resolvedState.nameColor,
                 backgroundEmojiId: replyFileId,
-                reply: (peer.compactDisplayTitle, environment.strings.NameColor_ChatPreview_ReplyText_Channel),
-                linkPreview: (environment.strings.NameColor_ChatPreview_LinkSite, environment.strings.NameColor_ChatPreview_LinkTitle, environment.strings.NameColor_ChatPreview_LinkText),
-                text: environment.strings.NameColor_ChatPreview_MessageText_Channel
+                reply: (peer.compactDisplayTitle, "Reply to your channel"),
+                linkPreview: ("Telegram", "Link Preview", "This preview will also be tinted."),
+                text: "The color you select will be used for the channel's name"
             )
             
             var replyLogoContents: [AnyComponentWithIdentity<Empty>] = []
@@ -771,11 +890,20 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if replyFileId != nil, let boostStatus = self.boostStatus, boostStatus.level < replyIconLevel {
+            if replyFileId != nil, let boostLevel = self.boostLevel, boostLevel < replyIconLevel {
                 replyLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: replyIconLevel
                 ))))
+            }
+            
+            var chatPreviewTheme: PresentationTheme = environment.theme
+            var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
+            if let resolvedCurrentTheme = self.resolvedCurrentTheme {
+                chatPreviewTheme = resolvedCurrentTheme.theme
+                if let wallpaper = resolvedCurrentTheme.wallpaper {
+                    chatPreviewWallpaper = wallpaper
+                }
             }
             
             let replySectionSize = self.replySection.update(
@@ -795,13 +923,13 @@ final class ChannelAppearanceScreenComponent: Component {
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
                             itemGenerator: PeerNameColorChatPreviewItem(
                                 context: component.context,
-                                theme: environment.theme,
-                                componentTheme: environment.theme,
+                                theme: chatPreviewTheme,
+                                componentTheme: chatPreviewTheme,
                                 strings: environment.strings,
                                 sectionId: 0,
                                 fontSize: presentationData.chatFontSize,
                                 chatBubbleCorners: presentationData.chatBubbleCorners,
-                                wallpaper: presentationData.chatWallpaper,
+                                wallpaper: chatPreviewWallpaper,
                                 dateTimeFormat: environment.dateTimeFormat,
                                 nameDisplayOrder: presentationData.nameDisplayOrder,
                                 messageItems: [messageItem]
@@ -813,7 +941,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                 theme: environment.theme,
                                 colors: component.context.peerNameColors,
                                 isProfile: false,
-                                currentColor: nameColor,
+                                currentColor: resolvedState.nameColor,
                                 updated: { [weak self] value in
                                     guard let self else {
                                         return
@@ -830,32 +958,16 @@ final class ChannelAppearanceScreenComponent: Component {
                             title: AnyComponent(HStack(replyLogoContents, spacing: 6.0)),
                             icon: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
                                 context: component.context,
-                                color: component.context.peerNameColors.get(nameColor, dark: environment.theme.overallDarkAppearance).main,
+                                color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main,
                                 fileId: replyFileId,
                                 file: replyFileId.flatMap { self.cachedIconFiles[$0] }
                             ))),
                             action: { [weak self] view in
-                                guard let self, let contentsData = self.contentsData, let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
+                                guard let self, let resolvedState = self.resolveState(), let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
                                     return
                                 }
                                 
-                                let nameColor: PeerNameColor
-                                if let updatedPeerNameColor = self.updatedPeerNameColor {
-                                    nameColor = updatedPeerNameColor
-                                } else if let peerNameColor = peer.nameColor {
-                                    nameColor = peerNameColor
-                                } else {
-                                    nameColor = .blue
-                                }
-                                
-                                let currentFileId: Int64?
-                                if case let .some(value) = self.updatedPeerNameEmoji {
-                                    currentFileId = value
-                                } else {
-                                    currentFileId = contentsData.peer?.backgroundEmojiId
-                                }
-                                
-                                self.openEmojiSetup(sourceView: iconView, currentFileId: currentFileId, color: component.context.peerNameColors.get(nameColor, dark: environment.theme.overallDarkAppearance).main, subject: .reply)
+                                self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.replyFileId, color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main, subject: .reply)
                             }
                         )))
                     ]
@@ -884,7 +996,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     )),
                     maximumNumberOfLines: 0
                 ))))
-                if currentTheme != chatThemes[0], let boostStatus = self.boostStatus, boostStatus.level < themeLevel {
+                if currentTheme != chatThemes[0], let boostLevel = self.boostLevel, boostLevel < themeLevel {
                     wallpaperLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                         strings: environment.strings,
                         level: themeLevel
@@ -915,7 +1027,8 @@ final class ChannelAppearanceScreenComponent: Component {
                                     animatedEmojiStickers: component.context.animatedEmojiStickers,
                                     themeSpecificAccentColors: [:],
                                     themeSpecificChatWallpapers: [:],
-                                    nightMode: false,
+                                    nightMode: environment.theme.overallDarkAppearance,
+                                    channelMode: true,
                                     currentTheme: currentTheme,
                                     updatedTheme: { [weak self] value in
                                         guard let self else {
@@ -964,7 +1077,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if backgroundFileId != nil, let boostStatus = self.boostStatus, boostStatus.level < profileIconLevel {
+            if backgroundFileId != nil, let boostLevel = self.boostLevel, boostLevel < profileIconLevel {
                 profileLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: profileIconLevel
@@ -1042,28 +1155,12 @@ final class ChannelAppearanceScreenComponent: Component {
                                 file: backgroundFileId.flatMap { self.cachedIconFiles[$0] }
                             ))),
                             action: { [weak self] view in
-                                guard let self, let contentsData = self.contentsData, let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
+                                guard let self, let resolvedState = self.resolveState(), let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
                                     return
                                 }
                                 
-                                let currentFileId: Int64?
-                                if case let .some(value) = self.updatedPeerProfileEmoji {
-                                    currentFileId = value
-                                } else {
-                                    currentFileId = contentsData.peer?.profileBackgroundEmojiId
-                                }
-                                
-                                let profileColor: PeerNameColor?
-                                if case let .some(value) = self.updatedPeerProfileColor {
-                                    profileColor = value
-                                } else if let peerProfileColor = peer.profileColor {
-                                    profileColor = peerProfileColor
-                                } else {
-                                    profileColor = nil
-                                }
-                                
-                                self.openEmojiSetup(sourceView: iconView, currentFileId: currentFileId, color: profileColor.flatMap { profileColor in
-                                    component.context.peerNameColors.getProfile(profileColor, dark: environment.theme.overallDarkAppearance, subject: .palette).main
+                                self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.backgroundFileId, color: resolvedState.profileColor.flatMap {
+                                    component.context.peerNameColors.getProfile($0, dark: environment.theme.overallDarkAppearance, subject: .palette).main
                                 } ?? environment.theme.list.itemAccentColor, subject: .profile)
                             }
                         )))
@@ -1091,7 +1188,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if emojiStatus != nil, let boostStatus = self.boostStatus, boostStatus.level < emojiStatusLevel {
+            if emojiStatus != nil, let boostLevel = self.boostLevel, boostLevel < emojiStatusLevel {
                 emojiStatusContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: emojiStatusLevel
@@ -1174,18 +1271,11 @@ final class ChannelAppearanceScreenComponent: Component {
                                 file: statusFileId.flatMap { self.cachedIconFiles[$0] }
                             ))),
                             action: { [weak self] view in
-                                guard let self, let contentsData = self.contentsData, let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
+                                guard let self, let resolvedState = self.resolveState(), let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
                                     return
                                 }
                                 
-                                let currentFileId: Int64?
-                                if case let .some(value) = self.updatedPeerStatusEmoji {
-                                    currentFileId = value
-                                } else {
-                                    currentFileId = contentsData.peer?.emojiStatus?.fileId
-                                }
-                                
-                                self.openEmojiSetup(sourceView: iconView, currentFileId: currentFileId, color: nil, subject: .status)
+                                self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.emojiStatus?.fileId, color: nil, subject: .status)
                             }
                         )))
                     ]
@@ -1210,7 +1300,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 Text(text: "Apply Changes", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
-            if let boostStatus = self.boostStatus, requiredLevel > boostStatus.level {
+            if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: requiredLevel,
                     theme: environment.theme,
@@ -1266,6 +1356,8 @@ final class ChannelAppearanceScreenComponent: Component {
             self.bottomPanelSeparator.backgroundColor = environment.theme.rootController.navigationBar.separatorColor.cgColor
             transition.setFrame(layer: self.bottomPanelSeparator, frame: CGRect(origin: CGPoint(x: bottomPanelFrame.minX, y: bottomPanelFrame.minY), size: CGSize(width: bottomPanelFrame.width, height: UIScreenPixel)))
             
+            let previousBounds = self.scrollView.bounds
+            
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
                 self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
@@ -1276,6 +1368,14 @@ final class ChannelAppearanceScreenComponent: Component {
             let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: availableSize.height - bottomPanelFrame.minY, right: 0.0)
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
+            }
+            
+            if !previousBounds.isEmpty, !transition.animation.isImmediate {
+                let bounds = self.scrollView.bounds
+                if bounds.maxY != previousBounds.maxY {
+                    let offsetY = previousBounds.maxY - bounds.maxY
+                    transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: offsetY), to: CGPoint(), additive: true)
+                }
             }
             
             self.updateScrolling(transition: transition)

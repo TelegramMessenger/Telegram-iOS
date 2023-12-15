@@ -465,8 +465,8 @@ public final class EngineStoryViewListContext {
                     |> mapToSignal { result -> Signal<InternalState, NoError> in
                         return account.postbox.transaction { transaction -> InternalState in
                             switch result {
-                            case let .storyViewsList(_, count, viewsCount, forwardsCount, reactionsCount, views, users, nextOffset):
-                                let peers = AccumulatedPeers(users: users)
+                            case let .storyViewsList(_, count, viewsCount, forwardsCount, reactionsCount, views, chats, users, nextOffset):
+                                let peers = AccumulatedPeers(chats: chats, users: users)
                                 updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                                 
                                 var items: [Item] = []

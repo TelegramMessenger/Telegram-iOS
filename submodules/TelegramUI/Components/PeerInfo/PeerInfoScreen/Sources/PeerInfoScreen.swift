@@ -1676,7 +1676,11 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
                     
                     //TODO:localize
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: generateDisclosureActionBoostLevelBadgeImage(text: "Level 1+"), text: "Appearance", icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
+                    var boostIcon: UIImage?
+                    if let approximateBoostLevel = channel.approximateBoostLevel, approximateBoostLevel < 1 {
+                        boostIcon = generateDisclosureActionBoostLevelBadgeImage(text: "Level 1+")
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: "Appearance", icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
                     }))
                     
@@ -3836,7 +3840,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 var currentSelectedFileId: Int64?
                 var topStatusTitle = strongSelf.presentationData.strings.PeerStatusSetup_NoTimerTitle
                 if let peer = strongSelf.data?.peer {
-                    if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
+                    if let emojiStatus = peer.emojiStatus {
                         selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
                         currentSelectedFileId = emojiStatus.fileId
                         
@@ -12214,7 +12218,7 @@ private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustom
         
         self.avatarNode.setPeer(context: self.item.context, account: self.item.account, theme: self.presentationData.theme, peer: self.item.peer)
         
-        if case let .user(user) = self.item.peer, let _ = user.emojiStatus {
+        if self.item.peer.emojiStatus != nil {
             rightTextInset += 32.0
         }
     
@@ -12231,6 +12235,10 @@ private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustom
                     iconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 28.0, height: 28.0), placeholderColor: self.presentationData.theme.list.mediaPlaceholderColor, themeColor: self.presentationData.theme.list.itemAccentColor, loopMode: .forever)
                 } else if user.isPremium {
                     iconContent = .premium(color: self.presentationData.theme.list.itemAccentColor)
+                }
+            } else if case let .channel(channel) = self.item.peer {
+                if let emojiStatus = channel.emojiStatus {
+                    iconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 28.0, height: 28.0), placeholderColor: self.presentationData.theme.list.mediaPlaceholderColor, themeColor: self.presentationData.theme.list.itemAccentColor, loopMode: .forever)
                 }
             }
             if let iconContent {

@@ -375,7 +375,11 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     return .complete()
                 }
                 
-                let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
+                //TODO
+                let _ = inputChannel
+                return .complete()
+                
+                /*let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
                 let signal: Signal<Api.messages.Messages, MTRpcError>
                 if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
                     signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
@@ -392,7 +396,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 }
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
-                }
+                }*/
             }
         case let .sentMedia(tags):
             let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty

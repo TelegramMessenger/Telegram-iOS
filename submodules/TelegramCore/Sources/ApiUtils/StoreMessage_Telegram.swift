@@ -451,7 +451,7 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         }
     }
     switch mediaArea {
-    case .inputMediaAreaVenue:
+    case .inputMediaAreaVenue, .inputMediaAreaChannelPost:
         return nil
     case let .mediaAreaGeoPoint(coordinates, geo):
         let latitude: Double
@@ -490,6 +490,8 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         } else {
             return nil
         }
+    case .mediaAreaChannelPost:
+        return nil
     }
 }
 

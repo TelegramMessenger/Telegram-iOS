@@ -244,7 +244,6 @@ open class ViewControllerComponentContainer: ViewController {
         } else {
             presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         }
-            
         
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch navigationBarAppearance {
@@ -278,6 +277,19 @@ open class ViewControllerComponentContainer: ViewController {
                         strongSelf.statusBar.statusBarStyle = .Ignore
                     case .default:
                         strongSelf.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
+                }
+                
+                let navigationBarPresentationData: NavigationBarPresentationData?
+                switch navigationBarAppearance {
+                case .none:
+                    navigationBarPresentationData = nil
+                case .transparent:
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true)
+                case .default:
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+                }
+                if let navigationBarPresentationData {
+                    strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 }
                 
                 if let layout = strongSelf.validLayout {

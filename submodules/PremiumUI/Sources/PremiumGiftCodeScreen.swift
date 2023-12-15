@@ -86,7 +86,9 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             var peerIds: [EnginePeer.Id] = []
             switch subject {
             case let .giftCode(giftCode):
-                peerIds.append(giftCode.fromPeerId)
+                if let fromPeerId = giftCode.fromPeerId {
+                    peerIds.append(fromPeerId)
+                }
                 if let toPeerId = giftCode.toPeerId {
                     peerIds.append(toPeerId)
                 }
@@ -201,7 +203,11 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 }
                 link = "https://t.me/giftcode/\(giftCode.slug)"
                 date = giftCode.date
-                fromPeer = state.peerMap[giftCode.fromPeerId]
+                if let fromPeerId = giftCode.fromPeerId {
+                    fromPeer = state.peerMap[fromPeerId]
+                } else {
+                    fromPeer = nil
+                }
                 toPeerId = giftCode.toPeerId
                 if let toPeerId = giftCode.toPeerId {
                     toPeer = state.peerMap[toPeerId]
