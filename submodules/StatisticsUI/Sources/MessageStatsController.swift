@@ -215,16 +215,14 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineStoryItem.Views?, messages: SearchMessagesResult?, forwards: StoryStatsPublicForwardsContext.State?, presentationData: PresentationData) -> [StatsEntry] {
+private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineStoryItem.Views?, forwards: StoryStatsPublicForwardsContext.State?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
         entries.append(.overviewTitle(presentationData.theme, presentationData.strings.Stats_MessageOverview.uppercased()))
         
         var publicShares: Int32?
-        if let messages {
-            publicShares = messages.totalCount
-        } else if let forwards {
+        if let forwards {
             publicShares = forwards.count
         }
         entries.append(.overview(presentationData.theme, data, storyViews, publicShares))
@@ -254,15 +252,6 @@ private func messageStatsControllerEntries(data: PostStats?, storyViews: EngineS
             entries.append(.reactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsGraph, .bars, isStories))
         }
 
-        if let messages, !messages.messages.isEmpty {
-            entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
-            var index: Int32 = 0
-            for message in messages.messages {
-                entries.append(.publicForward(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, .message(message)))
-                index += 1
-            }
-        }
-        
         if let forwards, !forwards.forwards.isEmpty {
             entries.append(.publicForwardsTitle(presentationData.theme, presentationData.strings.Stats_MessagePublicForwardsTitle.uppercased()))
             var index: Int32 = 0
@@ -305,7 +294,6 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     
     let actionsDisposable = DisposableSet()
     let dataPromise = Promise<PostStats?>(nil)
-    let messagesPromise = Promise<(SearchMessagesResult, SearchMessagesState)?>(nil)
     let forwardsPromise = Promise<StoryStatsPublicForwardsContext.State?>(nil)
     
     let anyStatsContext: Any
@@ -314,7 +302,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     var openStoryImpl: ((EnginePeer.Id, EngineStoryItem, UIView) -> Void)?
     var storyContextActionImpl: ((EnginePeer.Id, ASDisplayNode, ContextGesture?, Bool) -> Void)?
     
-    var forwardsContext: StoryStatsPublicForwardsContext?
+    let forwardsContext: StoryStatsPublicForwardsContext
     let peerId: EnginePeer.Id
     var storyItem: EngineStoryItem?
     switch subject {
@@ -331,19 +319,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         dataPromise.set(.single(nil) |> then(dataSignal))
         anyStatsContext = statsContext
         
-        let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: id), query: "", state: nil)
-        |> map(Optional.init)
-        |> afterNext { result in
-            if let result = result {
-                for message in result.0.messages {
-                    if let peer = message.peers[message.id.peerId], let peerReference = PeerReference(peer) {
-                        let _ = context.engine.peers.updatedRemotePeer(peer: peerReference).start()
-                    }
-                }
-            }
-        }
-        messagesPromise.set(.single(nil) |> then(searchSignal))
-        forwardsPromise.set(.single(nil))
+        forwardsContext = StoryStatsPublicForwardsContext(account: context.account, subject: .message(messageId: id))
     case let .story(peerIdValue, id, item, _):
         peerId = peerIdValue
         storyItem = item
@@ -358,22 +334,17 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         dataPromise.set(.single(nil) |> then(dataSignal))
         anyStatsContext = statsContext
-        
-        messagesPromise.set(.single(nil))
-        
-        forwardsContext = StoryStatsPublicForwardsContext(account: context.account, peerId: peerId, storyId: id)
-        if let forwardsContext {
-            forwardsPromise.set(
-                .single(nil)
-                |> then(
-                    forwardsContext.state
-                    |> map(Optional.init)
-                )
-            )
-        } else {
-            forwardsPromise.set(.single(nil))
-        }
+                
+        forwardsContext = StoryStatsPublicForwardsContext(account: context.account, subject: .story(peerId: peerId, id: id))
     }
+    
+    forwardsPromise.set(
+        .single(nil)
+        |> then(
+            forwardsContext.state
+            |> map(Optional.init)
+        )
+    )
     
     let arguments = MessageStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return loadDetailedGraphImpl?(graph, x) ?? .single(nil)
@@ -412,14 +383,13 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(
         presentationData,
-        dataPromise.get(), 
-        messagesPromise.get(),
+        dataPromise.get(),
         forwardsPromise.get(),
         longLoadingSignal,
         iconNodePromise.get()
     )
     |> deliverOnMainQueue
-    |> map { presentationData, data, search, forwards, longLoading, iconNode -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, forwards, longLoading, iconNode -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
@@ -445,7 +415,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
                 openStoryImpl?(peerId, storyItem, iconNode.view)
             }
         }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, storyViews: storyViews, messages: search?.0, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, storyViews: storyViews, forwards: forwards, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -464,7 +434,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         })
     }
     controller.visibleBottomContentOffsetChanged = { [weak forwardsContext] offset in
-        if case let .known(value) = offset, value < 100.0, case .story = subject {
+        if case let .known(value) = offset, value < 100.0 {
             forwardsContext?.loadMore()
         }
     }

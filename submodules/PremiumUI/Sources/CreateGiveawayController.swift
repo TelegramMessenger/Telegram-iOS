@@ -501,7 +501,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .prizeDescriptionText(_, placeholder, value, count):
-            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "\(count)"), text: value, placeholder: placeholder, returnKeyType: .done, spacing: 24.0, tag: CreateGiveawayEntryTag.description, sectionId: self.section, textUpdated: { value in
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "\(count)"), text: value, placeholder: placeholder, returnKeyType: .done, spacing: 24.0, maxLength: 128, tag: CreateGiveawayEntryTag.description, sectionId: self.section, textUpdated: { value in
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.prizeDescription = value

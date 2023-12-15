@@ -10663,7 +10663,7 @@ Sorry for the inconvenience.";
 
 "Story.ViewList.ContextSortChannelInfo" = "Choose the order for the list of reactions.";
 
-"Premium.Gift.MultipleDescription" = "Get **%1$@**%2$@ access to exclusive features with **Telegram Premium**.";
+"Premium.Gift.MultipleDescription" = "Get %1$@%2$@ access to exclusive features with **Telegram Premium**.";
 
 "Premium.Gift.NamesAndMore_1" = " and %@ more";
 "Premium.Gift.NamesAndMore_any" = " and %@ more";
@@ -10684,3 +10684,5 @@ Sorry for the inconvenience.";
 "Message.GiveawayEndedWinners_1" = "%@ winner of the giveaway was randomly selected by Telegram";
 "Message.GiveawayEndedWinners_any" = "%@ winners of the giveaway was randomly selected by Telegram";
 "Message.GiveawayEndedNoWinners" = "Due to the giveaway terms, no winners could be selected by Telegram";
+
+"Story.ViewMessage" = "View Message";

@@ -222,7 +222,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         } else {
                             names.append(environment.strings.CreateGroup_PeersTitleLastDelimeter)
                         }
-                        names.append(context.component.peers[i].compactDisplayTitle)
+                        names.append("**\(context.component.peers[i].compactDisplayTitle)**")
                     }
                     descriptionString = environment.strings.Premium_Gift_MultipleDescription(names, "").string
                 } else {
@@ -233,10 +233,9 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         } else {
                             names.append(environment.strings.CreateGroup_PeersTitleDelimeter)
                         }
-                        names.append(context.component.peers[i].compactDisplayTitle)
+                        names.append("**\(context.component.peers[i].compactDisplayTitle)**")
                     }
                     let more = environment.strings.Premium_Gift_NamesAndMore(Int32(context.component.peers.count - 3))
-                    
                     descriptionString = environment.strings.Premium_Gift_MultipleDescription(names, more).string
                 }
             } else {
@@ -996,7 +995,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                                 
             let price: String?
             if let products = state.products, let selectedProductId = state.selectedProductId, let product = products.first(where: { $0.id == selectedProductId }) {
-                price = product.price
+                price = product.storeProduct.multipliedPrice(count: context.component.peerIds.count)
             } else {
                 price = nil
             }

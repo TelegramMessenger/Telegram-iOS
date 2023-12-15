@@ -9,7 +9,6 @@ public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case group(groupId: PeerGroupId, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
-    case publicForwards(messageId: MessageId)
     case sentMedia(tags: MessageTags?)
 }
 
@@ -353,50 +352,6 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
                 }
-            }
-        case let .publicForwards(messageId):
-            remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer, Int32?) in
-                let sourcePeer = transaction.getPeer(messageId.peerId)
-                let inputChannel = sourcePeer.flatMap { apiInputChannel($0) }
-                let statsDatacenterId = (transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData)?.statsDatacenterId
-                
-                var lowerBound: MessageIndex?
-                if let state = state, let message = state.main.messages.last {
-                    lowerBound = message.index
-                }
-                if let lowerBound = lowerBound, let peer = transaction.getPeer(lowerBound.id.peerId), let inputPeer = apiInputPeer(peer) {
-                    return (inputChannel, state?.main.nextRate ?? 0, lowerBound, inputPeer, statsDatacenterId)
-                } else {
-                    return (inputChannel, 0, lowerBound, .inputPeerEmpty, statsDatacenterId)
-                }
-            }
-            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer, statsDatacenterId) in
-                guard let inputChannel = inputChannel else {
-                    return .complete()
-                }
-                
-                //TODO
-                let _ = inputChannel
-                return .complete()
-                
-                /*let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
-                let signal: Signal<Api.messages.Messages, MTRpcError>
-                if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
-                    signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-                    |> castError(MTRpcError.self)
-                    |> mapToSignal { worker in
-                        return worker.request(request)
-                    }
-                } else {
-                    signal = account.network.request(request, automaticFloodWait: false)
-                }
-                return signal
-                |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
-                    return (result, nil)
-                }
-                |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
-                    return .single((nil, nil))
-                }*/
             }
         case let .sentMedia(tags):
             let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty

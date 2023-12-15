@@ -1130,6 +1130,8 @@ public final class SolidRoundedButtonView: UIView {
                     strongSelf.iconNode.alpha = 0.55
                     strongSelf.animationNode?.layer.removeAnimation(forKey: "opacity")
                     strongSelf.animationNode?.alpha = 0.55
+                    strongSelf.badgeNode?.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.badgeNode?.alpha = 0.55
                 } else {
                     if strongSelf.buttonBackgroundNode.alpha > 0.0 {
                         strongSelf.buttonBackgroundNode.alpha = 1.0
@@ -1142,6 +1144,8 @@ public final class SolidRoundedButtonView: UIView {
                         strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         strongSelf.animationNode?.alpha = 1.0
                         strongSelf.animationNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.badgeNode?.alpha = 1.0
+                        strongSelf.badgeNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }

@@ -451,7 +451,9 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         }
     }
     switch mediaArea {
-    case .inputMediaAreaVenue, .inputMediaAreaChannelPost:
+    case .inputMediaAreaChannelPost:
+        return nil
+    case .inputMediaAreaVenue:
         return nil
     case let .mediaAreaGeoPoint(coordinates, geo):
         let latitude: Double
@@ -490,12 +492,12 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         } else {
             return nil
         }
-    case .mediaAreaChannelPost:
-        return nil
+    case let .mediaAreaChannelPost(coordinates, channelId, messageId):
+        return .channelMessage(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId))
     }
 }
 
-func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea]) -> [Api.MediaArea] {
+func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transaction) -> [Api.MediaArea] {
     var apiMediaAreas: [Api.MediaArea] = []
     for area in mediaAreas {
         let coordinates = area.coordinates
@@ -518,6 +520,10 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea]) -> [Api.MediaArea] {
                 apiFlags |= (1 << 1)
             }
             apiMediaAreas.append(.mediaAreaSuggestedReaction(flags: apiFlags, coordinates: inputCoordinates, reaction: reaction.apiReaction))
+        case let .channelMessage(_, messageId):
+            if let peer = transaction.getPeer(messageId.peerId), let inputChannel = apiInputChannel(peer) {
+                apiMediaAreas.append(.inputMediaAreaChannelPost(coordinates: inputCoordinates, channel: inputChannel, msgId: messageId.id))
+            }
         }
     }
     return apiMediaAreas
