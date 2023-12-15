@@ -1675,7 +1675,8 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }
                     let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
                     
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), text: presentationData.strings.Channel_ChannelColor, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
+                    //TODO:localize
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: generateDisclosureActionBoostLevelBadgeImage(text: "Level 1+"), text: "Appearance", icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
                     }))
                     
@@ -7200,9 +7201,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if self.peerId == self.context.account.peerId {
             let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .account)
             self.controller?.push(controller)
-        } else {
-            let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .channel(self.peerId))
-            self.controller?.push(controller)
+        } else if let peer = self.data?.peer, peer is TelegramChannel {
+            self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
         }
     }
     

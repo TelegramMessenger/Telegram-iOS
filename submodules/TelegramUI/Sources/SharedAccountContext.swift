@@ -363,6 +363,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 if themeUpdated {
                     updateLegacyTheme()
+                    
+                    /*if #available(iOS 13.0, *) {
+                        let userInterfaceStyle: UIUserInterfaceStyle
+                        if strongSelf.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
+                            userInterfaceStyle = .dark
+                        } else {
+                            userInterfaceStyle = .light
+                        }
+                        if let eventView = strongSelf.mainWindow?.hostView.eventView, eventView.overrideUserInterfaceStyle != userInterfaceStyle {
+                            eventView.overrideUserInterfaceStyle = userInterfaceStyle
+                        }
+                    }*/
                 }
                 if themeNameUpdated {
                     strongSelf.presentCrossfadeController()
@@ -962,6 +974,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        
+        /*if #available(iOS 13.0, *) {
+            let userInterfaceStyle: UIUserInterfaceStyle
+            if self.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
+                userInterfaceStyle = .dark
+            } else {
+                userInterfaceStyle = .light
+            }
+            if let eventView = self.mainWindow?.hostView.eventView, eventView.overrideUserInterfaceStyle != userInterfaceStyle {
+                eventView.overrideUserInterfaceStyle = userInterfaceStyle
+            }
+        }*/
     }
     
     deinit {

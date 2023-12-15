@@ -428,6 +428,7 @@ public func generateScaledImage(image: UIImage?, size: CGSize, opaque: Bool = tr
 
 public func generateSingleColorImage(size: CGSize, color: UIColor) -> UIImage? {
     return generateImage(size, contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
     })

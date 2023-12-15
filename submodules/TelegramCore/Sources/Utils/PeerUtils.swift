@@ -255,6 +255,17 @@ public extension Peer {
         return false
     }
     
+    var emojiStatus: PeerEmojiStatus? {
+        switch self {
+        case let user as TelegramUser:
+            return user.emojiStatus
+        case let channel as TelegramChannel:
+            return channel.emojiStatus
+        default:
+            return nil
+        }
+    }
+    
     var backgroundEmojiId: Int64? {
         switch self {
         case let user as TelegramUser:

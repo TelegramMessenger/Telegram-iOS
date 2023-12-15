@@ -30,7 +30,7 @@ struct BotCheckoutNativeCardEntryAdditionalFields: OptionSet {
 final class BotCheckoutNativeCardEntryController: ViewController {
     enum Provider {
         case stripe(additionalFields: BotCheckoutNativeCardEntryAdditionalFields, publishableKey: String)
-        case smartglobal(isTesting: Bool, publicToken: String)
+        case smartglobal(isTesting: Bool, publicToken: String, customTokenizeUrl: String?)
     }
 
     private var controllerNode: BotCheckoutNativeCardEntryControllerNode {

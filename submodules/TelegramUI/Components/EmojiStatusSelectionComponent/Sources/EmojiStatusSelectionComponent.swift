@@ -64,6 +64,7 @@ public final class EmojiStatusSelectionComponent: Component {
     public let emojiContent: EmojiPagerContentComponent
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
+    public let color: UIColor?
     public let hideTopPanel: Bool
     public let disableTopPanel: Bool
     public let hideTopPanelUpdated: (Bool, Transition) -> Void
@@ -73,6 +74,7 @@ public final class EmojiStatusSelectionComponent: Component {
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
         emojiContent: EmojiPagerContentComponent,
+        color: UIColor?,
         backgroundColor: UIColor,
         separatorColor: UIColor,
         hideTopPanel: Bool,
@@ -83,6 +85,7 @@ public final class EmojiStatusSelectionComponent: Component {
         self.strings = strings
         self.deviceMetrics = deviceMetrics
         self.emojiContent = emojiContent
+        self.color = color
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.hideTopPanel = hideTopPanel
@@ -101,6 +104,9 @@ public final class EmojiStatusSelectionComponent: Component {
             return false
         }
         if lhs.emojiContent != rhs.emojiContent {
+            return false
+        }
+        if lhs.color != rhs.color {
             return false
         }
         if lhs.backgroundColor != rhs.backgroundColor {
@@ -169,7 +175,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     isContentInFocus: true,
                     containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: 0.0, bottom: 0.0, right: 0.0),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
-                    emojiContent: component.emojiContent,
+                    emojiContent: component.emojiContent.withCustomTintColor(component.color),
                     stickerContent: nil,
                     maskContent: nil,
                     gifContent: nil,
@@ -200,7 +206,8 @@ public final class EmojiStatusSelectionComponent: Component {
                     isExpanded: false,
                     clipContentToTopPanel: false,
                     useExternalSearchContainer: false,
-                    hidePanels: component.disableTopPanel
+                    hidePanels: component.disableTopPanel,
+                    customTintColor: component.color
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -277,6 +284,7 @@ public final class EmojiStatusSelectionController: ViewController {
         private var validLayout: ContainerViewLayout?
         
         private let currentSelection: Int64?
+        private let color: UIColor?
         
         private var emojiContentDisposable: Disposable?
         private var emojiContent: EmojiPagerContentComponent?
@@ -312,10 +320,11 @@ public final class EmojiStatusSelectionController: ViewController {
         
         private var isReactionSearchActive: Bool = false
         
-        init(controller: EmojiStatusSelectionController, context: AccountContext, sourceView: UIView?, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?) {
+        init(controller: EmojiStatusSelectionController, context: AccountContext, sourceView: UIView?, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, color: UIColor?) {
             self.controller = controller
             self.context = context
             self.currentSelection = currentSelection
+            self.color = color
             
             if let sourceView = sourceView {
                 self.globalSourceRect = sourceView.convert(sourceView.bounds, to: nil)
@@ -826,17 +835,26 @@ public final class EmojiStatusSelectionController: ViewController {
                                 renderer: animationRenderer,
                                 placeholderColor: UIColor(white: 0.0, alpha: 0.0),
                                 pointSize: CGSize(width: 32.0, height: 32.0),
-                                dynamicColor: self.presentationData.theme.list.itemAccentColor
+                                dynamicColor: self.color ?? self.presentationData.theme.list.itemAccentColor
                             )
-                            switch item.tintMode {
-                            case let .custom(color):
-                                baseItemLayer.contentTintColor = color
-                            case .accent:
-                                baseItemLayer.contentTintColor = self.presentationData.theme.list.itemAccentColor
-                            case .primary:
-                                baseItemLayer.contentTintColor = self.presentationData.theme.list.itemPrimaryTextColor
-                            case .none:
-                                break
+                            if let color = self.color {
+                                switch item.tintMode {
+                                case .none:
+                                    break
+                                default:
+                                    baseItemLayer.contentTintColor = color
+                                }
+                            } else {
+                                switch item.tintMode {
+                                case let .custom(color):
+                                    baseItemLayer.contentTintColor = color
+                                case .accent:
+                                    baseItemLayer.contentTintColor = self.presentationData.theme.list.itemAccentColor
+                                case .primary:
+                                    baseItemLayer.contentTintColor = self.presentationData.theme.list.itemPrimaryTextColor
+                                case .none:
+                                    break
+                                }
                             }
                             
                             if let sublayers = animationLayer.sublayers {
@@ -988,6 +1006,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     strings: self.presentationData.strings,
                     deviceMetrics: layout.deviceMetrics,
                     emojiContent: emojiContent,
+                    color: self.color,
                     backgroundColor: listBackgroundColor,
                     separatorColor: separatorColor,
                     hideTopPanel: self.isReactionSearchActive,
@@ -1279,6 +1298,8 @@ public final class EmojiStatusSelectionController: ViewController {
                 case .statusSelection:
                     let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile, expirationDate: nil)
                     |> deliverOnMainQueue).start()
+                case let .backgroundSelection(completion):
+                    completion(item?.itemFile?.fileId.id)
                 case let .quickReactionSelection(completion):
                     if let item = item, let itemFile = item.itemFile {
                         var selectedReaction: MessageReaction.Reaction?
@@ -1364,6 +1385,7 @@ public final class EmojiStatusSelectionController: ViewController {
     
     public enum Mode {
         case statusSelection
+        case backgroundSelection(completion: (Int64?) -> Void)
         case quickReactionSelection(completion: () -> Void)
     }
     
@@ -1371,6 +1393,7 @@ public final class EmojiStatusSelectionController: ViewController {
     private weak var sourceView: UIView?
     private let emojiContent: Signal<EmojiPagerContentComponent, NoError>
     private let currentSelection: Int64?
+    private let color: UIColor?
     private let mode: Mode
     private let destinationItemView: () -> UIView?
     
@@ -1383,12 +1406,13 @@ public final class EmojiStatusSelectionController: ViewController {
         return true
     }
     
-    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, destinationItemView: @escaping () -> UIView?) {
+    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, color: UIColor? = nil, destinationItemView: @escaping () -> UIView?) {
         self.context = context
         self.mode = mode
         self.sourceView = sourceView
         self.emojiContent = emojiContent
         self.currentSelection = currentSelection
+        self.color = color
         self.destinationItemView = destinationItemView
         
         super.init(navigationBarPresentationData: nil)
@@ -1418,7 +1442,7 @@ public final class EmojiStatusSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context, sourceView: self.sourceView, emojiContent: self.emojiContent, currentSelection: self.currentSelection)
+        self.displayNode = Node(controller: self, context: self.context, sourceView: self.sourceView, emojiContent: self.emojiContent, currentSelection: self.currentSelection, color: self.color)
 
         super.displayNodeDidLoad()
     }

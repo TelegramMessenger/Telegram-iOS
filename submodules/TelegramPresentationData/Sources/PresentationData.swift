@@ -875,3 +875,29 @@ public extension PresentationData {
         return PresentationData(strings: strings, theme: self.theme, autoNightModeTriggered: self.autoNightModeTriggered, chatWallpaper: self.chatWallpaper, chatFontSize: self.chatFontSize, chatBubbleCorners: chatBubbleCorners, listsFontSize: self.listsFontSize, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, nameSortOrder: self.nameSortOrder, reduceMotion: self.reduceMotion, largeEmoji: self.largeEmoji)
     }
 }
+
+public func themeDisplayName(strings: PresentationStrings, reference: PresentationThemeReference) -> String {
+    let name: String
+    switch reference {
+    case let .builtin(theme):
+        switch theme {
+        case .dayClassic:
+            name = strings.Appearance_ThemeCarouselClassic
+        case .day:
+            name = strings.Appearance_ThemeCarouselDay
+        case .night:
+            name = strings.Appearance_ThemeCarouselNewNight
+        case .nightAccent:
+            name = strings.Appearance_ThemeCarouselTintedNight
+        }
+    case let .local(theme):
+        name = theme.title
+    case let .cloud(theme):
+        if let emoticon = theme.theme.emoticon {
+            name = emoticon
+        } else {
+            name = theme.theme.title
+        }
+    }
+    return name
+}
