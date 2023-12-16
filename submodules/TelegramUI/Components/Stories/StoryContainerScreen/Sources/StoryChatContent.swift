@@ -2454,6 +2454,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
         readGlobally: Bool
     ) {
         self.context = context
+        self.focusedItem = (focusedStoryId.peerId, focusedStoryId.id)
         self.viewListContext = viewListContext
         self.readGlobally = readGlobally
         

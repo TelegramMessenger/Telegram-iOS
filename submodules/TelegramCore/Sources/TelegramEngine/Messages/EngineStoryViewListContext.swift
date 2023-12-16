@@ -178,9 +178,9 @@ public final class EngineStoryViewListContext {
         }
         
         public struct ItemHash: Hashable {
-            var peerId: EnginePeer.Id
-            var storyId: Int32?
-            var messageId: EngineMessage.Id?
+            public var peerId: EnginePeer.Id
+            public var storyId: Int32?
+            public var messageId: EngineMessage.Id?
         }
         
         public var uniqueId: ItemHash {
