@@ -49,7 +49,9 @@
         }
         
         _frameCount = (int32_t)_animation->totalFrame();
+        _frameCount = MAX(1, _frameCount);
         _frameRate = (int32_t)_animation->frameRate();
+        _frameRate = MAX(1, _frameRate);
         
         size_t width = 0;
         size_t height = 0;
@@ -58,6 +60,9 @@
         if (width > 1536 || height > 1536) {
             return nil;
         }
+        
+        width = MAX(1, width);
+        height = MAX(1, height);
         
         _dimensions = CGSizeMake(width, height);
         

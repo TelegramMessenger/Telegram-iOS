@@ -1423,6 +1423,13 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
         guard let inputPeer = inputPeer else {
             return .complete()
         }
+        
+        #if DEBUG
+        if "".isEmpty {
+            return .complete()
+        }
+        #endif
+        
         return network.request(Api.functions.stories.getPeerStories(peer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.stories.PeerStories?, NoError> in

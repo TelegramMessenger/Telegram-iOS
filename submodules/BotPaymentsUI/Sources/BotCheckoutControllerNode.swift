@@ -903,10 +903,17 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     guard let publicToken = nativeParams["public_token"] as? String else {
                         return
                     }
+                    
+                    var customTokenizeUrl: String?
+                    if let value = nativeParams["public_token"] as? String, let url = URL(string: value), let host = url.host {
+                        if url.scheme == "https" && (host == "smart-glocal.com" || host.hasSuffix(".smart-glocal.com")) {
+                            customTokenizeUrl = value
+                        }
+                    }
 
                     var dismissImpl: (() -> Void)?
                     let canSave = paymentForm.canSaveCredentials || paymentForm.passwordMissing
-                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .smartglobal(isTesting: paymentForm.invoice.isTest, publicToken: publicToken), completion: { method in
+                    let controller = BotCheckoutNativeCardEntryController(context: strongSelf.context, provider: .smartglobal(isTesting: paymentForm.invoice.isTest, publicToken: publicToken, customTokenizeUrl: customTokenizeUrl), completion: { method in
                         guard let strongSelf = self else {
                             return
                         }

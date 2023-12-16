@@ -100,9 +100,9 @@ func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.
             if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
                 let flagsReplies: Int32 = (1 << 0) | (1 << 2)
                 
-                var flagsProfile: Int32 = (1 << 0) | (1 << 2)
+                var flagsProfile: Int32 = (1 << 0) | (1 << 1)
                 if profileColor != nil {
-                    flagsProfile |= (1 << 1)
+                    flagsProfile |= (1 << 2)
                 }
                 
                 return combineLatest(
@@ -160,4 +160,46 @@ func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.
     } 
     |> castError(UpdatePeerNameColorAndEmojiError.self)
     |> switchToLatest
+}
+
+public enum UpdatePeerEmojiStatusError {
+    case generic
+}
+
+func _internal_updatePeerEmojiStatus(account: Account, peerId: PeerId, fileId: Int64?, expirationDate: Int32?) -> Signal<Never, UpdatePeerEmojiStatusError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        let updatedStatus = fileId.flatMap {
+            PeerEmojiStatus(fileId: $0, expirationDate: expirationDate)
+        }
+        if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+            updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(updatedStatus)], update: { _, updated in updated })
+        }
+        
+        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    }
+    |> castError(UpdatePeerEmojiStatusError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, UpdatePeerEmojiStatusError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        let mappedStatus: Api.EmojiStatus
+        if let fileId = fileId {
+            if let expirationDate = expirationDate {
+                mappedStatus = .emojiStatusUntil(documentId: fileId, until: expirationDate)
+            } else {
+                mappedStatus = .emojiStatus(documentId: fileId)
+            }
+        } else {
+            mappedStatus = .emojiStatusEmpty
+        }
+        return account.network.request(Api.functions.channels.updateEmojiStatus(channel: inputChannel, emojiStatus: mappedStatus))
+        |> ignoreValues
+        |> `catch` { error -> Signal<Never, UpdatePeerEmojiStatusError> in
+            if error.errorDescription == "CHAT_NOT_MODIFIED" {
+                return .complete()
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
 }
