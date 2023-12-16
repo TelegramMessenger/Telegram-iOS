@@ -30,7 +30,7 @@ public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, 
                     |> mapToSignal { result in
                         switch result {
                         case let .channelMessages(_, _, _, _, apiMessages, _, apiChats, apiUsers):
-                            if let apiMessage = apiMessages.first, let storeMessage = StoreMessage(apiMessage: apiMessage, peerIsForum: peer.isForum) {
+                            if let apiMessage = apiMessages.first, let storeMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
                                 
                                 var peers: [PeerId: Peer] = [:]
                                 for chat in apiChats {
@@ -113,7 +113,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
                             }
                             
                             let messageAndFile:(Message, TelegramMediaFile)? = apiMessages.compactMap { value in
-                                return StoreMessage(apiMessage: value, peerIsForum: peer.isForum)
+                                return StoreMessage(apiMessage: value, accountPeerId: account.peerId, peerIsForum: peer.isForum)
                                 }.compactMap { value in
                                     return locallyRenderedMessage(message: value, peers: peers)
                                 }.sorted(by: {
