@@ -3085,28 +3085,33 @@ public final class DrawingToolsInteraction {
             var isRectangleImage = false
             var isVideo = false
             var isAdditional = false
+            var isMessage = false
             if let entity = entityView.entity as? DrawingStickerEntity {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
                     isAdditional = isAdditionalValue
                 } else if case let .image(_, type) = entity.content, case .rectangle = type {
                     isRectangleImage = true
+                } else if case .message = entity.content {
+                    isMessage = true
                 }
             }
             
-            guard !isVideo || isAdditional else {
+            guard (!isVideo || isAdditional) && (!isMessage || !isTopmost) else {
                 return
             }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
             var actions: [ContextMenuAction] = []
-            actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in
-                if let self, let entityView {
-                    if self.shouldDeleteEntity(entityView.entity) {
-                        self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
+            if !isMessage {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in
+                    if let self, let entityView {
+                        if self.shouldDeleteEntity(entityView.entity) {
+                            self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
+                        }
                     }
-                }
-            }))
+                }))
+            }
             if let entityView = entityView as? DrawingLocationEntityView {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Edit, accessibilityLabel: presentationData.strings.Paint_Edit), action: { [weak self, weak entityView] in
                     if let self, let entityView {
@@ -3121,7 +3126,7 @@ public final class DrawingToolsInteraction {
                         self.entitiesView.selectEntity(entityView.entity)
                     }
                 }))
-            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo {
+            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo && !isMessage {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Flip, accessibilityLabel: presentationData.strings.Paint_Flip), action: { [weak self] in
                     if let self {
                         self.flipSelectedEntity()
@@ -3135,7 +3140,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if !isVideo {
+            if !isVideo && !isMessage {
                 if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
                     
                 } else {

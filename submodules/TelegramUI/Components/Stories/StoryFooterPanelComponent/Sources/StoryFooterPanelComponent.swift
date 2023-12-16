@@ -42,6 +42,7 @@ public final class StoryFooterPanelComponent: Component {
     public let storyItem: EngineStoryItem
     public let myReaction: MyReaction?
     public let isChannel: Bool
+    public let canViewChannelStats: Bool
     public let canShare: Bool
     public let externalViews: EngineStoryItem.Views?
     public let expandFraction: CGFloat
@@ -61,6 +62,7 @@ public final class StoryFooterPanelComponent: Component {
         storyItem: EngineStoryItem,
         myReaction: MyReaction?,
         isChannel: Bool,
+        canViewChannelStats: Bool,
         canShare: Bool,
         externalViews: EngineStoryItem.Views?,
         expandFraction: CGFloat,
@@ -79,6 +81,7 @@ public final class StoryFooterPanelComponent: Component {
         self.storyItem = storyItem
         self.myReaction = myReaction
         self.isChannel = isChannel
+        self.canViewChannelStats = canViewChannelStats
         self.canShare = canShare
         self.externalViews = externalViews
         self.expandViewStats = expandViewStats
@@ -111,6 +114,9 @@ public final class StoryFooterPanelComponent: Component {
             return false
         }
         if lhs.isChannel != rhs.isChannel {
+            return false
+        }
+        if lhs.canViewChannelStats != rhs.canViewChannelStats {
             return false
         }
         if lhs.externalViews != rhs.externalViews {
@@ -393,7 +399,7 @@ public final class StoryFooterPanelComponent: Component {
             }
             
             var displayViewLists = false
-            if case let .channel(channel) = component.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+            if case let .channel(channel) = component.peer, channel.flags.contains(.isCreator) || component.canViewChannelStats {
                 displayViewLists = reactionCount != 0 || forwardCount != 0
             } else {
                 displayViewLists = viewCount != 0 && !component.isChannel

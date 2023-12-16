@@ -117,6 +117,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/PeerNameColorScreen",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/TelegramUI/Components/Settings/QuickReactionSetupController",
+        "//submodules/TelegramUI/Components/Settings/ThemeCarouselItem",
+        "//submodules/TelegramUI/Components/Settings/ThemeSettingsThemeItem",
     ],
     visibility = [
         "//visibility:public",

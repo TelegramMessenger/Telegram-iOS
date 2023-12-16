@@ -30,6 +30,9 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
         if flags.contains(StickerPackCollectionInfoFlags.isEmoji) {
             rawValue |= StickerPackCollectionInfoFlags.isEmoji.rawValue
         }
+        if flags.contains(StickerPackCollectionInfoFlags.isAvailableAsChannelStatus) {
+            rawValue |= StickerPackCollectionInfoFlags.isAvailableAsChannelStatus.rawValue
+        }
         
         self.rawValue = rawValue
     }
@@ -39,6 +42,7 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     public static let isAnimated = StickerPackCollectionInfoFlags(rawValue: 1 << 2)
     public static let isVideo = StickerPackCollectionInfoFlags(rawValue: 1 << 3)
     public static let isEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 4)
+    public static let isAvailableAsChannelStatus = StickerPackCollectionInfoFlags(rawValue: 1 << 5)
 }
 
 

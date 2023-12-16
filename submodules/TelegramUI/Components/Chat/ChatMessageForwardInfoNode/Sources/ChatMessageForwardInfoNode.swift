@@ -289,6 +289,8 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 }
                 
                 let textNode = textApply()
+                textNode.displaysAsynchronously = !presentationData.isPreview
+                
                 if node.textNode == nil {
                     textNode.isUserInteractionEnabled = false
                     node.textNode = textNode

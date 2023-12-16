@@ -34,15 +34,17 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     let id: AnyHashable
     let label: Label
     let additionalBadgeLabel: String?
+    let additionalBadgeIcon: UIImage?
     let text: String
     let icon: UIImage?
     let iconSignal: Signal<UIImage?, NoError>?
     let action: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, additionalBadgeIcon: UIImage? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, action: (() -> Void)?) {
         self.id = id
         self.label = label
         self.additionalBadgeLabel = additionalBadgeLabel
+        self.additionalBadgeIcon = additionalBadgeIcon
         self.text = text
         self.icon = icon
         self.iconSignal = iconSignal
@@ -61,6 +63,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let labelBadgeNode: ASImageNode
     private let labelNode: ImmediateTextNode
     private var additionalLabelNode: ImmediateTextNode?
+    private var additionalLabelBadgeNode: ASImageNode?
     private let textNode: ImmediateTextNode
     private let arrowNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
@@ -249,6 +252,24 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             self.labelBadgeNode.removeFromSupernode()
         }
         
+        if let additionalBadgeIcon = item.additionalBadgeIcon {
+            let additionalLabelBadgeNode: ASImageNode
+            if let current = self.additionalLabelBadgeNode {
+                additionalLabelBadgeNode = current
+            } else {
+                additionalLabelBadgeNode = ASImageNode()
+                additionalLabelBadgeNode.isUserInteractionEnabled = false
+                self.additionalLabelBadgeNode = additionalLabelBadgeNode
+                self.insertSubnode(additionalLabelBadgeNode, belowSubnode: self.labelNode)
+            }
+            additionalLabelBadgeNode.image = additionalBadgeIcon
+        } else {
+            if let additionalLabelBadgeNode = self.additionalLabelBadgeNode {
+                self.additionalLabelBadgeNode = nil
+                additionalLabelBadgeNode.removeFromSupernode()
+            }
+        }
+        
         var badgeWidth = max(badgeDiameter, labelSize.width + 10.0)
         if case .semitransparentBadge = item.label {
             badgeWidth += 2.0
@@ -281,6 +302,11 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         } else if let additionalLabelNode = self.additionalLabelNode {
             self.additionalLabelNode = nil
             additionalLabelNode.removeFromSupernode()
+        }
+        
+        if let additionalLabelBadgeNode = self.additionalLabelBadgeNode, let image = additionalLabelBadgeNode.image {
+            let additionalLabelSize = image.size
+            additionalLabelBadgeNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: floor((height - additionalLabelSize.height) / 2.0) + 1.0), size: additionalLabelSize)
         }
         
         let labelBadgeNodeFrame: CGRect

@@ -363,6 +363,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 if themeUpdated {
                     updateLegacyTheme()
+                    
+                    /*if #available(iOS 13.0, *) {
+                        let userInterfaceStyle: UIUserInterfaceStyle
+                        if strongSelf.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
+                            userInterfaceStyle = .dark
+                        } else {
+                            userInterfaceStyle = .light
+                        }
+                        if let eventView = strongSelf.mainWindow?.hostView.eventView, eventView.overrideUserInterfaceStyle != userInterfaceStyle {
+                            eventView.overrideUserInterfaceStyle = userInterfaceStyle
+                        }
+                    }*/
                 }
                 if themeNameUpdated {
                     strongSelf.presentCrossfadeController()
@@ -962,6 +974,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        
+        /*if #available(iOS 13.0, *) {
+            let userInterfaceStyle: UIUserInterfaceStyle
+            if self.currentPresentationData.with({ $0 }).theme.overallDarkAppearance {
+                userInterfaceStyle = .dark
+            } else {
+                userInterfaceStyle = .light
+            }
+            if let eventView = self.mainWindow?.hostView.eventView, eventView.overrideUserInterfaceStyle != userInterfaceStyle {
+                eventView.overrideUserInterfaceStyle = userInterfaceStyle
+            }
+        }*/
     }
     
     deinit {
@@ -1678,6 +1702,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
         return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), controllerInteraction: nil, context: context)
+    }
+    
+    public func makeChatMessageAvatarHeaderItem(context: AccountContext, timestamp: Int32, peer: Peer, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
+        return ChatMessageAvatarHeader(timestamp: timestamp, peerId: peer.id, peer: peer, messageReference: nil, message: message, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, controllerInteraction: nil, storyStats: nil)
     }
     
     public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {

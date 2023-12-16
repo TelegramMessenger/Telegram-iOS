@@ -652,16 +652,19 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 
                 node.previousMediaReference = updatedMediaReference
                 
-                node.titleNode?.displaysAsynchronously = !arguments.presentationData.isPreview
                 //node.textNode?.textNode.displaysAsynchronously = !arguments.presentationData.isPreview
                 
                 let titleNode = titleApply()
+                titleNode.displaysAsynchronously = !arguments.presentationData.isPreview
+                
                 var textArguments: TextNodeWithEntities.Arguments?
                 if let cache = arguments.animationCache, let renderer = arguments.animationRenderer {
                     textArguments = TextNodeWithEntities.Arguments(context: arguments.context, cache: cache, renderer: renderer, placeholderColor: placeholderColor, attemptSynchronous: attemptSynchronous)
                 }
                 let previousTextContents = node.textNode?.textNode.layer.contents
                 let textNode = textApply(textArguments)
+                textNode.textNode.displaysAsynchronously = !arguments.presentationData.isPreview
+                
                 textNode.visibilityRect = node.visibility ? CGRect.infinite : nil
                 
                 if node.titleNode == nil {
@@ -768,7 +771,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     if let current = node.dustNode {
                         dustNode = current
                     } else {
-                        dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: arguments.context.sharedContext.energyUsageSettings.fullTranslucency)
+                        dustNode = InvisibleInkDustNode(textNode: nil, enableAnimations: arguments.context.sharedContext.energyUsageSettings.fullTranslucency && !arguments.presentationData.isPreview)
                         dustNode.isUserInteractionEnabled = false
                         node.dustNode = dustNode
                         node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode.textNode)

@@ -310,9 +310,11 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             }))
 
             self.updateDone()
-        case let .smartglobal(isTesting, publicToken):
+        case let .smartglobal(isTesting, publicToken, customTokenizeUrl):
             let url: String
-            if isTesting {
+            if let customTokenizeUrl {
+                url = customTokenizeUrl
+            } else if isTesting {
                 url = "https://tgb-playground.smart-glocal.com/cds/v1/tokenize/card"
             } else {
                 url = "https://tgb.smart-glocal.com/cds/v1/tokenize/card"

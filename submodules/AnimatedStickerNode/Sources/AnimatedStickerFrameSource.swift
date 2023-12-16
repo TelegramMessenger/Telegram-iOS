@@ -592,9 +592,9 @@ public final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource 
             return nil
         }
         self.animation = animation
-        let frameCount = Int(animation.frameCount)
+        let frameCount = max(1, Int(animation.frameCount))
         self.frameCount = frameCount
-        self.frameRate = Int(animation.frameRate)
+        self.frameRate = max(1, Int(animation.frameRate))
         
         self.cache = cachePathPrefix.flatMap { cachePathPrefix in
             AnimatedStickerDirectFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height, frameCount: frameCount, fitzModifier: fitzModifier, useHardware: useMetalCache)

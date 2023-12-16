@@ -122,6 +122,10 @@ public func itemListNeighborsPlainInsets(_ neighbors: ItemListNeighbors) -> UIEd
 }
 
 public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors, _ params: ListViewItemLayoutParams) -> UIEdgeInsets {
+    if params.isStandalone {
+        return UIEdgeInsets()
+    }
+    
     let topInset: CGFloat
     switch neighbors.top {
     case .none:

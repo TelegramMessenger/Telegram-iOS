@@ -14,6 +14,8 @@ import WallpaperResources
 import AccountContext
 import AppBundle
 import ContextUI
+import ListItemComponentAdaptor
+import HexColor
 
 private struct ThemeSettingsThemeEntry: Comparable, Identifiable {    
     let index: Int
@@ -369,24 +371,24 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
 }
 
-class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
-    var sectionId: ItemListSectionId
+public class ThemeSettingsThemeItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
+    public var sectionId: ItemListSectionId
 
-    let context: AccountContext
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let themes: [PresentationThemeReference]
-    let allThemes: [PresentationThemeReference]
-    let displayUnsupported: Bool
-    let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
-    let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
-    let themePreferredBaseTheme: [Int64: TelegramBaseTheme]
-    let currentTheme: PresentationThemeReference
-    let updatedTheme: (PresentationThemeReference) -> Void
-    let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
-    let tag: ItemListItemTag?
+    public let context: AccountContext
+    public let theme: PresentationTheme
+    public let strings: PresentationStrings
+    public let themes: [PresentationThemeReference]
+    public let allThemes: [PresentationThemeReference]
+    public let displayUnsupported: Bool
+    public let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
+    public let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
+    public let themePreferredBaseTheme: [Int64: TelegramBaseTheme]
+    public let currentTheme: PresentationThemeReference
+    public let updatedTheme: (PresentationThemeReference) -> Void
+    public let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
+    public let tag: ItemListItemTag?
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], allThemes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], themePreferredBaseTheme: [Int64: TelegramBaseTheme], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], allThemes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], themePreferredBaseTheme: [Int64: TelegramBaseTheme], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -403,7 +405,7 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
 
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ThemeSettingsThemeItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -419,7 +421,7 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
         }
     }
 
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ThemeSettingsThemeItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -434,6 +436,42 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
                 }
             }
         }
+    }
+    
+    public func item() -> ListViewItem {
+        return self
+    }
+    
+    public static func ==(lhs: ThemeSettingsThemeItem, rhs: ThemeSettingsThemeItem) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.themes != rhs.themes {
+            return false
+        }
+        if lhs.displayUnsupported != rhs.displayUnsupported {
+            return false
+        }
+        if lhs.themeSpecificAccentColors != rhs.themeSpecificAccentColors {
+            return false
+        }
+        if lhs.themeSpecificChatWallpapers != rhs.themeSpecificChatWallpapers {
+            return false
+        }
+        if lhs.themePreferredBaseTheme != rhs.themePreferredBaseTheme {
+            return false
+        }
+        if lhs.currentTheme != rhs.currentTheme {
+            return false
+        }
+        
+        return true
     }
 }
 
@@ -472,7 +510,7 @@ private func ensureThemeVisible(listNode: ListView, themeReference: Presentation
     }
 }
 
-class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
+public class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -488,13 +526,13 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private var item: ThemeSettingsThemeItem?
     private var layoutParams: ListViewItemLayoutParams?
 
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
     private var tapping = false
 
-    init() {
+    public init() {
         self.containerNode = ASDisplayNode()
         
         self.backgroundNode = ASDisplayNode()
@@ -517,7 +555,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.listNode)
     }
 
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         self.listNode.view.disablesInteractiveTransitionGestureRecognizer = true
     }
@@ -558,7 +596,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         })
     }
 
-    func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -591,20 +629,26 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     if strongSelf.maskNode.supernode == nil {
                         strongSelf.containerNode.insertSubnode(strongSelf.maskNode, at: 3)
                     }
-
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
-                    var hasTopCorners = false
-                    var hasBottomCorners = false
-                    switch neighbors.top {
+                    
+                    if params.isStandalone {
+                        strongSelf.topStripeNode.isHidden = true
+                        strongSelf.bottomStripeNode.isHidden = true
+                        strongSelf.maskNode.isHidden = true
+                        strongSelf.backgroundNode.isHidden = true
+                    } else {
+                        let hasCorners = itemListHasRoundedBlockLayout(params)
+                        var hasTopCorners = false
+                        var hasBottomCorners = false
+                        switch neighbors.top {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
                             hasTopCorners = true
                             strongSelf.topStripeNode.isHidden = hasCorners
-                    }
-                    let bottomStripeInset: CGFloat
-                    let bottomStripeOffset: CGFloat
-                    switch neighbors.bottom {
+                        }
+                        let bottomStripeInset: CGFloat
+                        let bottomStripeOffset: CGFloat
+                        switch neighbors.bottom {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
@@ -614,15 +658,18 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             bottomStripeOffset = 0.0
                             hasBottomCorners = true
                             strongSelf.bottomStripeNode.isHidden = hasCorners
+                        }
+                        
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        
+                        strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
 
                     strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
 
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
-                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
 
                     var listInsets = UIEdgeInsets()
                     listInsets.top += params.leftInset + 4.0
@@ -694,15 +741,15 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
 
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    func prepareCrossfadeTransition() {
+    public func prepareCrossfadeTransition() {
         guard self.snapshotView == nil else {
             return
         }
@@ -719,7 +766,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    func animateCrossfadeTransition() {
+    public func animateCrossfadeTransition() {
         guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
             return
         }

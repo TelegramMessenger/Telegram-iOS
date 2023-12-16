@@ -334,7 +334,6 @@ private final class LineView: UIView {
         
         let _ = previousParams
         
-        
         self.backgroundView.tintColor = primaryColor
         
         if let secondaryColor {
@@ -405,6 +404,10 @@ private final class LineView: UIView {
             if let dashBackgroundView = self.dashBackgroundView {
                 self.dashBackgroundView = nil
                 dashBackgroundView.removeFromSuperview()
+            }
+            if let dashThirdBackgroundView = self.dashThirdBackgroundView {
+                self.dashThirdBackgroundView = nil
+                dashThirdBackgroundView.removeFromSuperview()
             }
             
             self.backgroundView.alpha = 1.0
