@@ -3,6 +3,7 @@ import UIKit
 import Display
 import CoreLocation
 import Photos
+import Postbox
 import TelegramCore
 import AccountContext
 import MediaEditor
@@ -128,6 +129,8 @@ extension MediaEditorScreen {
                         saveImageDraft(image, draft.dimensions)
                     }
                     removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
+                case let .message(messageId):
+                    let _ = messageId
                 }
             })
         }

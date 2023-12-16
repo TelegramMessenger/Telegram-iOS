@@ -5191,7 +5191,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
-            guard let viewListContext = component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)] else {
+            guard let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View, let viewListContext = viewListView.currentViewList else {
                 return
             }
             

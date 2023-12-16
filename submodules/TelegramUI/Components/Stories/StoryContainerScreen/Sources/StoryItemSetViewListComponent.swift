@@ -1272,6 +1272,10 @@ final class StoryItemSetViewListComponent: Component {
         private var sortMode: SortMode = .reactionsFirst
         private var currentSearchQuery: String = ""
         
+        public var currentViewList: EngineStoryViewListContext? {
+            return self.currentContentView?.viewList
+        }
+        
         override init(frame: CGRect) {
             self.navigationContainerView = UIView()
             self.navigationContainerView.clipsToBounds = true
