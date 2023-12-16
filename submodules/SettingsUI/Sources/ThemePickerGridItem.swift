@@ -18,7 +18,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
 import StickerResources
-
+import ThemeCarouselItem
 
 private var cachedBorderImages: [String: UIImage] = [:]
 private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selected: Bool) -> UIImage? {
@@ -500,7 +500,7 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
                     for theme in item.themes {
                         let selected = item.currentTheme.index == theme.index
                         
-                        let iconItem = ThemeCarouselThemeIconItem(context: item.context, emojiFile: theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }, themeReference: theme, nightMode: item.nightMode, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil, action: { theme in
+                        let iconItem = ThemeCarouselThemeIconItem(context: item.context, emojiFile: theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }, themeReference: theme, nightMode: item.nightMode, channelMode: false, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil, action: { theme in
                             item.updatedTheme(theme)
                         }, contextAction: nil)
                         

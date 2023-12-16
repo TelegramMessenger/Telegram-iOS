@@ -8,6 +8,7 @@ import LocalizedPeerData
 import AccountContext
 
 public enum MessageTimestampStatusFormat {
+    case full
     case regular
     case minimal
 }
@@ -81,35 +82,41 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         dateText = "         "
     }
     
-    if let forwardInfo = message.forwardInfo {
-        if message.id.peerId == accountPeerId {
-            let dayText: String
-            
-            let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            
-            var t: time_t = time_t(timestamp)
-            var timeinfo: tm = tm()
-            gmtime_r(&t, &timeinfo)
-            
-            var now: time_t = time_t(nowTimestamp)
-            var timeinfoNow: tm = tm()
-            localtime_r(&now, &timeinfoNow)
-            
-            if timeinfo.tm_year == timeinfoNow.tm_year {
-                if timeinfo.tm_yday == timeinfoNow.tm_yday {
-                    dayText = strings.Weekday_Today
-                } else {
-                    dayText = strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").string
-                }
+    var displayFullDate = false
+    if case .full = format {
+        displayFullDate = true
+    } else if let _ = message.forwardInfo, message.id.peerId == accountPeerId {
+        displayFullDate = true
+    }
+    
+    if displayFullDate {
+        let dayText: String
+        
+        let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        
+        var t: time_t = time_t(timestamp)
+        var timeinfo: tm = tm()
+        gmtime_r(&t, &timeinfo)
+        
+        var now: time_t = time_t(nowTimestamp)
+        var timeinfoNow: tm = tm()
+        localtime_r(&now, &timeinfoNow)
+        
+        if timeinfo.tm_year == timeinfoNow.tm_year {
+            if format != .full, timeinfo.tm_yday == timeinfoNow.tm_yday {
+                dayText = strings.Weekday_Today
             } else {
-                dayText = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
+                dayText = strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").string
             }
-            
-            //TODO:localize
-            dateText = "\(dayText), \(stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat))"
-        } else if forwardInfo.flags.contains(.isImported) {
-            dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).string
+        } else {
+            dayText = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
         }
+        
+        //TODO:localize
+        dateText = "\(dayText), \(stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat))"
+    }
+    else if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+        dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).string
     }
     
     var authorTitle: String?
@@ -149,7 +156,9 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         authorTitle = nil
     }
     
-    if case .regular = format {
+    if case .minimal = format {
+        
+    } else {
         if let authorTitle = authorTitle, !authorTitle.isEmpty {
             dateText = "\(authorTitle), \(dateText)"
         }

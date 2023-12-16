@@ -19,6 +19,7 @@ import InAppPurchaseManager
 import ConfettiEffect
 import TextFormat
 import UniversalMediaPlayer
+import InstantPageCache
 
 public enum PremiumGiftSource: Equatable {
     case profile
@@ -45,17 +46,19 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     let peers: [EnginePeer]
     let products: [PremiumGiftProduct]?
     let selectedProductId: String?
+    let isCompleted: Bool
     
     let present: (ViewController) -> Void
     let selectProduct: (String) -> Void
     let buy: () -> Void
     
-    init(context: AccountContext, source: PremiumGiftSource, peers: [EnginePeer], products: [PremiumGiftProduct]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumGiftSource, peers: [EnginePeer], products: [PremiumGiftProduct]?, selectedProductId: String?, isCompleted: Bool, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void) {
         self.context = context
         self.source = source
         self.peers = peers
         self.products = products
         self.selectedProductId = selectedProductId
+        self.isCompleted = isCompleted
         self.present = present
         self.selectProduct = selectProduct
         self.buy = buy
@@ -77,7 +80,9 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         if lhs.selectedProductId != rhs.selectedProductId {
             return false
         }
-        
+        if lhs.isCompleted != rhs.isCompleted {
+            return false
+        }
         return true
     }
     
@@ -94,6 +99,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
         var cachedBoostIcon: UIImage?
         
         var price: String?
+        var isCompleted = false
         
         init(context: AccountContext, source: PremiumGiftSource) {
             self.context = context
@@ -172,8 +178,11 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
     static var body: Body {
         let overscroll = Child(Rectangle.self)
         let text = Child(MultilineTextComponent.self)
+        let completedText = Child(MultilineTextComponent.self)
         let optionsSection = Child(SectionGroupComponent.self)
+        let perksTitle = Child(MultilineTextComponent.self)
         let perksSection = Child(SectionGroupComponent.self)
+        let termsText = Child(MultilineTextComponent.self)
         
         return { context in
             let sideInset: CGFloat = 16.0
@@ -210,42 +219,50 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
             
-            
             var descriptionString: String = ""
             if context.component.peers.count > 1 {
+                var names = ""
+                var more = ""
                 if context.component.peers.count < 4 {
-                    var names = ""
                     for i in 0 ..< context.component.peers.count {
                         if i == 0 {
                         } else if i < context.component.peers.count - 1 {
-                            names.append(environment.strings.CreateGroup_PeersTitleDelimeter)
+                            names.append(strings.CreateGroup_PeersTitleDelimeter)
                         } else {
-                            names.append(environment.strings.CreateGroup_PeersTitleLastDelimeter)
+                            names.append(strings.CreateGroup_PeersTitleLastDelimeter)
                         }
                         names.append("**\(context.component.peers[i].compactDisplayTitle)**")
                     }
-                    descriptionString = environment.strings.Premium_Gift_MultipleDescription(names, "").string
+                    descriptionString = strings.Premium_Gift_MultipleDescription(names, "").string
                 } else {
-                    var names = ""
                     for i in 0 ..< min(3, context.component.peers.count) {
                         if i == 0 {
                           
                         } else {
-                            names.append(environment.strings.CreateGroup_PeersTitleDelimeter)
+                            names.append(strings.CreateGroup_PeersTitleDelimeter)
                         }
                         names.append("**\(context.component.peers[i].compactDisplayTitle)**")
                     }
-                    let more = environment.strings.Premium_Gift_NamesAndMore(Int32(context.component.peers.count - 3))
-                    descriptionString = environment.strings.Premium_Gift_MultipleDescription(names, more).string
+                    more = strings.Premium_Gift_NamesAndMore(Int32(context.component.peers.count - 3))
+                }
+                if component.isCompleted {
+                    descriptionString = strings.Premium_Gift_Sent_Multiple_Text(names, more).string
+                } else {
+                    descriptionString = strings.Premium_Gift_MultipleDescription(names, more).string
                 }
             } else {
-                descriptionString = strings.Premium_Gift_Description(component.peers.first?.compactDisplayTitle ?? "").string
+                if component.isCompleted {
+                    descriptionString = strings.Premium_Gift_Sent_One_Text(component.peers.first?.compactDisplayTitle ?? "").string
+                } else {
+                    descriptionString = strings.Premium_Gift_Description(component.peers.first?.compactDisplayTitle ?? "").string
+                }
             }
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.component.context.currentAppConfiguration.with { $0 })
-            
-            descriptionString += "\n\n"
-            descriptionString += environment.strings.Premium_Gift_YouWillReceiveBoosts(Int32(context.component.peers.count) * premiumConfiguration.boostsPerGiftCount).replacingOccurrences(of: "[]()", with: "  [ ]() ")
+            if !component.isCompleted {
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                descriptionString += "\n\n"
+                descriptionString += environment.strings.Premium_Gift_YouWillReceiveBoosts(Int32(component.peers.count) * premiumConfiguration.boostsPerGiftCount).replacingOccurrences(of: "[]()", with: "  [ ]() ")
+            }
             
             let boostIcon: UIImage
             if let current = context.state.cachedBoostIcon {
@@ -263,7 +280,14 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 return nil
             })
             let descriptionText = parseMarkdownIntoAttributedString(descriptionString, attributes: markdownAttributes, textAlignment: .center)
-            let text = text.update(
+            
+            let textComponent: _ConcreteChildComponent<MultilineTextComponent>
+            if component.isCompleted {
+                textComponent = completedText
+            } else {
+                textComponent = text
+            }
+            let text = textComponent.update(
                 component: MultilineTextComponent(
                     text: .plain(descriptionText),
                     horizontalAlignment: .center,
@@ -276,100 +300,110 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             )
             context.add(text
                 .position(CGPoint(x: size.width / 2.0, y: size.height + text.size.height / 2.0))
+                .appear(.default(alpha: true))
+                .disappear(.default(alpha: true))
             )
             size.height += text.size.height
             size.height += 21.0
             
             var items: [SectionGroupComponent.Item] = []
-            
             var i = 0
-            if let products = component.products {
-                let gradientColors: [UIColor] = [
-                    UIColor(rgb: 0x8e77ff),
-                    UIColor(rgb: 0x9a6fff),
-                    UIColor(rgb: 0xb36eee)
-                ]
-                
-                let shortestOptionPrice: (Int64, NSDecimalNumber)
-                if let product = products.last {
-                    shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months)), product.storeProduct.priceValue.dividing(by: NSDecimalNumber(value: product.months)))
-                } else {
-                    shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
-                }
-                
-                for product in products {
-                    let giftTitle: String
-                    if product.months == 12 {
-                        giftTitle = strings.Premium_Gift_Years(1)
-                    } else {
-                        giftTitle = strings.Premium_Gift_Months(product.months)
-                    }
-                    
-                    let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(shortestOptionPrice.0)) * 100.0)
-                    let discount: String
-                    if discountValue > 0 {
-                        discount = "-\(discountValue)%"
-                    } else {
-                        discount = ""
-                    }
-                    
-                    let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
-                    
-                    var subtitle = ""
-                    var accessibilitySubtitle = ""
-                    var pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
-                    pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
-                    
-                    if discountValue > 0 {
-                        subtitle = "**\(defaultPrice)** \(product.price)"
-                        accessibilitySubtitle = product.price
-                    }
-                   
-                    items.append(SectionGroupComponent.Item(
-                        AnyComponentWithIdentity(
-                            id: product.id,
-                            component: AnyComponent(
-                                PremiumOptionComponent(
-                                    title: giftTitle,
-                                    subtitle: subtitle,
-                                    labelPrice: pricePerMonth,
-                                    discount: discount,
-                                    selected: product.id == component.selectedProductId,
-                                    primaryTextColor: textColor,
-                                    secondaryTextColor: subtitleColor,
-                                    accentColor: gradientColors[i],
-                                    checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
-                                    checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
-                                )
-                            )
-                        ),
-                        accessibilityLabel: "\(giftTitle). \(accessibilitySubtitle). \(pricePerMonth)",
-                        action: {
-                            component.selectProduct(product.id)
-                        })
-                    )
-                    i += 1
-                }
-            }
             
-            let optionsSection = optionsSection.update(
-                component: SectionGroupComponent(
-                    items: items,
-                    backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
-                    selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
-                    separatorColor: environment.theme.list.itemBlocksSeparatorColor
-                ),
-                environment: {},
-                availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
-                transition: context.transition
-            )
-            context.add(optionsSection
-                .position(CGPoint(x: availableWidth / 2.0, y: size.height + optionsSection.size.height / 2.0))
-                .clipsToBounds(true)
-                .cornerRadius(10.0)
-            )
-            size.height += optionsSection.size.height
-            size.height += 23.0
+            if !component.isCompleted {
+                if let products = component.products {
+                    let gradientColors: [UIColor] = [
+                        UIColor(rgb: 0x8e77ff),
+                        UIColor(rgb: 0x9a6fff),
+                        UIColor(rgb: 0xb36eee)
+                    ]
+                    
+                    let shortestOptionPrice: (Int64, NSDecimalNumber)
+                    if let product = products.last {
+                        shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months)), product.storeProduct.priceValue.dividing(by: NSDecimalNumber(value: product.months)))
+                    } else {
+                        shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
+                    }
+                    
+                    for product in products {
+                        let giftTitle: String
+                        if product.months == 12 {
+                            giftTitle = strings.Premium_Gift_Years(1)
+                        } else {
+                            giftTitle = strings.Premium_Gift_Months(product.months)
+                        }
+                        
+                        let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(shortestOptionPrice.0)) * 100.0)
+                        let discount: String
+                        if discountValue > 0 {
+                            discount = "-\(discountValue)%"
+                        } else {
+                            discount = ""
+                        }
+                        
+                        let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
+                        
+                        var subtitle = ""
+                        var accessibilitySubtitle = ""
+                        var pricePerMonth = environment.strings.Premium_PricePerMonth(product.storeProduct.pricePerMonth(Int(product.months))).string
+                        
+                        if component.peers.count > 1 {
+                            subtitle = "\(product.storeProduct.price) x \(component.peers.count)"
+                            pricePerMonth = product.storeProduct.multipliedPrice(count: component.peers.count)
+                        } else {
+                            if discountValue > 0 {
+                                subtitle = "**\(defaultPrice)** \(product.price)"
+                                accessibilitySubtitle = product.price
+                            }
+                        }
+                        
+                        items.append(SectionGroupComponent.Item(
+                            AnyComponentWithIdentity(
+                                id: product.id,
+                                component: AnyComponent(
+                                    PremiumOptionComponent(
+                                        title: giftTitle,
+                                        subtitle: subtitle,
+                                        labelPrice: pricePerMonth,
+                                        discount: discount,
+                                        multiple: component.peers.count > 1,
+                                        selected: product.id == component.selectedProductId,
+                                        primaryTextColor: textColor,
+                                        secondaryTextColor: subtitleColor,
+                                        accentColor: gradientColors[i],
+                                        checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
+                                        checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
+                                    )
+                                )
+                            ),
+                            accessibilityLabel: "\(giftTitle). \(accessibilitySubtitle). \(pricePerMonth)",
+                            action: {
+                                component.selectProduct(product.id)
+                            })
+                        )
+                        i += 1
+                    }
+                }
+                
+                let optionsSection = optionsSection.update(
+                    component: SectionGroupComponent(
+                        items: items,
+                        backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
+                        selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
+                        separatorColor: environment.theme.list.itemBlocksSeparatorColor
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+                    transition: context.transition
+                )
+                context.add(optionsSection
+                    .position(CGPoint(x: availableWidth / 2.0, y: size.height + optionsSection.size.height / 2.0))
+                    .clipsToBounds(true)
+                    .cornerRadius(10.0)
+                    .disappear(.default(alpha: true))
+                )
+                size.height += optionsSection.size.height
+                size.height += 23.0
+            }
             
             let state = context.state
             let accountContext = context.component.context
@@ -378,6 +412,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             
             let price = context.component.products?.first(where: { $0.id == context.component.selectedProductId })?.price
             state.price = price
+            state.isCompleted = context.component.isCompleted
             
             let gradientColors: [UIColor] = [
                 UIColor(rgb: 0xef6922),
@@ -398,6 +433,27 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x3eb26d),
                 UIColor(rgb: 0x3dbd4a)
             ]
+            
+            let textSideInset: CGFloat = 16.0
+            size.height += 8.0
+            let perksTitle = perksTitle.update(
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(string: strings.Premium_WhatsIncluded.uppercased(), font: Font.regular(14.0), textColor: environment.theme.list.freeTextColor)
+                    ),
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                environment: {},
+                availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+                transition: context.transition
+            )
+            context.add(perksTitle
+                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + perksTitle.size.width / 2.0, y: size.height + perksTitle.size.height / 2.0))
+            )
+            size.height += perksTitle.size.height
+            size.height += 3.0
             
             i = 0
             var perksItems: [SectionGroupComponent.Item] = []
@@ -462,7 +518,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         }
                         
                         let buttonText: String
-                        if let price = state?.price {
+                        if let state, let price = state.price, !state.isCompleted {
                             buttonText = strings.Premium_Gift_GiftSubscription(price).string
                         } else {
                             buttonText = strings.Common_OK
@@ -471,7 +527,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .gift(state?.price), order: state?.configuration.perks, buttonText: buttonText, isPremium: false)
                         controller.action = { [weak state] in
                             dismissImpl?()
-                            if let _ = state?.price {
+                            if let state, let _ = state.price, !state.isCompleted {
                                 buy()
                             }
                         }
@@ -505,8 +561,79 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 .clipsToBounds(true)
                 .cornerRadius(10.0)
             )
-            
             size.height += perksSection.size.height
+            size.height += 6.0
+            
+            
+            let termsFont = Font.regular(13.0)
+            let termsTextColor = environment.theme.list.freeTextColor
+            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+                       
+            let termsString: MultilineTextComponent.TextContent = .markdown(
+                text: strings.Premium_Gift_Terms,
+                attributes: termsMarkdownAttributes
+            )
+            
+            let controller = environment.controller
+            let termsTapActionImpl: ([NSAttributedString.Key: Any]) -> Void = { attributes in
+                if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
+                    let controller = controller() as? PremiumGiftScreen, let navigationController = controller.navigationController as? NavigationController {
+                    if url.hasPrefix("https://apps.apple.com/account/subscriptions") {
+                        controller.context.sharedContext.applicationBindings.openSubscriptions()
+                    } else if url.hasPrefix("https://") || url.hasPrefix("tg://") {
+                        controller.context.sharedContext.openExternalUrl(context: controller.context, urlContext: .generic, url: url, forceExternal: !url.hasPrefix("tg://"), presentationData: controller.context.sharedContext.currentPresentationData.with({$0}), navigationController: nil, dismissInput: {})
+                    } else {
+                        let context = controller.context
+                        let signal: Signal<ResolvedUrl, NoError>?
+                        switch url {
+                            case "terms":
+                                signal = cachedTermsPage(context: context)
+                            case "privacy":
+                                signal = cachedPrivacyPage(context: context)
+                            default:
+                                signal = nil
+                        }
+                        if let signal = signal {
+                            let _ = (signal
+                            |> deliverOnMainQueue).start(next: { resolvedUrl in
+                                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                                }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
+                                    controller?.push(c)
+                                }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
+                            })
+                        }
+                    }
+                }
+            }
+            
+            let termsText = termsText.update(
+                component: MultilineTextComponent(
+                    text: termsString,
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.0,
+                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { attributes, _ in
+                        termsTapActionImpl(attributes)
+                    }
+                ),
+                environment: {},
+                availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
+                transition: context.transition
+            )
+            context.add(termsText
+                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: size.height + termsText.size.height / 2.0))
+            )
+            size.height += termsText.size.height
             
             size.height += 10.0
             size.height += scrollEnvironment.insets.bottom
@@ -551,6 +678,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: (Int32) -> Void
+    let dismiss: () -> Void
     
     init(
         context: AccountContext,
@@ -563,8 +691,9 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         updateTabBarAlpha: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
-        completion: @escaping (Int32) -> Void)
-    {
+        completion: @escaping (Int32) -> Void,
+        dismiss: @escaping () -> Void
+    ) {
         self.context = context
         self.peerIds = peerIds
         self.options = options
@@ -576,6 +705,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         self.present = present
         self.push = push
         self.completion = completion
+        self.dismiss = dismiss
     }
         
     static func ==(lhs: PremiumGiftScreenComponent, rhs: PremiumGiftScreenComponent) -> Bool {
@@ -604,6 +734,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         private let updateInProgress: (Bool) -> Void
         private let present: (ViewController) -> Void
         private let completion: (Int32) -> Void
+        private let dismiss: () -> Void
         
         var topContentOffset: CGFloat?
         var bottomContentOffset: CGFloat?
@@ -615,6 +746,8 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 self.updateButton()
             }
         }
+        
+        var isCompleted = false
         
         var peers: [EnginePeer.Id: EnginePeer] = [:]
         var products: [PremiumGiftProduct]?
@@ -633,8 +766,9 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             buttonAction: ActionSlot<Void>,
             updateInProgress: @escaping (Bool) -> Void,
             present: @escaping (ViewController) -> Void,
-            completion: @escaping (Int32) -> Void)
-        {
+            completion: @escaping (Int32) -> Void,
+            dismiss: @escaping () -> Void
+        ) {
             self.context = context
             self.peerIds = peerIds
             self.options = options
@@ -644,6 +778,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.updateInProgress = updateInProgress
             self.present = present
             self.completion = completion
+            self.dismiss = dismiss
             
             super.init()
             
@@ -725,6 +860,11 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 return
             }
             
+            if self.isCompleted {
+                self.dismiss()
+                return
+            }
+            
             guard let product = self.products?.first(where: { $0.id == self.selectedProductId }) else {
                 return
             }
@@ -737,24 +877,41 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
             
-            //TODO:update buy when api arrives
-            
-            let purpose: AppStoreTransactionPurpose = .gift(peerId: self.peerIds.first!, currency: currency, amount: amount)
+            let purpose: AppStoreTransactionPurpose
+            var quantity: Int32 = 1
+            if self.peerIds.count > 1 {
+                purpose = .giftCode(peerIds: self.peerIds, boostPeer: nil, currency: currency, amount: amount)
+                quantity = Int32(self.peerIds.count)
+            } else if let peerId = self.peerIds.first {
+                purpose = .gift(peerId: peerId, currency: currency, amount: amount)
+            } else {
+                fatalError()
+            }
             let _ = (self.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     if available {
-                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, purpose: purpose)
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, quantity: quantity, purpose: purpose)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
-                            if let strongSelf = self, case .purchased = status {
-                                Queue.mainQueue().after(2.0) {
-                                    let _ = updatePremiumPromoConfigurationOnce(account: strongSelf.context.account).start()
-                                    strongSelf.inProgress = false
-                                    strongSelf.updateInProgress(false)
+                            if let self, case .purchased = status {
+                                if case .settings = self.source {
+                                    self.inProgress = false
+                                    self.updateInProgress(false)
                                     
-                                    strongSelf.updated(transition: .easeInOut(duration: 0.25))
-                                    strongSelf.completion(duration)
+                                    self.isCompleted = true
+                                    
+                                    self.updated(transition: .easeInOut(duration: 0.25))
+                                    self.completion(duration)
+                                } else {
+                                    Queue.mainQueue().after(2.0) {
+                                        let _ = updatePremiumPromoConfigurationOnce(account: self.context.account).start()
+                                        self.inProgress = false
+                                        self.updateInProgress(false)
+                                        
+                                        self.updated(transition: .easeInOut(duration: 0.25))
+                                        self.completion(duration)
+                                    }
                                 }
                             }
                         }, error: { [weak self] error in
@@ -812,7 +969,8 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             buttonAction: self.buttonAction,
             updateInProgress: self.updateInProgress,
             present: self.present,
-            completion: self.completion
+            completion: self.completion,
+            dismiss: self.dismiss
         )
     }
     
@@ -823,6 +981,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
         let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
+        let completedTitle = Child(MultilineTextComponent.self)
         let secondaryTitle = Child(MultilineTextComponent.self)
         let bottomPanel = Child(BlurredBackgroundComponent.self)
         let bottomSeparator = Child(Rectangle.self)
@@ -855,9 +1014,26 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            let title = title.update(
+            let titleString: String
+            if state.isCompleted {
+                if context.component.peerIds.count > 1 {
+                    titleString = environment.strings.Premium_Gift_Sent_Multiple_Title
+                } else {
+                    titleString = environment.strings.Premium_Gift_Sent_One_Title
+                }
+            } else {
+                titleString = environment.strings.Premium_Gift_Title
+            }
+            
+            let titleComponent: _ConcreteChildComponent<MultilineTextComponent>
+            if state.isCompleted {
+                titleComponent = completedTitle
+            } else {
+                titleComponent = title
+            }
+            let title = titleComponent.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.Premium_Gift_Title, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: titleString, font: Font.bold(28.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 1
@@ -902,6 +1078,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                         peers: peers,
                         products: state.products,
                         selectedProductId: state.selectedProductId,
+                        isCompleted: state.isCompleted,
                         present: context.component.present,
                         selectProduct: { [weak state] productId in
                             state?.selectProduct(id: productId)
@@ -985,6 +1162,8 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
                 .opacity(titleAlpha)
+                .appear(.default(alpha: true))
+                .disappear(.default(alpha: true))
             )
             
             context.add(secondaryTitle
@@ -1012,8 +1191,12 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             } else {
                 let sideInset: CGFloat = 16.0
                 
+                var gloss = true
                 let buttonText: String
-                if context.component.peerIds.count > 1 {
+                if state.isCompleted {
+                    buttonText = environment.strings.Premium_Gift_Sent_Close
+                    gloss = false
+                } else if context.component.peerIds.count > 1 {
                     let subscriptions = environment.strings.Premium_Gift_GiftMultipleSubscriptions(Int32(context.component.peerIds.count))
                     buttonText = environment.strings.Premium_Gift_GiftMultipleSubscriptionsFormat(subscriptions, price ?? "—").string
                 } else {
@@ -1035,7 +1218,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                         ),
                         height: 50.0,
                         cornerRadius: 11.0,
-                        gloss: true,
+                        gloss: gloss,
                         isLoading: state.inProgress,
                         action: {
                             state.buy()
@@ -1104,6 +1287,8 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
         var pushImpl: ((ViewController) -> Void)?
         var completionImpl: ((Int32) -> Void)?
         var updateTabBarAlphaImpl: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+        var dismissImpl: (() -> Void)?
+        
         super.init(context: context, component: PremiumGiftScreenComponent(
             context: context,
             peerIds: peerIds,
@@ -1125,6 +1310,9 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
             },
             completion: { duration in
                 completionImpl?(duration)
+            },
+            dismiss: {
+                dismissImpl?()
             }
         ), navigationBarAppearance: .transparent, presentationMode: .modal)
         
@@ -1150,12 +1338,21 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
             pushController(c)
         }
         
-        completionImpl = { _ in
+        completionImpl = { [weak self] _ in
             completion()
+            
+            if let self, case .settings = source {
+                self.animateSuccess()
+            }
         }
-        
         updateTabBarAlphaImpl = { [weak self] alpha, transition in
             self?.updateTabBarAlpha(alpha, transition)
+        }
+        
+        dismissImpl = { [weak self] in
+            if let self {
+                self.dismiss()
+            }
         }
     }
     
@@ -1165,6 +1362,10 @@ open class PremiumGiftScreen: ViewControllerComponentContainer {
     
     @objc private func cancelPressed() {
         self.dismiss()
+    }
+    
+    public func animateSuccess() {
+        self.view.addSubview(ConfettiView(frame: self.view.bounds))
     }
     
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

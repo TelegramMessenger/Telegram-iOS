@@ -91,6 +91,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         var proceedImpl: (() -> Void)?
         
         var placeholder: String
+        var shortPlaceholder: String?
         var includeChatList = false
         switch mode {
         case let .peerSelection(_, searchGroups, searchChannels):
@@ -103,7 +104,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             self.footerPanelNode = nil
         case .premiumGifting:
             placeholder = self.presentationData.strings.Premium_Gift_ContactSelection_Placeholder
-            
+            shortPlaceholder = self.presentationData.strings.Common_Search
             self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                 proceedImpl?()
             })
@@ -152,7 +153,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
         }
         
-        self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder)
+        self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder, shortPlaceholder: shortPlaceholder)
         
         super.init()
         
@@ -316,7 +317,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 count = contactListNode.selectionState?.selectedPeerIndices.count ?? 0
             }
             footerPanelNode.count = count
-            let panelHeight = footerPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+            let panelHeight = footerPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: headerInsets.bottom, transition: transition)
             if count == 0 {
                 transition.updateFrame(node: footerPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: panelHeight)))
             } else {

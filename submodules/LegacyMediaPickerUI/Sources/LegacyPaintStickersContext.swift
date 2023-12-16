@@ -152,6 +152,8 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             self.file = nil
         case .dualVideoReference:
             self.file = nil
+        case .message:
+            self.file = nil
         }
     }
     

@@ -262,7 +262,7 @@ private extension EngineAvailableColorOptions {
         var mappedOptions: [Option] = []
         for apiColor in apiColors {
             switch apiColor {
-            case let .peerColorOption(flags, colorId, colors, darkColors):
+            case let .peerColorOption(flags, colorId, colors, darkColors, _):
                 let isHidden = (flags & (1 << 0)) != 0
                 
                 let mappedColors = colors.flatMap(EngineAvailableColorOptions.ColorOption.init(apiColors:))

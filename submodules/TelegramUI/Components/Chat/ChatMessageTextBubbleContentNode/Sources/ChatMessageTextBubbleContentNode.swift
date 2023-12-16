@@ -242,7 +242,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let dateFormat: MessageTimestampStatusFormat
-                if let subject = item.associatedData.subject, case .messageOptions = subject {
+                if item.presentationData.isPreview {
+                    dateFormat = .full
+                } else if let subject = item.associatedData.subject, case .messageOptions = subject {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
@@ -506,11 +508,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
                 
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
+                let hideAllAdditionalInfo = item.presentationData.isPreview
+                
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 12 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
                 let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
                 if !textLayout.spoilers.isEmpty {
-                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 12 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
                 } else {
                     spoilerTextLayoutAndApply = nil
                 }
@@ -530,12 +534,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
-                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: hideAllAdditionalInfo ? nil : ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
                         presentationData: item.presentationData,
-                        edited: edited,
+                        edited: edited && !hideAllAdditionalInfo,
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
@@ -634,7 +638,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency)
+                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode.textNode, enableAnimations: item.context.sharedContext.energyUsageSettings.fullTranslucency && !item.presentationData.isPreview)
                                     strongSelf.dustNode = dustNode
                                     strongSelf.containerNode.insertSubnode(dustNode, aboveSubnode: spoilerTextNode.textNode)
                                 }

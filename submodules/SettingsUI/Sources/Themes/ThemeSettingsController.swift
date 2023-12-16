@@ -19,32 +19,7 @@ import ContextUI
 import UndoUI
 import PremiumUI
 import PeerNameColorScreen
-
-func themeDisplayName(strings: PresentationStrings, reference: PresentationThemeReference) -> String {
-    let name: String
-    switch reference {
-        case let .builtin(theme):
-            switch theme {
-                case .dayClassic:
-                    name = strings.Appearance_ThemeCarouselClassic
-                case .day:
-                    name = strings.Appearance_ThemeCarouselDay
-                case .night:
-                    name = strings.Appearance_ThemeCarouselNewNight
-                case .nightAccent:
-                    name = strings.Appearance_ThemeCarouselTintedNight
-            }
-        case let .local(theme):
-            name = theme.title
-        case let .cloud(theme):
-            if let emoticon = theme.theme.emoticon {
-                name = emoticon
-            } else {
-                name = theme.theme.title
-            }
-    }
-    return name
-}
+import ThemeCarouselItem
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext

@@ -117,6 +117,7 @@ import ChatNavigationButton
 import WebsiteType
 import ChatQrCodeScreen
 import PeerInfoScreen
+import MediaEditorScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -955,7 +956,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.chatDisplayNode.dismissInput()
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
                             let toPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? message.id.peerId : strongSelf.context.account.peerId
-                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration, giftCode: nil))
                             strongSelf.push(controller)
                             return true
                         case let .giftCode(slug, _, _, _, _, _, _, _, _):
@@ -2415,6 +2416,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
+                
+                if let message = messages.first, message.media.contains(where: { media in
+                    if media is TelegramMediaContact || media is TelegramMediaPoll {
+                        return true
+                    } else if let file = media as? TelegramMediaFile, file.isSticker || file.isAnimatedSticker || file.isVideoSticker {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                } else {
+                    shareController.shareStory = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        Queue.mainQueue().after(0.1) {
+                            self.openStorySharing(messages: messages)
+                        }
+                    }
+                }
                 shareController.openShareAsImage = { [weak self] messages in
                     if let strongSelf = self {
                         strongSelf.present(ChatQrCodeScreen(context: strongSelf.context, subject: .messages(messages)), in: .window(.root))
@@ -16998,7 +17019,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peerId = self.chatLocation.peerId else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
+        let message = sourceMessageId.flatMap { self.chatDisplayNode.historyNode.messageInCurrentHistoryView($0) }
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, message: message, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -18752,6 +18774,79 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: messageId)
         })
+    }
+    
+    func openStorySharing(messages: [Message]) {
+        let context = self.context
+        let subject: Signal<MediaEditorScreen.Subject?, NoError> = .single(.message(messages.map { $0.id }))
+        
+        let initialCaption: NSAttributedString? = nil
+        let initialPrivacy: EngineStoryPrivacy? = nil
+        let initialMediaAreas: [MediaArea] = []
+        
+        let externalState = MediaEditorTransitionOutExternalState(
+            storyTarget: nil,
+            isPeerArchived: false,
+            transitionOut: nil
+        )
+        
+        let controller = MediaEditorScreen(
+            context: context,
+            subject: subject,
+            isEditing: false,
+            forwardSource: nil,
+            initialCaption: initialCaption,
+            initialPrivacy: initialPrivacy,
+            initialMediaAreas: initialMediaAreas,
+            initialVideoPosition: nil,
+            transitionIn: nil,
+            transitionOut: { finished, isNew in
+                if finished {
+                    if let transitionOut = externalState.transitionOut?(externalState.storyTarget, externalState.isPeerArchived), let destinationView = transitionOut.destinationView {
+                        return MediaEditorScreen.TransitionOut(
+                            destinationView: destinationView,
+                            destinationRect: transitionOut.destinationRect,
+                            destinationCornerRadius: transitionOut.destinationCornerRadius
+                        )
+                    } else {
+                        return nil
+                    }
+                } else {
+                    return nil
+                }
+            },
+            completion: { result, commit in
+                let target: Stories.PendingTarget
+                let targetPeerId: EnginePeer.Id
+                if let sendAsPeerId = result.options.sendAsPeerId {
+                    target = .peer(sendAsPeerId)
+                    targetPeerId = sendAsPeerId
+                } else {
+                    target = .myStories
+                    targetPeerId = context.account.peerId
+                }
+                externalState.storyTarget = target
+                
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))
+                         |> deliverOnMainQueue).startStandalone(next: { peer in
+                    guard let peer else {
+                        return
+                    }
+                    
+                    if case let .user(user) = peer {
+                        externalState.isPeerArchived = user.storiesHidden ?? false
+                        
+                    } else if case let .channel(channel) = peer {
+                        externalState.isPeerArchived = channel.storiesHidden ?? false
+                    }
+                    
+                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                    }
+                })
+            }
+        )
+        self.push(controller)
     }
 }
 

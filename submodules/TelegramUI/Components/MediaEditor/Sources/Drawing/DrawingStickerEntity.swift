@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
+import Postbox
 import TelegramCore
 
 private func entitiesPath() -> String {
@@ -32,6 +33,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case animatedImage(Data, UIImage)
         case video(TelegramMediaFile)
         case dualVideoReference(Bool)
+        case message([MessageId], CGSize)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -65,6 +67,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
+            case let .message(messageIds, size):
+                if case .message(messageIds, size) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             }
         }
     }
@@ -80,6 +88,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case isDualPhoto
         case dualVideo
         case isAdditionalVideo
+        case messageIds
+        case explicitSize
         case referenceDrawingSize
         case position
         case scale
@@ -109,6 +119,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var color: DrawingColor = DrawingColor.clear
     public var lineWidth: CGFloat = 0.0
     
+    public var secondaryRenderImage: UIImage?
+    
     public var center: CGPoint {
         return self.position
     }
@@ -132,6 +144,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             dimensions = CGSize(width: 512.0, height: 512.0)
+        case let .message(_, size):
+            dimensions = size
         }
         
         let boundingSize = CGSize(width: size, height: size)
@@ -159,6 +173,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return true
         case .dualVideoReference:
             return true
+        case .message:
+            return false
         }
     }
     
@@ -167,6 +183,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .image(_, imageType):
             return imageType == .rectangle
         case .video:
+            return true
+        case .message:
             return true
         default:
             return false
@@ -196,7 +214,10 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
+        if let messageIds = try container.decodeIfPresent([MessageId].self, forKey: .messageIds) {
+            let size = try container.decodeIfPresent(CGSize.self, forKey: .explicitSize) ?? .zero
+            self.content = .message(messageIds, size)
+        } else if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
             let isAdditional = try container.decodeIfPresent(Bool.self, forKey: .isAdditionalVideo) ?? false
             self.content = .dualVideoReference(isAdditional)
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
@@ -290,6 +311,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .dualVideoReference(isAdditional):
             try container.encode(true, forKey: .dualVideo)
             try container.encode(isAdditional, forKey: .isAdditionalVideo)
+        case let .message(messageIds, size):
+            try container.encode(messageIds, forKey: .messageIds)
+            try container.encode(size, forKey: .explicitSize)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)

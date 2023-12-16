@@ -120,15 +120,18 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
     
     func getRenderImage() -> UIImage? {
-        guard case let .file(_, type) = self.stickerEntity.content, case .reaction = type else {
+        if case let .file(_, type) = self.stickerEntity.content, case .reaction = type {
+            let rect = self.bounds
+            UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
+            self.drawHierarchy(in: rect, afterScreenUpdates: true)
+            let image = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            return image
+        } else if case .message = self.stickerEntity.content {
+            return self.animatedImageView?.image
+        } else {
             return nil
         }
-        let rect = self.bounds
-        UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
-        self.drawHierarchy(in: rect, afterScreenUpdates: true)
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return image
     }
     
     private var video: TelegramMediaFile? {
@@ -151,6 +154,8 @@ public class DrawingStickerEntityView: DrawingEntityView {
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             return CGSize(width: 512.0, height: 512.0)
+        case let .message(_, size):
+            return size
         }
     }
     
@@ -309,6 +314,13 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.animatedImageView = imageView
             self.addSubview(imageView)
             self.setNeedsLayout()
+        } else if case .message = self.stickerEntity.content {
+            let imageView = UIImageView()
+            imageView.contentMode = .scaleAspectFit
+            imageView.image = self.stickerEntity.renderImage
+            self.animatedImageView = imageView
+            self.addSubview(imageView)
+            self.setNeedsLayout()
         }
     }
     
@@ -343,6 +355,12 @@ public class DrawingStickerEntityView: DrawingEntityView {
     override func updateVisibility(_ visibility: Bool) {
         self.isVisible = visibility
         self.applyVisibility()
+    }
+    
+    private var isNight = false
+    public func toggleNightTheme() {
+        self.isNight = !self.isNight
+        self.animatedImageView?.image = self.isNight ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
     }
     
     func applyVisibility() {
@@ -1002,7 +1020,11 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             
             actualInset = floorToScreenPixels((self.bounds.width - width) / 2.0)
             
-            let cornerRadius: CGFloat = 12.0 - self.scale
+            var cornerRadius: CGFloat = 12.0 - self.scale
+            if case .message = entity.content {
+                cornerRadius *= 2.1
+            }
+            
             let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
             let count = 12
             let dashLength = perimeter / CGFloat(count)

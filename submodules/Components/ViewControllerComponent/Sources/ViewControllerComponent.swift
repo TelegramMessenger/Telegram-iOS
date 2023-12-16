@@ -225,12 +225,25 @@ open class ViewControllerComponentContainer: ViewController {
     
     public var wasDismissed: (() -> Void)?
     
-    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, statusBarStyle: StatusBarStyle = .default, presentationMode: PresentationMode = .default, theme: Theme = .default) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    public init<C: Component>(
+        context: AccountContext,
+        component: C,
+        navigationBarAppearance: NavigationBarAppearance,
+        statusBarStyle: StatusBarStyle = .default,
+        presentationMode: PresentationMode = .default,
+        theme: Theme = .default,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil
+    ) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
         self.theme = theme
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData: PresentationData
+        if let updatedPresentationData {
+            presentationData = updatedPresentationData.initial
+        } else {
+            presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        }
         
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch navigationBarAppearance {
@@ -243,7 +256,7 @@ open class ViewControllerComponentContainer: ViewController {
         }
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
-        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? self.context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 var theme = presentationData.theme
@@ -264,6 +277,19 @@ open class ViewControllerComponentContainer: ViewController {
                         strongSelf.statusBar.statusBarStyle = .Ignore
                     case .default:
                         strongSelf.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
+                }
+                
+                let navigationBarPresentationData: NavigationBarPresentationData?
+                switch navigationBarAppearance {
+                case .none:
+                    navigationBarPresentationData = nil
+                case .transparent:
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData, hideBackground: true, hideBadge: false, hideSeparator: true)
+                case .default:
+                    navigationBarPresentationData = NavigationBarPresentationData(presentationData: presentationData)
+                }
+                if let navigationBarPresentationData {
+                    strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 }
                 
                 if let layout = strongSelf.validLayout {
