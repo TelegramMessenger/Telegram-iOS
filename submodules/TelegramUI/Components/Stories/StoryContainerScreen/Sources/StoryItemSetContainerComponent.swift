@@ -5199,7 +5199,7 @@ public final class StoryItemSetContainerComponent: Component {
             let storyContent = RepostStoriesContentContextImpl(context: context, focusedStoryId: StoryId(peerId: peer.id, id: id), viewListContext: viewListContext, readGlobally: false)
             let _ = (storyContent.state
             |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak sourceView] _ in
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak viewListView, weak sourceView] _ in
                 guard let controller, let sourceView else {
                     return
                 }
@@ -5214,9 +5214,14 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     content: storyContent,
                     transitionIn: transitionIn,
-                    transitionOut: { [weak sourceView] peerId, storyIdValue in
-                        if let sourceView {
-                            let destinationView = sourceView
+                    transitionOut: { [weak sourceView, weak viewListView] peerId, storyIdValue in
+                        var destinationView: UIView?
+                        if let view = viewListView?.sourceView(storyId: StoryId(peerId: peerId, id: storyIdValue as? Int32 ?? 0)) {
+                            destinationView = view
+                        } else {
+                            destinationView = sourceView
+                        }
+                        if let destinationView {
                             return StoryContainerScreen.TransitionOut(
                                 destinationView: destinationView,
                                 transitionView: StoryContainerScreen.TransitionView(
@@ -5252,6 +5257,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                 )
+                viewListView?.setPreviewedItem(signal: storyContainerScreen.focusedItem)
                 controller.push(storyContainerScreen)
             })
         }

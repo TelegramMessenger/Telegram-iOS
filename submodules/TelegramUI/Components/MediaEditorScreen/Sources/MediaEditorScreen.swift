@@ -2669,6 +2669,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         return false
                     }
                 }
+                if self.stickerScreen != nil {
+                    return false
+                }
                 return true
             } else {
                 return true
