@@ -102,6 +102,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     var needReactions = true
     
+    let hideAllAdditionalInfo = item.presentationData.isPreview
+    
     var hasSeparateCommentsButton = false
     
     outer: for (message, itemAttributes) in item.content {
@@ -313,13 +315,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         needReactions = false
     }
     
-    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
+    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) && !hideAllAdditionalInfo {
         if hasCommentButton(item: item) {
             result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .footer, neighborSpacing: .default)))
         }
     }
     
-    if !reactionsAreInline, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
+    if !reactionsAreInline && !hideAllAdditionalInfo, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
         if result.last?.1 == ChatMessageTextBubbleContentNode.self {
         } else {
             if result.last?.1 == ChatMessagePollBubbleContentNode.self ||
@@ -1386,7 +1388,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 var allowAuthor = incoming
                 
-                if let author = firstMessage.author, author is TelegramChannel, !incoming {
+                if let author = firstMessage.author, author is TelegramChannel, !incoming || item.presentationData.isPreview {
                     allowAuthor = true
                     ignoreNameHiding = true
                 }
@@ -2057,7 +2059,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 let dateFormat: MessageTimestampStatusFormat
-                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
+                if item.presentationData.isPreview {
+                    dateFormat = .full
+                } else if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
@@ -2392,14 +2396,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var maxContentWidth: CGFloat = headerSize.width
         
         var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
-        if let replyMarkup = replyMarkup {
+        if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
             let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
         }
         
         var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
-        if !bubbleReactions.reactions.isEmpty {
+        if !bubbleReactions.reactions.isEmpty && !item.presentationData.isPreview {
             var maximumNodeWidth = maximumNodeWidth
             if hasInstantVideo {
                 maximumNodeWidth = min(309, baseWidth - 84)

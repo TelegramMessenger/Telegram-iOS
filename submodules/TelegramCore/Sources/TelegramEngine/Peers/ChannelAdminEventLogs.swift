@@ -360,6 +360,10 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     let _ = prevValue
                                     let _ = newValue
                                     action = nil
+                                case let .channelAdminLogEventActionChangeEmojiStatus(prevValue, newValue):
+                                    let _ = prevValue
+                                    let _ = newValue
+                                    action = nil
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

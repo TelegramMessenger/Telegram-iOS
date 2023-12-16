@@ -7906,6 +7906,7 @@ Sorry for the inconvenience.";
 "Notification.PremiumGift.Title" = "Telegram Premium";
 "Notification.PremiumGift.Subtitle" = "for %@";
 "Notification.PremiumGift.View" = "View";
+"Notification.PremiumGift.UseGift" = "Use Gift";
 
 "StickerPack.AddEmojiCount_1" = "Add 1 Emoji";
 "StickerPack.AddEmojiCount_any" = "Add %@ Emoji";
@@ -9716,6 +9717,7 @@ Sorry for the inconvenience.";
 "Story.Views.ViewsExpired" = "List of viewers becomes unavailable **24 hours** after the story expires.";
 "Story.Views.ViewsNotRecorded" = "Information about viewers wasn’t recorded.";
 "Story.Views.NoViews" = "Nobody has viewed\nyour story yet.";
+"Story.Views.NoReactions" = "Nobody has reacted to\nyour story yet.";
 
 "AutoDownloadSettings.Stories" = "Stories";
 "MediaEditor.Draft" = "Draft";
@@ -10663,7 +10665,7 @@ Sorry for the inconvenience.";
 
 "Story.ViewList.ContextSortChannelInfo" = "Choose the order for the list of reactions.";
 
-"Premium.Gift.MultipleDescription" = "Get %1$@%2$@ access to exclusive features with **Telegram Premium**.";
+"Premium.Gift.MultipleDescription" = "Give %1$@%2$@ access to exclusive features with **Telegram Premium**.";
 
 "Premium.Gift.NamesAndMore_1" = " and %@ more";
 "Premium.Gift.NamesAndMore_any" = " and %@ more";
@@ -10675,6 +10677,7 @@ Sorry for the inconvenience.";
 "Premium.Gift.ContactSelection.Placeholder" = "Search people to gift Premium to...";
 "Premium.Gift.ContactSelection.Proceed" = "Proceed";
 "Premium.Gift.ContactSelection.FrequentContacts" = "FREQUENT CONTACTS";
+"Premium.Gift.ContactSelection.DeselectAll" = "DESELECT ALL";
 "Premium.Gift.ContactSelection.MaximumReached" = "You can select up to %@ users.";
 
 "Premium.Gift.GiftMultipleSubscriptionsFormat" = "%1$@ for %2$@";
@@ -10686,3 +10689,20 @@ Sorry for the inconvenience.";
 "Message.GiveawayEndedNoWinners" = "Due to the giveaway terms, no winners could be selected by Telegram";
 
 "Story.ViewMessage" = "View Message";
+
+"Premium.Gift.Terms" = "By gifting Telegram Premium, you agree to the Telegram [Terms of Service](terms) and [Privacy Policy](privacy).";
+"Premium.Gift.Sent.One.Title" = "Gift Sent!";
+"Premium.Gift.Sent.One.Text" = "%@ has been notified about the gift you purchased.\n\nThey now have access to additional features.";
+"Premium.Gift.Sent.Multiple.Title" = "Gifts Sent!";
+"Premium.Gift.Sent.Multiple.Text" = "%1$@%2$@ have been notified about the gift you purchased.\n\nThey now have access to additional features.";
+
+"Premium.Gift.Sent.Close" = "Close";
+
+"Premium.Gift.ApplyLink" = "Apply for Free";
+"Premium.Gift.ApplyLink.AlreadyHasPremium.Title" = "You already have Telegram Premium";
+"Premium.Gift.ApplyLink.AlreadyHasPremium.Text" = "You can activate this gift link after %@ or [send the link]() to a friend.";
+
+"Premium.Gift.Link.Text" = "This link allows you or [anyone you choose]() to activate a **Telegram Premium** subscription.";
+"Premium.Gift.UsedLink.Text" = "This link was used to activate a **Telegram Premium** subscription.";
+
+"Premium.WhatsIncluded" = "WHAT'S INCLUDED";

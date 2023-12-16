@@ -747,7 +747,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
                 var displayTranscribe = false
-                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat && !arguments.presentationData.isPreview {
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
                     if arguments.associatedData.isPremium {
                         displayTranscribe = true
@@ -894,7 +894,13 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         edited = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings, associatedData: arguments.associatedData)
+                    let dateFormat: MessageTimestampStatusFormat
+                    if arguments.presentationData.isPreview {
+                        dateFormat = .full
+                    } else {
+                        dateFormat = .regular
+                    }
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings, format: dateFormat, associatedData: arguments.associatedData)
                     
                     let displayReactionsInline = shouldDisplayInlineDateReactions(message: arguments.message, isPremium: arguments.associatedData.isPremium, forceInline: arguments.associatedData.forceInlineReactions)
                     var reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings?

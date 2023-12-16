@@ -129,7 +129,7 @@ public final class AccountWithInfo: Equatable {
 
 public enum OpenURLContext {
     case generic
-    case chat(peerId: PeerId, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?)
+    case chat(peerId: PeerId, message: Message?, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?)
 }
 
 public struct ChatAvailableMessageActionOptions: OptionSet {
@@ -897,6 +897,7 @@ public protocol SharedAccountContext: AnyObject {
     ) -> ChatHistoryListNode
     func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool) -> ListViewItem
     func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
+    func makeChatMessageAvatarHeaderItem(context: AccountContext, timestamp: Int32, peer: Peer, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController?
     func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController
     func makeContactMultiselectionController(_ params: ContactMultiselectionControllerParams) -> ContactMultiselectionController

@@ -79,6 +79,12 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
                 content = .video(file)
             case .dualVideoReference:
                 return []
+            case .message:
+                if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
+                    return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false)]
+                } else {
+                    return []
+                }
             }
             return [MediaEditorComposerStickerEntity(postbox: postbox, content: content, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: entity.mirrored, colorSpace: colorSpace, tintColor: tintColor, isStatic: entity.isExplicitlyStatic)]
         }

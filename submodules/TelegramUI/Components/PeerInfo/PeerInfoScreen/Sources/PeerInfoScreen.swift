@@ -4585,7 +4585,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: self.peerId, updatedPresentationData: self.controller?.updatedPresentationData), navigationController: navigationController, forceExternal: false, openPeer: { [weak self] peer, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: self.peerId, message: nil, updatedPresentationData: self.controller?.updatedPresentationData), navigationController: navigationController, forceExternal: false, openPeer: { [weak self] peer, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -8729,14 +8729,26 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let options = Promise<[PremiumGiftCodeOption]>()
                 options.set(self.context.engine.payments.premiumGiftCodeOptions(peerId: nil))
 
+            var reachedLimitImpl: ((Int32) -> Void)?
                 let controller = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
                     if case let .user(user) = peer, user.botInfo == nil {
                         return true
                     } else {
                         return false
                     }
+                }, limit: 10, reachedLimit: { limit in
+                    reachedLimitImpl?(limit)
                 }))
                 self.controller?.push(controller)
+            
+                reachedLimitImpl = { [weak self, weak controller] limit in
+                    guard let self, let controller else {
+                        return
+                    }
+                    self.hapticFeedback.error()
+                    controller.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(limit)").string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                }
+            
                 self.activeActionDisposable.set(combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
                 .startStrict(next: { [weak self, weak controller] result, options in
                     guard let self, let controller else {
@@ -8757,7 +8769,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     if peerIds.count > maxCount {
                         self.hapticFeedback.error()
                         
-                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(maxCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(maxCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         return
                     }
                     
@@ -8766,22 +8778,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     let giftController = PremiumGiftScreen(context: self.context, peerIds: peerIds, options: mappedOptions, source: .settings, pushController: { [weak self] c in
                         self?.controller?.push(c)
                     }, completion: { [weak self] in
-                        if let self, let navigationController = self.controller?.navigationController as? NavigationController, peerIds.count == 1, let peerId = peerIds.first {
+                        if let self, let navigationController = self.controller?.navigationController as? NavigationController {
                             var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is PeerInfoScreen) && !($0 is PremiumGiftScreen) }
-                            var foundController = false
-                            for controller in controllers.reversed() {
-                                if let chatController = controller as? ChatController, case .peer(id: peerId) = chatController.chatLocation {
-                                    chatController.hintPlayNextOutgoingGift()
-                                    foundController = true
-                                    break
-                                }
-                            }
-                            if !foundController {
-                                let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
-                                chatController.hintPlayNextOutgoingGift()
-                                controllers.append(chatController)
-                            }
+                            controllers = controllers.filter { !($0 is ContactMultiselectionController) }
                             navigationController.setViewControllers(controllers, animated: true)
                         }
                     })

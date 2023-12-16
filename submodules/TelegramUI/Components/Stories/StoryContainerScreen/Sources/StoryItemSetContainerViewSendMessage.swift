@@ -2642,7 +2642,7 @@ final class StoryItemSetContainerSendMessage {
         component.context.sharedContext.openResolvedUrl(
             result,
             context: component.context,
-            urlContext: .chat(peerId: peerId, updatedPresentationData: updatedPresentationData),
+            urlContext: .chat(peerId: peerId, message: nil, updatedPresentationData: updatedPresentationData),
             navigationController: navigationController,
             forceExternal: forceExternal,
             openPeer: { [weak self, weak view] peerId, navigation in
@@ -3304,8 +3304,7 @@ final class StoryItemSetContainerSendMessage {
                 controller?.push(locationController)
             }))
         case let .channelMessage(_, messageId):
-            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewMessage, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller] in
-                
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewMessage, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
                 let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
                 |> mapToSignal { result -> Signal<Message?, NoError> in
                     if case let .result(messages) = result {
@@ -3313,22 +3312,11 @@ final class StoryItemSetContainerSendMessage {
                     }
                     return .single(nil)
                 })
-                |> deliverOnMainQueue).startStandalone(next: { [weak controller] message in
-                    guard let controller, let message else {
+                |> deliverOnMainQueue).startStandalone(next: { message in
+                    guard let message else {
                         return
                     }
-                    let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: controller.navigationController as? NavigationController, dismissInput: {}, present: { [weak controller] c, a in
-                        controller?.present(c, in: .window(.root))
-                    }, transitionNode: { _, _, _ in
-                        return nil
-                    }, addToTransitionSurface: { _ in
-                    }, openUrl: { _ in
-                    }, openPeer: { _, _ in
-                    }, callPeer: { _, _ in
-                    }, enqueueMessage: { _ in
-                    }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in
-                    }, chatAvatarHiddenMedia: { _, _ in
-                    }))
+                    context.sharedContext.navigateToChat(accountId: context.account.id, peerId: message.id.peerId, messageId: message.id)
                 })
             }))
         case .reaction:

@@ -465,8 +465,8 @@ public final class EngineStoryViewListContext {
                     |> mapToSignal { result -> Signal<InternalState, NoError> in
                         return account.postbox.transaction { transaction -> InternalState in
                             switch result {
-                            case let .storyViewsList(_, count, viewsCount, forwardsCount, reactionsCount, views, users, nextOffset):
-                                let peers = AccumulatedPeers(users: users)
+                            case let .storyViewsList(_, count, viewsCount, forwardsCount, reactionsCount, views, chats, users, nextOffset):
+                                let peers = AccumulatedPeers(chats: chats, users: users)
                                 updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
                                 
                                 var items: [Item] = []
@@ -577,7 +577,7 @@ public final class EngineStoryViewListContext {
                                             views: Stories.Item.Views(
                                                 seenCount: Int(count),
                                                 reactedCount: Int(reactionsCount),
-                                                forwardCount: currentViews.forwardCount,
+                                                forwardCount: Int(forwardsCount),
                                                 seenPeerIds: currentViews.seenPeerIds,
                                                 reactions: currentViews.reactions,
                                                 hasList: currentViews.hasList
@@ -615,7 +615,7 @@ public final class EngineStoryViewListContext {
                                                     views: Stories.Item.Views(
                                                         seenCount: Int(count),
                                                         reactedCount: Int(reactionsCount),
-                                                        forwardCount: currentViews.forwardCount,
+                                                        forwardCount: Int(forwardsCount),
                                                         seenPeerIds: currentViews.seenPeerIds,
                                                         reactions: currentViews.reactions,
                                                         hasList: currentViews.hasList

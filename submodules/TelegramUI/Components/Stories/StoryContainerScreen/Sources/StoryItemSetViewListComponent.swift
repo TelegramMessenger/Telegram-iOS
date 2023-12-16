@@ -1036,7 +1036,7 @@ final class StoryItemSetViewListComponent: Component {
                 
                 var emptyButtonTransition = transition
                 let emptyButton: ComponentView<Empty>?
-                if self.query == nil, !component.hasPremium, let views = component.storyItem.views, views.seenCount != 0 {
+                if self.query == nil, !component.hasPremium && !component.peerId.isGroupOrChannel, let views = component.storyItem.views, views.seenCount != 0 {
                     if let current = self.emptyButton {
                         emptyButton = current
                     } else {
@@ -1084,7 +1084,7 @@ final class StoryItemSetViewListComponent: Component {
                             text = component.strings.Story_ViewList_PremiumUpgradeText
                         }
                     } else {
-                        text = component.strings.Story_Views_NoViews
+                        text = component.peerId.isGroupOrChannel ? component.strings.Story_Views_NoReactions : component.strings.Story_Views_NoViews
                     }
                 } else {
                     if let query = self.query, !query.isEmpty {
@@ -1103,7 +1103,7 @@ final class StoryItemSetViewListComponent: Component {
                                 text = component.strings.Story_ViewList_PremiumUpgradeText
                             }
                         } else {
-                            text = component.strings.Story_Views_NoViews
+                            text = component.peerId.isGroupOrChannel ? component.strings.Story_Views_NoReactions : component.strings.Story_Views_NoViews
                         }
                     }
                 }
@@ -1648,7 +1648,7 @@ final class StoryItemSetViewListComponent: Component {
                             displayModeSelector = true
                             displaySearchBar = true
                         }
-                        if (views.reactedCount >= 10 && totalCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                        if (((component.peerId.isGroupOrChannel && views.forwardCount >= 10 ) || (!component.peerId.isGroupOrChannel && views.reactedCount >= 10)) && totalCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                             displaySortSelector = true
                         }
                     } else {
