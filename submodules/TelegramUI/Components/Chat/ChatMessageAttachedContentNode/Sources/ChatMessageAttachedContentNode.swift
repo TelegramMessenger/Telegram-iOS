@@ -979,6 +979,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.transformContainer.addSubnode(title.textNode)
                                 
                                 title.textNode.frame = titleFrame
+                                
+                                title.textNode.displaysAsynchronously = !presentationData.isPreview
                             } else {
                                 title.textNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                                 animation.animator.updatePosition(layer: title.textNode.layer, position: titleFrame.origin, completion: nil)
@@ -1079,6 +1081,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.transformContainer.addSubnode(subtitle.textNode)
                                 
                                 subtitle.textNode.frame = subtitleFrame
+                                
+                                subtitle.textNode.displaysAsynchronously = !presentationData.isPreview
                             } else {
                                 subtitle.textNode.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
                                 animation.animator.updatePosition(layer: subtitle.textNode.layer, position: subtitleFrame.origin, completion: nil)
@@ -1108,6 +1112,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.transformContainer.addSubnode(text.textNode)
                                 
                                 text.textNode.frame = textFrame
+                                
+                                text.textNode.displaysAsynchronously = !presentationData.isPreview
                             } else {
                                 text.textNode.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
                                 animation.animator.updatePosition(layer: text.textNode.layer, position: textFrame.origin, completion: nil)

@@ -471,7 +471,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, associatedData: item.associatedData)
+                let dateFormat: MessageTimestampStatusFormat
+                if item.presentationData.isPreview {
+                    dateFormat = .full
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -584,7 +590,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, 33.0)
                     let buttonSpacing: CGFloat = 4.0
                     
-                    let (channelButtonsSize, channelButtonsApply) = continueChannelLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
+                    let (channelButtonsSize, channelButtonsApply) = continueChannelLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, !item.presentationData.isPreview)
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
@@ -620,6 +626,20 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                             }
                             strongSelf.item = item
                             strongSelf.giveaway = giveaway
+                            
+                            let displaysAsynchronously = !item.presentationData.isPreview
+                            strongSelf.badgeTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.prizeTitleNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.prizeTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.additionalPrizeTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.additionalPrizeSeparatorNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.participantsTitleNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.participantsTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.countriesTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.dateTitleNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.dateTextNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.buttonNode.titleNode.displaysAsynchronously = displaysAsynchronously
+                            strongSelf.channelButtons.displaysAsynchronously = displaysAsynchronously
                             
                             strongSelf.updateVisibility()
                             
@@ -835,7 +855,7 @@ private final class PeerButtonsStackNode: ASDisplayNode {
     var buttonNodes: [PeerButtonNode] = []
     var openPeer: (EnginePeer) -> Void = { _ in }
     
-    static func asyncLayout(_ current: PeerButtonsStackNode) -> (_ context: AccountContext, _ width: CGFloat, _ peers: [EnginePeer], _ titleColor: UIColor, _ backgroundColor: UIColor, _ incoming: Bool, _ dark: Bool) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonsStackNode)) {
+    static func asyncLayout(_ current: PeerButtonsStackNode) -> (_ context: AccountContext, _ width: CGFloat, _ peers: [EnginePeer], _ titleColor: UIColor, _ backgroundColor: UIColor, _ incoming: Bool, _ dark: Bool) -> (CGFloat, (CGFloat, Bool) -> (CGSize, () -> PeerButtonsStackNode)) {
         let currentChannelButtons = current.buttonNodes.isEmpty ? nil : current.buttonNodes
         let maybeMakeChannelButtons = current.buttonNodes.map(PeerButtonNode.asyncLayout)
         
@@ -843,7 +863,7 @@ private final class PeerButtonsStackNode: ASDisplayNode {
             let targetNode = current
             
             var buttonNodes: [PeerButtonNode] = []
-            let makeChannelButtonLayouts: [(_ context: AccountContext, _ width: CGFloat, _ peer: EnginePeer?, _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonNode))]
+            let makeChannelButtonLayouts: [(_ context: AccountContext, _ width: CGFloat, _ peer: EnginePeer?, _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat, Bool) -> (CGSize, () -> PeerButtonNode))]
             if let currentChannelButtons {
                 buttonNodes = currentChannelButtons
                 makeChannelButtonLayouts = maybeMakeChannelButtons
@@ -863,7 +883,7 @@ private final class PeerButtonsStackNode: ASDisplayNode {
             var groups: [[Int]] = []
             var currentGroup: [Int] = []
             
-            var buttonContinues: [(CGFloat) -> (CGSize, () -> PeerButtonNode)] = []
+            var buttonContinues: [(CGFloat, Bool) -> (CGSize, () -> PeerButtonNode)] = []
             for i in 0 ..< makeChannelButtonLayouts.count {
                 let peer = peers[i]
                 let makeChannelButtonLayout = makeChannelButtonLayouts[i]
@@ -925,10 +945,10 @@ private final class PeerButtonsStackNode: ASDisplayNode {
                 originY += buttonHeight + verticalButtonSpacing
             }
             
-            return (maxWidth, { _ in
+            return (maxWidth, { _, displayAsynchronously in
                 var buttonLayoutsAndApply: [(CGSize, () -> PeerButtonNode)] = []
                 for buttonApply in buttonContinues {
-                    buttonLayoutsAndApply.append(buttonApply(maxWidth))
+                    buttonLayoutsAndApply.append(buttonApply(maxWidth, displayAsynchronously))
                 }
                 
                 return (CGSize(width: maxWidth, height: max(0, originY - verticalButtonSpacing)), {
@@ -975,7 +995,7 @@ private final class PeerButtonNode: HighlightTrackingButtonNode {
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
         
-        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 13.0))
         
         super.init()
         
@@ -1002,7 +1022,7 @@ private final class PeerButtonNode: HighlightTrackingButtonNode {
         self.pressed?()
     }
         
-    static func asyncLayout(_ current: PeerButtonNode?) -> (_ context: AccountContext, _ width: CGFloat, _ peer: EnginePeer?, _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonNode)) {
+    static func asyncLayout(_ current: PeerButtonNode?) -> (_ context: AccountContext, _ width: CGFloat, _ peer: EnginePeer?, _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat, Bool) -> (CGSize, () -> PeerButtonNode)) {
         let maybeMakeTextLayout = (current?.textNode).flatMap(TextNode.asyncLayout)
         
         return { context, width, peer, titleColor, backgroundColor in
@@ -1027,9 +1047,12 @@ private final class PeerButtonNode: HighlightTrackingButtonNode {
             let (textSize, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: peer?.compactDisplayTitle ?? "", font: Font.medium(14.0), textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, width - avatarSize.width - (spacing + inset) * 2.0), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
             
             let refinedWidth = avatarSize.width + textSize.size.width + (spacing + inset) * 2.0
-            return (refinedWidth, { _ in
+            return (refinedWidth, { _, displayAsynchronously in
                 return (CGSize(width: refinedWidth, height: 24.0), {
                     let _ = textApply()
+                    
+                    targetNode.avatarNode.displaysAsynchronously = displayAsynchronously
+                    targetNode.textNode.displaysAsynchronously = displayAsynchronously
                     
                     let backgroundFrame = CGRect(origin: .zero, size: CGSize(width: refinedWidth, height: 24.0))
                     let textFrame = CGRect(origin: CGPoint(x: inset + avatarSize.width + spacing, y: floorToScreenPixels((backgroundFrame.height - textSize.size.height) / 2.0)), size: textSize.size)

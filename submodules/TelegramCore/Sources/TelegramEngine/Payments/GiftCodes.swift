@@ -191,11 +191,19 @@ func _internal_checkPremiumGiftCode(account: Account, slug: String) -> Signal<Pr
 
 public enum ApplyPremiumGiftCodeError {
     case generic
+    case waitForExpiration(Int32)
 }
 
 func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Never, ApplyPremiumGiftCodeError> {
     return account.network.request(Api.functions.payments.applyGiftCode(slug: slug))
-    |> mapError { _ -> ApplyPremiumGiftCodeError in
+    |> mapError { error -> ApplyPremiumGiftCodeError in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+            if let range = error.errorDescription.range(of: "_", options: .backwards) {
+                if let value = Int32(error.errorDescription[range.upperBound...]) {
+                    return .waitForExpiration(value)
+                }
+            }
+        }
         return .generic
     }
     |> mapToSignal { updates -> Signal<Never, ApplyPremiumGiftCodeError> in
@@ -267,7 +275,11 @@ extension PremiumGiftCodeInfo {
         case let .checkedGiftCode(flags, fromId, giveawayMsgId, toId, date, months, usedDate, _, _):
             self.slug = slug
             self.fromPeerId = fromId?.peerId
-            self.messageId = giveawayMsgId.flatMap { giveawayMsgId in fromId.flatMap { fromId in EngineMessage.Id(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId) } }
+            if let fromId = fromId, let giveawayMsgId = giveawayMsgId {
+                self.messageId = EngineMessage.Id(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId)
+            } else {
+                self.messageId = nil
+            }
             self.toPeerId = toId.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }
             self.date = date
             self.months = months

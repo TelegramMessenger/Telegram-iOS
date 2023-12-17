@@ -45,6 +45,7 @@ private let muteButtonTag = GenericComponentViewTag()
 private let saveButtonTag = GenericComponentViewTag()
 private let switchCameraButtonTag = GenericComponentViewTag()
 private let stickerButtonTag = GenericComponentViewTag()
+private let dayNightButtonTag = GenericComponentViewTag()
 
 final class MediaEditorScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -235,6 +236,7 @@ final class MediaEditorScreenComponent: Component {
         
         var muteDidChange = false
         var playbackDidChange = false
+        var dayNightDidChange = false
     }
     
     func makeState() -> State {
@@ -263,6 +265,7 @@ final class MediaEditorScreenComponent: Component {
         private let playbackButton = ComponentView<Empty>()
         private let muteButton = ComponentView<Empty>()
         private let saveButton = ComponentView<Empty>()
+        private let dayNightButton = ComponentView<Empty>()
         
         private let switchCameraButton = ComponentView<Empty>()
         
@@ -1722,12 +1725,107 @@ final class MediaEditorScreenComponent: Component {
                     transition.setScale(view: playbackButtonView, scale: displayTopButtons ? 1.0 : 0.01)
                     transition.setAlpha(view: playbackButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
                 }
+                
+                topButtonOffsetX += 50.0
             } else {
                 if let playbackButtonView = self.playbackButton.view, playbackButtonView.superview != nil {
                     playbackButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak playbackButtonView] _ in
                         playbackButtonView?.removeFromSuperview()
                     })
                     playbackButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            }
+            
+            if let subject = controller.node.subject, case .message = subject {
+                let isNightTheme = mediaEditor?.values.nightTheme == true
+                
+                let dayNightContentComponent: AnyComponentWithIdentity<Empty>
+                if component.hasAppeared {
+                    dayNightContentComponent = AnyComponentWithIdentity(
+                        id: "animatedIcon",
+                        component: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(
+                                    name: isNightTheme ? "anim_sun" : "anim_sun_reverse",
+                                    mode: state.dayNightDidChange ? .animating(loop: false) : .still(position: .end)
+                                ),
+                                colors: ["__allcolors__": .white],
+                                size: CGSize(width: 30.0, height: 30.0)
+                            ).tagged(muteButtonTag)
+                        )
+                    )
+                } else {
+                    dayNightContentComponent = AnyComponentWithIdentity(
+                        id: "staticIcon",
+                        component: AnyComponent(
+                            BundleIconComponent(
+                                name: "Media Editor/MuteIcon",
+                                tintColor: nil
+                            )
+                        )
+                    )
+                }
+                
+                let dayNightButtonSize = self.dayNightButton.update(
+                    transition: transition,
+                    component: AnyComponent(CameraButton(
+                        content: dayNightContentComponent,
+                        action: { [weak self, weak state, weak mediaEditor] in
+                            guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                                return
+                            }
+                            guard !controller.node.recording.isActive else {
+                                return
+                            }
+                            
+                            if let mediaEditor {
+                                state?.dayNightDidChange = true
+                                
+                                if let snapshotView = controller.node.previewContainerView.snapshotView(afterScreenUpdates: false) {
+                                    controller.node.previewContainerView.addSubview(snapshotView)
+                                    
+                                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.1, removeOnCompletion: false, completion: { _ in
+                                        snapshotView.removeFromSuperview()
+                                    })
+                                }
+                                
+                                mediaEditor.toggleNightTheme()
+                                controller.node.entitiesView.eachView { view in
+                                    if let stickerEntityView = view as? DrawingStickerEntityView {
+                                        stickerEntityView.toggleNightTheme()
+                                    }
+                                }
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let dayNightButtonFrame = CGRect(
+                    origin: CGPoint(x: availableSize.width - 20.0 - dayNightButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                    size: dayNightButtonSize
+                )
+                if let dayNightButtonView = self.dayNightButton.view {
+                    if dayNightButtonView.superview == nil {
+                        setupButtonShadow(dayNightButtonView)
+                        self.addSubview(dayNightButtonView)
+                        
+                        dayNightButtonView.layer.animateAlpha(from: 0.0, to: dayNightButtonView.alpha, duration: self.animatingButtons ? 0.1 : 0.2)
+                        dayNightButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: self.animatingButtons ? 0.1 : 0.2)
+                    }
+                    transition.setPosition(view: dayNightButtonView, position: dayNightButtonFrame.center)
+                    transition.setBounds(view: dayNightButtonView, bounds: CGRect(origin: .zero, size: dayNightButtonFrame.size))
+                    transition.setScale(view: dayNightButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                    transition.setAlpha(view: dayNightButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
+                }
+                
+                topButtonOffsetX += 50.0
+            } else {
+                if let muteButtonView = self.muteButton.view, muteButtonView.superview != nil {
+                    muteButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak muteButtonView] _ in
+                        muteButtonView?.removeFromSuperview()
+                    })
+                    muteButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
             }
             
@@ -1945,7 +2043,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         fileprivate let storyPreview: ComponentView<Empty>
         fileprivate let toolValue: ComponentView<Empty>
         
-        private let previewContainerView: UIView
+        fileprivate let previewContainerView: UIView
         private var transitionInView: UIImageView?
         
         private let gradientView: UIImageView
@@ -2181,6 +2279,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 isFromCamera = true
             case .draft:
                 isSavingAvailable = true
+            case .message:
+                isSavingAvailable = true
             default:
                 isSavingAvailable = false
             }
@@ -2190,7 +2290,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let mediaDimensions = subject.dimensions
             let maxSide: CGFloat = 1920.0 / UIScreen.main.scale
             let fittedSize = mediaDimensions.cgSize.fitted(CGSize(width: maxSide, height: maxSide))
-            let mediaEntity = DrawingMediaEntity(content: subject.mediaContent, size: fittedSize)
+            let mediaEntity = DrawingMediaEntity(size: fittedSize)
             mediaEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             if fittedSize.height > fittedSize.width {
                 mediaEntity.scale = max(storyDimensions.width / fittedSize.width, storyDimensions.height / fittedSize.height)
@@ -2295,6 +2395,36 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                 }
+            } else if case let .message(messageIds) = subject {
+                let _ = ((self.context.engine.data.get(
+                    EngineDataMap(messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
+                ))
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    var messages: [Message] = []
+                    for id in messageIds {
+                        if let maybeMessage = result[id], let message = maybeMessage {
+                            messages.append(message._asMessage())
+                        }
+                    }
+                    
+                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
+                    renderer.render(completion: { size, dayImage, nightImage in
+                        let messageEntity = DrawingStickerEntity(content: .message(messageIds, size))
+                        messageEntity.renderImage = dayImage
+                        messageEntity.secondaryRenderImage = nightImage
+                        messageEntity.referenceDrawingSize = storyDimensions
+                        messageEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
+                        
+                        let fraction = max(size.width, size.height) / 353.0
+                        messageEntity.scale = 3.3 * fraction
+
+                        self.entitiesView.add(messageEntity, announce: false)
+                    })
+                })
+
             }
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
@@ -2538,6 +2668,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let hitTestResult = self.view.hitTest(location, with: nil), hitTestResult.isDescendant(of: reactionNode.view) {
                         return false
                     }
+                }
+                if self.stickerScreen != nil {
+                    return false
                 }
                 return true
             } else {
@@ -2787,7 +2920,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             } else {
-                if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
+                if case .message = self.subject, let layout = self.validLayout {
+                    self.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                } else if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                     view.animateIn(from: .camera, completion: completion)
                 }
             }
@@ -3988,6 +4123,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         case video(String, UIImage?, Bool, String?, UIImage?, PixelDimensions, Double, [(Bool, Double)], PIPPosition)
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
+        case message([MessageId])
         
         var dimensions: PixelDimensions {
             switch self {
@@ -3997,6 +4133,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
             case let .draft(draft, _):
                 return draft.dimensions
+            case .message:
+                return PixelDimensions(width: 1080, height: 1920)
             }
         }
         
@@ -4010,19 +4148,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return .asset(asset)
             case let .draft(draft, _):
                 return .draft(draft)
-            }
-        }
-        
-        var mediaContent: DrawingMediaEntity.Content {
-            switch self {
-            case let .image(image, dimensions, _, _):
-                return .image(image, dimensions)
-            case let .video(videoPath, _, _, _, _, dimensions, _, _, _):
-                return .video(videoPath, dimensions)
-            case let .asset(asset):
-                return .asset(asset)
-            case let .draft(draft, _):
-                return .image(draft.thumbnail, draft.dimensions)
+            case let .message(messageIds):
+                return .message(messageIds.first!)
             }
         }
         
@@ -4040,6 +4167,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 return asset.mediaType == .video
             case let .draft(draft, _):
                 return draft.isVideo
+            case .message:
+                return false
             }
         }
     }
@@ -5019,6 +5148,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         firstFrame = .single((UIImage(), nil))
                     }
                 }
+            case .message:
+                let image = generateSingleColorImage(size: CGSize(width: 1080, height: 1920), color: .black, scale: 1.0)!
+                let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
+                if let data = image.jpegData(compressionQuality: 0.85) {
+                    try? data.write(to: URL(fileURLWithPath: tempImagePath))
+                }
+                videoResult = .imageFile(path: tempImagePath)
+                
+                firstFrame = .single((image, nil))
+                duration = 5.0
             }
             
             let _ = (firstFrame
@@ -5182,6 +5321,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         fatalError()
                     }
                 }
+            case .message:
+                exportSubject = .single(.image(image: generateSingleColorImage(size: CGSize(width: 1080, height: 1920), color: .black, scale: 1.0)!))
             }
             
             let _ = exportSubject.start(next: { [weak self] exportSubject in

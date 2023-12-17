@@ -1232,7 +1232,7 @@ public final class StoryItemSetContainerComponent: Component {
                             var displayViewLists = false
                             if component.slice.peer.id == component.context.account.peerId {
                                 displayViewLists = true
-                            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+                            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || component.slice.additionalPeerData.canViewStats {
                                 displayViewLists = true
                             }
                             
@@ -1734,6 +1734,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         return StoryFooterPanelComponent.MyReaction(reaction: value, file: centerAnimation, animationFileId: animationFileId)
                                     },
                                     isChannel: isChannel,
+                                    canViewChannelStats: component.slice.additionalPeerData.canViewStats,
                                     canShare: canShare,
                                     externalViews: nil,
                                     expandFraction: footerExpandFraction,
@@ -1916,7 +1917,7 @@ public final class StoryItemSetContainerComponent: Component {
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
                 displayViewLists = true
-            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || component.slice.additionalPeerData.canViewStats {
                 displayViewLists = true
             }
             
@@ -3129,7 +3130,7 @@ public final class StoryItemSetContainerComponent: Component {
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
                 displayViewLists = true
-            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || channel.adminRights?.rights.contains(.canPostStories) == true {
+            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || component.slice.additionalPeerData.canViewStats {
                 displayViewLists = true
             }
             
@@ -3515,7 +3516,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.openReposts(peer: peer, id: id, stories: stories, sourceView: sourceView)
+                                self.openReposts(peer: peer, id: id, sourceView: sourceView)
                             },
                             openPremiumIntro: { [weak self] in
                                 guard let self else {
@@ -5182,7 +5183,7 @@ public final class StoryItemSetContainerComponent: Component {
             StoryContainerScreen.openPeerStories(context: component.context, peerId: peer.id, parentController: controller, avatarNode: avatarNode)
         }
         
-        func openReposts(peer: EnginePeer, id: Int32, stories: [(EnginePeer, EngineStoryItem)], sourceView: UIView) {
+        func openReposts(peer: EnginePeer, id: Int32, sourceView: UIView) {
             guard let component = self.component else {
                 return
             }
@@ -5190,11 +5191,15 @@ public final class StoryItemSetContainerComponent: Component {
                 return
             }
             
+            guard let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View, let viewListContext = viewListView.currentViewList else {
+                return
+            }
+            
             let context = component.context
-            let storyContent = RepostStoriesContentContextImpl(context: context, storyId: StoryId(peerId: peer.id, id: id), storyItems: stories, readGlobally: false)
+            let storyContent = RepostStoriesContentContextImpl(context: context, focusedStoryId: StoryId(peerId: peer.id, id: id), viewListContext: viewListContext, readGlobally: false)
             let _ = (storyContent.state
             |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak sourceView] _ in
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak viewListView, weak sourceView] _ in
                 guard let controller, let sourceView else {
                     return
                 }
@@ -5209,9 +5214,14 @@ public final class StoryItemSetContainerComponent: Component {
                     context: context,
                     content: storyContent,
                     transitionIn: transitionIn,
-                    transitionOut: { [weak sourceView] peerId, storyIdValue in
-                        if let sourceView {
-                            let destinationView = sourceView
+                    transitionOut: { [weak sourceView, weak viewListView] peerId, storyIdValue in
+                        var destinationView: UIView?
+                        if let view = viewListView?.sourceView(storyId: StoryId(peerId: peerId, id: storyIdValue as? Int32 ?? 0)) {
+                            destinationView = view
+                        } else {
+                            destinationView = sourceView
+                        }
+                        if let destinationView {
                             return StoryContainerScreen.TransitionOut(
                                 destinationView: destinationView,
                                 transitionView: StoryContainerScreen.TransitionView(
@@ -5247,6 +5257,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                 )
+                viewListView?.setPreviewedItem(signal: storyContainerScreen.focusedItem)
                 controller.push(storyContainerScreen)
             })
         }

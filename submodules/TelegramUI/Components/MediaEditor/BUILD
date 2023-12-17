@@ -68,6 +68,7 @@ swift_library(
         "//submodules/StickerResources:StickerResources",
         "//submodules/YuvConversion:YuvConversion",
         "//submodules/FastBlur:FastBlur",
+        "//submodules/WallpaperBackgroundNode",
     ],
     visibility = [
         "//visibility:public",

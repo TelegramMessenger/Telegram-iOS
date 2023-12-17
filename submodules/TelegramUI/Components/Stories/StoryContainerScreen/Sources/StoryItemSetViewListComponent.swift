@@ -293,6 +293,9 @@ final class StoryItemSetViewListComponent: Component {
         var viewListState: EngineStoryViewListContext.State?
         var requestedLoadMoreToken: EngineStoryViewListContext.LoadMoreToken?
         
+        private var previewedItemDisposable: Disposable?
+        private var previewedItemId: StoryId?
+        
         var eventCycleState: EventCycleState?
         
         var totalCount: Int? {
@@ -339,6 +342,42 @@ final class StoryItemSetViewListComponent: Component {
         
         deinit {
             self.viewListDisposable?.dispose()
+            self.previewedItemDisposable?.dispose()
+        }
+        
+        func setPreviewedItem(signal: Signal<StoryId?, NoError>) {
+            self.previewedItemDisposable?.dispose()
+            self.previewedItemDisposable = (signal |> distinctUntilChanged |> deliverOnMainQueue).start(next: { [weak self] previewedItemId in
+                guard let self else {
+                    return
+                }
+                self.previewedItemId = previewedItemId
+                
+                for (itemId, visibleItem) in self.visibleItems {
+                    if let itemView = visibleItem.view as? PeerListItemComponent.View {
+                        let isPreviewing = itemId.peerId == previewedItemId?.peerId && itemId.storyId == previewedItemId?.id
+                        itemView.updateIsPreviewing(isPreviewing: isPreviewing)
+                        
+                        if isPreviewing {
+                            let itemFrame = itemView.frame.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            if !self.scrollView.bounds.intersects(itemFrame.insetBy(dx: 0.0, dy: 20.0)) {
+                                self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: 0.0, dy: -40.0), animated: false)
+                            }
+                        }
+                    }
+                }
+            })
+        }
+        
+        func sourceView(storyId: StoryId) -> UIView? {
+            for (itemId, visibleItem) in self.visibleItems {
+                if let itemView = visibleItem.view as? PeerListItemComponent.View {
+                    if itemId.peerId == storyId.peerId && itemId.storyId == storyId.id {
+                        return itemView.imageNode?.view
+                    }
+                }
+            }
+            return nil
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -577,13 +616,15 @@ final class StoryItemSetViewListComponent: Component {
                         environment: {},
                         containerSize: itemFrame.size
                     )
-                    if let itemView = visibleItem.view {
+                    if let itemView = visibleItem.view as? PeerListItemComponent.View {
                         var animateIn = false
                         if itemView.superview == nil {
                             animateIn = true
                             self.scrollView.addSubview(itemView)
                         }
                         itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        
+                        itemView.updateIsPreviewing(isPreviewing: self.previewedItemId?.peerId == item.peer.id && self.previewedItemId?.id == item.story?.id)
                         
                         if animateIn, synchronousLoad {
                             itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -1036,7 +1077,7 @@ final class StoryItemSetViewListComponent: Component {
                 
                 var emptyButtonTransition = transition
                 let emptyButton: ComponentView<Empty>?
-                if self.query == nil, !component.hasPremium, let views = component.storyItem.views, views.seenCount != 0 {
+                if self.query == nil, !component.hasPremium && !component.peerId.isGroupOrChannel, let views = component.storyItem.views, views.seenCount != 0 {
                     if let current = self.emptyButton {
                         emptyButton = current
                     } else {
@@ -1084,7 +1125,7 @@ final class StoryItemSetViewListComponent: Component {
                             text = component.strings.Story_ViewList_PremiumUpgradeText
                         }
                     } else {
-                        text = component.strings.Story_Views_NoViews
+                        text = component.peerId.isGroupOrChannel ? component.strings.Story_Views_NoReactions : component.strings.Story_Views_NoViews
                     }
                 } else {
                     if let query = self.query, !query.isEmpty {
@@ -1103,7 +1144,7 @@ final class StoryItemSetViewListComponent: Component {
                                 text = component.strings.Story_ViewList_PremiumUpgradeText
                             }
                         } else {
-                            text = component.strings.Story_Views_NoViews
+                            text = component.peerId.isGroupOrChannel ? component.strings.Story_Views_NoReactions : component.strings.Story_Views_NoViews
                         }
                     }
                 }
@@ -1272,6 +1313,10 @@ final class StoryItemSetViewListComponent: Component {
         private var sortMode: SortMode = .reactionsFirst
         private var currentSearchQuery: String = ""
         
+        public var currentViewList: EngineStoryViewListContext? {
+            return self.currentContentView?.viewList
+        }
+        
         override init(frame: CGRect) {
             self.navigationContainerView = UIView()
             self.navigationContainerView.clipsToBounds = true
@@ -1304,6 +1349,14 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             return super.hitTest(point, with: event)
+        }
+        
+        public func setPreviewedItem(signal: Signal<StoryId?, NoError>) {
+            self.currentContentView?.setPreviewedItem(signal: signal)
+        }
+        
+        public func sourceView(storyId: StoryId) -> UIView? {
+            self.currentContentView?.sourceView(storyId: storyId)
         }
         
         func animateIn(transition: Transition) {
@@ -1648,7 +1701,7 @@ final class StoryItemSetViewListComponent: Component {
                             displayModeSelector = true
                             displaySearchBar = true
                         }
-                        if (views.reactedCount >= 10 && totalCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                        if (((component.peerId.isGroupOrChannel && views.forwardCount >= 10 ) || (!component.peerId.isGroupOrChannel && views.reactedCount >= 10)) && totalCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                             displaySortSelector = true
                         }
                     } else {

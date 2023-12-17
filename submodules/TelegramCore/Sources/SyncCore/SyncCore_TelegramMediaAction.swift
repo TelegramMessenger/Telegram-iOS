@@ -208,7 +208,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 35:
             self = .botAppAccessGranted(appName: decoder.decodeOptionalStringForKey("app"), type: decoder.decodeOptionalInt32ForKey("atp").flatMap { BotSendMessageAccessGrantedType(rawValue: $0) })
         case 36:
-            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0), currency: decoder.decodeOptionalStringForKey("currency"), amount: decoder.decodeOptionalInt64ForKey("amount"), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"))
+            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: decoder.decodeOptionalInt64ForKey("pi").flatMap { PeerId($0) }, months: decoder.decodeInt32ForKey("months", orElse: 0), currency: decoder.decodeOptionalStringForKey("currency"), amount: decoder.decodeOptionalInt64ForKey("amount"), cryptoCurrency: decoder.decodeOptionalStringForKey("cryptoCurrency"), cryptoAmount: decoder.decodeOptionalInt64ForKey("cryptoAmount"))
         case 37:
             self = .giveawayLaunched
         case 38:

@@ -394,7 +394,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var message: Message?
     private var attributes: ChatMessageEntryAttributes?
     private var media: Media?
-    private var themeAndStrings: (PresentationTheme, PresentationStrings, String)?
+    private var themeAndStrings: (PresentationTheme, PresentationStrings, String, Bool)?
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
     private var wideLayout: Bool?
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
@@ -1424,7 +1424,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.attributes = attributes
                             strongSelf.media = media
                             strongSelf.wideLayout = wideLayout
-                            strongSelf.themeAndStrings = (presentationData.theme.theme, presentationData.strings, dateTimeFormat.decimalSeparator)
+                            strongSelf.themeAndStrings = (presentationData.theme.theme, presentationData.strings, dateTimeFormat.decimalSeparator, presentationData.isPreview)
                             strongSelf.sizeCalculation = sizeCalculation
                             strongSelf.automaticPlayback = automaticPlayback
                             strongSelf.automaticDownload = automaticDownload
@@ -1718,7 +1718,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     }
     
     private func updateStatus(animated: Bool) {
-        guard let (theme, strings, decimalSeparator) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, let attributes = self.attributes, var automaticPlayback = self.automaticPlayback, let wideLayout = self.wideLayout else {
+        guard let (theme, strings, decimalSeparator, isPreview) = self.themeAndStrings, let sizeCalculation = self.sizeCalculation, let message = self.message, let attributes = self.attributes, var automaticPlayback = self.automaticPlayback, let wideLayout = self.wideLayout else {
             return
         }
         
@@ -2162,7 +2162,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
+                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, enableAnimations: (self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true) && !isPreview)
                 extendedMediaOverlayNode.tapped = { [weak self] in
                     self?.internallyVisible = true
                     self?.updateVisibility()

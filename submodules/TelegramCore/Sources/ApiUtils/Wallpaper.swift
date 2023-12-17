@@ -7,7 +7,7 @@ import TelegramApi
 extension WallpaperSettings {
     init(apiWallpaperSettings: Api.WallPaperSettings) {
         switch apiWallpaperSettings {
-        case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, intensity, rotation):
+        case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, intensity, rotation, _):
             var colors: [UInt32] = []
             if let backgroundColor = backgroundColor {
                 colors.append(UInt32(bitPattern: backgroundColor))
@@ -57,7 +57,7 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
         flags |= (1 << 6)
         fourthBackgroundColor = Int32(bitPattern: wallpaperSettings.colors[3])
     }
-    return .wallPaperSettings(flags: flags, backgroundColor: backgroundColor, secondBackgroundColor: secondBackgroundColor, thirdBackgroundColor: thirdBackgroundColor, fourthBackgroundColor: fourthBackgroundColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0)
+    return .wallPaperSettings(flags: flags, backgroundColor: backgroundColor, secondBackgroundColor: secondBackgroundColor, thirdBackgroundColor: thirdBackgroundColor, fourthBackgroundColor: fourthBackgroundColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0, emoticon: nil)
 }
 
 extension TelegramWallpaper {
@@ -77,7 +77,7 @@ extension TelegramWallpaper {
                     self = .color(0xffffff)
                 }
             case let .wallPaperNoFile(id, _, settings):
-                if let settings = settings, case let .wallPaperSettings(_, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, _, rotation) = settings {
+                if let settings = settings, case let .wallPaperSettings(_, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, _, rotation, _) = settings {
                     let colors: [UInt32] = ([backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor] as [Int32?]).compactMap({ color -> UInt32? in
                         return color.flatMap(UInt32.init(bitPattern:))
                     })

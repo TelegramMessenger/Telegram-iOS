@@ -92,7 +92,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case .boost, .chatFolder:
                         if let navigationController = controller.navigationController as? NavigationController {
-                            openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigateToPeer in
+                            openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, message: nil, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigateToPeer in
                                 openResolvedPeerImpl(peer, navigateToPeer)
                             }, sendFile: nil, sendSticker: nil, joinVoiceChat: nil, present: { c, a in }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
                         }

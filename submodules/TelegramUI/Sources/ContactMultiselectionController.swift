@@ -257,11 +257,20 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 var displayCountAlert = false
                 
                 var selectionState: ContactListNodeGroupSelectionState?
+                let reachedLimit = strongSelf.params.reachedLimit
                 switch strongSelf.contactsNode.contentNode {
                 case let .contacts(contactsNode):
                     contactsNode.updateSelectionState { state in
                         if let state = state {
                             var updatedState = state.withToggledPeerId(.peer(peer.id))
+                            if let limit = limit, updatedState.selectedPeerIndices.count > limit {
+                                reachedLimit?(Int32(limit))
+                                updatedCount = nil
+                                removedTokenId = nil
+                                addedToken = nil
+                                return state
+                            }
+                            
                             if updatedState.selectedPeerIndices[.peer(peer.id)] == nil {
                                 removedTokenId = peer.id
                             } else {
@@ -280,7 +289,6 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                         }
                     }
                 case let .chats(chatsNode):
-                    let reachedLimit = strongSelf.params.reachedLimit
                     chatsNode.updateState { initialState in
                         var state = initialState
                         if state.selectedPeerIds.contains(peer.id) {
@@ -522,6 +530,19 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     strongSelf.rightNavigationButtonPressed()
                 }
             }
+        }
+        
+        switch self.contactsNode.contentNode {
+        case let .contacts(contactsNode):
+            contactsNode.deselectedAll = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.contactsNode.editableTokens = []
+                self.requestLayout(transition: ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring))
+            }
+        case .chats:
+            break
         }
         
         self.displayNodeDidLoad()

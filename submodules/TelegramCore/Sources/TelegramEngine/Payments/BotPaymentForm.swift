@@ -8,6 +8,7 @@ public enum BotPaymentInvoiceSource {
     case message(MessageId)
     case slug(String)
     case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
+    case giftCode(users: [PeerId], currency: String, amount: Int64, option: PremiumGiftCodeOption)
 }
 
 
@@ -255,6 +256,33 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: option.users, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
         
         return .inputInvoicePremiumGiftCode(purpose: inputPurpose, option: option)
+    case let .giftCode(users, currency, amount, option):
+        
+        
+        var inputUsers: [Api.InputUser] = []
+        if !users.isEmpty {
+            for peerId in users {
+                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputUser(peer) {
+                    inputUsers.append(inputPeer)
+                }
+            }
+        }
+        
+        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: 0, users: inputUsers, boostPeer: nil, currency: currency, amount: amount)
+
+        
+        var flags: Int32 = 0
+        if let _ = option.storeProductId {
+            flags |= (1 << 0)
+        }
+        if option.storeQuantity > 0 {
+            flags |= (1 << 1)
+        }
+        
+        let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: option.users, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
+
+        return .inputInvoicePremiumGiftCode(purpose: inputPurpose, option: option)
+
     }
 }
 
@@ -539,6 +567,8 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     receiptMessageId = id
                                                 }
                                             }
+                                        case .giftCode:
+                                            receiptMessageId = nil
                                         }
                                     }
                                 }

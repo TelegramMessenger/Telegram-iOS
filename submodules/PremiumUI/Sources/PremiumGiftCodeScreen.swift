@@ -291,7 +291,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             let linkButton = linkButton.update(
                 component: Button(
                     content: AnyComponent(
-                        LinkButtonContentComponent(theme: environment.theme, text: link)
+                        GiftLinkButtonContentComponent(theme: environment.theme, text: link)
                     ),
                     action: {
                         if let link {
@@ -750,23 +750,29 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
     }
 }
 
-private final class LinkButtonContentComponent: CombinedComponent {
+final class GiftLinkButtonContentComponent: CombinedComponent {
     let theme: PresentationTheme
     let text: String?
+    let isSeparateSection: Bool
     
-    public init(
+    init(
         theme: PresentationTheme,
-        text: String?
+        text: String?,
+        isSeparateSection: Bool = false
     ) {
         self.theme = theme
         self.text = text
+        self.isSeparateSection = isSeparateSection
     }
     
-    static func ==(lhs: LinkButtonContentComponent, rhs: LinkButtonContentComponent) -> Bool {
+    static func ==(lhs: GiftLinkButtonContentComponent, rhs: GiftLinkButtonContentComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.isSeparateSection != rhs.isSeparateSection {
             return false
         }
         return true
@@ -784,7 +790,7 @@ private final class LinkButtonContentComponent: CombinedComponent {
             let sideInset: CGFloat = 38.0
             
             let background = background.update(
-                component: RoundedRectangle(color: component.theme.list.itemInputField.backgroundColor, cornerRadius: 10.0),
+                component: RoundedRectangle(color: component.isSeparateSection ? component.theme.list.itemBlocksBackgroundColor : component.theme.list.itemInputField.backgroundColor, cornerRadius: 10.0),
                 availableSize: context.availableSize,
                 transition: context.transition
             )
@@ -1074,7 +1080,7 @@ private final class PeerCellComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 13.0))
             
             super.init(frame: frame)
             

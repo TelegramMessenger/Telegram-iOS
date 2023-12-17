@@ -253,7 +253,7 @@ public final class PeerListItemComponent: Component {
         private var fileDisposable: Disposable?
         
         private var imageButtonView: HighlightTrackingButton?
-        private var imageNode: TransformImageNode?
+        public private(set) var imageNode: TransformImageNode?
         
         private var component: PeerListItemComponent?
         private weak var state: EmptyComponentState?
@@ -408,6 +408,10 @@ public final class PeerListItemComponent: Component {
                 }
                 reactionLayer.frame = iconFrame
             }
+        }
+        
+        public func updateIsPreviewing(isPreviewing: Bool) {
+            self.imageNode?.isHidden = isPreviewing
         }
         
         func update(component: PeerListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
@@ -910,6 +914,7 @@ public final class PeerListItemComponent: Component {
                     
                     imageButtonView = HighlightTrackingButton()
                     imageButtonView.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
+                    imageButtonView.isEnabled = component.message == nil
                     self.imageButtonView = imageButtonView
                     
                     self.containerButton.addSubview(imageNode.view)

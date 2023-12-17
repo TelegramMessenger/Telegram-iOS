@@ -523,7 +523,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, associatedData: item.associatedData)
+            let dateFormat: MessageTimestampStatusFormat
+            if item.presentationData.isPreview {
+                dateFormat = .full
+            } else {
+                dateFormat = .regular
+            }
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
             
             let maxDateAndStatusWidth: CGFloat
             if case .bubble = statusDisplayType {
@@ -785,7 +791,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                                         
                     var displayTranscribe = false
-                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
+                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free && !item.presentationData.isPreview {
                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
                         if item.associatedData.isPremium {
                             displayTranscribe = true
