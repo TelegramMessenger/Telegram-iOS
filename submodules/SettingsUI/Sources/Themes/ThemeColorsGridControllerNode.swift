@@ -9,6 +9,7 @@ import MergeLists
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import WallpaperGalleryScreen
 
 final class ThemeColorsGridControllerInteraction {
     let openWallpaper: (TelegramWallpaper) -> Void

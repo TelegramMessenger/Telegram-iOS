@@ -170,7 +170,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index: Int32 = 0
             
             if canShareStory {
-                entries.append(SharePeerEntry(index: index, item: .story, theme: theme, strings: strings))
+                entries.append(SharePeerEntry(index: index, item: .story(isMessage: false), theme: theme, strings: strings))
                 index += 1
             }
             

@@ -43,6 +43,8 @@ swift_library(
         "//submodules/TelegramUI/Components/DynamicCornerRadiusView",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/WallpaperResources",
+        "//submodules/MediaPickerUI",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
     ],
     visibility = [
         "//visibility:public",

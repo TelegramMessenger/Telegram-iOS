@@ -401,7 +401,7 @@ public class WallpaperGalleryController: ViewController {
         self.colorsPanelNode?.updateTheme(self.presentationData.theme)
     }
     
-    func dismiss(forceAway: Bool) {
+    public func dismiss(forceAway: Bool) {
 //        let completion: () -> Void = { [weak self] in
 //            self?.presentingViewController?.dismiss(animated: false, completion: nil)
 //        }

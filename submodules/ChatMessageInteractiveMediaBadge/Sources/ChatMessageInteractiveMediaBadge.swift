@@ -51,8 +51,8 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     private var iconName: String?
     
     private let backgroundNode: ASImageNode
-    private let durationNode: ASTextNode
-    private var sizeNode: ASTextNode?
+    public let durationNode: ASTextNode
+    public private(set) var sizeNode: ASTextNode?
     private var measureNode: ASTextNode
     private var iconNode: ASImageNode?
     private var mediaDownloadStatusNode: RadialStatusNode?

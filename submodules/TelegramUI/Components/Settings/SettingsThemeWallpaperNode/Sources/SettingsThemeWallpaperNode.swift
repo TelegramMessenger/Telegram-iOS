@@ -42,17 +42,17 @@ private let blackColorImage: UIImage? = {
     return context.generateImage()
 }()
 
-final class SettingsThemeWallpaperNode: ASDisplayNode {
-    var wallpaper: TelegramWallpaper?
+public final class SettingsThemeWallpaperNode: ASDisplayNode {
+    public var wallpaper: TelegramWallpaper?
     private var arguments: PatternWallpaperArguments?
     
-    let buttonNode = HighlightTrackingButtonNode()
-    let backgroundNode = ASImageNode()
-    let imageNode = TransformImageNode()
+    public let buttonNode = HighlightTrackingButtonNode()
+    public let backgroundNode = ASImageNode()
+    public let imageNode = TransformImageNode()
     private var gradientNode: GradientBackgroundNode?
     private let statusNode: RadialStatusNode
     
-    var pressed: (() -> Void)?
+    public var pressed: (() -> Void)?
 
     private let displayLoading: Bool
     private var isSelected: Bool = false
@@ -60,7 +60,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
     private let isLoadedDisposable = MetaDisposable()
          
-    init(displayLoading: Bool = false, overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
+    public init(displayLoading: Bool = false, overlayBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.3)) {
         self.displayLoading = displayLoading
         self.imageNode.contentAnimations = [.subsequentUpdates]
         
@@ -83,7 +83,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.isLoadedDisposable.dispose()
     }
     
-    func setSelected(_ selected: Bool, animated: Bool = false) {
+    public func setSelected(_ selected: Bool, animated: Bool = false) {
         if self.isSelected != selected {
             self.isSelected = selected
 
@@ -110,11 +110,11 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
         }
     }
     
-    func setOverlayBackgroundColor(_ color: UIColor) {
+    public func setOverlayBackgroundColor(_ color: UIColor) {
         self.statusNode.backgroundNodeColor = color
     }
     
-    func setWallpaper(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
+    public func setWallpaper(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)

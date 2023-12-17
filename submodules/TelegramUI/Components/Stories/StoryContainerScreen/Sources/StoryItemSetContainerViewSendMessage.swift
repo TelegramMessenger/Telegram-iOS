@@ -3264,8 +3264,8 @@ final class StoryItemSetContainerSendMessage {
             controller.push(sheet)
         })
     }
-    
-    func activateMediaArea(view: StoryItemSetContainerComponent.View, mediaArea: MediaArea) {
+        
+    func activateMediaArea(view: StoryItemSetContainerComponent.View, mediaArea: MediaArea, immediate: Bool = false) {
         guard let component = view.component, let controller = component.controller() else {
             return
         }
@@ -3278,8 +3278,8 @@ final class StoryItemSetContainerSendMessage {
         var actions: [ContextMenuAction] = []
         switch mediaArea {
         case let .venue(_, venue):
-            let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewLocation, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller, weak view] in
+            let action = { [weak controller, weak view] in
+                let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 let locationController = LocationViewController(
                     context: context,
                     updatedPresentationData: updatedPresentationData,
@@ -3302,9 +3302,16 @@ final class StoryItemSetContainerSendMessage {
                     })
                 }
                 controller?.push(locationController)
+            }
+            if immediate {
+                action()
+                return
+            }
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewLocation, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+                action()
             }))
         case let .channelMessage(_, messageId):
-            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewMessage, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+            let action = { [weak self, weak view] in
                 let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
                 |> mapToSignal { result -> Signal<Message?, NoError> in
                     if case let .result(messages) = result {
@@ -3312,12 +3319,21 @@ final class StoryItemSetContainerSendMessage {
                     }
                     return .single(nil)
                 })
-                |> deliverOnMainQueue).startStandalone(next: { message in
-                    guard let message else {
+                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] message in
+                    guard let self, let view else {
                         return
                     }
-                    context.sharedContext.navigateToChat(accountId: context.account.id, peerId: message.id.peerId, messageId: message.id)
+                    if let message, let peer = message.peers[message.id.peerId] {
+                        self.openResolved(view: view, result: .channelMessage(peer: peer, messageId: message.id, timecode: nil))
+                    }
                 })
+            }
+            if immediate {
+                action()
+                return
+            }
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewMessage, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+                action()
             }))
         case .reaction:
             return

@@ -6,7 +6,7 @@ import SwiftSignalKit
 import CheckNode
 import AnimationUI
 
-enum WallpaperOptionButtonValue {
+public enum WallpaperOptionButtonValue {
     case check(Bool)
     case color(Bool, UIColor)
     case colors(Bool, [UIColor])
@@ -270,7 +270,7 @@ final class WallpaperNavigationButtonNode: HighlightTrackingButtonNode {
 }
 
 
-final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
+public final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     let backgroundNode: WallpaperOptionBackgroundNode
     
     private let checkNode: CheckNode
@@ -281,7 +281,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
     private var textSize: CGSize?
     
     private var _value: WallpaperOptionButtonValue
-    override var isSelected: Bool {
+    public override var isSelected: Bool {
         get {
             switch self._value {
             case let .check(selected), let .color(selected, _), let .colors(selected, _):
@@ -301,13 +301,13 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    var title: String {
+    public var title: String {
         didSet {
             self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
         }
     }
     
-    init(title: String, value: WallpaperOptionButtonValue) {
+    public init(title: String, value: WallpaperOptionButtonValue) {
         self._value = value
         self.title = title
         
@@ -368,12 +368,12 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
+    public var buttonColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.3) {
         didSet {
         }
     }
     
-    var color: UIColor? {
+    public var color: UIColor? {
         get {
             switch self._value {
                 case let .color(_, color):
@@ -395,7 +395,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
 
-    var colors: [UIColor]? {
+    public var colors: [UIColor]? {
         get {
             switch self._value {
             case let .colors(_, colors):
@@ -429,7 +429,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    func setSelected(_ selected: Bool, animated: Bool = false) {
+    public func setSelected(_ selected: Bool, animated: Bool = false) {
         switch self._value {
         case .check:
             self._value = .check(selected)
@@ -441,7 +441,7 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         self.checkNode.setSelected(selected, animated: animated)
     }
     
-    func setEnabled(_ enabled: Bool) {
+    public func setEnabled(_ enabled: Bool) {
         let alpha: CGFloat = enabled ? 1.0 : 0.4
         self.checkNode.alpha = alpha
         self.colorNode.alpha = alpha
@@ -449,13 +449,13 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         self.isUserInteractionEnabled = enabled
     }
     
-    override func measure(_ constrainedSize: CGSize) -> CGSize {
+    public override func measure(_ constrainedSize: CGSize) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
         self.textSize = size
         return CGSize(width: ceil(size.width) + 48.0, height: 30.0)
     }
     
-    override func layout() {
+    public override func layout() {
         super.layout()
 
         self.backgroundNode.frame = self.bounds

@@ -1485,7 +1485,7 @@ open class TextNode: ASDisplayNode {
         
         var blockQuotes: [TextNodeBlockQuote] = []
         
-        for i in 0 ..< calculatedSegments.count {
+    loop: for i in 0 ..< calculatedSegments.count {
             let segment = calculatedSegments[i]
             if i != 0 {
                 if segment.blockQuote != nil {
@@ -1510,6 +1510,10 @@ open class TextNode: ASDisplayNode {
             }
             
             for line in segment.lines {
+                var isLastLine = false
+                if maximumNumberOfLines > 0 && lines.count == maximumNumberOfLines - 1 {
+                    isLastLine = true
+                }
                 line.frame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: -insets.bottom + size.height + line.frame.size.height), size: line.frame.size)
                 line.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
                 //line.frame.size.width = max(blockWidth, line.frame.size.width)
@@ -1575,6 +1579,10 @@ open class TextNode: ASDisplayNode {
                 }
                 
                 lines.append(line)
+                
+                if isLastLine {
+                    break loop
+                }
             }
             
             let blockMaxY = size.height - insets.bottom

@@ -112,6 +112,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                                                 }
                                             }
                                         }
+                                    } else if case let .channelMessage(_, messageId) = mediaArea {
+                                        if let peer = transaction.getPeer(messageId.peerId) {
+                                            peers[peer.id] = peer
+                                        }
                                     }
                                 }
                             }
@@ -216,6 +220,17 @@ public final class StoryContentContextImpl: StoryContentContext {
                     guard let media = item.media else {
                         return nil
                     }
+                    
+                    var forwardInfo = item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                    if forwardInfo == nil {
+                        for mediaArea in item.mediaAreas {
+                            if case let .channelMessage(_, messageId) = mediaArea, let peer = peers[messageId.peerId] {
+                                forwardInfo = .known(peer: EnginePeer(peer), storyId: 0, isModified: false)
+                                break
+                            }
+                        }
+                    }
+                    
                     return EngineStoryItem(
                         id: item.id,
                         timestamp: item.timestamp,
@@ -248,7 +263,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isEdited: item.isEdited,
                         isMy: item.isMy,
                         myReaction: item.myReaction,
-                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                        forwardInfo: forwardInfo
                     )
                 }
                 var totalCount = peerStoryItemsView.items.count
@@ -1131,6 +1146,10 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                                         }
                                     }
                                 }
+                            } else if case let .channelMessage(_, messageId) = mediaArea {
+                                if let peer = transaction.getPeer(messageId.peerId) {
+                                    peers[peer.id] = peer
+                                }
                             }
                         }
                     }
@@ -1186,6 +1205,16 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
             }
             
             if let item, case let .item(itemValue) = item, let media = itemValue.media {
+                var forwardInfo = itemValue.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                if forwardInfo == nil {
+                    for mediaArea in itemValue.mediaAreas {
+                        if case let .channelMessage(_, messageId) = mediaArea, let peer = peers[messageId.peerId] {
+                            forwardInfo = .known(peer: EnginePeer(peer), storyId: 0, isModified: false)
+                            break
+                        }
+                    }
+                }
+                
                 let mappedItem = EngineStoryItem(
                     id: itemValue.id,
                     timestamp: itemValue.timestamp,
@@ -1218,7 +1247,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isEdited: itemValue.isEdited,
                     isMy: itemValue.isMy,
                     myReaction: itemValue.myReaction,
-                    forwardInfo: itemValue.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                    forwardInfo: forwardInfo
                 )
                 
                 let mainItem = StoryContentItem(
@@ -2073,12 +2102,21 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
         
         private var currentForwardInfoStories: [StoryId: Promise<EngineStoryItem?>] = [:]
         
-        init(context: AccountContext, peerId: EnginePeer.Id, focusedId initialFocusedId: Int32?, items: [EngineStoryItem]) {
+        init(
+            context: AccountContext,
+            originalPeerId: EnginePeer.Id,
+            originalStory: EngineStoryItem,
+            peerId: EnginePeer.Id,
+            focusedId initialFocusedId: Int32?,
+            items: [EngineStoryItem]
+        ) {
             self.context = context
             self.peerId = peerId
             
             self.currentFocusedId = initialFocusedId
             self.currentFocusedIdUpdatedPromise.set(.single(Void()))
+            
+            let originalStoryId = StoryId(peerId: originalPeerId, id: originalStory.id)
             
             let inputKeys: [PostboxViewKey] = [
                 PostboxViewKey.basicPeer(peerId),
@@ -2098,53 +2136,43 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                     var forwardInfoStories: [StoryId: EngineStoryItem?] = [:]
                     var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
                     
-                    if let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView {
-                        for item in itemsView.items {
-                            if let item = item.value.get(Stories.StoredItem.self), case let .item(itemValue) = item {
-                                if let views = itemValue.views {
-                                    for peerId in views.seenPeerIds {
-                                        if let peer = transaction.getPeer(peerId) {
-                                            peers[peer.id] = peer
-                                        }
-                                    }
-                                }
-                                if let forwardInfo = itemValue.forwardInfo, case let .known(peerId, id, _) = forwardInfo {
-                                    if let peer = transaction.getPeer(peerId) {
-                                        peers[peer.id] = peer
-                                    }
-                                    let storyId = StoryId(peerId: peerId, id: id)
-                                    if let story = getCachedStory(storyId: storyId, transaction: transaction) {
-                                        forwardInfoStories[storyId] = story
-                                    } else {
-                                        forwardInfoStories.updateValue(nil, forKey: storyId)
-                                    }
-                                }
-                                for entity in itemValue.entities {
-                                    if case let .CustomEmoji(_, fileId) = entity.type {
-                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                        if allEntityFiles[mediaId] == nil {
-                                            if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
-                                                allEntityFiles[file.fileId] = file
-                                            }
-                                        }
-                                    }
-                                }
-                                for mediaArea in itemValue.mediaAreas {
-                                    if case let .reaction(_, reaction, _) = mediaArea {
-                                        if case let .custom(fileId) = reaction {
-                                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                            if allEntityFiles[mediaId] == nil {
-                                                if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
-                                                    allEntityFiles[file.fileId] = file
-                                                }
-                                            }
-                                        }
+                    for item in items {
+                        if let forwardInfo = item.forwardInfo, case let .known(peer, id, _) = forwardInfo {
+                            let storyId = StoryId(peerId: peer.id, id: id)
+                            if storyId == originalStoryId {
+                                forwardInfoStories[storyId] = originalStory
+                            } else {
+                                forwardInfoStories.updateValue(nil, forKey: storyId)
+                            }
+                        }
+                        for entity in item.entities {
+                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                if allEntityFiles[mediaId] == nil {
+                                    if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                        allEntityFiles[file.fileId] = file
                                     }
                                 }
                             }
                         }
+                        for mediaArea in item.mediaAreas {
+                            if case let .reaction(_, reaction, _) = mediaArea {
+                                if case let .custom(fileId) = reaction {
+                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                    if allEntityFiles[mediaId] == nil {
+                                        if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                            allEntityFiles[file.fileId] = file
+                                        }
+                                    }
+                                }
+                            } else if case let .channelMessage(_, messageId) = mediaArea {
+                                if let peer = transaction.getPeer(messageId.peerId) {
+                                    peers[peer.id] = peer
+                                }
+                            }
+                        }
                     }
-                    
+
                     return (views, peers, globalNotificationSettings, allEntityFiles, forwardInfoStories)
                 }
             }
@@ -2163,7 +2191,6 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                 if let presencesView = views.views[PostboxViewKey.peerPresences(peerIds: Set([peerId]))] as? PeerPresencesView {
                     peerPresence = presencesView.presences[peerId]
                 }
-                
                 for (storyId, story) in forwardInfoStories {
                     let promise: Promise<EngineStoryItem?>
                     var added = false
@@ -2174,7 +2201,9 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                         self.currentForwardInfoStories[storyId] = promise
                         added = true
                     }
-                    if let story {
+                    if storyId == originalStoryId {
+                        promise.set(.single(originalStory))
+                    } else if let story {
                         promise.set(.single(story))
                     } else if added {
                         promise.set(self.context.engine.messages.getStory(peerId: storyId.peerId, id: storyId.id))
@@ -2273,7 +2302,6 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                     }
                     
                     let mappedFocusedIndex = mappedItems.firstIndex(where: { $0.id == mappedItems[focusedIndex].id })
-                    
                     
                     do {
                         let mappedItem = mappedItems[focusedIndex]
@@ -2416,6 +2444,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
     }
     
     private let context: AccountContext
+    private let originalPeerId: EnginePeer.Id
+    private let originalStory: EngineStoryItem
     private let viewListContext: EngineStoryViewListContext
     private let readGlobally: Bool
     
@@ -2449,11 +2479,15 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
         
     public init(
         context: AccountContext,
+        originalPeerId: EnginePeer.Id,
+        originalStory: EngineStoryItem,
         focusedStoryId: StoryId,
         viewListContext: EngineStoryViewListContext,
         readGlobally: Bool
     ) {
         self.context = context
+        self.originalPeerId = originalPeerId
+        self.originalStory = originalStory
         self.focusedItem = (focusedStoryId.peerId, focusedStoryId.id)
         self.viewListContext = viewListContext
         self.readGlobally = readGlobally
@@ -2530,7 +2564,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                     if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: currentStoryItems[centralIndex].peer.id) {
                         centralPeerContext = existingContext
                     } else {
-                        centralPeerContext = PeerContext(context: self.context, peerId: currentStoryItems[centralIndex].peer.id, focusedId: nil, items: [currentStoryItems[centralIndex].story])
+                        centralPeerContext = PeerContext(context: self.context, originalPeerId: self.originalPeerId, originalStory: self.originalStory, peerId: currentStoryItems[centralIndex].peer.id, focusedId: nil, items: [currentStoryItems[centralIndex].story])
                     }
                     
                     var previousPeerContext: PeerContext?
@@ -2538,7 +2572,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                         if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: currentStoryItems[centralIndex - 1].peer.id) {
                             previousPeerContext = existingContext
                         } else {
-                            previousPeerContext = PeerContext(context: self.context, peerId: currentStoryItems[centralIndex - 1].peer.id, focusedId: nil, items: [currentStoryItems[centralIndex - 1].story])
+                            previousPeerContext = PeerContext(context: self.context, originalPeerId: self.originalPeerId, originalStory: self.originalStory, peerId: currentStoryItems[centralIndex - 1].peer.id, focusedId: nil, items: [currentStoryItems[centralIndex - 1].story])
                         }
                     }
                     
@@ -2547,7 +2581,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                         if let currentState = self.currentState, let existingContext = currentState.findPeerContext(id: currentStoryItems[centralIndex + 1].peer.id) {
                             nextPeerContext = existingContext
                         } else {
-                            nextPeerContext = PeerContext(context: self.context, peerId: currentStoryItems[centralIndex + 1].peer.id, focusedId: nil, items: [currentStoryItems[centralIndex + 1].story])
+                            nextPeerContext = PeerContext(context: self.context, originalPeerId: self.originalPeerId, originalStory: self.originalStory, peerId: currentStoryItems[centralIndex + 1].peer.id, focusedId: nil, items: [currentStoryItems[centralIndex + 1].story])
                         }
                     }
                     

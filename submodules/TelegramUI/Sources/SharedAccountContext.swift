@@ -49,6 +49,7 @@ import ChatMessageItemImpl
 import ChatRecentActionsController
 import PeerInfoScreen
 import ChatQrCodeScreen
+import UndoUI
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1946,6 +1947,72 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: isCurrent, level: level, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: link, myBoostCount: myBoostCount, canBoostAgain: canBoostAgain)
         }
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
+    }
+    
+    public func makePremiumGiftController(context: AccountContext) -> ViewController {
+        let options = Promise<[PremiumGiftCodeOption]>()
+        options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+        let limit: Int32 = 10
+        var reachedLimitImpl: ((Int32) -> Void)?
+        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
+            if case let .user(user) = peer, user.botInfo == nil {
+                return true
+            } else {
+                return false
+            }
+        }, limit: limit, reachedLimit: { limit in
+            reachedLimitImpl?(limit)
+        }))
+        
+        reachedLimitImpl = { [weak controller] limit in
+            guard let controller else {
+                return
+            }
+            HapticFeedback().error()
+            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(limit)").string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+        }
+    
+        let _ = combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
+        .startStandalone(next: { [weak controller] result, options in
+            guard let controller else {
+                return
+            }
+            var peerIds: [PeerId] = []
+            if case let .result(peerIdsValue, _) = result {
+                peerIds = peerIdsValue.compactMap({ peerId in
+                    if case let .peer(peerId) = peerId {
+                        return peerId
+                    } else {
+                        return nil
+                    }
+                })
+            }
+            
+            let mappedOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+            var pushImpl: ((ViewController) -> Void)?
+            var filterImpl: (() -> Void)?
+            let giftController = PremiumGiftScreen(context: context, peerIds: peerIds, options: mappedOptions, source: .settings, pushController: { c in
+                pushImpl?(c)
+            }, completion: {
+                filterImpl?()
+            })
+            pushImpl = { [weak giftController] c in
+                giftController?.push(c)
+            }
+            filterImpl = { [weak giftController] in
+                if let navigationController = giftController?.navigationController as? NavigationController {
+                    var controllers = navigationController.viewControllers
+                    controllers = controllers.filter { !($0 is ContactMultiselectionController) }
+                    navigationController.setViewControllers(controllers, animated: true)
+                }
+            }
+            controller.push(giftController)
+        })
+        
+        return controller
     }
     
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {

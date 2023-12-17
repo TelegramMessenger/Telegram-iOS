@@ -15,6 +15,7 @@ import SearchUI
 import HexColor
 import PresentationDataUtils
 import MediaPickerUI
+import WallpaperGalleryScreen
 
 public final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {

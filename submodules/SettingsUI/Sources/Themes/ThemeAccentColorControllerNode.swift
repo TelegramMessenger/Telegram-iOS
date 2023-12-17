@@ -14,6 +14,7 @@ import PresentationDataUtils
 import WallpaperBackgroundNode
 import AnimationCache
 import MultiAnimationRenderer
+import WallpaperGalleryScreen
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 80.0), opaque: false, rotatedContext: { size, context in

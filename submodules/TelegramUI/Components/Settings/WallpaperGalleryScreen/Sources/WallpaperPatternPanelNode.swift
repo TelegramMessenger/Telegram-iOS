@@ -9,6 +9,7 @@ import LegacyComponents
 import AccountContext
 import MergeLists
 import Postbox
+import SettingsThemeWallpaperNode
 
 private let itemSize = CGSize(width: 88.0, height: 88.0)
 private let inset: CGFloat = 12.0
@@ -172,24 +173,24 @@ private final class WallpaperPatternItemNode : ListViewItemNode {
     }
 }
 
-final class WallpaperPatternPanelNode: ASDisplayNode {
+public final class WallpaperPatternPanelNode: ASDisplayNode {
     private let context: AccountContext
     private var theme: PresentationTheme
     
     private let backgroundNode: NavigationBackgroundNode
     private let topSeparatorNode: ASDisplayNode
     
-    let scrollNode: ASScrollNode
+    public let scrollNode: ASScrollNode
     
     private let titleNode: ImmediateTextNode
     private let labelNode: ImmediateTextNode
     private var sliderView: TGPhotoEditorSliderView?
     
     private var disposable: Disposable?
-    var wallpapers: [TelegramWallpaper] = []
+    public var wallpapers: [TelegramWallpaper] = []
     private var currentWallpaper: TelegramWallpaper?
     
-    var serviceBackgroundColor: UIColor = UIColor(rgb: 0x748698) {
+    public var serviceBackgroundColor: UIColor = UIColor(rgb: 0x748698) {
         didSet {
             guard let nodes = self.scrollNode.subnodes else {
                 return
@@ -200,7 +201,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: ([HSBColor], Int32?, Int32?)? = nil {
+    public var backgroundColors: ([HSBColor], Int32?, Int32?)? = nil {
         didSet {
             var updated = false
             if oldValue?.0 != self.backgroundColors?.0 || oldValue?.1 != self.backgroundColors?.1 {
@@ -223,11 +224,11 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
     
     private var validLayout: (CGSize, CGFloat)?
     
-    var patternChanged: ((TelegramWallpaper?, Int32?, Bool) -> Void)?
+    public var patternChanged: ((TelegramWallpaper?, Int32?, Bool) -> Void)?
 
     private let allowDark: Bool
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
         self.allowDark = theme.overallDarkAppearance
@@ -287,7 +288,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.disposable?.dispose()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.scrollNode.view.showsHorizontalScrollIndicator = false
@@ -320,7 +321,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.sliderView = sliderView
     }
     
-    func updateWallpapers() {
+    public func updateWallpapers() {
         guard let subnodes = self.scrollNode.subnodes else {
             return
         }
@@ -386,7 +387,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.layoutItemNodes(transition: .immediate)
     }
     
-    func updateTheme(_ theme: PresentationTheme) {
+    public func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
         self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
@@ -416,7 +417,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
+    public func didAppear(initialWallpaper: TelegramWallpaper? = nil, intensity: Int32? = nil) {
         let wallpaper: TelegramWallpaper?
 
         if self.wallpapers.isEmpty {
@@ -482,7 +483,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, bottomInset)
         
         let backgroundFrame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height + bottomInset)

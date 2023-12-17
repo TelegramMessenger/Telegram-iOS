@@ -580,7 +580,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var viewCount: Int?
                 var dateReplies = 0
                 var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
-                if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
+                if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) || presentationData.isPreview {
                     dateReactionsAndPeers = ([], [])
                 }
                 for attribute in message.attributes {
@@ -595,7 +595,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, associatedData: associatedData)
+                let dateFormat: MessageTimestampStatusFormat
+                if presentationData.isPreview {
+                    dateFormat = .full
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, format: dateFormat, associatedData: associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType
                 if incoming {

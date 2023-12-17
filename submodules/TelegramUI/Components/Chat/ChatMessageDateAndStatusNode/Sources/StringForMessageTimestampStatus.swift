@@ -61,7 +61,7 @@ private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String 
     }
 }
 
-public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, associatedData: ChatMessageItemAssociatedData) -> String {
+public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, associatedData: ChatMessageItemAssociatedData, ignoreAuthor: Bool = false) -> String {
     if let adAttribute = message.adAttribute {
         switch adAttribute.messageType {
         case .sponsored:
@@ -83,7 +83,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     }
     
     var displayFullDate = false
-    if case .full = format {
+    if case .full = format, timestamp > 100000 {
         displayFullDate = true
     } else if let _ = message.forwardInfo, message.id.peerId == accountPeerId {
         displayFullDate = true
@@ -153,6 +153,9 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     }
     
     if let subject = associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
+        authorTitle = nil
+    }
+    if ignoreAuthor {
         authorTitle = nil
     }
     

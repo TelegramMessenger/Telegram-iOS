@@ -56,8 +56,8 @@ private class BlurLayer: CALayer {
     }
 }
 
-class BlurView: UIView {
-    override class var layerClass : AnyClass {
+public class BlurView: UIView {
+    public override class var layerClass : AnyClass {
         return BlurLayer.self
     }
     
@@ -71,7 +71,7 @@ class BlurView: UIView {
         return Queue(name: nil, qos: .userInteractive)
     }()
     
-    open var blurRadius: CGFloat {
+    public var blurRadius: CGFloat {
         set { self.blurLayer.blurRadius = newValue }
         get { return self.blurLayer.blurRadius }
     }
@@ -104,7 +104,7 @@ class BlurView: UIView {
         }
     }
     
-    override func display(_ layer: CALayer) {
+    public override func display(_ layer: CALayer) {
         let blurRadius = self.blurLayer.presentationRadius
         if let image = self.image {
             self.draw(image, blurRadius: blurRadius)
@@ -112,19 +112,19 @@ class BlurView: UIView {
     }
 }
 
-final class BlurredImageNode: ASDisplayNode {
-    var image: UIImage? {
+public final class BlurredImageNode: ASDisplayNode {
+    public var image: UIImage? {
         didSet {
             self.blurView.image = self.image
             self.blurView.layer.setNeedsDisplay()
         }
     }
     
-    var blurView: BlurView {
+    public var blurView: BlurView {
         return (self.view as? BlurView)!
     }
     
-    override init() {
+    public override init() {
         super.init()
         
         self.setViewBlock({

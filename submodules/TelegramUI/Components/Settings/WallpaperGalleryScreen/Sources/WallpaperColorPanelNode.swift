@@ -313,15 +313,26 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     }
 }
 
-struct WallpaperColorPanelNodeState: Equatable {
-    var selection: Int?
-    var colors: [HSBColor]
-    var maximumNumberOfColors: Int
-    var rotateAvailable: Bool
-    var rotation: Int32
-    var preview: Bool
-    var simpleGradientGeneration: Bool
-    var suggestedNewColor: HSBColor?
+public struct WallpaperColorPanelNodeState: Equatable {
+    public var selection: Int?
+    public var colors: [HSBColor]
+    public var maximumNumberOfColors: Int
+    public var rotateAvailable: Bool
+    public var rotation: Int32
+    public var preview: Bool
+    public var simpleGradientGeneration: Bool
+    public var suggestedNewColor: HSBColor?
+    
+    public init(selection: Int? = nil, colors: [HSBColor], maximumNumberOfColors: Int, rotateAvailable: Bool, rotation: Int32, preview: Bool, simpleGradientGeneration: Bool, suggestedNewColor: HSBColor? = nil) {
+        self.selection = selection
+        self.colors = colors
+        self.maximumNumberOfColors = maximumNumberOfColors
+        self.rotateAvailable = rotateAvailable
+        self.rotation = rotation
+        self.preview = preview
+        self.simpleGradientGeneration = simpleGradientGeneration
+        self.suggestedNewColor = suggestedNewColor
+    }
 }
 
 private final class ColorSampleItemNode: ASImageNode {
@@ -377,7 +388,7 @@ private final class ColorSampleItemNode: ASImageNode {
     }
 }
 
-final class WallpaperColorPanelNode: ASDisplayNode {
+public final class WallpaperColorPanelNode: ASDisplayNode {
     private var theme: PresentationTheme
      
     private var state: WallpaperColorPanelNodeState
@@ -394,16 +405,16 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     private var sampleItemNodes: [ColorSampleItemNode] = []
     private let multiColorFieldNode: ColorInputFieldNode
 
-    var colorsChanged: (([HSBColor], Int, Bool) -> Void)?
-    var colorSelected: (() -> Void)?
-    var rotate: (() -> Void)?
+    public var colorsChanged: (([HSBColor], Int, Bool) -> Void)?
+    public var colorSelected: (() -> Void)?
+    public var rotate: (() -> Void)?
     
-    var colorAdded: (() -> Void)?
-    var colorRemoved: (() -> Void)?
+    public var colorAdded: (() -> Void)?
+    public var colorRemoved: (() -> Void)?
     
     private var validLayout: (CGSize, CGFloat)?
 
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    public init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         
         self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
@@ -512,7 +523,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
     }
         
-    func updateTheme(_ theme: PresentationTheme) {
+    public func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
@@ -520,7 +531,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         self.multiColorFieldNode.updateTheme(theme)
     }
     
-    func updateState(_ f: (WallpaperColorPanelNodeState) -> WallpaperColorPanelNodeState, updateLayout: Bool = true, animated: Bool = true) {
+    public func updateState(_ f: (WallpaperColorPanelNodeState) -> WallpaperColorPanelNodeState, updateLayout: Bool = true, animated: Bool = true) {
         var updateLayout = updateLayout
         let previousColors = self.state.colors
         let previousPreview = self.state.preview
@@ -560,7 +571,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, bottomInset)
         
         let condensedLayout = size.width < 375.0
@@ -724,7 +735,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         })
     }
 
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = super.hitTest(point, with: event) {
             return result
         }

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import AccountContext
 import GridMessageSelectionNode
+import SettingsThemeWallpaperNode
 
 final class ThemeColorsGridControllerItem: GridItem {
     let context: AccountContext

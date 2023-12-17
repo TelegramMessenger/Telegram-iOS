@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import Postbox
 import AccountContext
 import GridMessageSelectionNode
+import SettingsThemeWallpaperNode
 
 final class ThemeGridControllerItem: GridItem {
     let context: AccountContext

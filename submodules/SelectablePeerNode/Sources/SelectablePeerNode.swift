@@ -170,11 +170,11 @@ public final class SelectablePeerNode: ASDisplayNode {
         )
     }
     
-    public func setupStoryRepost(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool) {
+    public func setupStoryRepost(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool, isMessage: Bool) {
         self.peer = nil
         
         self.textNode.maximumNumberOfLines = 2
-        self.textNode.attributedText = NSAttributedString(string: strings.Share_RepostStory, font: textFont, textColor: self.theme.textColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: isMessage ? strings.Share_RepostToStory : strings.Share_RepostStory, font: textFont, textColor: self.theme.textColor, paragraphAlignment: .center)
         self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: ContentSettings.default, theme: theme, peer: nil, overrideImage: .repostIcon, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: .round, synchronousLoad: synchronousLoad)
         
         self.avatarNode.playRepostAnimation()

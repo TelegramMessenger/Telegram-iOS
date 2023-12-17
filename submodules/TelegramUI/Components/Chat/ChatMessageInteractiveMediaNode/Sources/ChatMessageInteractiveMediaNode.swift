@@ -861,7 +861,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 let statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                     context: context,
                     presentationData: presentationData,
-                    edited: dateAndStatus.edited,
+                    edited: dateAndStatus.edited && !presentationData.isPreview,
                     impressionCount: dateAndStatus.viewCount,
                     dateText: dateAndStatus.dateText,
                     type: dateAndStatus.type,
@@ -2122,6 +2122,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         if let badgeContent = badgeContent {
             if self.badgeNode == nil {
                 let badgeNode = ChatMessageInteractiveMediaBadge()
+                if isPreview {
+                    badgeNode.durationNode.displaysAsynchronously = false
+                    badgeNode.sizeNode?.displaysAsynchronously = false
+                }
                 
                 var inset: CGFloat = 6.0
                 if let corners = self.currentImageArguments?.corners, case .Tail = corners.bottomLeft {

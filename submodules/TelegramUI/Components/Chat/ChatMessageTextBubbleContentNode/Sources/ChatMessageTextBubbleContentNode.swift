@@ -510,11 +510,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let hideAllAdditionalInfo = item.presentationData.isPreview
                 
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 12 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 10 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
                 let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
                 if !textLayout.spoilers.isEmpty {
-                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 12 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 10 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
                 } else {
                     spoilerTextLayoutAndApply = nil
                 }

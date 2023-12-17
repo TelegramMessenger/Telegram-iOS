@@ -31,6 +31,7 @@ import PremiumUI
 import AuthorizationUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
+import WallpaperGalleryScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {

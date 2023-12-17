@@ -597,7 +597,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     let smallSpacing: CGFloat = 2.0
                     let largeSpacing: CGFloat = 14.0
                     
-                    var layoutSize = CGSize(width: boundingWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTextLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 106.0)
+                    var layoutSize = CGSize(width: boundingWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTextLayout.size.height + dateTextLayout.size.height + 99.0)
+                    if !item.presentationData.isPreview {
+                        layoutSize.height += buttonSize.height + buttonSpacing + 7.0
+                    }
                     
                     if additionalPrizeTextLayout.size.height > 0.0 {
                         layoutSize.height += additionalPrizeSeparatorLayout.size.height + additionalPrizeTextLayout.size.height + 7.0
@@ -622,6 +625,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                         if let strongSelf = self {
                             if strongSelf.item == nil {
                                 strongSelf.animationNode.autoplay = true
+                                if let animationNode = strongSelf.animationNode as? DefaultAnimatedStickerNodeImpl, item.presentationData.isPreview {
+                                    animationNode.displaysAsynchronously = false
+                                    animationNode.forceSynchronous = true
+                                }
                                 strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
                             }
                             strongSelf.item = item
@@ -655,6 +662,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                             let _ = dateTextApply()
                             let _ = channelButtonsApply()
                             let _ = buttonApply(animation)
+                        
+                            strongSelf.buttonNode.isHidden = item.presentationData.isPreview
                                                         
                             var originY: CGFloat = 0.0
                             
@@ -1051,7 +1060,7 @@ private final class PeerButtonNode: HighlightTrackingButtonNode {
                 return (CGSize(width: refinedWidth, height: 24.0), {
                     let _ = textApply()
                     
-                    targetNode.avatarNode.displaysAsynchronously = displayAsynchronously
+                    targetNode.avatarNode.contentNode.displaysAsynchronously = displayAsynchronously
                     targetNode.textNode.displaysAsynchronously = displayAsynchronously
                     
                     let backgroundFrame = CGRect(origin: .zero, size: CGSize(width: refinedWidth, height: 24.0))

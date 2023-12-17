@@ -68,7 +68,7 @@ final class StoryContentCaptionComponent: Component {
     let longTapAction: (Action) -> Void
     let textSelectionAction: (NSAttributedString, TextSelectionAction) -> Void
     let controller: () -> ViewController?
-    let openStory: (EnginePeer, EngineStoryItem) -> Void
+    let openStory: (EnginePeer, EngineStoryItem?) -> Void
     
     init(
         externalState: ExternalState,
@@ -85,7 +85,7 @@ final class StoryContentCaptionComponent: Component {
         longTapAction: @escaping (Action) -> Void,
         textSelectionAction: @escaping (NSAttributedString, TextSelectionAction) -> Void,
         controller: @escaping () -> ViewController?,
-        openStory: @escaping (EnginePeer, EngineStoryItem) -> Void
+        openStory: @escaping (EnginePeer, EngineStoryItem?) -> Void
     ) {
         self.externalState = externalState
         self.context = context
@@ -692,9 +692,9 @@ final class StoryContentCaptionComponent: Component {
                                 }
                             }
                         })
-                        text = nil
+                        text = ""
                     } else {
-                        text = nil
+                        text = ""
                     }
                 case let .unknown(name, _):
                     authorName = name
@@ -727,8 +727,8 @@ final class StoryContentCaptionComponent: Component {
                                 effectAlignment: .center,
                                 minSize: nil,
                                 action: { [weak self] in
-                                    if let self, case let .known(peer, _, _) = forwardInfo, let story = self.forwardInfoStory {
-                                        self.component?.openStory(peer, story)
+                                    if let self, case let .known(peer, _, _) = forwardInfo {
+                                        self.component?.openStory(peer, self.forwardInfoStory)
                                     } else if let controller = self?.component?.controller() as? StoryContainerScreen {
                                         let tooltipController = TooltipController(content: .text(component.strings.Story_ForwardAuthorHiddenTooltip), baseFontSize: 17.0, isBlurred: true, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                                         controller.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak controller] in
