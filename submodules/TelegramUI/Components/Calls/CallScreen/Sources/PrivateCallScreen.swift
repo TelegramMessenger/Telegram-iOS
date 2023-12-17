@@ -31,17 +31,28 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
         
         public struct TerminatedState: Equatable {
-            public var duration: Double
+            public enum Reason {
+                case missed
+                case hangUp
+                case failed
+                case busy
+                case declined
+            }
             
-            public init(duration: Double) {
+            public var duration: Double
+            public var reason: Reason
+            
+            public init(duration: Double, reason: Reason) {
                 self.duration = duration
+                self.reason = reason
             }
         }
         
         public enum LifecycleState: Equatable {
-            case connecting
+            case requesting
             case ringing
-            case exchangingKeys
+            case connecting
+            case reconnecting
             case active(ActiveState)
             case terminated(TerminatedState)
         }
@@ -176,6 +187,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     private var areControlsHidden: Bool = false
     private var swapLocalAndRemoteVideo: Bool = false
     private var isPictureInPictureActive: Bool = false
+    
+    private var hideEmojiTooltipTimer: Foundation.Timer?
+    private var hideControlsTimer: Foundation.Timer?
     
     private var processedInitialAudioLevelBump: Bool = false
     private var audioLevelBump: Float = 0.0
@@ -500,8 +514,20 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         if let previousParams = self.params, case .active = params.state.lifecycleState {
             switch previousParams.state.lifecycleState {
-            case .connecting, .exchangingKeys, .ringing:
-                self.displayEmojiTooltip = true
+            case .requesting, .ringing, .connecting, .reconnecting:
+                if self.hideEmojiTooltipTimer == nil {
+                    self.displayEmojiTooltip = true
+                    
+                    self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        if self.displayEmojiTooltip {
+                            self.displayEmojiTooltip = false
+                            self.update(transition: .spring(duration: 0.4))
+                        }
+                    })
+                }
             default:
                 break
             }
@@ -559,6 +585,18 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
         let havePrimaryVideo = !activeVideoSources.isEmpty
         
+        if havePrimaryVideo && self.hideControlsTimer == nil {
+            self.hideControlsTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false, block: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if !self.areControlsHidden {
+                    self.areControlsHidden = true
+                    self.update(transition: .spring(duration: 0.4))
+                }
+            })
+        }
+        
         if #available(iOS 16.0, *) {
             if havePrimaryVideo, let pipVideoCallViewController = self.pipVideoCallViewController as? AVPictureInPictureVideoCallViewController {
                 if self.pipController == nil {
@@ -607,11 +645,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         let backgroundStateIndex: Int
         switch params.state.lifecycleState {
-        case .connecting:
-            backgroundStateIndex = 0
-        case .ringing:
-            backgroundStateIndex = 0
-        case .exchangingKeys:
+        case .requesting, .ringing, .connecting, .reconnecting:
             backgroundStateIndex = 0
         case let .active(activeState):
             if activeState.signalInfo.quality <= 0.2 {
@@ -626,20 +660,36 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         transition.setFrame(view: self.buttonGroupView, frame: CGRect(origin: CGPoint(), size: params.size))
         
+        var isVideoButtonEnabled = false
+        switch params.state.lifecycleState {
+        case .active, .reconnecting:
+            isVideoButtonEnabled = true
+        default:
+            isVideoButtonEnabled = false
+        }
+        
+        var isTerminated = false
+        switch params.state.lifecycleState {
+        case .terminated:
+            isTerminated = true
+        default:
+            break
+        }
+        
         var buttons: [ButtonGroupView.Button] = [
-            ButtonGroupView.Button(content: .video(isActive: params.state.localVideo != nil), action: { [weak self] in
+            ButtonGroupView.Button(content: .video(isActive: params.state.localVideo != nil), isEnabled: isVideoButtonEnabled && !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.videoAction?()
             }),
-            ButtonGroupView.Button(content: .microphone(isMuted: params.state.isLocalAudioMuted), action: { [weak self] in
+            ButtonGroupView.Button(content: .microphone(isMuted: params.state.isLocalAudioMuted), isEnabled: !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.microhoneMuteAction?()
             }),
-            ButtonGroupView.Button(content: .end, action: { [weak self] in
+            ButtonGroupView.Button(content: .end, isEnabled: !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -647,14 +697,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             })
         ]
         if self.activeLocalVideoSource != nil {
-            buttons.insert(ButtonGroupView.Button(content: .flipCamera, action: { [weak self] in
+            buttons.insert(ButtonGroupView.Button(content: .flipCamera, isEnabled: !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.flipCameraAction?()
             }), at: 0)
         } else {
-            buttons.insert(ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), action: { [weak self] in
+            buttons.insert(ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), isEnabled: !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -663,23 +713,27 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
         
         var notices: [ButtonGroupView.Notice] = []
-        if params.state.isLocalAudioMuted {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "Your microphone is turned off"))
-        }
-        if params.state.isRemoteAudioMuted {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "\(params.state.shortName)'s microphone is turned off"))
-        }
-        if params.state.remoteVideo != nil && params.state.localVideo == nil {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "Your camera is turned off"))
-        }
-        if params.state.isRemoteBatteryLow {
-            notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), text: "\(params.state.shortName)'s battery is low"))
+        if !isTerminated {
+            if params.state.isLocalAudioMuted {
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "Your microphone is turned off"))
+            }
+            if params.state.isRemoteAudioMuted {
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "\(params.state.shortName)'s microphone is turned off"))
+            }
+            if params.state.remoteVideo != nil && params.state.localVideo == nil {
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "Your camera is turned off"))
+            }
+            if params.state.isRemoteBatteryLow {
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), text: "\(params.state.shortName)'s battery is low"))
+            }
         }
         
-        var displayClose = false
+        /*var displayClose = false
         if case .terminated = params.state.lifecycleState {
             displayClose = true
-        }
+        }*/
+        let displayClose = false
+        
         let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, minWidth: wideContentWidth, controlsHidden: currentAreControlsHidden, displayClose: displayClose, buttons: buttons, notices: notices, transition: transition)
         
         var expandedEmojiKeyRect: CGRect?
@@ -1105,9 +1159,21 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         let titleString: String
         switch params.state.lifecycleState {
-        case .terminated:
+        case let .terminated(terminatedState):
             self.titleView.contentMode = .center
-            titleString = "Call Ended"
+            
+            switch terminatedState.reason {
+            case .busy:
+                titleString = "Line Busy"
+            case .declined:
+                titleString = "Call Declined"
+            case .failed:
+                titleString = "Call Failed"
+            case .hangUp:
+                titleString = "Call Ended"
+            case .missed:
+                titleString = "Call Missed"
+            }
             genericAlphaTransition.setScale(layer: self.blobLayer, scale: 0.3)
             genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: 0.0)
             self.canAnimateAudioLevel = false
@@ -1133,12 +1199,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         let statusState: StatusView.State
         switch params.state.lifecycleState {
-        case .connecting:
+        case .requesting:
             statusState = .waiting(.requesting)
+        case .connecting:
+            statusState = .waiting(.connecting)
+        case .reconnecting:
+            statusState = .waiting(.reconnecting)
         case .ringing:
             statusState = .waiting(.ringing)
-        case .exchangingKeys:
-            statusState = .waiting(.generatingKeys)
         case let .active(activeState):
             statusState = .active(StatusView.ActiveState(startTimestamp: activeState.startTime, signalStrength: activeState.signalInfo.quality))
             

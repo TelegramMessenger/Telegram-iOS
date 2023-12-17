@@ -2030,7 +2030,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             stableId: callUpdate.callId,
             handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
             phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
-            isVideo: false,
+            isVideo: callUpdate.isVideo,
             displayTitle: callUpdate.peer.debugDisplayTitle,
             completion: { error in
                 if let error = error {

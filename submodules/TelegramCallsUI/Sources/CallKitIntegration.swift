@@ -10,12 +10,8 @@ import AccountContext
 import TelegramAudio
 import TelegramVoip
 
-private let sharedProviderDelegate: AnyObject? = {
-    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-        return CallKitProviderDelegate()
-    } else {
-        return nil
-    }
+private let sharedProviderDelegate: CallKitProviderDelegate? = {
+    return CallKitProviderDelegate()
 }()
 
 public final class CallKitIntegration {
@@ -53,69 +49,50 @@ public final class CallKitIntegration {
         setCallMuted: @escaping (UUID, Bool) -> Void,
         audioSessionActivationChanged: @escaping (Bool) -> Void
     ) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged, hasActiveCallsValue: hasActiveCallsValue)
-        }
+        sharedProviderDelegate?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged, hasActiveCallsValue: hasActiveCallsValue)
     }
     
     private init?() {
         if !CallKitIntegration.isAvailable {
             return nil
         }
-        
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-        } else {
-            return nil
-        }
     }
     
     func startCall(context: AccountContext, peerId: EnginePeer.Id, phoneNumber: String?, localContactId: String?, isVideo: Bool, displayTitle: String) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle)
-            self.donateIntent(peerId: peerId, displayTitle: displayTitle, localContactId: localContactId)
-        }
+        sharedProviderDelegate?.startCall(context: context, peerId: peerId, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle)
+        self.donateIntent(peerId: peerId, displayTitle: displayTitle, localContactId: localContactId)
     }
     
     func answerCall(uuid: UUID) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.answerCall(uuid: uuid)
-        }
+        sharedProviderDelegate?.answerCall(uuid: uuid)
     }
     
     public func dropCall(uuid: UUID) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.dropCall(uuid: uuid)
-        }
+        sharedProviderDelegate?.dropCall(uuid: uuid)
     }
     
     public func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, phoneNumber: String?, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, stableId: stableId, handle: handle, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
-        }
+        sharedProviderDelegate?.reportIncomingCall(uuid: uuid, stableId: stableId, handle: handle, phoneNumber: phoneNumber, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
     }
     
     func reportOutgoingCallConnected(uuid: UUID, at date: Date) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportOutgoingCallConnected(uuid: uuid, at: date)
-        }
+        sharedProviderDelegate?.reportOutgoingCallConnected(uuid: uuid, at: date)
     }
     
     private func donateIntent(peerId: EnginePeer.Id, displayTitle: String, localContactId: String?) {
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            let handle = INPersonHandle(value: "tg\(peerId.id._internalGetInt64Value())", type: .unknown)
-            let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: localContactId, customIdentifier: "tg\(peerId.id._internalGetInt64Value())")
+        let handle = INPersonHandle(value: "tg\(peerId.id._internalGetInt64Value())", type: .unknown)
+        let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: localContactId, customIdentifier: "tg\(peerId.id._internalGetInt64Value())")
+    
+        let intent = INStartAudioCallIntent(destinationType: .normal, contacts: [contact])
         
-            let intent = INStartAudioCallIntent(destinationType: .normal, contacts: [contact])
-            
-            let interaction = INInteraction(intent: intent, response: nil)
-            interaction.direction = .outgoing
-            interaction.donate { _ in
-            }
+        let interaction = INInteraction(intent: intent, response: nil)
+        interaction.direction = .outgoing
+        interaction.donate { _ in
         }
     }
     
     public func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
-        (sharedProviderDelegate as? CallKitProviderDelegate)?.applyVoiceChatOutputMode(outputMode: outputMode)
+        sharedProviderDelegate?.applyVoiceChatOutputMode(outputMode: outputMode)
     }
 }
 

@@ -30,6 +30,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private let callScreen: PrivateCallScreen
     private var callScreenState: PrivateCallScreen.State?
     
+    let isReady = Promise<Bool>()
+    private var didInitializeIsReady: Bool = false
+    
     private var callStartTimestamp: Double?
     
     private var callState: PresentationCallState?
@@ -307,18 +310,17 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         let mappedLifecycleState: PrivateCallScreen.State.LifecycleState
         switch callState.state {
         case .waiting:
-            mappedLifecycleState = .connecting
+            mappedLifecycleState = .requesting
         case .ringing:
             mappedLifecycleState = .ringing
         case let .requesting(isRinging):
             if isRinging {
                 mappedLifecycleState = .ringing
             } else {
-                mappedLifecycleState = .connecting
+                mappedLifecycleState = .requesting
             }
-        case let .connecting(keyData):
-            let _ = keyData
-            mappedLifecycleState = .exchangingKeys
+        case .connecting:
+            mappedLifecycleState = .connecting
         case let .active(startTime, signalQuality, keyData):
             self.callStartTimestamp = startTime
             
@@ -332,20 +334,47 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 emojiKey: self.resolvedEmojiKey(data: keyData)
             ))
         case let .reconnecting(startTime, _, keyData):
-            let _ = keyData
-            mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
-                startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
-                signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
-                emojiKey: self.resolvedEmojiKey(data: keyData)
-            ))
-        case .terminating, .terminated:
+            if self.callStartTimestamp != nil {
+                mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
+                    startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
+                    signalInfo: PrivateCallScreen.State.SignalInfo(quality: 0.0),
+                    emojiKey: self.resolvedEmojiKey(data: keyData)
+                ))
+            } else {
+                mappedLifecycleState = .connecting
+            }
+        case .terminating(let reason), .terminated(_, let reason, _):
             let duration: Double
             if let callStartTimestamp = self.callStartTimestamp {
                 duration = CFAbsoluteTimeGetCurrent() - callStartTimestamp
             } else {
                 duration = 0.0
             }
-            mappedLifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: duration))
+            
+            let mappedReason: PrivateCallScreen.State.TerminatedState.Reason
+            if let reason {
+                switch reason {
+                case let .ended(type):
+                    switch type {
+                    case .missed:
+                        mappedReason = .missed
+                    case .busy:
+                        mappedReason = .busy
+                    case .hungUp:
+                        if self.callStartTimestamp != nil {
+                            mappedReason = .hangUp
+                        } else {
+                            mappedReason = .declined
+                        }
+                    }
+                case .error:
+                    mappedReason = .failed
+                }
+            } else {
+                mappedReason = .hangUp
+            }
+            
+            mappedLifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: duration, reason: mappedReason))
         }
         
         switch callState.state {
@@ -403,6 +432,21 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         
         if case let .terminated(_, _, reportRating) = callState.state {
             self.callEnded?(reportRating)
+        }
+        
+        if !self.didInitializeIsReady {
+            self.didInitializeIsReady = true
+            
+            if let localVideo = self.localVideo {
+                self.isReady.set(Signal { subscriber in
+                    return localVideo.addOnUpdated {
+                        subscriber.putNext(true)
+                        subscriber.putCompletion()
+                    }
+                })
+            } else {
+                self.isReady.set(.single(true))
+            }
         }
     }
     

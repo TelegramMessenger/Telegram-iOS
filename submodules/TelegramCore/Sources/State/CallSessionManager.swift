@@ -656,12 +656,24 @@ private final class CallSessionManagerContext {
             
             if let (id, accessHash, reason) = dropData {
                 self.contextIdByStableId.removeValue(forKey: id)
-                let mappedReason: CallSessionTerminationReason = .ended(.hungUp)
+                let mappedReason: CallSessionTerminationReason
+                switch reason {
+                case .abort:
+                    mappedReason = .ended(.hungUp)
+                case .busy:
+                    mappedReason = .ended(.busy)
+                case .disconnect:
+                    mappedReason = .error(.disconnected)
+                case .hangUp:
+                    mappedReason = .ended(.hungUp)
+                case .missed:
+                    mappedReason = .ended(.missed)
+                }
                 context.state = .dropping(reason: mappedReason, disposable: (dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: reason)
                 |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
-                            context.state = .terminated(id: id, accessHash: accessHash,  reason: .ended(.hungUp), reportRating: reportRating, sendDebugLogs: sendDebugLogs)
+                            context.state = .terminated(id: id, accessHash: accessHash,  reason: mappedReason, reportRating: reportRating, sendDebugLogs: sendDebugLogs)
                             /*if sendDebugLogs {
                                 let network = strongSelf.network
                                 let _ = (debugLog
