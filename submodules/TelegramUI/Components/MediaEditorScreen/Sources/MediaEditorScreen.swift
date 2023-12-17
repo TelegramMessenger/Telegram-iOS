@@ -2922,6 +2922,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             } else {
                 if case .message = self.subject, let layout = self.validLayout {
                     self.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    completion()
                 } else if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
                     view.animateIn(from: .camera, completion: completion)
                 }

@@ -595,7 +595,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, associatedData: associatedData)
+                let dateFormat: MessageTimestampStatusFormat
+                if presentationData.isPreview {
+                    dateFormat = .full
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, format: dateFormat, associatedData: associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType
                 if incoming {

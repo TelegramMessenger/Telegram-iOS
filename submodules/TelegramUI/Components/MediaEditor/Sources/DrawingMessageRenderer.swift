@@ -11,64 +11,58 @@ import WallpaperBackgroundNode
 
 public final class DrawingWallpaperRenderer {
     private let context: AccountContext
-    private let presentationData: PresentationData
     private let customWallpaper: TelegramWallpaper?
     
-    private let containerNode: ASDisplayNode
     private let wallpaperBackgroundNode: WallpaperBackgroundNode
+    private let darkWallpaperBackgroundNode: WallpaperBackgroundNode
     
     public init (context: AccountContext, customWallpaper: TelegramWallpaper?) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.customWallpaper = customWallpaper
         
-        self.containerNode = ASDisplayNode()
         self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.wallpaperBackgroundNode.displaysAsynchronously = false
         
-        self.containerNode.addSubnode(self.wallpaperBackgroundNode)
-    }
-    
-    public func render(completion: @escaping (CGSize, UIImage?, UIImage?) -> Void) {
         let wallpaper = self.customWallpaper ?? context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
         
-        let size = CGSize(width: 360.0, height: 640.0)
-        self.updateLayout(size: size)
+        self.darkWallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
+        self.darkWallpaperBackgroundNode.displaysAsynchronously = false
         
-        Queue.mainQueue().after(0.03, {
-            let resultSize = CGSize(width: 1080, height: 1920)
-            self.generate { dayImage in
-                if self.customWallpaper != nil {
-                    completion(resultSize, dayImage, nil)
-                } else {
-                    let darkTheme = defaultDarkColorPresentationTheme
-                    let wallpaper = darkTheme.chat.defaultWallpaper
-                    self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
-                    self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: .immediate)
-                    Queue.mainQueue().after(0.03, {
-                        self.generate { nightImage in
-                            completion(resultSize, dayImage, nightImage)
-                        }
-                    })
-                }
-            }
-        })
+        let darkTheme = defaultDarkColorPresentationTheme
+        let darkWallpaper = darkTheme.chat.defaultWallpaper
+        self.darkWallpaperBackgroundNode.update(wallpaper: darkWallpaper, animated: false)
     }
     
-    private func generate(completion: @escaping (UIImage) -> Void) {
+    public func render(completion: @escaping (CGSize, UIImage?, UIImage?) -> Void) {
+        self.updateLayout(size: CGSize(width: 360.0, height: 640.0))
+        
+        let resultSize = CGSize(width: 1080, height: 1920)
+        self.generate(view: self.wallpaperBackgroundNode.view) { dayImage in
+            if self.customWallpaper != nil {
+                completion(resultSize, dayImage, nil)
+            } else {
+                Queue.mainQueue().justDispatch {
+                    self.generate(view: self.darkWallpaperBackgroundNode.view) { nightImage in
+                        completion(resultSize, dayImage, nightImage)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func generate(view: UIView, completion: @escaping (UIImage) -> Void) {
         let size = CGSize(width: 360.0, height: 640.0)
         UIGraphicsBeginImageContextWithOptions(size, false, 3.0)
-        self.containerNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: true)
+        view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: true)
         let img = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
         
         let finalImage = generateImage(CGSize(width: size.width * 3.0, height: size.height * 3.0), contextGenerator: { size, context in
-            context.clear(CGRect(origin: .zero, size: size))
             if let cgImage = img?.cgImage {
                 context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)
             }
-        }, opaque: false, scale: 1.0)
+        }, opaque: true, scale: 1.0)
         if let finalImage {
             completion(finalImage)
         }
@@ -77,7 +71,8 @@ public final class DrawingWallpaperRenderer {
     private func updateLayout(size: CGSize) {
         self.wallpaperBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: .immediate)
         self.wallpaperBackgroundNode.frame = CGRect(origin: .zero, size: size)
-        self.containerNode.frame = CGRect(origin: .zero, size: size)
+        self.darkWallpaperBackgroundNode.updateLayout(size: size, displayMode: .aspectFill, transition: .immediate)
+        self.darkWallpaperBackgroundNode.frame = CGRect(origin: .zero, size: size)
     }
 }
 

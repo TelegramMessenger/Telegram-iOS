@@ -1700,7 +1700,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     image = playerAlbumArt(postbox: context.account.postbox, engine: context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
                 }
             }
-            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
+            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor: presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
+            if presentationData.isPreview {
+                statusNode.displaysAsynchronously = false
+            }
             self.statusNode = statusNode
 
             self.statusContainerNode.contentNode.insertSubnode(statusNode, at: 0)
@@ -1787,7 +1790,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             cutoutFrame.origin.y += 6.0
         }
         
-        if streamingState == .none && self.selectionNode == nil {
+        if (streamingState == .none && self.selectionNode == nil) || presentationData.isPreview {
             self.statusNode?.setCutout(nil, animated: animated)
         } else if let statusNode = self.statusNode, (self.iconNode?.isHidden ?? true) {
             statusNode.setCutout(cutoutFrame, animated: true)

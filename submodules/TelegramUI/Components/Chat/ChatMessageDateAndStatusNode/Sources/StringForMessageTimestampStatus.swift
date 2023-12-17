@@ -83,7 +83,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     }
     
     var displayFullDate = false
-    if case .full = format {
+    if case .full = format, timestamp > 100000 {
         displayFullDate = true
     } else if let _ = message.forwardInfo, message.id.peerId == accountPeerId {
         displayFullDate = true

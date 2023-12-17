@@ -482,6 +482,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.containerNode = ContextControllerSourceNode()
 
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode.contentNode.displaysAsynchronously = !presentationData.isPreview
 
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
 

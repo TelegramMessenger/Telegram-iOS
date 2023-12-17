@@ -10226,6 +10226,7 @@ Sorry for the inconvenience.";
 
 "ChannelBoost.MoreBoosts.Title" = "More Boosts Needed";
 "ChannelBoost.MoreBoosts.Text" = "To boost **%1$@** again, gift **Telegram Premium** to a friend and get **%2$@** additional boosts.";
+"ChannelBoost.MoreBoosts.Gift" = "Gift Premium";
 
 "BoostGift.Title" = "Boosts via Gifts";
 "BoostGift.Description" = "Get more boosts for your channel by gifting\nPremium to your subscribers.";
@@ -10658,9 +10659,6 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.WinnersInfo.One" = "The winner received their gift link in a private message.";
 "Chat.Giveaway.Message.WinnersInfo.Many" = "All winners received gift links in private messages.";
 
-"ChannelBoost.Wallpaper" = "Set Wallpaper";
-"ChannelBoost.WallpaperText" = "Your channel needs **Level %1$@** to set custom wallpaper.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
-
 "Settings.PremiumGift" = "Premium Gifting";
 
 "Story.ViewList.ContextSortChannelInfo" = "Choose the order for the list of reactions.";
@@ -10706,3 +10704,50 @@ Sorry for the inconvenience.";
 "Premium.Gift.UsedLink.Text" = "This link was used to activate a **Telegram Premium** subscription.";
 
 "Premium.WhatsIncluded" = "WHAT'S INCLUDED";
+
+
+"ChannelBoost.Table.Level_1" = "Level %@";
+"ChannelBoost.Table.Level_any" = "Level %@";
+
+"ChannelBoost.Table.LevelUnlocks_1" = "Level %@ Unlocks:";
+"ChannelBoost.Table.LevelUnlocks_any" = "Level %@ Unlocks:";
+
+"ChannelBoost.Table.StoriesPerDay_1" = "%@ Story Per Day";
+"ChannelBoost.Table.StoriesPerDay_any" = "%@ Stories Per Day";
+"ChannelBoost.Table.CustomReactions_1" = "%@ Custom Reaction";
+"ChannelBoost.Table.CustomReactions_any" = "%@ Custom Reactions";
+"ChannelBoost.Table.NameColor_1" = "%@ Channel Name Color";
+"ChannelBoost.Table.NameColor_any" = "%@ Channel Name Colors";
+"ChannelBoost.Table.ProfileColor_1" = "%@ Color for Channel Cover";
+"ChannelBoost.Table.ProfileColor_any" = "%@ Colors for Channel Cover";
+"ChannelBoost.Table.ProfileLogo" = "Custom Logo for Channel Cover";
+"ChannelBoost.Table.StyleForHeaders_1" = "%@ Style for Links and Quotes";
+"ChannelBoost.Table.StyleForHeaders_any" = "%@ Styles for Links and Quotes";
+"ChannelBoost.Table.HeadersLogo" = "Custom Logo for Links and Quotes";
+"ChannelBoost.Table.EmojiStatus" = "1000+ Emoji Statuses";
+"ChannelBoost.Table.Wallpaper_1" = "%@ Channel Background";
+"ChannelBoost.Table.Wallpaper_any" = "%@ Channel Backgrounds";
+"ChannelBoost.Table.CustomWallpaper" = "Custom Channel Background";
+
+"ChannelBoost.AskToBoost" = "Ask your **Premium** subscribers to boost your channel with this link:";
+
+"ChannelBoost.NameColor" = "Enable Colors";
+"ChannelBoost.EnableNameColorLevelText" = "Your channel needs **Level %1$@** to change channel color.";
+
+"ChannelBoost.NameIcon" = "Set Link Icon";
+"ChannelBoost.EnableNameIconLevelText" = "Your channel needs **Level %1$@** to change link icon.";
+
+"ChannelBoost.ProfileColor" = "Set Cover Color";
+"ChannelBoost.EnableProfileColorLevelText" = "Your channel needs **Level %1$@** to change channel cover color.";
+
+"ChannelBoost.ProfileIcon" = "Set Cover Icon";
+"ChannelBoost.EnableProfileIconLevelText" = "Your channel needs **Level %1$@** to change channel cover icon.";
+
+"ChannelBoost.EmojiStatus" = "Use Emoji Statuses";
+"ChannelBoost.EnableEmojiStatusLevelText" = "Your channel needs **Level %1$@** to use emoji statuses.";
+
+"ChannelBoost.Wallpaper" = "Set Channel Background";
+"ChannelBoost.EnableWallpaperLevelText" = "Your channel needs **Level %1$@** to set channel background.";
+
+"ChannelBoost.CustomWallpaper" = "Set Custom Channel Background";
+"ChannelBoost.EnableCustomWallpaperLevelText" = "Your channel needs **Level %1$@** to set custom channel background.";

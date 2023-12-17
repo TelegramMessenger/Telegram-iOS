@@ -1021,12 +1021,16 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             actualInset = floorToScreenPixels((self.bounds.width - width) / 2.0)
             
             var cornerRadius: CGFloat = 12.0 - self.scale
+            var count = 12
             if case .message = entity.content {
                 cornerRadius *= 2.1
+                count = 20
+            } else if case .image = entity.content {
+                count = 20
             }
             
             let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
-            let count = 12
+
             let dashLength = perimeter / CGFloat(count)
             self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
             
@@ -1041,17 +1045,11 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
         }
         
-        let handles = [
-            self.leftHandle,
-            self.rightHandle
-        ]
-        
-        for handle in handles {
+        for handle in [self.leftHandle, self.rightHandle] {
             handle.path = handlePath
             handle.bounds = bounds
             handle.lineWidth = lineWidth
         }
-        
         
         self.leftHandle.position = CGPoint(x: actualInset, y: self.bounds.midY)
         self.rightHandle.position = CGPoint(x: self.bounds.maxX - actualInset, y: self.bounds.midY)

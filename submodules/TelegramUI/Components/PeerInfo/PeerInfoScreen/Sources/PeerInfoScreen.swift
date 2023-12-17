@@ -8639,172 +8639,114 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             navigationController.setViewControllers(updatedControllers, animated: animated)
         }
         switch section {
-            case .avatar:
-                self.openAvatarForEditing()
-            case .edit:
-                self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
-            case .proxy:
-                self.controller?.push(proxySettingsController(context: self.context))
-            case .stories:
-                push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
-            case .savedMessages:
-                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                    guard let self, let peer = peer else {
-                        return
-                    }
-                    if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
-                    }
-                })
-            case .recentCalls:
-                push(CallListController(context: context, mode: .navigation))
-            case .devices:
-                let _ = (self.activeSessionsContextAndCount.get()
+        case .avatar:
+            self.openAvatarForEditing()
+        case .edit:
+            self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
+        case .proxy:
+            self.controller?.push(proxySettingsController(context: self.context))
+        case .stories:
+            push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .saved))
+        case .savedMessages:
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                guard let self, let peer = peer else {
+                    return
+                }
+                if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                }
+            })
+        case .recentCalls:
+            push(CallListController(context: context, mode: .navigation))
+        case .devices:
+            let _ = (self.activeSessionsContextAndCount.get()
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] activeSessionsContextAndCount in
+                if let strongSelf = self, let activeSessionsContextAndCount = activeSessionsContextAndCount {
+                    let (activeSessionsContext, _, webSessionsContext) = activeSessionsContextAndCount
+                    push(recentSessionsController(context: strongSelf.context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
+                }
+            })
+        case .chatFolders:
+            push(chatListFilterPresetListController(context: self.context, mode: .default))
+        case .notificationsAndSounds:
+            if let settings = self.data?.globalSettings {
+                push(notificationsAndSoundsController(context: self.context, exceptionsList: settings.notificationExceptions))
+            }
+        case .privacyAndSecurity:
+            if let settings = self.data?.globalSettings {
+                let _ = (combineLatest(self.blockedPeers.get(), self.hasTwoStepAuth.get())
                 |> take(1)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] activeSessionsContextAndCount in
-                    if let strongSelf = self, let activeSessionsContextAndCount = activeSessionsContextAndCount {
-                        let (activeSessionsContext, _, webSessionsContext) = activeSessionsContextAndCount
-                        push(recentSessionsController(context: strongSelf.context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] blockedPeersContext, hasTwoStepAuth in
+                    if let strongSelf = self {
+                        let loginEmailPattern = strongSelf.twoStepAuthData.get() |> map { data -> String? in
+                            return data?.loginEmailPattern
+                        }
+                        push(privacyAndSecurityController(context: strongSelf.context, initialSettings: settings.privacySettings, updatedSettings: { [weak self] settings in
+                            self?.privacySettings.set(.single(settings))
+                        }, updatedBlockedPeers: { [weak self] blockedPeersContext in
+                            self?.blockedPeers.set(.single(blockedPeersContext))
+                        }, updatedHasTwoStepAuth: { [weak self] hasTwoStepAuthValue in
+                            self?.hasTwoStepAuth.set(.single(hasTwoStepAuthValue))
+                        }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth, loginEmailPattern: loginEmailPattern, updatedTwoStepAuthData: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.twoStepAuthData.set(
+                                    strongSelf.context.engine.auth.twoStepAuthData()
+                                    |> map(Optional.init)
+                                    |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
+                                        return .single(nil)
+                                    }
+                                )
+                            }
+                        }, requestPublicPhotoSetup: { [weak self] completion in
+                            if let strongSelf = self {
+                                strongSelf.openAvatarForEditing(mode: .fallback, completion: completion)
+                            }
+                        }, requestPublicPhotoRemove: { [weak self] completion in
+                            if let strongSelf = self {
+                                strongSelf.openAvatarRemoval(mode: .fallback, completion: completion)
+                            }
+                        }))
                     }
                 })
-            case .chatFolders:
-                push(chatListFilterPresetListController(context: self.context, mode: .default))
-            case .notificationsAndSounds:
-                if let settings = self.data?.globalSettings {
-                    push(notificationsAndSoundsController(context: self.context, exceptionsList: settings.notificationExceptions))
+            }
+        case .passwordSetup:
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.6, execute: { [weak self] in
+                guard let self else {
+                    return
                 }
-            case .privacyAndSecurity:
-                if let settings = self.data?.globalSettings {
-                    let _ = (combineLatest(self.blockedPeers.get(), self.hasTwoStepAuth.get())
-                    |> take(1)
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self] blockedPeersContext, hasTwoStepAuth in
-                        if let strongSelf = self {
-                            let loginEmailPattern = strongSelf.twoStepAuthData.get() |> map { data -> String? in
-                                return data?.loginEmailPattern
-                            }
-                            push(privacyAndSecurityController(context: strongSelf.context, initialSettings: settings.privacySettings, updatedSettings: { [weak self] settings in
-                                self?.privacySettings.set(.single(settings))
-                            }, updatedBlockedPeers: { [weak self] blockedPeersContext in
-                                self?.blockedPeers.set(.single(blockedPeersContext))
-                            }, updatedHasTwoStepAuth: { [weak self] hasTwoStepAuthValue in
-                                self?.hasTwoStepAuth.set(.single(hasTwoStepAuthValue))
-                            }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth, loginEmailPattern: loginEmailPattern, updatedTwoStepAuthData: { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.twoStepAuthData.set(
-                                        strongSelf.context.engine.auth.twoStepAuthData()
-                                        |> map(Optional.init)
-                                        |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
-                                            return .single(nil)
-                                        }
-                                    )
-                                }
-                            }, requestPublicPhotoSetup: { [weak self] completion in
-                                if let strongSelf = self {
-                                    strongSelf.openAvatarForEditing(mode: .fallback, completion: completion)
-                                }
-                            }, requestPublicPhotoRemove: { [weak self] completion in
-                                if let strongSelf = self {
-                                    strongSelf.openAvatarRemoval(mode: .fallback, completion: completion)
-                                }
-                            }))
-                        }
-                    })
-                }
-            case .passwordSetup:
-                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.6, execute: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).startStandalone()
-                })
-                
-                let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
-                push(controller)
-            case .dataAndStorage:
-                push(dataAndStorageController(context: self.context))
-            case .appearance:
-                push(themeSettingsController(context: self.context))
-            case .language:
-                push(LocalizationListController(context: self.context))
-            case .premium:
-                self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
-            case .premiumGift:
-                let options = Promise<[PremiumGiftCodeOption]>()
-                options.set(self.context.engine.payments.premiumGiftCodeOptions(peerId: nil))
-
-            var reachedLimitImpl: ((Int32) -> Void)?
-                let controller = self.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: self.context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
-                    if case let .user(user) = peer, user.botInfo == nil {
-                        return true
-                    } else {
-                        return false
-                    }
-                }, limit: 10, reachedLimit: { limit in
-                    reachedLimitImpl?(limit)
-                }))
-                self.controller?.push(controller)
+                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).startStandalone()
+            })
             
-                reachedLimitImpl = { [weak self, weak controller] limit in
-                    guard let self, let controller else {
-                        return
-                    }
-                    self.hapticFeedback.error()
-                    controller.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(limit)").string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                }
-            
-                self.activeActionDisposable.set(combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
-                .startStrict(next: { [weak self, weak controller] result, options in
-                    guard let self, let controller else {
-                        return
-                    }
-                    var peerIds: [PeerId] = []
-                    if case let .result(peerIdsValue, _) = result {
-                        peerIds = peerIdsValue.compactMap({ peerId in
-                            if case let .peer(peerId) = peerId {
-                                return peerId
-                            } else {
-                                return nil
-                            }
-                        })
-                    }
-                    
-                    let maxCount = 10
-                    if peerIds.count > maxCount {
-                        self.hapticFeedback.error()
-                        
-                        controller.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.Premium_Gift_ContactSelection_MaximumReached("\(maxCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                        return
-                    }
-                    
-                    let mappedOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                    
-                    let giftController = PremiumGiftScreen(context: self.context, peerIds: peerIds, options: mappedOptions, source: .settings, pushController: { [weak self] c in
-                        self?.controller?.push(c)
-                    }, completion: { [weak self] in
-                        if let self, let navigationController = self.controller?.navigationController as? NavigationController {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is ContactMultiselectionController) }
-                            navigationController.setViewControllers(controllers, animated: true)
-                        }
-                    })
-                    controller.push(giftController)
+            let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
+            push(controller)
+        case .dataAndStorage:
+            push(dataAndStorageController(context: self.context))
+        case .appearance:
+            push(themeSettingsController(context: self.context))
+        case .language:
+            push(LocalizationListController(context: self.context))
+        case .premium:
+            self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
+        case .premiumGift:
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
+            self.controller?.push(controller)
+        case .stickers:
+            if let settings = self.data?.globalSettings {
+                push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in
+                    self?.archivedPacks.set(.single(packs))
                 }))
-            case .stickers:
-                if let settings = self.data?.globalSettings {
-                    push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in
-                        self?.archivedPacks.set(.single(packs))
-                    }))
-                }
-            case .passport:
-                self.controller?.push(SecureIdAuthController(context: self.context, mode: .list))
-            case .watch:
-                push(watchSettingsController(context: self.context))
-            case .support:
-                let supportPeer = Promise<PeerId?>()
-                supportPeer.set(context.engine.peers.supportPeerId())
-                
-                self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Settings_FAQ_Intro, actions: [
+            }
+        case .passport:
+            self.controller?.push(SecureIdAuthController(context: self.context, mode: .list))
+        case .watch:
+            push(watchSettingsController(context: self.context))
+        case .support:
+            let supportPeer = Promise<PeerId?>()
+            supportPeer.set(context.engine.peers.supportPeerId())
+            
+            self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Settings_FAQ_Intro, actions: [
                 TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_FAQ_Button, action: { [weak self] in
                     self?.openFaq()
                 }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: { [weak self] in
@@ -8817,81 +8759,81 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                     }))
                 })]), in: .window(.root))
-            case .faq:
-                self.openFaq()
-            case .tips:
-                self.openTips()
-            case .phoneNumber:
-                if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
-                    let introController = PrivacyIntroController(context: self.context, mode: .changePhoneNumber(phoneNumber), proceedAction: { [weak self] in
-                        if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            navigationController.replaceTopController(ChangePhoneNumberController(context: strongSelf.context), animated: true)
-                        }
-                    })
-                    push(introController)
-                }
-            case .username:
-                push(usernameSetupController(context: self.context))
-            case .addAccount:
-                let _ = (activeAccountsAndPeers(context: context)
-                |> take(1)
-                |> deliverOnMainQueue
-                ).startStandalone(next: { [weak self] accountAndPeer, accountsAndPeers in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    var maximumAvailableAccounts: Int = 3
-                    if accountAndPeer?.1.isPremium == true && !strongSelf.context.account.testingEnvironment {
-                        maximumAvailableAccounts = 4
-                    }
-                    var count: Int = 1
-                    for (accountContext, peer, _) in accountsAndPeers {
-                        if !accountContext.account.testingEnvironment {
-                            if peer.isPremium {
-                                maximumAvailableAccounts = 4
-                            }
-                            count += 1
-                        }
-                    }
-                    
-                    if count >= maximumAvailableAccounts {
-                        var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumLimitScreen(context: strongSelf.context, subject: .accounts, count: Int32(count), action: {
-                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .accounts)
-                            replaceImpl?(controller)
-                            return true
-                        })
-                        replaceImpl = { [weak controller] c in
-                            controller?.replace(with: c)
-                        }
-                        if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
-                            navigationController.pushViewController(controller)
-                        }
-                    } else {
-                        strongSelf.context.sharedContext.beginNewAuth(testingEnvironment: strongSelf.context.account.testingEnvironment)
+        case .faq:
+            self.openFaq()
+        case .tips:
+            self.openTips()
+        case .phoneNumber:
+            if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
+                let introController = PrivacyIntroController(context: self.context, mode: .changePhoneNumber(phoneNumber), proceedAction: { [weak self] in
+                    if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                        navigationController.replaceTopController(ChangePhoneNumberController(context: strongSelf.context), animated: true)
                     }
                 })
-            case .logout:
-                if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
-                    if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
-                        self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: true, phoneNumber: phoneNumber))
+                push(introController)
+            }
+        case .username:
+            push(usernameSetupController(context: self.context))
+        case .addAccount:
+            let _ = (activeAccountsAndPeers(context: context)
+                     |> take(1)
+                     |> deliverOnMainQueue
+            ).startStandalone(next: { [weak self] accountAndPeer, accountsAndPeers in
+                guard let strongSelf = self else {
+                    return
+                }
+                var maximumAvailableAccounts: Int = 3
+                if accountAndPeer?.1.isPremium == true && !strongSelf.context.account.testingEnvironment {
+                    maximumAvailableAccounts = 4
+                }
+                var count: Int = 1
+                for (accountContext, peer, _) in accountsAndPeers {
+                    if !accountContext.account.testingEnvironment {
+                        if peer.isPremium {
+                            maximumAvailableAccounts = 4
+                        }
+                        count += 1
                     }
                 }
-            case .rememberPassword:
-                let context = self.context
-                let controller = TwoFactorDataInputScreen(sharedContext: self.context.sharedContext, engine: .authorized(self.context.engine), mode: .rememberPassword(doneText: self.presentationData.strings.TwoFactorSetup_Done_Action), stateUpdated: { _ in
-                }, presentation: .modalInLargeLayout)
-                controller.twoStepAuthSettingsController = { configuration in
-                    return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
+                
+                if count >= maximumAvailableAccounts {
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumLimitScreen(context: strongSelf.context, subject: .accounts, count: Int32(count), action: {
+                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .accounts)
+                        replaceImpl?(controller)
+                        return true
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                        navigationController.pushViewController(controller)
+                    }
+                } else {
+                    strongSelf.context.sharedContext.beginNewAuth(testingEnvironment: strongSelf.context.account.testingEnvironment)
                 }
-                controller.passwordRemembered = {
-                    let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).startStandalone()
+            })
+        case .logout:
+            if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
+                if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
+                    self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: true, phoneNumber: phoneNumber))
                 }
-                push(controller)
-            case .emojiStatus:
-                self.headerNode.invokeDisplayPremiumIntro()
-            case .powerSaving:
-                push(energySavingSettingsScreen(context: self.context))
+            }
+        case .rememberPassword:
+            let context = self.context
+            let controller = TwoFactorDataInputScreen(sharedContext: self.context.sharedContext, engine: .authorized(self.context.engine), mode: .rememberPassword(doneText: self.presentationData.strings.TwoFactorSetup_Done_Action), stateUpdated: { _ in
+            }, presentation: .modalInLargeLayout)
+            controller.twoStepAuthSettingsController = { configuration in
+                return twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: .single(TwoStepVerificationUnlockSettingsControllerData.access(configuration: TwoStepVerificationAccessConfiguration(configuration: configuration, password: nil)))))
+            }
+            controller.passwordRemembered = {
+                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePassword).startStandalone()
+            }
+            push(controller)
+        case .emojiStatus:
+            self.headerNode.invokeDisplayPremiumIntro()
+        case .powerSaving:
+            push(energySavingSettingsScreen(context: self.context))
         }
     }
     

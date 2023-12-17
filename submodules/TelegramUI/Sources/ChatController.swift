@@ -18800,50 +18800,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             initialMediaAreas: initialMediaAreas,
             initialVideoPosition: nil,
             transitionIn: nil,
-            transitionOut: { finished, isNew in
-                if finished {
-                    if let transitionOut = externalState.transitionOut?(externalState.storyTarget, externalState.isPeerArchived), let destinationView = transitionOut.destinationView {
-                        return MediaEditorScreen.TransitionOut(
-                            destinationView: destinationView,
-                            destinationRect: transitionOut.destinationRect,
-                            destinationCornerRadius: transitionOut.destinationCornerRadius
-                        )
-                    } else {
-                        return nil
-                    }
-                } else {
-                    return nil
-                }
+            transitionOut: { _, _ in
+                return nil
             },
             completion: { result, commit in
                 let target: Stories.PendingTarget
-                let targetPeerId: EnginePeer.Id
                 if let sendAsPeerId = result.options.sendAsPeerId {
                     target = .peer(sendAsPeerId)
-                    targetPeerId = sendAsPeerId
                 } else {
                     target = .myStories
-                    targetPeerId = context.account.peerId
                 }
                 externalState.storyTarget = target
                 
-                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))
-                         |> deliverOnMainQueue).startStandalone(next: { peer in
-                    guard let peer else {
-                        return
-                    }
-                    
-                    if case let .user(user) = peer {
-                        externalState.isPeerArchived = user.storiesHidden ?? false
-                        
-                    } else if case let .channel(channel) = peer {
-                        externalState.isPeerArchived = channel.storiesHidden ?? false
-                    }
-                    
-                    if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-                        rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
-                    }
-                })
+                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                }
             }
         )
         self.push(controller)

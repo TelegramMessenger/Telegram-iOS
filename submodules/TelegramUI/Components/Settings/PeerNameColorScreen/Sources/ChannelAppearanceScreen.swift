@@ -337,12 +337,13 @@ final class ChannelAppearanceScreenComponent: Component {
         private var updatedPeerProfileEmoji: Int64??
         private var updatedPeerStatus: PeerEmojiStatus??
         
-        private var requiredLevel: Int?
+        private var requiredBoostSubject: BoostSubject?
         
         private var currentTheme: PresentationThemeReference?
         private var resolvedCurrentTheme: (reference: PresentationThemeReference, isDark: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper?)?
         private var resolvingCurrentTheme: (reference: PresentationThemeReference, isDark: Bool, disposable: Disposable)?
         
+        private var premiumConfiguration: PremiumConfiguration?
         private var boostLevel: Int?
         private var boostStatus: ChannelBoostStatus?
         private var boostStatusDisposable: Disposable?
@@ -488,15 +489,16 @@ final class ChannelAppearanceScreenComponent: Component {
         }
         
         private func applySettings() {
-            guard let component = self.component, let resolvedState = self.resolveState(), let requiredLevel = self.requiredLevel else {
+            guard let component = self.component, let resolvedState = self.resolveState(), let premiumConfiguration = self.premiumConfiguration, let requiredBoostSubject = self.requiredBoostSubject else {
                 return
             }
             if self.isApplyingSettings {
                 return
             }
             
+            let requiredLevel = requiredBoostSubject.requiredLevel(premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
-                self.displayPremiumScreen(requiredLevel: requiredLevel)
+                self.displayBoostLevels(subject: requiredBoostSubject)
                 return
             }
             
@@ -545,7 +547,7 @@ final class ChannelAppearanceScreenComponent: Component {
             })
         }
         
-        private func displayPremiumScreen(requiredLevel: Int) {
+        private func displayBoostLevels(subject: BoostSubject) {
             guard let component = self.component else {
                 return
             }
@@ -555,31 +557,25 @@ final class ChannelAppearanceScreenComponent: Component {
                 guard let self, let component = self.component, let peer, let status = self.boostStatus else {
                     return
                 }
-                
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
-                
-                let link = status.url
-                let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions(reactionCount: requiredLevel), isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
-                    guard let self, let component = self.component else {
-                        return true
+                let controller = PremiumBoostLevelsScreen(
+                    context: component.context,
+                    peer: peer,
+                    subject: subject,
+                    status: status,
+                    openStats: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openBoostStats()
+                    },
+                    openGift: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        let controller = createGiveawayController(context: component.context, peerId: component.peerId, subject: .generic)
+                        self.environment?.controller()?.push(controller)
                     }
-                            
-                    UIPasteboard.general.string = link
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                    return true
-                }, openStats: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.openBoostStats()
-                }, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? { [weak self] in
-                    guard let self, let component = self.component else {
-                        return
-                    }
-                    let controller = createGiveawayController(context: component.context, peerId: component.peerId, subject: .generic)
-                    self.environment?.controller()?.push(controller)
-                } : nil)
+                )
                 self.environment?.controller()?.push(controller)
                 
                 HapticFeedback().impact(.light)
@@ -713,6 +709,14 @@ final class ChannelAppearanceScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
             
+            let premiumConfiguration: PremiumConfiguration
+            if let current = self.premiumConfiguration {
+                premiumConfiguration = current
+            } else {
+                premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                self.premiumConfiguration = premiumConfiguration
+            }
+
             if self.contentsDataDisposable == nil {
                 self.contentsDataDisposable = (ContentsData.get(context: component.context, peerId: component.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] contentsData in
@@ -747,7 +751,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return availableSize
             }
             
-            var requiredLevel = 1
+            var requiredBoostSubject: BoostSubject = .nameColors
             
             let replyIconLevel = 5
             var profileIconLevel = 7
@@ -762,23 +766,25 @@ final class ChannelAppearanceScreenComponent: Component {
                     emojiStatusLevel = Int(value)
                 }
             }
-            
-            let profileColor = resolvedState.profileColor
-            
+                        
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
-                requiredLevel = max(requiredLevel, replyIconLevel)
+                requiredBoostSubject = .nameIcon
+            }
+            
+            let profileColor = resolvedState.profileColor
+            if profileColor != nil {
+                requiredBoostSubject = .profileColors
             }
             
             let backgroundFileId = resolvedState.backgroundFileId
-            if profileColor != nil || backgroundFileId != nil {
-                requiredLevel = max(requiredLevel, profileIconLevel)
+            if backgroundFileId != nil {
+                requiredBoostSubject = .profileIcon
             }
             
             let emojiStatus = resolvedState.emojiStatus
-            
             if emojiStatus != nil {
-                requiredLevel = max(requiredLevel, emojiStatusLevel)
+                requiredBoostSubject = .emojiStatus
             }
             let statusFileId = emojiStatus?.fileId
             
@@ -831,7 +837,7 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             if self.currentTheme != nil && self.currentTheme != chatThemes.first {
-                requiredLevel = max(requiredLevel, themeLevel)
+                requiredBoostSubject = .wallpaper
             }
             
             if case let .user(user) = peer {
@@ -852,7 +858,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )
             }
             
-            self.requiredLevel = requiredLevel
+            self.requiredBoostSubject = requiredBoostSubject
             
             let topInset: CGFloat = 24.0
             let bottomContentInset: CGFloat = 24.0
@@ -890,7 +896,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if replyFileId != nil, let boostLevel = self.boostLevel, boostLevel < replyIconLevel {
+            if replyFileId != nil, let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelNameIconLevel {
                 replyLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: replyIconLevel
@@ -996,7 +1002,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     )),
                     maximumNumberOfLines: 0
                 ))))
-                if currentTheme != chatThemes[0], let boostLevel = self.boostLevel, boostLevel < themeLevel {
+                if currentTheme != chatThemes[0], let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelCustomWallpaperLevel {
                     wallpaperLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                         strings: environment.strings,
                         level: themeLevel
@@ -1077,7 +1083,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if backgroundFileId != nil, let boostLevel = self.boostLevel, boostLevel < profileIconLevel {
+            if backgroundFileId != nil, let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelProfileIconLevel {
                 profileLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: profileIconLevel
@@ -1188,7 +1194,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if emojiStatus != nil, let boostLevel = self.boostLevel, boostLevel < emojiStatusLevel {
+            if emojiStatus != nil, let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelEmojiStatusLevel {
                 emojiStatusContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: emojiStatusLevel
@@ -1300,9 +1306,10 @@ final class ChannelAppearanceScreenComponent: Component {
                 Text(text: "Apply Changes", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
+            let requiredLevel = requiredBoostSubject.requiredLevel(premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
-                    count: requiredLevel,
+                    count: Int(requiredLevel),
                     theme: environment.theme,
                     strings: environment.strings
                 ))))
