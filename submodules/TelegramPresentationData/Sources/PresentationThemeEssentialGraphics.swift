@@ -341,8 +341,8 @@ public final class PrincipalThemeEssentialGraphics {
             self.clockMediaMinImage = emptyImage
             self.clockFreeFrameImage = emptyImage
             self.clockFreeMinImage = emptyImage
-            self.dateAndStatusMediaBackground = emptyImage
-            self.dateAndStatusFreeBackground = emptyImage
+            self.dateAndStatusMediaBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: theme.message.mediaDateAndStatusFillColor)!
+            self.dateAndStatusFreeBackground = generateStretchableFilledCircleImage(diameter: 18.0, color: serviceColor.dateFillStatic)!
                 
             let impressionCountImage = UIImage(bundleImageName: "Chat/Message/ImpressionCount")!
             self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.incoming.secondaryTextColor)!

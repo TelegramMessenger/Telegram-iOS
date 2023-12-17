@@ -1254,7 +1254,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 uploading = true
                             }
                             
-                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading {
+                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading && !presentationData.isPreview {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile {
@@ -1796,6 +1796,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
             }
         }
+        if isPreview {
+            progressRequired = true
+        }
         
         var radialStatusSize: CGFloat
         if isSecretMedia {
@@ -1805,7 +1808,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         }
         if progressRequired {
             if self.statusNode == nil {
-                let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.message.mediaOverlayControlColors.fillColor)
+                let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.message.mediaOverlayControlColors.fillColor, isPreview: isPreview)
+                statusNode.displaysAsynchronously = !isPreview
                 let imageSize = self.imageNode.bounds.size
                 statusNode.frame = CGRect(origin: CGPoint(x: floor(imageSize.width / 2.0 - radialStatusSize / 2.0), y: floor(imageSize.height / 2.0 - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
                 self.statusNode = statusNode
@@ -1891,6 +1895,10 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             
             if message.flags.contains(.Unsent) {
                 automaticPlayback = false
+            }
+            
+            if isPreview {
+                muted = false
             }
             
             if let actualFetchStatus = self.actualFetchStatus {
@@ -2069,6 +2077,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
             }
         }
+        if isPreview, let _ = media as? TelegramMediaFile {
+            state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+        }
         
         if isSecretMedia {
             let remainingTime: Int32?
@@ -2119,12 +2130,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             })
             statusNode.backgroundNodeColor = backgroundColor
         }
-        if let badgeContent = badgeContent {
+        if var badgeContent = badgeContent {
             if self.badgeNode == nil {
                 let badgeNode = ChatMessageInteractiveMediaBadge()
                 if isPreview {
                     badgeNode.durationNode.displaysAsynchronously = false
-                    badgeNode.sizeNode?.displaysAsynchronously = false
                 }
                 
                 var inset: CGFloat = 6.0
@@ -2148,6 +2158,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 self.pinchContainerNode.contentNode.addSubnode(badgeNode)
                 
                 animated = false
+            }
+            if isPreview {
+                mediaDownloadState = nil
+                if case let .mediaDownload(backgroundColor, foregroundColor, duration, _ ,_ , _) = badgeContent {
+                    badgeContent = .text(inset: 0.0, backgroundColor: backgroundColor, foregroundColor: foregroundColor, text: NSAttributedString(string: duration), iconName: nil)
+                }
             }
             self.badgeNode?.update(theme: theme, content: badgeContent, mediaDownloadState: mediaDownloadState, animated: animated)
         } else if let badgeNode = self.badgeNode {

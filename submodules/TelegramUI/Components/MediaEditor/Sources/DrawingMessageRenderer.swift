@@ -83,7 +83,6 @@ public final class DrawingMessageRenderer {
     private let containerNode: ASDisplayNode
 
     private let messagesContainerNode: ASDisplayNode
-    private var dateHeaderNode: ListViewItemHeaderNode?
     private var avatarHeaderNode: ListViewItemHeaderNode?
     private var messageNodes: [ListViewItemNode]?
     
@@ -156,7 +155,6 @@ public final class DrawingMessageRenderer {
         let size = layout.size
                 
         let theme = presentationData.theme.withUpdated(preview: true)
-        let dateHeaderItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
         
         let avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: self.messages.first!.peers[self.messages.first!.author!.id]!, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
     
@@ -235,17 +233,6 @@ public final class DrawingMessageRenderer {
             }
         }
                 
-        let dateHeaderNode: ListViewItemHeaderNode
-        if let currentDateHeaderNode = self.dateHeaderNode {
-            dateHeaderNode = currentDateHeaderNode
-            dateHeaderItem.updateNode(dateHeaderNode, previous: nil, next: dateHeaderItem)
-        } else {
-            dateHeaderNode = dateHeaderItem.node(synchronousLoad: true)
-            dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-//            self.messagesContainerNode.addSubnode(dateHeaderNode)
-            self.dateHeaderNode = dateHeaderNode
-        }
-        
         let avatarHeaderNode: ListViewItemHeaderNode
         if let currentAvatarHeaderNode = self.avatarHeaderNode {
             avatarHeaderNode = currentAvatarHeaderNode
@@ -256,10 +243,7 @@ public final class DrawingMessageRenderer {
             self.messagesContainerNode.addSubnode(avatarHeaderNode)
             self.avatarHeaderNode = avatarHeaderNode
         }
-        
-        dateHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: CGSize(width: layout.size.width, height: dateHeaderItem.height))
-        dateHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
-        
+                
         avatarHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 3.0), size: CGSize(width: layout.size.width, height: avatarHeaderItem.height))
         avatarHeaderNode.updateLayout(size: size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         
