@@ -2087,6 +2087,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
         
+        private let readyValue = Promise<Bool>()
+        
         init(controller: MediaEditorScreen) {
             self.controller = controller
             self.context = controller.context
@@ -2360,6 +2362,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
+            if case .message = subject {
+            } else {
+                self.readyValue.set(.single(true))
+            }
+            
             if case let .image(_, _, additionalImage, position) = subject, let additionalImage {
                 let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
                     let bounds = CGRect(origin: .zero, size: size)
@@ -2422,9 +2429,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         messageEntity.scale = 3.3 * fraction
 
                         self.entitiesView.add(messageEntity, announce: false)
+                        
+                        self.readyValue.set(.single(true))
                     })
                 })
-
             }
             
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
@@ -4088,7 +4096,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
             
             if isFirstTime {
-                self.animateIn()
+                self.isHidden = true
+                let _ = (self.readyValue.get()
+                |> take(1)).start(next: { [weak self] _ in
+                    if let self {
+                        self.isHidden = false
+                        self.animateIn()
+                    }
+                })
             }
         }
     }
@@ -4221,7 +4236,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     private var audioSessionDisposable: Disposable?
     private let postingAvailabilityPromise = Promise<StoriesUploadAvailability>()
     private var postingAvailabilityDisposable: Disposable?
-        
+            
     public init(
         context: AccountContext,
         subject: Signal<Subject?, NoError>,

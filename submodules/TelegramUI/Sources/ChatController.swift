@@ -2432,7 +2432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let self else {
                             return
                         }
-                        Queue.mainQueue().after(0.1) {
+                        Queue.mainQueue().after(0.05) {
                             self.openStorySharing(messages: messages)
                         }
                     }
