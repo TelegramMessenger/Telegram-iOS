@@ -2077,7 +2077,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
             }
         }
-        if isPreview {
+        if isPreview, let _ = media as? TelegramMediaFile {
             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
         }
         
