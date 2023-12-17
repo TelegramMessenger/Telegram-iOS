@@ -1821,11 +1821,11 @@ final class MediaEditorScreenComponent: Component {
                 
                 topButtonOffsetX += 50.0
             } else {
-                if let doneButtonView = self.doneButton.view, doneButtonView.superview != nil {
-                    doneButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak doneButtonView] _ in
-                        doneButtonView?.removeFromSuperview()
+                if let dayNightButtonView = self.dayNightButton.view, dayNightButtonView.superview != nil {
+                    dayNightButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak dayNightButtonView] _ in
+                        dayNightButtonView?.removeFromSuperview()
                     })
-                    doneButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    dayNightButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
             }
             
