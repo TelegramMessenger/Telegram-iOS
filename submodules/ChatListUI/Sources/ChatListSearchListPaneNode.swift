@@ -1690,7 +1690,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             })
             
             let foundThreads: Signal<[EngineChatList.Item], NoError>
-            if case .forum = location, (key == .topics || key == .chats) {
+            if case let .forum(peerId) = location, (key == .topics || key == .chats) {
                 foundThreads = chatListViewForLocation(chatListLocation: location, location: .initial(count: 1000, filter: nil), account: context.account)
                 |> map { view -> [EngineChatList.Item] in
                     var filteredItems: [EngineChatList.Item] = []
@@ -1708,6 +1708,24 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     
                     return filteredItems
                 }
+                |> mapToSignal { local -> Signal<[EngineChatList.Item], NoError> in
+                    return .single(local)
+                    |> then(context.engine.messages.searchForumTopics(peerId: peerId, query: finalQuery)
+                    |> map { remoteResult in
+                        var mergedResult = local
+                        for item in remoteResult {
+                            guard case let .forum(threadId) = item.id else {
+                                continue
+                            }
+                            if !mergedResult.contains(where: { $0.id == .forum(threadId) }) {
+                                mergedResult.append(item)
+                            }
+                        }
+                        
+                        return mergedResult
+                    })
+                }
+                |> distinctUntilChanged
             } else {
                 foundThreads = .single([])
             }

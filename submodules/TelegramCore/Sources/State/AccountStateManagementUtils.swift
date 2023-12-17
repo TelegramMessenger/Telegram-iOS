@@ -2833,7 +2833,7 @@ func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, pe
         
         var resetTopicsSignals: [Signal<StateResetForumTopics, NoError>] = []
         for resetForumTopicPeerId in resetForumTopics {
-            resetTopicsSignals.append(_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: resetForumTopicPeerId, offsetIndex: nil, limit: 20)
+            resetTopicsSignals.append(_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: resetForumTopicPeerId, query: nil, offsetIndex: nil, limit: 20)
             |> map(StateResetForumTopics.result)
             |> `catch` { _ -> Signal<StateResetForumTopics, NoError> in
                 return .single(.error(resetForumTopicPeerId))
@@ -3113,7 +3113,7 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 
                 var resetTopicsSignals: [Signal<StateResetForumTopics, NoError>] = []
                 for resetForumTopicPeerId in resetForumTopics {
-                    resetTopicsSignals.append(_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: resetForumTopicPeerId, offsetIndex: nil, limit: 20)
+                    resetTopicsSignals.append(_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: resetForumTopicPeerId, query: nil, offsetIndex: nil, limit: 20)
                     |> map(StateResetForumTopics.result)
                     |> `catch` { _ -> Signal<StateResetForumTopics, NoError> in
                         return .single(.error(resetForumTopicPeerId))

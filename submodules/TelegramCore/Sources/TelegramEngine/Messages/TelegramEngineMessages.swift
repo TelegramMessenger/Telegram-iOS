@@ -637,6 +637,10 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func searchForumTopics(peerId: EnginePeer.Id, query: String) -> Signal<[EngineChatList.Item], NoError> {
+            return _internal_searchForumTopics(account: self.account, peerId: peerId, query: query)
+        }
+        
         public func debugAddHoles() -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
