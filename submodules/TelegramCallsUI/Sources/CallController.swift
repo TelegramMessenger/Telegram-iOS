@@ -50,6 +50,9 @@ public final class CallController: ViewController {
         return self._ready
     }
     
+    private let isDataReady = Promise<Bool>(false)
+    private let isContentsReady = Promise<Bool>(false)
+    
     private let sharedContext: SharedAccountContext
     private let account: Account
     public let call: PresentationCall
@@ -84,6 +87,14 @@ public final class CallController: ViewController {
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self._ready.set(combineLatest(queue: .mainQueue(), self.isDataReady.get(), self.isContentsReady.get())
+        |> map { a, b -> Bool in
+            return a && b
+        }
+        |> filter { $0 }
+        |> take(1)
+        |> timeout(2.0, queue: .mainQueue(), alternate: .single(true)))
         
         self.isOpaqueWhenInOverlay = true
         
@@ -140,6 +151,7 @@ public final class CallController: ViewController {
         if self.sharedContext.immediateExperimentalUISettings.callUIV2 {
             let displayNode = CallControllerNodeV2(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), easyDebugAccess: self.easyDebugAccess, call: self.call)
             self.displayNode = displayNode
+            self.isContentsReady.set(displayNode.isReady.get())
             
             displayNode.restoreUIForPictureInPicture = { [weak self] completion in
                 guard let self, let restoreUIForPictureInPicture = self.restoreUIForPictureInPicture else {
@@ -150,6 +162,7 @@ public final class CallController: ViewController {
             }
         } else {
             self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+            self.isContentsReady.set(.single(true))
         }
         self.displayNodeDidLoad()
         
@@ -320,7 +333,7 @@ public final class CallController: ViewController {
                 if let accountPeer = accountView.peers[accountView.peerId], let peer = view.peers[view.peerId] {
                     strongSelf.peer = peer
                     strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.count > 1)
-                    strongSelf._ready.set(.single(true))
+                    strongSelf.isDataReady.set(.single(true))
                 }
             }
         })

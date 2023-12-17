@@ -38,10 +38,12 @@ final class ButtonGroupView: OverlayMaskContainerView {
         }
         
         let content: Content
+        let isEnabled: Bool
         let action: () -> Void
         
-        init(content: Content, action: @escaping () -> Void) {
+        init(content: Content, isEnabled: Bool, action: @escaping () -> Void) {
             self.content = content
+            self.isEnabled = isEnabled
             self.action = action
         }
     }
@@ -260,7 +262,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
             transition.setAlpha(view: buttonView, alpha: displayClose ? 0.0 : 1.0)
             
             buttonTransition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize)))
-            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: buttonTransition)
+            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, isEnabled: button.isEnabled, title: title, transition: buttonTransition)
             buttonX += buttonSize + buttonSpacing
         }
         

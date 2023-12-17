@@ -333,10 +333,10 @@ public final class ManagedAudioSession: NSObject {
             var headphonesAreActive = false
             loop: for currentOutput in audioSession.currentRoute.outputs {
                 switch currentOutput.portType {
-                case .headphones, .bluetoothA2DP, .bluetoothHFP:
+                case .headphones, .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
                     headphonesAreActive = true
                     hasHeadphones = true
-                    hasBluetoothHeadphones = [.bluetoothA2DP, .bluetoothHFP].contains(currentOutput.portType)
+                    hasBluetoothHeadphones = [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains(currentOutput.portType)
                     activeOutput = .headphones
                     break loop
                 default:
@@ -730,7 +730,7 @@ public final class ManagedAudioSession: NSObject {
         let route = AVAudioSession.sharedInstance().currentRoute
         //managedAudioSessionLog("\(route)")
         for desc in route.outputs {
-            if desc.portType == .headphones || desc.portType == .bluetoothA2DP || desc.portType == .bluetoothHFP {
+            if desc.portType == .headphones || desc.portType == .bluetoothA2DP || desc.portType == .bluetoothHFP || desc.portType == .bluetoothLE {
                 return true
             }
         }
@@ -977,7 +977,7 @@ public final class ManagedAudioSession: NSObject {
                             } else {
                                 loop: for route in routes {
                                     switch route.portType {
-                                    case .headphones, .bluetoothA2DP, .bluetoothHFP:
+                                    case .headphones, .bluetoothA2DP, .bluetoothHFP, .bluetoothLE:
                                         let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
                                         alreadySet = true
                                         break loop
