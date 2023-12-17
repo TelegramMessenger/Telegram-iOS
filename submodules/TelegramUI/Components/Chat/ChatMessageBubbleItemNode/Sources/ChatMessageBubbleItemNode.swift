@@ -2092,7 +2092,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let statusSuggestedWidthAndContinue = mosaicStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                     context: item.context,
                     presentationData: item.presentationData,
-                    edited: edited,
+                    edited: edited && !item.presentationData.isPreview,
                     impressionCount: viewCount,
                     dateText: dateText,
                     type: statusType,

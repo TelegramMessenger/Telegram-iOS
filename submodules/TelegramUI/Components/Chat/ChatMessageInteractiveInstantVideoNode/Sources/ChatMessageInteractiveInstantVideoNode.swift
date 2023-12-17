@@ -1225,7 +1225,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         if progressRequired {
             if self.statusNode == nil {
-                let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor)
+                let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor, isPreview: item.presentationData.isPreview)
                 statusNode.displaysAsynchronously = !item.presentationData.isPreview
                 self.isUserInteractionEnabled = false
                 self.statusNode = statusNode

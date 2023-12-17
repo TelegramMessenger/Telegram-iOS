@@ -243,18 +243,21 @@ public final class RadialStatusNode: ASControlNode {
     }
 
     private let enableBlur: Bool
-
+    private let isPreview: Bool
+    
     public private(set) var state: RadialStatusNodeState = .none
     
+    private var staticBackgroundNode: ASImageNode?
     private var backgroundNode: NavigationBackgroundNode?
     private var currentBackgroundNodeColor: UIColor?
 
     private var contentNode: RadialStatusContentNode?
     private var nextContentNode: RadialStatusContentNode?
     
-    public init(backgroundNodeColor: UIColor, enableBlur: Bool = false) {
-        self.enableBlur = enableBlur
+    public init(backgroundNodeColor: UIColor, enableBlur: Bool = false, isPreview: Bool = false) {
         self.backgroundNodeColor = backgroundNodeColor
+        self.enableBlur = enableBlur
+        self.isPreview = isPreview
         
         super.init()
     }
@@ -325,6 +328,7 @@ public final class RadialStatusNode: ASControlNode {
         } else {
             self.contentNode = node
             if let contentNode = self.contentNode {
+                contentNode.displaysAsynchronously = self.displaysAsynchronously
                 contentNode.frame = self.bounds
                 contentNode.prepareAnimateIn(from: nil)
                 self.addSubnode(contentNode)
@@ -354,27 +358,40 @@ public final class RadialStatusNode: ASControlNode {
         
         if updated {
             if let color = color {
-                if let backgroundNode = self.backgroundNode {
-                    backgroundNode.updateColor(color: color, transition: .immediate)
-                    self.currentBackgroundNodeColor = color
-
-                    completion()
-                } else {
-                    let backgroundNode = NavigationBackgroundNode(color: color, enableBlur: self.enableBlur)
-                    self.currentBackgroundNodeColor = color
-
-                    backgroundNode.frame = self.bounds
-                    backgroundNode.update(size: backgroundNode.bounds.size, cornerRadius: backgroundNode.bounds.size.height / 2.0, transition: .immediate)
-                    self.backgroundNode = backgroundNode
-                    self.insertSubnode(backgroundNode, at: 0)
-                    
-                    if animated {
-                        backgroundNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, removeOnCompletion: false)
-                        backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                            completion()
-                        })
+                if self.isPreview {
+                    let backgroundNode: ASImageNode
+                    if let current = self.staticBackgroundNode {
+                        backgroundNode = current
                     } else {
+                        backgroundNode = ASImageNode()
+                        backgroundNode.image = generateFilledCircleImage(diameter: 50.0, color: self.backgroundNodeColor)
+                        self.insertSubnode(backgroundNode, at: 0)
+                        self.staticBackgroundNode = backgroundNode
+                    }
+                    backgroundNode.frame = self.bounds
+                } else {
+                    if let backgroundNode = self.backgroundNode {
+                        backgroundNode.updateColor(color: color, transition: .immediate)
+                        self.currentBackgroundNodeColor = color
+                        
                         completion()
+                    } else {
+                        let backgroundNode = NavigationBackgroundNode(color: color, enableBlur: self.enableBlur)
+                        self.currentBackgroundNodeColor = color
+                        
+                        backgroundNode.frame = self.bounds
+                        backgroundNode.update(size: backgroundNode.bounds.size, cornerRadius: backgroundNode.bounds.size.height / 2.0, transition: .immediate)
+                        self.backgroundNode = backgroundNode
+                        self.insertSubnode(backgroundNode, at: 0)
+                        
+                        if animated {
+                            backgroundNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2, removeOnCompletion: false)
+                            backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                completion()
+                            })
+                        } else {
+                            completion()
+                        }
                     }
                 }
             } else if let backgroundNode = self.backgroundNode {
