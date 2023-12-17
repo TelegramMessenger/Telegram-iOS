@@ -518,7 +518,7 @@ final class StoryItemSetViewListComponent: Component {
                     )).string
                     
                     if let story = item.story, !story.text.isEmpty {
-                        dateText += " • commented"
+                        dateText += component.strings.Story_Views_Commented
                     }
                     
                     let subtitleAccessory: PeerListItemComponent.SubtitleAccessory

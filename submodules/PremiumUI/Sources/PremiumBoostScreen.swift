@@ -239,7 +239,7 @@ public func PremiumBoostScreen(
                                         let controller = context.sharedContext.makePremiumGiftController(context: context)
                                         pushController(controller)
                                     }),
-                                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Close, action: {})
+                                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Close, action: {})
                                 ],
                                 actionLayout: .vertical,
                                 parseMarkdown: true

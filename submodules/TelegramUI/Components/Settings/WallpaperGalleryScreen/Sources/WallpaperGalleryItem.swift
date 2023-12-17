@@ -1370,7 +1370,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         let editFrame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - 28.0 + offset.x - 46.0, y: 16.0), size: CGSize(width: 28.0, height: 28.0))
         
         let centerOffset: CGFloat = 32.0
-        
+
         if let entry = self.entry {
             switch entry {
                 case .asset:
@@ -1451,6 +1451,11 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             }
         }
         
+        if let mode = self.mode, case let .peer(peer, _) = mode, case .channel = peer {
+            motionAlpha = 0.0
+            blurFrame = centerButtonFrame
+        }
+        
         transition.updateFrame(node: self.patternButtonNode, frame: patternFrame)
         transition.updateAlpha(node: self.patternButtonNode, alpha: patternAlpha * alpha)
         
@@ -1487,13 +1492,29 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
 
         var items: [ListViewItem] = []
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+        var peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
         let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
-        let messages = SimpleDictionary<MessageId, Message>()
-        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
-        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+        var messages = SimpleDictionary<MessageId, Message>()
         
+        let replyAuthor = self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName
+        
+        var messageAuthor: Peer = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_PreviewReplyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+        let otherAuthor = TelegramUser(id: otherPeerId, accessHash: nil, firstName: replyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+        peers[otherPeerId] = otherAuthor
+        
+        var messageAttributes: [MessageAttribute] = []
+        if let mode = self.mode, case let .peer(peer, _) = mode, case .channel = peer {
+            peerId = peer.id
+            messageAuthor = peer._asPeer()
+            
+            let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
+            messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: messageAuthor, text: self.presentationData.strings.WallpaperPreview_ChannelReplyText, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            messageAttributes = [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil, isQuote: false)]
+        }
+        
+        peers[peerId] = messageAuthor
+
         var topMessageText = ""
         var bottomMessageText = ""
         var serviceMessageText: String?
@@ -1566,10 +1587,16 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         if let mode = self.mode, case let .peer(peer, existing) = mode {
-            topMessageText = presentationData.strings.WallpaperPreview_ChatTopText
-            bottomMessageText = presentationData.strings.WallpaperPreview_ChatBottomText
-            if !existing {
-                serviceMessageText = presentationData.strings.WallpaperPreview_NotAppliedInfo(peer.compactDisplayTitle).string
+            if case .channel = peer {
+                topMessageText = presentationData.strings.WallpaperPreview_ChannelTopText
+                bottomMessageText = ""
+                serviceMessageText = presentationData.strings.WallpaperPreview_ChannelHeader
+            } else {
+                topMessageText = presentationData.strings.WallpaperPreview_ChatTopText
+                bottomMessageText = presentationData.strings.WallpaperPreview_ChatBottomText
+                if !existing {
+                    serviceMessageText = presentationData.strings.WallpaperPreview_NotAppliedInfo(peer.compactDisplayTitle).string
+                }
             }
         }
 
@@ -1579,10 +1606,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let theme = self.presentationData.theme
                    
-        let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-        items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false))
+        if !bottomMessageText.isEmpty {
+            let message1 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+            items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message1], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false))
+        }
+    
         
-        let message2 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+        let message2 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: messageAttributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message2], theme: theme, strings: self.presentationData.strings, wallpaper: currentWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.nativeNode, availableReactions: nil, accountPeer: nil, isCentered: false))
         
         if let serviceMessageText {

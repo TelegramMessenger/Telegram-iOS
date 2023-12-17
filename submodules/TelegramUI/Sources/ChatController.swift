@@ -118,6 +118,7 @@ import WebsiteType
 import ChatQrCodeScreen
 import PeerInfoScreen
 import MediaEditorScreen
+import WallpaperGalleryScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -18780,10 +18781,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let context = self.context
         let subject: Signal<MediaEditorScreen.Subject?, NoError> = .single(.message(messages.map { $0.id }))
         
-        let initialCaption: NSAttributedString? = nil
-        let initialPrivacy: EngineStoryPrivacy? = nil
-        let initialMediaAreas: [MediaArea] = []
-        
         let externalState = MediaEditorTransitionOutExternalState(
             storyTarget: nil,
             isPeerArchived: false,
@@ -18793,28 +18790,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let controller = MediaEditorScreen(
             context: context,
             subject: subject,
-            isEditing: false,
-            forwardSource: nil,
-            initialCaption: initialCaption,
-            initialPrivacy: initialPrivacy,
-            initialMediaAreas: initialMediaAreas,
-            initialVideoPosition: nil,
             transitionIn: nil,
             transitionOut: { _, _ in
                 return nil
             },
-            completion: { result, commit in
+            completion: { [weak self] result, commit in
+                guard let self else {
+                    return
+                }
+                let targetPeerId: EnginePeer.Id
                 let target: Stories.PendingTarget
                 if let sendAsPeerId = result.options.sendAsPeerId {
                     target = .peer(sendAsPeerId)
+                    targetPeerId = sendAsPeerId
                 } else {
                     target = .myStories
+                    targetPeerId = self.context.account.peerId
                 }
                 externalState.storyTarget = target
                 
                 if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
                     rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
                 }
+                
+                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let self, let peer else {
+                        return
+                    }
+                    let text: String
+                    if case .channel = peer {
+                        text = self.presentationData.strings.Story_MessageReposted_Channel(peer.compactDisplayTitle).string
+                    } else {
+                        text = self.presentationData.strings.Story_MessageReposted_Personal
+                    }
+                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .succeed(text: text, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                })
+
             }
         )
         self.push(controller)

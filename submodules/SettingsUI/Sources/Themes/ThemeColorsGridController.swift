@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import AttachmentUI
+import WallpaperGalleryScreen
 
 private func availableGradients(dark: Bool) -> [[UInt32]] {
     if dark {

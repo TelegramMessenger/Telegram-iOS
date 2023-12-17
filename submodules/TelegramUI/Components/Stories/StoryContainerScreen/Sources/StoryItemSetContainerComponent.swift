@@ -4246,46 +4246,55 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            let context = component.context
-                            let peerId = component.slice.peer.id
-                            let currentResult: ResolvedUrl = .story(peerId: peerId, id: component.slice.item.storyItem.id)
-                            
-                            self.sendMessageContext.openResolved(view: self, result: .story(peerId: peer.id, id: story.id), completion: { [weak self] in
-                                guard let self, let controller = self.component?.controller() as? StoryContainerScreen else {
-                                    return
-                                }
-                                if let nextController = controller.navigationController?.viewControllers.last as? StoryContainerScreen {
-                                    nextController.customBackAction = { [weak nextController] in
-                                        context.sharedContext.openResolvedUrl(
-                                            currentResult,
-                                            context: context,
-                                            urlContext: .generic,
-                                            navigationController: nextController?.navigationController as? NavigationController,
-                                            forceExternal: false,
-                                            openPeer: { _, _ in
-                                            },
-                                            sendFile: nil,
-                                            sendSticker: nil,
-                                            requestMessageActionUrlAuth: nil,
-                                            joinVoiceChat: nil,
-                                            present: { _, _ in
-                                            },
-                                            dismissInput: {
-                                            },
-                                            contentContext: nil,
-                                            progress: nil,
-                                            completion: { [weak nextController] in
-                                                Queue.mainQueue().after(0.5) {
-                                                    nextController?.dismissWithoutTransitionOut()
+                            if let story {
+                                let context = component.context
+                                let peerId = component.slice.peer.id
+                                let currentResult: ResolvedUrl = .story(peerId: peerId, id: component.slice.item.storyItem.id)
+                                
+                                self.sendMessageContext.openResolved(view: self, result: .story(peerId: peer.id, id: story.id), completion: { [weak self] in
+                                    guard let self, let controller = self.component?.controller() as? StoryContainerScreen else {
+                                        return
+                                    }
+                                    if let nextController = controller.navigationController?.viewControllers.last as? StoryContainerScreen {
+                                        nextController.customBackAction = { [weak nextController] in
+                                            context.sharedContext.openResolvedUrl(
+                                                currentResult,
+                                                context: context,
+                                                urlContext: .generic,
+                                                navigationController: nextController?.navigationController as? NavigationController,
+                                                forceExternal: false,
+                                                openPeer: { _, _ in
+                                                },
+                                                sendFile: nil,
+                                                sendSticker: nil,
+                                                requestMessageActionUrlAuth: nil,
+                                                joinVoiceChat: nil,
+                                                present: { _, _ in
+                                                },
+                                                dismissInput: {
+                                                },
+                                                contentContext: nil,
+                                                progress: nil,
+                                                completion: { [weak nextController] in
+                                                    Queue.mainQueue().after(0.5) {
+                                                        nextController?.dismissWithoutTransitionOut()
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
+                                    }
+                                    Queue.mainQueue().after(0.5) {
+                                        controller.dismissWithoutTransitionOut()
+                                    }
+                                })
+                            } else {
+                                for mediaArea in component.slice.item.storyItem.mediaAreas {
+                                    if case .channelMessage = mediaArea {
+                                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: mediaArea, immediate: true)
+                                        break
                                     }
                                 }
-                                Queue.mainQueue().after(0.5) {
-                                    controller.dismissWithoutTransitionOut()
-                                }
-                            })
+                            }
                         }
                     )),
                     environment: {},
@@ -5196,7 +5205,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let context = component.context
-            let storyContent = RepostStoriesContentContextImpl(context: context, focusedStoryId: StoryId(peerId: peer.id, id: id), viewListContext: viewListContext, readGlobally: false)
+            let storyContent = RepostStoriesContentContextImpl(context: context, originalPeerId: component.slice.peer.id, originalStory: component.slice.item.storyItem, focusedStoryId: StoryId(peerId: peer.id, id: id), viewListContext: viewListContext, readGlobally: false)
             let _ = (storyContent.state
             |> take(1)
             |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak viewListView, weak sourceView] _ in

@@ -119,6 +119,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/QuickReactionSetupController",
         "//submodules/TelegramUI/Components/Settings/ThemeCarouselItem",
         "//submodules/TelegramUI/Components/Settings/ThemeSettingsThemeItem",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
+        "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
     ],
     visibility = [
         "//visibility:public",

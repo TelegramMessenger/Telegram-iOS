@@ -10641,10 +10641,6 @@ Sorry for the inconvenience.";
 
 "Story.ViewList.TitleReactions" = "Reactions";
 
-"Wallpaper.ApplyForChannel" = "Apply For This Channel";
-
-"Notification.ChannelChangedWallpaper" = "Channel set a new wallpaper";
-
 "Chat.Giveaway.Message.WinnersSelectedTitle.One" = "Winner Selected!";
 "Chat.Giveaway.Message.WinnersSelectedTitle.Many" = "Winners Selected!";
 "Chat.Giveaway.Message.WinnersSelectedText_1" = "**%@** winner of the [Giveaway]() was randomly selected by Telegram.";
@@ -10751,3 +10747,15 @@ Sorry for the inconvenience.";
 
 "ChannelBoost.CustomWallpaper" = "Set Custom Channel Background";
 "ChannelBoost.EnableCustomWallpaperLevelText" = "Your channel needs **Level %1$@** to set custom channel background.";
+
+"WallpaperPreview.ChannelHeader" = "All subscribers will see this wallpaper";
+"WallpaperPreview.ChannelTopText" = "Details to follow shortly.\nStay tuned!";
+"WallpaperPreview.ChannelReplyText" = "Breaking News";
+
+"Wallpaper.ApplyForChannel" = "Apply Background";
+"Notification.ChannelChangedWallpaper" = "Channel set a new wallpaper";
+
+"Story.MessageReposted.Personal" = "Message reposted to your stories.";
+"Story.MessageReposted.Channel" = "Message reposted to **%@**.";
+
+"Story.Views.Commented" = " • commented";

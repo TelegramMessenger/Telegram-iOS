@@ -462,6 +462,11 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         } else {
             minSize.width += sideInset
         }
+        if self.item.additionalLeftIcon != nil {
+            minSize.width += 24.0
+            minSize.width += iconSideInset
+            minSize.width += iconSpacing
+        }
         if let forcedHeight {
             minSize.height = forcedHeight
         } else {

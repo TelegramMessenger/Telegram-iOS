@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import PresentationDataUtils
 import MediaResources
+import WallpaperGalleryScreen
 
 private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
 

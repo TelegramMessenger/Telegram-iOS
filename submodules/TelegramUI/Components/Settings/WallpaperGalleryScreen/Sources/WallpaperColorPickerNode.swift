@@ -266,50 +266,50 @@ private final class WallpaperColorBrightnessNode: ASDisplayNode {
     }
 }
 
-struct HSBColor: Equatable {
-    static func == (lhs: HSBColor, rhs: HSBColor) -> Bool {
+public struct HSBColor: Equatable {
+    public static func == (lhs: HSBColor, rhs: HSBColor) -> Bool {
         return lhs.values.h == rhs.values.h && lhs.values.s == rhs.values.s && lhs.values.b == rhs.values.b
     }
     
-    let values: (h: CGFloat, s: CGFloat, b: CGFloat)
-    let backingColor: UIColor
+    public let values: (h: CGFloat, s: CGFloat, b: CGFloat)
+    public let backingColor: UIColor
     
-    var hue: CGFloat {
+    public var hue: CGFloat {
         return self.values.h
     }
     
-    var saturation: CGFloat {
+    public var saturation: CGFloat {
         return self.values.s
     }
     
-    var brightness: CGFloat {
+    public var brightness: CGFloat {
         return self.values.b
     }
     
-    var rgb: UInt32 {
+    public var rgb: UInt32 {
         return self.color.argb
     }
     
-    init(values: (h: CGFloat, s: CGFloat, b: CGFloat)) {
+    public init(values: (h: CGFloat, s: CGFloat, b: CGFloat)) {
         self.values = values
         self.backingColor = UIColor(hue: values.h, saturation: values.s, brightness: values.b, alpha: 1.0)
     }
     
-    init(hue: CGFloat, saturation: CGFloat, brightness: CGFloat) {
+    public init(hue: CGFloat, saturation: CGFloat, brightness: CGFloat) {
         self.values = (h: hue, s: saturation, b: brightness)
         self.backingColor = UIColor(hue: self.values.h, saturation: self.values.s, brightness: self.values.b, alpha: 1.0)
     }
     
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.values = color.hsb
         self.backingColor = color
     }
     
-    init(rgb: UInt32) {
+    public init(rgb: UInt32) {
         self.init(color: UIColor(rgb: rgb))
     }
     
-    var color: UIColor {
+    public var color: UIColor {
         return self.backingColor
     }
 }

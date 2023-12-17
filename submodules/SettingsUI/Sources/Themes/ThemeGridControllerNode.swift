@@ -15,6 +15,7 @@ import AccountContext
 import SearchBarNode
 import SearchUI
 import WallpaperResources
+import WallpaperGalleryScreen
 
 struct ThemeGridControllerNodeState: Equatable {
     var editing: Bool

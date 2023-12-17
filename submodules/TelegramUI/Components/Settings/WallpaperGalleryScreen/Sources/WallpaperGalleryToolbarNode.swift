@@ -5,12 +5,12 @@ import Display
 import TelegramPresentationData
 import ManagedAnimationNode
 
-enum WallpaperGalleryToolbarCancelButtonType {
+public enum WallpaperGalleryToolbarCancelButtonType {
     case cancel
     case discard
 }
 
-enum WallpaperGalleryToolbarDoneButtonType {
+public enum WallpaperGalleryToolbarDoneButtonType {
     case set
     case setPeer(String, Bool)
     case setChannel
@@ -19,7 +19,7 @@ enum WallpaperGalleryToolbarDoneButtonType {
     case none
 }
 
-protocol WallpaperGalleryToolbar: ASDisplayNode {
+public protocol WallpaperGalleryToolbar: ASDisplayNode {
     var cancelButtonType: WallpaperGalleryToolbarCancelButtonType { get set }
     var doneButtonType: WallpaperGalleryToolbarDoneButtonType { get set }
     
@@ -31,7 +31,7 @@ protocol WallpaperGalleryToolbar: ASDisplayNode {
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition)
 }
 
-final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar {
+public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar {
     class ButtonNode: ASDisplayNode {
         private let doneButton = HighlightTrackingButtonNode()
         private var doneButtonBackgroundNode: ASDisplayNode
@@ -205,18 +205,18 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
     private var theme: PresentationTheme
     private let strings: PresentationStrings
     
-    var cancelButtonType: WallpaperGalleryToolbarCancelButtonType {
+    public var cancelButtonType: WallpaperGalleryToolbarCancelButtonType {
         didSet {
             self.updateThemeAndStrings(theme: self.theme, strings: self.strings)
         }
     }
-    var doneButtonType: WallpaperGalleryToolbarDoneButtonType {
+    public var doneButtonType: WallpaperGalleryToolbarDoneButtonType {
         didSet {
             self.updateThemeAndStrings(theme: self.theme, strings: self.strings)
         }
     }
     
-    var dark: Bool = false {
+    public var dark: Bool = false {
         didSet {
             self.applyButton.dark = self.dark
             self.applyForBothButton.dark = self.dark
@@ -226,10 +226,10 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
     private let applyButton = ButtonNode()
     private let applyForBothButton = ButtonNode()
     
-    var cancel: (() -> Void)?
-    var done: ((Bool) -> Void)?
+    public var cancel: (() -> Void)?
+    public var done: ((Bool) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, cancelButtonType: WallpaperGalleryToolbarCancelButtonType = .cancel, doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, cancelButtonType: WallpaperGalleryToolbarCancelButtonType = .cancel, doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set) {
         self.theme = theme
         self.strings = strings
         self.cancelButtonType = cancelButtonType
@@ -256,13 +256,13 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
         }
     }
     
-    func setDoneEnabled(_ enabled: Bool) {
+    public func setDoneEnabled(_ enabled: Bool) {
         self.applyButton.setEnabled(enabled)
         self.applyForBothButton.setEnabled(enabled)
     }
     
     private var isSolid = false
-    func setDoneIsSolid(_ isSolid: Bool, transition: ContainedViewLayoutTransition) {
+    public func setDoneIsSolid(_ isSolid: Bool, transition: ContainedViewLayoutTransition) {
         guard self.isSolid != isSolid else {
             return
         }
@@ -272,7 +272,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
         self.applyForBothButton.setIsSolid(isSolid, transition: transition)
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
                 
         let applyTitle: String
@@ -303,7 +303,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
         self.applyForBothButton.isLocked = applyForBothLocked
     }
     
-    func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let inset: CGFloat = 16.0
         let buttonHeight: CGFloat = 50.0
         
@@ -329,16 +329,16 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
     }
 }
 
-final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalleryToolbar {
+public final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalleryToolbar {
     private var theme: PresentationTheme
     private let strings: PresentationStrings
     
-    var cancelButtonType: WallpaperGalleryToolbarCancelButtonType {
+    public var cancelButtonType: WallpaperGalleryToolbarCancelButtonType {
         didSet {
             self.updateThemeAndStrings(theme: self.theme, strings: self.strings)
         }
     }
-    var doneButtonType: WallpaperGalleryToolbarDoneButtonType {
+    public var doneButtonType: WallpaperGalleryToolbarDoneButtonType {
         didSet {
             self.updateThemeAndStrings(theme: self.theme, strings: self.strings)
         }
@@ -352,10 +352,10 @@ final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalleryToolb
     private let separatorNode = ASDisplayNode()
     private let topSeparatorNode = ASDisplayNode()
     
-    var cancel: (() -> Void)?
-    var done: ((Bool) -> Void)?
+    public var cancel: (() -> Void)?
+    public var done: ((Bool) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, cancelButtonType: WallpaperGalleryToolbarCancelButtonType = .cancel, doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, cancelButtonType: WallpaperGalleryToolbarCancelButtonType = .cancel, doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set) {
         self.theme = theme
         self.strings = strings
         self.cancelButtonType = cancelButtonType
@@ -404,12 +404,12 @@ final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalleryToolb
         self.doneButton.addTarget(self, action: #selector(self.donePressed), forControlEvents: .touchUpInside)
     }
     
-    func setDoneEnabled(_ enabled: Bool) {
+    public func setDoneEnabled(_ enabled: Bool) {
         self.doneButton.alpha = enabled ? 1.0 : 0.4
         self.doneButton.isUserInteractionEnabled = enabled
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
@@ -440,7 +440,7 @@ final class WallpaperGalleryOldToolbarNode: ASDisplayNode, WallpaperGalleryToolb
         self.doneButton.setTitle(doneTitle, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
     }
     
-    func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.cancelButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
         self.cancelHighlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: floor(size.width / 2.0), height: size.height))
         self.doneButton.frame = CGRect(origin: CGPoint(x: floor(size.width / 2.0), y: 0.0), size: CGSize(width: size.width - floor(size.width / 2.0), height: size.height))

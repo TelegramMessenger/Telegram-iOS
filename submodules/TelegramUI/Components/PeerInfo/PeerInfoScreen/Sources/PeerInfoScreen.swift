@@ -531,7 +531,6 @@ private final class PeerInfoInteraction {
     let performBotCommand: (PeerInfoBotCommand) -> Void
     let editingOpenPublicLinkSetup: () -> Void
     let editingOpenNameColorSetup: () -> Void
-    let editingOpenPeerWallpaperSetup: () -> Void
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingToggleMessageSignatures: (Bool) -> Void
@@ -587,7 +586,6 @@ private final class PeerInfoInteraction {
         performBotCommand: @escaping (PeerInfoBotCommand) -> Void,
         editingOpenPublicLinkSetup: @escaping () -> Void,
         editingOpenNameColorSetup: @escaping () -> Void,
-        editingOpenPeerWallpaperSetup: @escaping () -> Void,
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
@@ -642,7 +640,6 @@ private final class PeerInfoInteraction {
         self.performBotCommand = performBotCommand
         self.editingOpenPublicLinkSetup = editingOpenPublicLinkSetup
         self.editingOpenNameColorSetup = editingOpenNameColorSetup
-        self.editingOpenPeerWallpaperSetup = editingOpenPeerWallpaperSetup
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
@@ -1581,7 +1578,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             case .broadcast:
                 let ItemUsername = 1
                 let ItemPeerColor = 2
-                let ItemPeerWallpaper = 3
                 let ItemInviteLinks = 4
                 let ItemDiscussionGroup = 5
                 let ItemSignMessages = 6
@@ -1682,10 +1678,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: "Appearance", icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
-                    }))
-                    
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerWallpaper, label: .none, text: "Wallpaper", icon: UIImage(bundleImageName: "Settings/Menu/Appearance"), action: {
-                        interaction.editingOpenPeerWallpaperSetup()
                     }))
                 }
                 
@@ -2363,9 +2355,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             editingOpenNameColorSetup: { [weak self] in
                 self?.editingOpenNameColorSetup()
-            },
-            editingOpenPeerWallpaperSetup: { [weak self] in
-                self?.editingOpenPeerWallpaperSetup()
             },
             editingOpenInviteLinksSetup: { [weak self] in
                 self?.editingOpenInviteLinksSetup()
@@ -7209,80 +7198,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
         }
     }
-    
-    private func editingOpenPeerWallpaperSetup() {      
-//        let link = status.url
-//        let controller = PremiumLimitScreen(context: context, subject: .storiesChannelBoost(peer: peer, boostSubject: .nameColors, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: {
-//            UIPasteboard.general.string = link
-//            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-//            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
-//            return true
-//        }, openStats: nil, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? {
-//            let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
-//            pushImpl?(controller)
-//        } : nil)
-//        pushImpl?(controller)
         
-        let dismissControllers = { [weak self] in
-            if let self, let navigationController = self.controller?.navigationController as? NavigationController {
-                let controllers = navigationController.viewControllers.filter({ controller in
-                    if controller is WallpaperGalleryController || controller is AttachmentController || controller is PeerInfoScreenImpl {
-                        return false
-                    }
-                    return true
-                })
-                navigationController.setViewControllers(controllers, animated: true)
-            }
-        }
-        var openWallpaperPickerImpl: ((Bool) -> Void)?
-        let openWallpaperPicker: (Bool) -> Void = { [weak self] animateAppearance in
-            guard let self, let peer = self.data?.peer else {
-                return
-            }
-            let controller = wallpaperMediaPickerController(
-                context: self.context,
-                updatedPresentationData: self.controller?.updatedPresentationData,
-                peer: EnginePeer(peer),
-                animateAppearance: true,
-                completion: { [weak self] _, result in
-                    guard let strongSelf = self, let asset = result as? PHAsset else {
-                        return
-                    }
-                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
-                    controller.navigationPresentation = .modal
-                    controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness, forBoth in
-                        if let strongSelf = self {
-                            uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peer.id, forBoth: forBoth, completion: {
-                                Queue.mainQueue().after(0.3, {
-                                    dismissControllers()
-                                })
-                            })
-                        }
-                    }
-                    strongSelf.controller?.push(controller)
-                },
-                openColors: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let controller = standaloneColorPickerController(context: strongSelf.context, peer: EnginePeer(peer), push: { [weak self] controller in
-                        if let strongSelf = self {
-                            strongSelf.controller?.push(controller)
-                        }
-                    }, openGallery: {
-                        openWallpaperPickerImpl?(false)
-                    })
-                    controller.navigationPresentation = .flatModal
-                    strongSelf.controller?.push(controller)
-                }
-            )
-            controller.navigationPresentation = .flatModal
-            self.controller?.push(controller)
-        }
-        openWallpaperPickerImpl = openWallpaperPicker
-        openWallpaperPicker(true)
-    }
-    
     private func editingOpenInviteLinksSetup() {
         self.controller?.push(inviteLinkListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, admin: nil))
     }

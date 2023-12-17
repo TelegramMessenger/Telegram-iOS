@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Photos
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
@@ -29,6 +30,8 @@ import EmojiStatusComponent
 import DynamicCornerRadiusView
 import ComponentDisplayAdapters
 import WallpaperResources
+import MediaPickerUI
+import WallpaperGalleryScreen
 
 private final class EmojiActionIconComponent: Component {
     let context: AccountContext
@@ -590,6 +593,58 @@ final class ChannelAppearanceScreenComponent: Component {
             self.environment?.controller()?.push(statsController)
         }
         
+        private func openCustomWallpaperSetup() {
+            guard let _ = self.component, let contentsData = self.contentsData else {
+                return
+            }
+//            let dismissControllers = { [weak self] in
+//                if let self, let navigationController = self.controller?.navigationController as? NavigationController {
+//                    let controllers = navigationController.viewControllers.filter({ controller in
+//                        if controller is WallpaperGalleryController || controller is AttachmentController || controller is PeerInfoScreenImpl {
+//                            return false
+//                        }
+//                        return true
+//                    })
+//                    navigationController.setViewControllers(controllers, animated: true)
+//                }
+//            }
+//            var openWallpaperPickerImpl: ((Bool) -> Void)?
+            let openWallpaperPicker: (Bool) -> Void = { [weak self] animateAppearance in
+                guard let self, let component = self.component, let peer = contentsData.peer else {
+                    return
+                }
+                let controller = wallpaperMediaPickerController(
+                    context: component.context,
+                    updatedPresentationData: nil,
+                    peer: peer,
+                    animateAppearance: true,
+                    completion: { [weak self] _, result in
+                        guard let self, let component = self.component, let asset = result as? PHAsset else {
+                            return
+                        }
+                        let controller = WallpaperGalleryController(context: component.context, source: .asset(asset), mode: .peer(peer, false))
+                        controller.navigationPresentation = .modal
+                        controller.apply = { wallpaper, options, editedImage, cropRect, brightness, forBoth in
+//                            if let strongSelf = self {
+//                                uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peer.id, forBoth: forBoth, completion: {
+//                                    Queue.mainQueue().after(0.3, {
+//                                        dismissControllers()
+//                                    })
+//                                })
+//                            }
+                        }
+                        self.environment?.controller()?.push(controller)
+                    },
+                    openColors: {
+                    }
+                )
+                controller.navigationPresentation = .flatModal
+                self.environment?.controller()?.push(controller)
+            }
+//            openWallpaperPickerImpl = openWallpaperPicker
+            openWallpaperPicker(true)
+        }
+        
         private enum EmojiSetupSubject {
             case reply
             case profile
@@ -1055,7 +1110,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                     guard let self else {
                                         return
                                     }
-                                    let _ = self
+                                    self.openCustomWallpaperSetup()
                                 }
                             )))
                         ]

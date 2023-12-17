@@ -23,6 +23,7 @@ import UndoUI
 import WebsiteType
 import GalleryData
 import StoryContainerScreen
+import WallpaperGalleryScreen
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
     var story: TelegramMediaStory?
