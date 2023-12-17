@@ -1751,7 +1751,7 @@ final class MediaEditorScreenComponent: Component {
                                 ),
                                 colors: ["__allcolors__": .white],
                                 size: CGSize(width: 30.0, height: 30.0)
-                            ).tagged(muteButtonTag)
+                            ).tagged(dayNightButtonTag)
                         )
                     )
                 } else {
@@ -1821,11 +1821,11 @@ final class MediaEditorScreenComponent: Component {
                 
                 topButtonOffsetX += 50.0
             } else {
-                if let muteButtonView = self.muteButton.view, muteButtonView.superview != nil {
-                    muteButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak muteButtonView] _ in
-                        muteButtonView?.removeFromSuperview()
+                if let doneButtonView = self.doneButton.view, doneButtonView.superview != nil {
+                    doneButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak doneButtonView] _ in
+                        doneButtonView?.removeFromSuperview()
                     })
-                    muteButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    doneButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
             }
             

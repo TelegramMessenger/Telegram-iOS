@@ -10759,3 +10759,5 @@ Sorry for the inconvenience.";
 "Story.MessageReposted.Channel" = "Message reposted to **%@**.";
 
 "Story.Views.Commented" = " • commented";
+
+"Share.RepostToStory" = "Repost\nto Story";

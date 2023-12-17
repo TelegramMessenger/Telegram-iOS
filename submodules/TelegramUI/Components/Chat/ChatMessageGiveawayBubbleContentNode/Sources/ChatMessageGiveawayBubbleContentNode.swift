@@ -625,6 +625,10 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                         if let strongSelf = self {
                             if strongSelf.item == nil {
                                 strongSelf.animationNode.autoplay = true
+                                if let animationNode = strongSelf.animationNode as? DefaultAnimatedStickerNodeImpl, item.presentationData.isPreview {
+                                    animationNode.displaysAsynchronously = false
+                                    animationNode.forceSynchronous = true
+                                }
                                 strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 384, height: 384, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
                             }
                             strongSelf.item = item

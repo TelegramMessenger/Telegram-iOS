@@ -861,7 +861,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 let statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                     context: context,
                     presentationData: presentationData,
-                    edited: dateAndStatus.edited,
+                    edited: dateAndStatus.edited && !presentationData.isPreview,
                     impressionCount: dateAndStatus.viewCount,
                     dateText: dateAndStatus.dateText,
                     type: dateAndStatus.type,
