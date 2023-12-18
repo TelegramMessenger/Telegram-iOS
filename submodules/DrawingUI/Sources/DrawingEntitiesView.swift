@@ -837,12 +837,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     selectionView.handlePan(gestureRecognizer)
                 }
             }
-        }
-        else if self.autoSelectEntities, gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
+        } else if self.autoSelectEntities, gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
             self.selectEntity(viewToSelect.entity, animate: false)
             self.onInteractionUpdated(true)
-        }
-        else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+        } else if gestureRecognizer.numberOfTouches == 2, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
     }
@@ -963,7 +961,7 @@ public class DrawingEntityView: UIView {
         }
                 
         selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
-        selectionView.layer.animateScale(from: 0.87, to: 1.0, duration: 0.2, delay: 0.1)
+        selectionView.layer.animateScale(from: 0.88, to: 1.0, duration: 0.23, delay: 0.1)
         
         let values = [self.entity.scale, self.entity.scale * 0.88, self.entity.scale]
         let keyTimes = [0.0, 0.33, 1.0]

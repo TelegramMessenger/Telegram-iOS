@@ -51,7 +51,7 @@ public struct UserLimitsConfiguration: Equatable {
             maxStoriesSuggestedReactions: 1,
             maxGiveawayChannelsCount: 10,
             maxGiveawayCountriesCount: 10,
-            maxGiveawayPeriodSeconds: 86400 * 7,
+            maxGiveawayPeriodSeconds: 86400 * 31,
             maxChannelRecommendationsCount: 10
         )
     }

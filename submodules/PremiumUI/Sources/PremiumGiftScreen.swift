@@ -876,10 +876,10 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.inProgress = true
             self.updateInProgress(true)
             self.updated(transition: .immediate)
-            
+                        
             let purpose: AppStoreTransactionPurpose
             var quantity: Int32 = 1
-            if self.peerIds.count > 1 {
+            if case .settings = self.source {
                 purpose = .giftCode(peerIds: self.peerIds, boostPeer: nil, currency: currency, amount: amount)
                 quantity = Int32(self.peerIds.count)
             } else if let peerId = self.peerIds.first {

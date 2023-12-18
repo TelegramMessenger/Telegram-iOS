@@ -2432,7 +2432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let self else {
                             return
                         }
-                        Queue.mainQueue().after(0.1) {
+                        Queue.mainQueue().after(0.15) {
                             self.openStorySharing(messages: messages)
                         }
                     }
@@ -18824,7 +18824,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         text = self.presentationData.strings.Story_MessageReposted_Personal
                     }
-                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .succeed(text: text, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    Queue.mainQueue().after(0.25) {
+                        self.present(UndoOverlayController(
+                            presentationData: self.presentationData,
+                            content: .forward(savedMessages: false, text: text),
+                            elevatedLayout: false,
+                            action: { _ in return false }
+                        ), in: .current)
+                        
+                        Queue.mainQueue().after(0.1) {
+                            self.chatDisplayNode.hapticFeedback.success()
+                        }
+                    }
                 })
 
             }
