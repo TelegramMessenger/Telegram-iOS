@@ -650,8 +650,8 @@ final class VideoContainerView: HighlightTrackingButton {
                     disappearingFitVideoSize = videoLayout.effectiveVideoFrame.size
                 }
                 
-                let disappearingVideoSize = initialDisappearingVideoSize.aspectFilled(disappearingFitVideoSize)
-                transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: CGPoint(x: videoLayout.rotatedVideoSize.width * 0.5, y: videoLayout.rotatedVideoSize.height * 0.5))
+                let disappearingVideoSize = disappearingVideoLayout.rotatedVideoSize.aspectFilled(disappearingFitVideoSize)
+                transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: CGPoint(x: videoLayout.effectiveVideoFrame.width * 0.5, y: videoLayout.effectiveVideoFrame.height * 0.5))
                 transition.setBounds(layer: disappearingVideoLayer.videoLayer, bounds: CGRect(origin: CGPoint(), size: disappearingVideoSize))
                 transition.setPosition(layer: disappearingVideoLayer.videoLayer.blurredLayer, position: videoLayout.rotatedVideoFrame.center)
                 transition.setBounds(layer: disappearingVideoLayer.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: disappearingVideoSize))
@@ -709,7 +709,6 @@ final class VideoContainerView: HighlightTrackingButton {
             let videoResolution = rotatedResolution.aspectFittedOrSmaller(CGSize(width: 1280, height: 1280)).aspectFittedOrSmaller(CGSize(width: videoSize.width * 3.0, height: videoSize.height * 3.0))
             let rotatedVideoResolution = videoIsRotated ? CGSize(width: videoResolution.height, height: videoResolution.width) : videoResolution
             
-            let rotatedBoundingSize = videoIsRotated ? CGSize(width: params.size.height, height: params.size.width) : params.size
             let rotatedVideoSize = videoIsRotated ? CGSize(width: videoSize.height, height: videoSize.width) : videoSize
             let rotatedVideoBoundingSize = params.size
             let rotatedVideoFrame = CGRect(origin: CGPoint(x: floor((rotatedVideoBoundingSize.width - rotatedVideoSize.width) * 0.5), y: floor((rotatedVideoBoundingSize.height - rotatedVideoSize.height) * 0.5)), size: rotatedVideoSize)
@@ -733,8 +732,8 @@ final class VideoContainerView: HighlightTrackingButton {
             })
             
             transition.setPosition(layer: self.videoContainerLayer, position: CGPoint(x: params.size.width * 0.5, y: params.size.height * 0.5))
-            transition.setBounds(layer: self.videoContainerLayer, bounds: CGRect(origin: CGPoint(), size: rotatedBoundingSize))
-            self.videoContainerLayer.update(size: rotatedBoundingSize, transition: transition)
+            transition.setBounds(layer: self.videoContainerLayer, bounds: CGRect(origin: CGPoint(), size: params.size))
+            self.videoContainerLayer.update(size: params.size, transition: transition)
             
             var videoTransition = transition
             if self.videoLayer.bounds.isEmpty {
@@ -745,7 +744,7 @@ final class VideoContainerView: HighlightTrackingButton {
                 }
             }
             
-            let videoFrame = rotatedVideoSize.centered(around: CGPoint(x: rotatedBoundingSize.width * 0.5, y: rotatedBoundingSize.height * 0.5))
+            let videoFrame = rotatedVideoSize.centered(around: CGPoint(x: params.size.width * 0.5, y: params.size.height * 0.5))
             
             if let disappearingVideoLayer = self.disappearingVideoLayer {
                 self.disappearingVideoLayer = nil

@@ -128,7 +128,7 @@ public final class ViewController: UIViewController {
                 return
             }
             if self.callState.localVideo == nil {
-                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test3", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.0)
+                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test3", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.5)
             } else {
                 self.callState.localVideo = nil
             }
