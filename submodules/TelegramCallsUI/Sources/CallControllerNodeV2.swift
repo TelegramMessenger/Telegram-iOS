@@ -20,6 +20,14 @@ import DeviceAccess
 import LibYuvBinding
 
 final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeProtocol {
+    private struct PanGestureState {
+        var offsetFraction: CGFloat
+        
+        init(offsetFraction: CGFloat) {
+            self.offsetFraction = offsetFraction
+        }
+    }
+    
     private let sharedContext: SharedAccountContext
     private let account: Account
     private let presentationData: PresentationData
@@ -64,6 +72,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private var localVideo: AdaptedCallVideoSource?
     private var remoteVideo: AdaptedCallVideoSource?
     
+    private var panGestureState: PanGestureState?
+    private var notifyDismissedInteractivelyOnPanGestureApply: Bool = false
+    
     init(
         sharedContext: SharedAccountContext,
         account: Account,
@@ -80,6 +91,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         self.call = call
         
         self.containerView = UIView()
+        self.containerView.clipsToBounds = true
         self.callScreen = PrivateCallScreen()
         
         super.init()
@@ -174,6 +186,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             self.callScreen.addIncomingAudioLevel(value: audioLevel)
         })
+        
+        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
     
     deinit {
@@ -257,7 +271,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                             
                             var updateLayoutImpl: ((ContainerViewLayout, CGFloat) -> Void)?
                             
-                            let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: { [weak self] in
+                            let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, displayPlaceholderUntilReady: true, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: { [weak self] in
                                 guard let self, let (layout, navigationBarHeight) = self.validLayout else {
                                     return
                                 }
@@ -357,7 +371,11 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 case let .ended(type):
                     switch type {
                     case .missed:
-                        mappedReason = .missed
+                        if self.call.isOutgoing {
+                            mappedReason = .hangUp
+                        } else {
+                            mappedReason = .missed
+                        }
                     case .busy:
                         mappedReason = .busy
                     case .hungUp:
@@ -517,6 +535,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
 
     func animateIn() {
+        self.panGestureState = nil
+        self.update(transition: .immediate)
+        
         if !self.containerView.alpha.isZero {
             var bounds = self.bounds
             bounds.origin = CGPoint()
@@ -548,7 +569,34 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
     
     func expandFromPipIfPossible() {
-
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began, .changed:
+            if !self.bounds.height.isZero && !self.notifyDismissedInteractivelyOnPanGestureApply {
+                let translation = recognizer.translation(in: self.view)
+                self.panGestureState = PanGestureState(offsetFraction: translation.y / self.bounds.height)
+                self.update(transition: .immediate)
+            }
+        case .cancelled, .ended:
+            if !self.bounds.height.isZero {
+                let translation = recognizer.translation(in: self.view)
+                let panGestureState = PanGestureState(offsetFraction: translation.y / self.bounds.height)
+                
+                let velocity = recognizer.velocity(in: self.view)
+                
+                self.panGestureState = nil
+                if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
+                    self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
+                    self.notifyDismissedInteractivelyOnPanGestureApply = true
+                }
+                
+                self.update(transition: .animated(duration: 0.4, curve: .spring))
+            }
+        default:
+            break
+        }
     }
     
     private func update(transition: ContainedViewLayoutTransition) {
@@ -561,7 +609,24 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         
-        transition.updateFrame(view: self.containerView, frame: CGRect(origin: CGPoint(), size: layout.size))
+        var containerOffset: CGFloat = 0.0
+        if let panGestureState = self.panGestureState {
+            containerOffset = panGestureState.offsetFraction * layout.size.height
+            self.containerView.layer.cornerRadius = layout.deviceMetrics.screenCornerRadius
+        }
+        
+        transition.updateFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: containerOffset), size: layout.size), completion: { [weak self] completed in
+            guard let self, completed else {
+                return
+            }
+            if self.panGestureState == nil {
+                self.containerView.layer.cornerRadius = 0.0
+            }
+            if self.notifyDismissedInteractivelyOnPanGestureApply {
+                self.notifyDismissedInteractivelyOnPanGestureApply = false
+                self.dismissedInteractively?()
+            }
+        })
         transition.updateFrame(view: self.callScreen, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         if var callScreenState = self.callScreenState {

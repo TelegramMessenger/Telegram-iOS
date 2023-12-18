@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AppBundle
 
 private func addRoundedRectPath(context: CGContext, rect: CGRect, radius: CGFloat) {
     context.saveGState()
@@ -41,6 +42,7 @@ final class EmojiTooltipView: OverlayMaskContainerView {
     private let text: String
     
     private let backgroundView: UIImageView
+    private let iconView: UIImageView
     private let textView: TextView
     
     private var currentLayout: Layout?
@@ -50,18 +52,18 @@ final class EmojiTooltipView: OverlayMaskContainerView {
         
         self.backgroundView = UIImageView()
         
+        self.iconView = UIImageView()
         self.textView = TextView()
         
         super.init(frame: CGRect())
         
         self.maskContents.addSubview(self.backgroundView)
+        self.addSubview(self.iconView)
         self.addSubview(self.textView)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-        
-        
     }
     
     func animateIn() {
@@ -92,9 +94,16 @@ final class EmojiTooltipView: OverlayMaskContainerView {
     }
         
     private func update(params: Params) -> CGSize {
-        let horizontalInset: CGFloat = 12.0
+        let horizontalInset: CGFloat = 13.0
         let verticalInset: CGFloat = 10.0
         let arrowHeight: CGFloat = 8.0
+        let iconSpacing: CGFloat = 5.0
+        
+        if self.iconView.image == nil {
+            self.iconView.image = UIImage(bundleImageName: "Call/EmojiTooltipLock")?.withRenderingMode(.alwaysTemplate)
+            self.iconView.tintColor = .white
+        }
+        let iconSize = self.iconView.image?.size ?? CGSize(width: 12.0, height: 12.0)
         
         let textSize = self.textView.update(
             string: self.text,
@@ -105,9 +114,11 @@ final class EmojiTooltipView: OverlayMaskContainerView {
             transition: .immediate
         )
         
-        let size = CGSize(width: textSize.width + horizontalInset * 2.0, height: arrowHeight + textSize.height + verticalInset * 2.0)
+        let size = CGSize(width: iconSize.width + iconSpacing + textSize.width + horizontalInset * 2.0, height: arrowHeight + textSize.height + verticalInset * 2.0)
         
-        self.textView.frame = CGRect(origin: CGPoint(x: horizontalInset, y: arrowHeight + verticalInset), size: textSize)
+        self.iconView.frame = CGRect(origin: CGPoint(x: horizontalInset, y: arrowHeight + verticalInset + floorToScreenPixels((textSize.height - iconSize.height) * 0.5)), size: iconSize)
+        
+        self.textView.frame = CGRect(origin: CGPoint(x: horizontalInset + iconSize.width + iconSpacing, y: arrowHeight + verticalInset), size: textSize)
         
         self.backgroundView.image = generateImage(size, rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))

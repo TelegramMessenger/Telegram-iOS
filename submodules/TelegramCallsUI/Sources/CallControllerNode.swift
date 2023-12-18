@@ -17,6 +17,7 @@ import AlertUI
 import PresentationDataUtils
 import DeviceAccess
 import ContextUI
+import AppBundle
 
 private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
     return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
@@ -27,6 +28,8 @@ private func interpolate(from: CGFloat, to: CGFloat, value: CGFloat) -> CGFloat 
 }
 
 final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
+    private var placeholderImageNode: ASImageNode?
+    
     private let videoTransformContainer: ASDisplayNode
     private let videoView: PresentationCallVideoView
     
@@ -52,7 +55,7 @@ final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
     
     private var previousVideoHeight: CGFloat?
     
-    init(videoView: PresentationCallVideoView, disabledText: String?, assumeReadyAfterTimeout: Bool, isReadyUpdated: @escaping () -> Void, orientationUpdated: @escaping () -> Void, isFlippedUpdated: @escaping (CallVideoNode) -> Void) {
+    init(videoView: PresentationCallVideoView, displayPlaceholderUntilReady: Bool = false, disabledText: String?, assumeReadyAfterTimeout: Bool, isReadyUpdated: @escaping () -> Void, orientationUpdated: @escaping () -> Void, isFlippedUpdated: @escaping (CallVideoNode) -> Void) {
         self.isReadyUpdated = isReadyUpdated
         self.isFlippedUpdated = isFlippedUpdated
         
@@ -80,6 +83,13 @@ final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
         self.videoTransformContainer.view.addSubview(self.videoView.view)
         self.addSubnode(self.videoTransformContainer)
         
+        if displayPlaceholderUntilReady {
+            let placeholderImageNode = ASImageNode()
+            placeholderImageNode.image = UIImage(bundleImageName: "Camera/SelfiePlaceholder")
+            self.placeholderImageNode = placeholderImageNode
+            self.addSubnode(placeholderImageNode)
+        }
+        
         if let disabledText = disabledText {
             self.videoPausedNode.attributedText = NSAttributedString(string: disabledText, font: Font.regular(17.0), textColor: .white)
             self.addSubnode(self.videoPausedNode)
@@ -95,6 +105,13 @@ final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
                     strongSelf.readyPromise.set(true)
                     strongSelf.isReadyTimer?.invalidate()
                     strongSelf.isReadyUpdated()
+                    
+                    if let placeholderImageNode = strongSelf.placeholderImageNode {
+                        strongSelf.placeholderImageNode = nil
+                        placeholderImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak placeholderImageNode] _ in
+                            placeholderImageNode?.removeFromSupernode()
+                        })
+                    }
                 }
             }
         }
@@ -190,6 +207,11 @@ final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
     
     func updateLayout(size: CGSize, cornerRadius: CGFloat, isOutgoing: Bool, deviceOrientation: UIDeviceOrientation, isCompactLayout: Bool, transition: ContainedViewLayoutTransition) {
         self.currentCornerRadius = cornerRadius
+        
+        if let placeholderImageNode = self.placeholderImageNode, let image = placeholderImageNode.image {
+            let placeholderSize = image.size.aspectFilled(size)
+            transition.updateFrame(node: placeholderImageNode, frame: CGRect(origin: CGPoint(x: (size.width - placeholderSize.width) * 0.5, y: (size.height - placeholderSize.height) * 0.5), size: placeholderSize))
+        }
         
         var rotationAngle: CGFloat
         if false && isOutgoing && isCompactLayout {

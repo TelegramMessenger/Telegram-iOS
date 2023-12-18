@@ -323,8 +323,11 @@ public final class CallController: ViewController {
         }
         
         self.controllerNode.dismissedInteractively = { [weak self] in
-            self?.didPlayPresentationAnimation = false
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            guard let self else {
+                return
+            }
+            self.didPlayPresentationAnimation = false
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
         self.peerDisposable = (combineLatest(self.account.postbox.peerView(id: self.account.peerId) |> take(1), self.account.postbox.peerView(id: self.call.peerId), self.sharedContext.activeAccountsWithInfo |> take(1))

@@ -715,16 +715,16 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         var notices: [ButtonGroupView.Notice] = []
         if !isTerminated {
             if params.state.isLocalAudioMuted {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), text: "Your microphone is turned off"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), icon: "Call/CallToastMicrophone", text: "Your microphone is turned off"))
             }
             if params.state.isRemoteAudioMuted {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), text: "\(params.state.shortName)'s microphone is turned off"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), icon: "Call/CallToastMicrophone", text: "\(params.state.shortName)'s microphone is turned off"))
             }
             if params.state.remoteVideo != nil && params.state.localVideo == nil {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), text: "Your camera is turned off"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: "Your camera is turned off"))
             }
             if params.state.isRemoteBatteryLow {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), text: "\(params.state.shortName)'s battery is low"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), icon: "Call/CallToastBattery", text: "\(params.state.shortName)'s battery is low"))
             }
         }
         

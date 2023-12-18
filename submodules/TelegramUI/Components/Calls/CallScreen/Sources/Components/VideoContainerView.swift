@@ -488,6 +488,7 @@ final class VideoContainerView: HighlightTrackingButton {
     
     private struct MinimizedLayout {
         var videoIsRotated: Bool
+        var videoSize: CGSize
         var rotatedVideoSize: CGSize
         var rotatedVideoResolution: CGSize
         var rotatedVideoFrame: CGRect
@@ -538,6 +539,7 @@ final class VideoContainerView: HighlightTrackingButton {
         
         return MinimizedLayout(
             videoIsRotated: videoIsRotated,
+            videoSize: videoSize,
             rotatedVideoSize: rotatedVideoSize,
             rotatedVideoResolution: rotatedVideoResolution,
             rotatedVideoFrame: rotatedVideoFrame,
@@ -563,20 +565,20 @@ final class VideoContainerView: HighlightTrackingButton {
             
             let videoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: videoMetrics, resolvedRotationAngle: resolvedRotationAngle, applyDragPosition: true)
             
-            transition.setPosition(layer: self.videoContainerLayer, position: videoLayout.rotatedVideoFrame.center)
+            transition.setPosition(layer: self.videoContainerLayer, position: videoLayout.effectiveVideoFrame.center)
             
             self.videoContainerLayer.contentsLayer.masksToBounds = true
             if self.disappearingVideoLayer != nil {
                 self.videoContainerLayer.contentsLayer.backgroundColor = UIColor.black.cgColor
             }
-            transition.setBounds(layer: self.videoContainerLayer, bounds: CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize), completion: { [weak self] completed in
+            transition.setBounds(layer: self.videoContainerLayer, bounds: CGRect(origin: CGPoint(), size: videoLayout.effectiveVideoFrame.size), completion: { [weak self] completed in
                 guard let self, completed else {
                     return
                 }
                 self.videoContainerLayer.contentsLayer.masksToBounds = false
                 self.videoContainerLayer.contentsLayer.backgroundColor = nil
             })
-            self.videoContainerLayer.update(size: videoLayout.rotatedVideoSize, transition: transition)
+            self.videoContainerLayer.update(size: videoLayout.effectiveVideoFrame.size, transition: transition)
             
             var videoTransition = transition
             if self.videoLayer.bounds.isEmpty {
@@ -587,30 +589,18 @@ final class VideoContainerView: HighlightTrackingButton {
                 self.disappearingVideoLayer = nil
                 
                 let disappearingVideoLayout = self.calculateMinimizedLayout(params: params, videoMetrics: disappearingVideoLayer.videoMetrics, resolvedRotationAngle: resolveVideoRotationAngle(angle: disappearingVideoLayer.videoMetrics.rotationAngle, followsDeviceOrientation: disappearingVideoLayer.videoMetrics.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation), applyDragPosition: true)
-                let initialDisapparingVideoSize = disappearingVideoLayout.rotatedVideoSize
+                let initialDisappearingVideoSize = disappearingVideoLayout.effectiveVideoFrame.size
                 
                 if !disappearingVideoLayer.isAlphaAnimationInitiated {
                     disappearingVideoLayer.isAlphaAnimationInitiated = true
                     
                     if let flipAnimationInfo = disappearingVideoLayer.flipAnimationInfo {
-                        let resolvedPreviousRotationAngle = resolveVideoRotationAngle(angle: flipAnimationInfo.previousRotationAngle, followsDeviceOrientation: flipAnimationInfo.followsDeviceOrientation, interfaceOrientation: params.interfaceOrientation)
-                        
                         var videoTransform = self.videoContainerLayer.transform
                         var axis: (x: CGFloat, y: CGFloat, z: CGFloat) = (0.0, 0.0, 0.0)
                         let previousVideoScale: CGPoint
-                        if resolvedPreviousRotationAngle == Float.pi * 0.5 {
-                            axis.x = -1.0
-                            previousVideoScale = CGPoint(x: 1.0, y: -1.0)
-                        } else if resolvedPreviousRotationAngle == Float.pi {
-                            axis.y = -1.0
-                            previousVideoScale = CGPoint(x: -1.0, y: -1.0)
-                        } else if resolvedPreviousRotationAngle == Float.pi * 3.0 / 2.0 {
-                            axis.x = 1.0
-                            previousVideoScale = CGPoint(x: 1.0, y: 1.0)
-                        } else {
-                            axis.y = 1.0
-                            previousVideoScale = CGPoint(x: -1.0, y: 1.0)
-                        }
+                        
+                        axis.y = 1.0
+                        previousVideoScale = CGPoint(x: -1.0, y: 1.0)
                         
                         videoTransform = CATransform3DRotate(videoTransform, (flipAnimationInfo.isForward ? 1.0 : -1.0) * CGFloat.pi * 0.9999, axis.x, axis.y, axis.z)
                         self.videoContainerLayer.transform = videoTransform
@@ -618,7 +608,7 @@ final class VideoContainerView: HighlightTrackingButton {
                         disappearingVideoLayer.videoLayer.zPosition = 1.0
                         transition.setZPosition(layer: disappearingVideoLayer.videoLayer, zPosition: -1.0)
                         
-                        disappearingVideoLayer.videoLayer.transform = CATransform3DMakeScale(previousVideoScale.x, previousVideoScale.y, 1.0)
+                        disappearingVideoLayer.videoLayer.transform = CATransform3DConcat(disappearingVideoLayout.videoTransform, CATransform3DMakeScale(previousVideoScale.x, previousVideoScale.y, 1.0))
                         
                         animateFlipDisappearingVideo = disappearingVideoLayer
                         disappearingVideoLayer.videoLayer.blurredLayer.removeFromSuperlayer()
@@ -640,13 +630,27 @@ final class VideoContainerView: HighlightTrackingButton {
                         self.videoLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     
+                    let mappedDisappearingSize: CGSize
+                    if videoLayout.videoIsRotated {
+                        mappedDisappearingSize = CGSize(width: initialDisappearingVideoSize.height, height: initialDisappearingVideoSize.width)
+                    } else {
+                        mappedDisappearingSize = initialDisappearingVideoSize
+                    }
+                    
                     self.videoLayer.position = disappearingVideoLayer.videoLayer.position
-                    self.videoLayer.bounds = CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize.aspectFilled(initialDisapparingVideoSize))
+                    self.videoLayer.bounds = CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize.aspectFilled(mappedDisappearingSize))
                     self.videoLayer.blurredLayer.position = disappearingVideoLayer.videoLayer.blurredLayer.position
-                    self.videoLayer.blurredLayer.bounds = CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize.aspectFilled(initialDisapparingVideoSize))
+                    self.videoLayer.blurredLayer.bounds = CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize.aspectFilled(mappedDisappearingSize))
                 }
                 
-                let disappearingVideoSize = initialDisapparingVideoSize.aspectFilled(videoLayout.rotatedVideoSize)
+                let disappearingFitVideoSize: CGSize
+                if disappearingVideoLayout.videoIsRotated {
+                    disappearingFitVideoSize = CGSize(width: videoLayout.effectiveVideoFrame.size.height, height: videoLayout.effectiveVideoFrame.size.width)
+                } else {
+                    disappearingFitVideoSize = videoLayout.effectiveVideoFrame.size
+                }
+                
+                let disappearingVideoSize = initialDisappearingVideoSize.aspectFilled(disappearingFitVideoSize)
                 transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: CGPoint(x: videoLayout.rotatedVideoSize.width * 0.5, y: videoLayout.rotatedVideoSize.height * 0.5))
                 transition.setBounds(layer: disappearingVideoLayer.videoLayer, bounds: CGRect(origin: CGPoint(), size: disappearingVideoSize))
                 transition.setPosition(layer: disappearingVideoLayer.videoLayer.blurredLayer, position: videoLayout.rotatedVideoFrame.center)
@@ -654,12 +658,13 @@ final class VideoContainerView: HighlightTrackingButton {
             }
             
             let animateFlipDisappearingVideoLayer = animateFlipDisappearingVideo?.videoLayer
-            transition.setTransform(layer: self.videoContainerLayer, transform: videoLayout.videoTransform, completion: { [weak animateFlipDisappearingVideoLayer] _ in
+            transition.setTransform(layer: self.videoContainerLayer, transform: CATransform3DIdentity, completion: { [weak animateFlipDisappearingVideoLayer] _ in
                 animateFlipDisappearingVideoLayer?.removeFromSuperlayer()
             })
             
-            transition.setPosition(layer: self.videoLayer, position: CGPoint(x: videoLayout.rotatedVideoSize.width * 0.5, y: videoLayout.rotatedVideoSize.height * 0.5))
+            transition.setPosition(layer: self.videoLayer, position: CGPoint(x: videoLayout.videoSize.width * 0.5, y: videoLayout.videoSize.height * 0.5))
             transition.setBounds(layer: self.videoLayer, bounds: CGRect(origin: CGPoint(), size: videoLayout.rotatedVideoSize))
+            videoTransition.setTransform(layer: self.videoLayer, transform: videoLayout.videoTransform)
             
             transition.setPosition(layer: self.videoLayer.blurredLayer, position: videoLayout.rotatedVideoFrame.center)
             transition.setAlpha(layer: self.videoLayer.blurredLayer, alpha: 0.0)
@@ -740,11 +745,18 @@ final class VideoContainerView: HighlightTrackingButton {
                 }
             }
             
+            let videoFrame = rotatedVideoSize.centered(around: CGPoint(x: rotatedBoundingSize.width * 0.5, y: rotatedBoundingSize.height * 0.5))
+            
             if let disappearingVideoLayer = self.disappearingVideoLayer {
                 self.disappearingVideoLayer = nil
                 
                 if !disappearingVideoLayer.isAlphaAnimationInitiated {
                     disappearingVideoLayer.isAlphaAnimationInitiated = true
+                    
+                    self.videoLayer.position = disappearingVideoLayer.videoLayer.position
+                    
+                    transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: videoFrame.center)
+                    transition.setPosition(layer: disappearingVideoLayer.videoLayer.blurredLayer, position: videoFrame.center)
                     
                     let alphaTransition: Transition = .easeInOut(duration: 0.2)
                     let disappearingVideoLayerValue = disappearingVideoLayer.videoLayer
@@ -758,10 +770,11 @@ final class VideoContainerView: HighlightTrackingButton {
                 }
             }
             
-            transition.setTransform(layer: self.videoContainerLayer, transform: CATransform3DMakeRotation(CGFloat(resolvedRotationAngle), 0.0, 0.0, 1.0))
+            transition.setPosition(layer: self.videoLayer, position: videoFrame.center)
+            videoTransition.setBounds(layer: self.videoLayer, bounds: CGRect(origin: CGPoint(), size: videoFrame.size))
+            videoTransition.setTransform(layer: self.videoLayer, transform: CATransform3DMakeRotation(CGFloat(resolvedRotationAngle), 0.0, 0.0, 1.0))
             
-            videoTransition.setFrame(layer: self.videoLayer, frame: rotatedVideoSize.centered(around: CGPoint(x: rotatedBoundingSize.width * 0.5, y: rotatedBoundingSize.height * 0.5)))
-            videoTransition.setPosition(layer: self.videoLayer.blurredLayer, position: rotatedVideoFrame.center)
+            transition.setPosition(layer: self.videoLayer.blurredLayer, position: rotatedVideoFrame.center)
             videoTransition.setBounds(layer: self.videoLayer.blurredLayer, bounds: CGRect(origin: CGPoint(), size: rotatedVideoFrame.size))
             videoTransition.setAlpha(layer: self.videoLayer.blurredLayer, alpha: 1.0)
             videoTransition.setTransform(layer: self.videoLayer.blurredLayer, transform: CATransform3DMakeRotation(CGFloat(resolvedRotationAngle), 0.0, 0.0, 1.0))

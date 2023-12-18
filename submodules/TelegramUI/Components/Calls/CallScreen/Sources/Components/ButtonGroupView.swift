@@ -50,10 +50,12 @@ final class ButtonGroupView: OverlayMaskContainerView {
     
     final class Notice {
         let id: AnyHashable
+        let icon: String
         let text: String
         
-        init(id: AnyHashable, text: String) {
+        init(id: AnyHashable, icon: String, text: String) {
             self.id = id
+            self.icon = icon
             self.text = text
         }
     }
@@ -126,7 +128,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     noticesHeight += buttonNoticeSpacing
                 }
             }
-            let noticeSize = noticeView.update(text: notice.text, constrainedWidth: size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
+            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
             let noticeFrame = CGRect(origin: CGPoint(x: floor((size.width - noticeSize.width) * 0.5), y: nextNoticeY - noticeSize.height), size: noticeSize)
             noticesHeight += noticeSize.height
             nextNoticeY -= noticeSize.height + noticeSpacing

@@ -61,11 +61,11 @@ public final class ViewController: UIViewController {
             }
             
             switch self.callState.lifecycleState {
-            case .connecting:
+            case .requesting:
                 self.callState.lifecycleState = .ringing
             case .ringing:
-                self.callState.lifecycleState = .exchangingKeys
-            case .exchangingKeys:
+                self.callState.lifecycleState = .connecting
+            case .connecting:
                 self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: Date().timeIntervalSince1970,
                     signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
@@ -74,6 +74,12 @@ public final class ViewController: UIViewController {
             case var .active(activeState):
                 activeState.signalInfo.quality = activeState.signalInfo.quality == 1.0 ? 0.1 : 1.0
                 self.callState.lifecycleState = .active(activeState)
+            case .reconnecting:
+                self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
+                    startTime: Date().timeIntervalSince1970,
+                    signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
+                    emojiKey: ["😂", "😘", "😍", "😊"]
+                ))
             case .terminated:
                 self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: Date().timeIntervalSince1970,
@@ -113,8 +119,8 @@ public final class ViewController: UIViewController {
             }
             if let input = self.callState.localVideo as? FileVideoSource {
                 input.sourceId = input.sourceId == 0 ? 1 : 0
-                input.fixedRotationAngle = input.sourceId == 0 ? Float.pi * 0.0 : Float.pi * 0.5
-                input.sizeMultiplicator = input.sourceId == 0 ? CGPoint(x: 1.0, y: 1.0) : CGPoint(x: 1.5, y: 1.0)
+                //input.fixedRotationAngle = input.sourceId == 0 ? Float.pi * 0.5 : Float.pi * 0.5
+                //input.sizeMultiplicator = input.sourceId == 0 ? CGPoint(x: 1.0, y: 1.0) : CGPoint(x: 1.0, y: 0.5)
             }
         }
         callScreenView.videoAction = { [weak self] in
@@ -130,7 +136,7 @@ public final class ViewController: UIViewController {
         }
         callScreenView.microhoneMuteAction = {
             if self.callState.remoteVideo == nil {
-                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test4", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.0)
+                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test4", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 1.0)
             } else {
                 self.callState.remoteVideo = nil
             }
@@ -140,7 +146,7 @@ public final class ViewController: UIViewController {
             guard let self else {
                 return
             }
-            self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0))
+            self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0, reason: .hangUp))
             self.callState.remoteVideo = nil
             self.callState.localVideo = nil
             self.callState.isLocalAudioMuted = false
@@ -151,9 +157,8 @@ public final class ViewController: UIViewController {
             guard let self else {
                 return
             }
-            //self.callState.isLocalAudioMuted = !self.callState.isLocalAudioMuted
-            //self.update(transition: .spring(duration: 0.4))
-            self.callScreenView?.beginPictureInPicture()
+            self.callState.isLocalAudioMuted = !self.callState.isLocalAudioMuted
+            self.update(transition: .spring(duration: 0.4))
         }
         callScreenView.closeAction = { [weak self] in
             guard let self else {
