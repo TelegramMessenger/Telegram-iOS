@@ -148,7 +148,10 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        if self.sharedContext.immediateExperimentalUISettings.callUIV2 {
+        if let data = self.call.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_callui_v2"] {
+            self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+            self.isContentsReady.set(.single(true))
+        } else {
             let displayNode = CallControllerNodeV2(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), easyDebugAccess: self.easyDebugAccess, call: self.call)
             self.displayNode = displayNode
             self.isContentsReady.set(displayNode.isReady.get())
@@ -160,9 +163,6 @@ public final class CallController: ViewController {
                 }
                 restoreUIForPictureInPicture(completion)
             }
-        } else {
-            self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
-            self.isContentsReady.set(.single(true))
         }
         self.displayNodeDidLoad()
         

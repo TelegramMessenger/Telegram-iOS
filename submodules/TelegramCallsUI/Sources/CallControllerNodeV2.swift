@@ -66,8 +66,10 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private var peerAvatarDisposable: Disposable?
     
     private var availableAudioOutputs: [AudioSessionOutput]?
+    private var currentAudioOutput: AudioSessionOutput?
     private var isMicrophoneMutedDisposable: Disposable?
     private var audioLevelDisposable: Disposable?
+    private var audioOutputCheckTimer: Foundation.Timer?
     
     private var localVideo: AdaptedCallVideoSource?
     private var remoteVideo: AdaptedCallVideoSource?
@@ -194,10 +196,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         self.peerAvatarDisposable?.dispose()
         self.isMicrophoneMutedDisposable?.dispose()
         self.audioLevelDisposable?.dispose()
+        self.audioOutputCheckTimer?.invalidate()
     }
     
     func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?) {
         self.availableAudioOutputs = availableOutputs
+        self.currentAudioOutput = currentOutput
         
         if var callScreenState = self.callScreenState {
             let mappedOutput: PrivateCallScreen.State.AudioOutput
@@ -218,6 +222,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.audioOutput = mappedOutput
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.3, curve: .spring))
+                
+                self.setupAudioOutputForVideoIfNeeded()
             }
         }
     }
@@ -446,6 +452,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.35, curve: .spring))
             }
+            
+            self.setupAudioOutputForVideoIfNeeded()
         }
         
         if case let .terminated(_, _, reportRating) = callState.state {
@@ -464,6 +472,36 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 })
             } else {
                 self.isReady.set(.single(true))
+            }
+        }
+    }
+    
+    private func setupAudioOutputForVideoIfNeeded() {
+        guard let callScreenState = self.callScreenState, let currentAudioOutput = self.currentAudioOutput else {
+            return
+        }
+        if callScreenState.localVideo != nil || callScreenState.remoteVideo != nil {
+            switch currentAudioOutput {
+            case .headphones, .speaker:
+                break
+            case let .port(port) where port.type == .bluetooth || port.type == .wired:
+                break
+            default:
+                self.setCurrentAudioOutput?(.speaker)
+            }
+            
+            if self.audioOutputCheckTimer == nil {
+                self.audioOutputCheckTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true, block: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.setupAudioOutputForVideoIfNeeded()
+                })
+            }
+        } else {
+            if let audioOutputCheckTimer = self.audioOutputCheckTimer {
+                self.audioOutputCheckTimer = nil
+                audioOutputCheckTimer.invalidate()
             }
         }
     }
