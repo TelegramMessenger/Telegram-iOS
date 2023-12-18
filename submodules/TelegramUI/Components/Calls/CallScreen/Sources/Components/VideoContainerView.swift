@@ -754,6 +754,7 @@ final class VideoContainerView: HighlightTrackingButton {
                     disappearingVideoLayer.isAlphaAnimationInitiated = true
                     
                     self.videoLayer.position = disappearingVideoLayer.videoLayer.position
+                    self.videoLayer.blurredLayer.position = disappearingVideoLayer.videoLayer.blurredLayer.position
                     
                     transition.setPosition(layer: disappearingVideoLayer.videoLayer, position: videoFrame.center)
                     transition.setPosition(layer: disappearingVideoLayer.videoLayer.blurredLayer, position: videoFrame.center)
