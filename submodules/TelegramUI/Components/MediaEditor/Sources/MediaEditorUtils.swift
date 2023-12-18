@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import AVFoundation
 import SwiftSignalKit
+import TelegramCore
+import AccountContext
 
 extension AVPlayer {
     func fadeVolume(from: Float, to: Float, duration: Float, completion: (() -> Void)? = nil) -> SwiftSignalKit.Timer? {
@@ -128,4 +130,22 @@ func getTextureImage(device: MTLDevice, texture: MTLTexture, mirror: Bool = fals
         return nil
     }
     return UIImage(cgImage: cgImage)
+}
+
+public func getChatWallpaperImage(context: AccountContext, messageId: EngineMessage.Id) -> Signal<(CGSize, UIImage?, UIImage?), NoError> {
+    return context.account.postbox.transaction { transaction -> TelegramWallpaper? in
+        return (transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData)?.wallpaper
+    }
+    |> mapToSignal { customWallpaper -> Signal<(CGSize, UIImage?, UIImage?), NoError> in
+        return Signal { subscriber in
+            Queue.mainQueue().async {
+                let wallpaperRenderer = DrawingWallpaperRenderer(context: context, customWallpaper: customWallpaper)
+                wallpaperRenderer.render { size, image, darkImage in
+                    subscriber.putNext((size, image, darkImage))
+                    subscriber.putCompletion()
+                }
+            }
+            return EmptyDisposable
+        }
+    }
 }

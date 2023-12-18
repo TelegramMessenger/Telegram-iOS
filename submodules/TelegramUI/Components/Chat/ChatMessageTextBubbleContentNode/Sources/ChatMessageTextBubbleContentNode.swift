@@ -86,6 +86,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNodeWithEntities
     private var spoilerTextNode: TextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
+    private var moreNode: TextNode?
     
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     public var statusNode: ChatMessageDateAndStatusNode?
@@ -166,6 +167,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let spoilerTextLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
         let statusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.statusNode)
+        let moreLayout = TextNode.asyncLayout(self.moreNode)
         
         let currentCachedChatMessageText = self.cachedChatMessageText
         
@@ -504,21 +506,29 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = updatedString
                 }
                 
-                let cutout: TextNodeCutout? = nil
+                let hideAllAdditionalInfo = item.presentationData.isPreview
+                
+                var moreLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                var cutout: TextNodeCutout? = nil
+                if item.presentationData.isPreview {
+                    moreLayoutAndApply = moreLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Conversation_ReadMore, font: textFont, textColor: messageTheme.accentTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize))
+                    cutout = TextNodeCutout(bottomRight: moreLayoutAndApply?.0.size)
+                }
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
                 
-                let hideAllAdditionalInfo = item.presentationData.isPreview
-                
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 10 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
+                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 12 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
+                if !textLayout.truncated {
+                    moreLayoutAndApply = nil
+                }
                 
                 let spoilerTextLayoutAndApply: (TextNodeLayout, (TextNodeWithEntities.Arguments?) -> TextNodeWithEntities)?
                 if !textLayout.spoilers.isEmpty {
-                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 10 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
+                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: hideAllAdditionalInfo ? 12 : 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true, displayEmbeddedItemsUnderSpoilers: true))
                 } else {
                     spoilerTextLayoutAndApply = nil
                 }
-                
+            
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode))?
                 if let statusType = statusType {
                     var isReplyThread = false
@@ -564,6 +574,14 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: topInset)
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: topInset)
 
+                var readMoreFrame: CGRect = .zero
+                if let (readMoreLayout, _ ) = moreLayoutAndApply {
+                    let remainingLineWidth = textLayout.size.width - textLayout.trailingLineWidth
+                    if readMoreLayout.size.width < remainingLineWidth {
+                        readMoreFrame = CGRect(origin: CGPoint(x: textFrame.maxX - readMoreLayout.size.width - textInsets.right, y: textFrame.maxY - readMoreLayout.size.height - textInsets.bottom), size: readMoreLayout.size)
+                    }
+                }
+                
                 var suggestedBoundingWidth: CGFloat = textFrameWithoutInsets.width
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
@@ -654,6 +672,19 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
+                            if let (_, moreApply) = moreLayoutAndApply {
+                                let moreNode = moreApply()
+                                if strongSelf.moreNode == nil {
+                                    moreNode.displaysAsynchronously = false
+                                    strongSelf.moreNode = moreNode
+                                    strongSelf.containerNode.insertSubnode(moreNode, aboveSubnode: strongSelf.textNode.textNode)
+                                }
+                                moreNode.frame = readMoreFrame
+                            } else if let moreNode = strongSelf.moreNode {
+                                strongSelf.moreNode = nil
+                                moreNode.removeFromSupernode()
+                            }
+                             
                             switch strongSelf.visibility {
                             case .none:
                                 strongSelf.textNode.visibilityRect = nil

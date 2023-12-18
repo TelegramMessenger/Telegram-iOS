@@ -2486,10 +2486,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     self.updateInProgress(false)
                     self.updated(transition: .immediate)
                     
-                    if case let .waitForExpiration(period) = error {
+                    if case let .waitForExpiration(date) = error {
                         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                         
-                        let dateText = stringForMediumDate(timestamp: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + period, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                        let dateText = stringForMediumDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                         self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: presentationData.strings.Premium_Gift_ApplyLink_AlreadyHasPremium_Title, text: presentationData.strings.Premium_Gift_ApplyLink_AlreadyHasPremium_Text(dateText).string, timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, action: { _ in return true }))
                     }
                 }, completed: { [weak self] in

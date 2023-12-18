@@ -1789,10 +1789,12 @@ final class MediaEditorScreenComponent: Component {
                                     })
                                 }
                                 
-                                mediaEditor.toggleNightTheme()
-                                controller.node.entitiesView.eachView { view in
-                                    if let stickerEntityView = view as? DrawingStickerEntityView {
-                                        stickerEntityView.toggleNightTheme()
+                                Queue.mainQueue().after(0.1) {
+                                    mediaEditor.toggleNightTheme()
+                                    controller.node.entitiesView.eachView { view in
+                                        if let stickerEntityView = view as? DrawingStickerEntityView {
+                                            stickerEntityView.toggleNightTheme()
+                                        }
                                     }
                                 }
                             }
@@ -2077,10 +2079,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissed = false
         private var isDismissBySwipeSuppressed = false
         
-        fileprivate var hasAnyChanges = false
+        private (set) var hasAnyChanges = false
         
         private var playbackPositionDisposable: Disposable?
-        
         
         var recording: MediaEditorScreen.Recording
         
@@ -2195,6 +2196,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     stickerItems
                 ) |> map { emoji, stickers -> StickerPickerInputData in
                     return StickerPickerInputData(emoji: emoji, stickers: stickers, gifs: nil)
+                } |> afterNext { [weak self] _ in
+                    if let self {
+                        self.controller?.checkPostingAvailability()
+                    }
                 }
                 
                 stickerPickerInputData.set(signal)
@@ -2267,6 +2272,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.subject = subject
             guard let controller = self.controller else {
                 return
+            }
+            
+            Queue.mainQueue().justDispatch {
+                controller.setupAudioSessionIfNeeded()
             }
             
             if case let .draft(draft, _) = subject, let privacy = draft.privacy {
@@ -2770,14 +2779,23 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         @objc func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
+                return
+            }
             self.entitiesView.handlePan(gestureRecognizer)
         }
         
         @objc func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
+            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
+                return
+            }
             self.entitiesView.handlePinch(gestureRecognizer)
         }
         
         @objc func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
+            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
+                return
+            }
             self.entitiesView.handleRotate(gestureRecognizer)
         }
         
@@ -4307,10 +4325,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         updateStorySources(engine: self.context.engine)
         updateStoryDrafts(engine: self.context.engine)
-        
-        if let _ = forwardSource {
-            self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
-        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -4321,6 +4335,91 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.exportDisposable.dispose()
         self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
+    }
+    
+    fileprivate func setupAudioSessionIfNeeded() {
+        guard let subject = self.node.subject else {
+            return
+        }
+        var needsAudioSession = false
+        var checkPostingAvailability = false
+        if self.forwardSource != nil {
+            needsAudioSession = true
+            checkPostingAvailability = true
+        }
+        if self.isEditingStory {
+            needsAudioSession = true
+        }
+        if case .message = subject {
+            needsAudioSession = true
+            checkPostingAvailability = true
+        }
+        if needsAudioSession {
+            self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
+                if #available(iOS 13.0, *) {
+                    try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+                }
+            }, deactivate: { _ in
+                return .single(Void())
+            })
+        }
+        if checkPostingAvailability {
+            self.postingAvailabilityPromise.set(self.context.engine.messages.checkStoriesUploadAvailability(target: .myStories))
+        }
+    }
+    
+    fileprivate func checkPostingAvailability() {
+        guard self.postingAvailabilityDisposable == nil else {
+            return
+        }
+        self.postingAvailabilityDisposable = (self.postingAvailabilityPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] availability in
+            guard let self, availability != .available else {
+                return
+            }
+            
+            let subject: PremiumLimitSubject
+            switch availability {
+            case .expiringLimit:
+                subject = .expiringStories
+            case .weeklyLimit:
+                subject = .storiesWeekly
+            case .monthlyLimit:
+                subject = .storiesMonthly
+            default:
+                subject = .expiringStories
+            }
+            
+            let context = self.context
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: subject, count: 10, forceDark: true, cancel: { [weak self] in
+                self?.requestDismiss(saveDraft: false, animated: true)
+            }, action: { [weak self] in
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        guard let self else {
+                            return
+                        }
+                        let isPremium = peer?.isPremium ?? false
+                        if !isPremium {
+                            self.requestDismiss(saveDraft: false, animated: true)
+                        }
+                    })
+                })
+                replaceImpl?(controller)
+                return true
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                navigationController.pushViewController(controller)
+            }
+        })
     }
     
     override public func loadDisplayNode() {
@@ -4334,65 +4433,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         Queue.mainQueue().after(0.4) {
             self.adminedChannels.set(.single([]) |> then(self.context.engine.peers.channelsForStories()))
             self.closeFriends.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends()))
-            
-            if self.forwardSource != nil || self.isEditingStory {
-                self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
-                    if #available(iOS 13.0, *) {
-                        try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
-                    }
-                }, deactivate: { _ in
-                    return .single(Void())
-                })
-            }
-            
-            self.postingAvailabilityDisposable = (self.postingAvailabilityPromise.get()
-            |> deliverOnMainQueue).start(next: { [weak self] availability in
-                guard let self, availability != .available else {
-                    return
-                }
-                
-                let subject: PremiumLimitSubject
-                switch availability {
-                case .expiringLimit:
-                    subject = .expiringStories
-                case .weeklyLimit:
-                    subject = .storiesWeekly
-                case .monthlyLimit:
-                    subject = .storiesMonthly
-                default:
-                    subject = .expiringStories
-                }
-                
-                let context = self.context
-                var replaceImpl: ((ViewController) -> Void)?
-                let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: subject, count: 10, forceDark: true, cancel: { [weak self] in
-                    self?.requestDismiss(saveDraft: false, animated: true)
-                }, action: { [weak self] in
-                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .stories, forceDark: true, dismissed: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-                        |> deliverOnMainQueue).start(next: { [weak self] peer in
-                            guard let self else {
-                                return
-                            }
-                            let isPremium = peer?.isPremium ?? false
-                            if !isPremium {
-                                self.requestDismiss(saveDraft: false, animated: true)
-                            }
-                        })
-                    })
-                    replaceImpl?(controller)
-                    return true
-                })
-                replaceImpl = { [weak controller] c in
-                    controller?.replace(with: c)
-                }
-                if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
-                    navigationController.pushViewController(controller)
-                }
-            })
         }
     }
     
@@ -5002,7 +5042,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             var firstFrame: Signal<(UIImage?, UIImage?), NoError>
             let firstFrameTime = CMTime(seconds: mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, preferredTimescale: CMTimeScale(60))
 
-            let videoResult: MediaResult.VideoResult
+            let videoResult: Signal<MediaResult.VideoResult, NoError>
             var videoIsMirrored = false
             let duration: Double
             switch subject {
@@ -5011,13 +5051,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let data = image.jpegData(compressionQuality: 0.85) {
                     try? data.write(to: URL(fileURLWithPath: tempImagePath))
                 }
-                videoResult = .imageFile(path: tempImagePath)
+                videoResult = .single(.imageFile(path: tempImagePath))
                 duration = 5.0
                 
                 firstFrame = .single((image, nil))
             case let .video(path, _, mirror, additionalPath, _, _, durationValue, _, _):
                 videoIsMirrored = mirror
-                videoResult = .videoFile(path: path)
+                videoResult = .single(.videoFile(path: path))
                 if let videoTrimRange = mediaEditor.values.videoTrimRange {
                     duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                 } else {
@@ -5059,7 +5099,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             case let .asset(asset):
-                videoResult = .asset(localIdentifier: asset.localIdentifier)
+                videoResult = .single(.asset(localIdentifier: asset.localIdentifier))
                 if asset.mediaType == .video {
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
@@ -5134,7 +5174,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case let .draft(draft, _):
                 let draftPath = draft.fullPath(engine: context.engine)
                 if draft.isVideo {
-                    videoResult = .videoFile(path: draftPath)
+                    videoResult = .single(.videoFile(path: draftPath))
                     if let videoTrimRange = mediaEditor.values.videoTrimRange {
                         duration = videoTrimRange.upperBound - videoTrimRange.lowerBound
                     } else {
@@ -5155,7 +5195,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                 } else {
-                    videoResult = .imageFile(path: draftPath)
+                    videoResult = .single(.imageFile(path: draftPath))
                     duration = 5.0
                     
                     if let image = UIImage(contentsOfFile: draftPath) {
@@ -5164,21 +5204,41 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         firstFrame = .single((UIImage(), nil))
                     }
                 }
-            case .message:
-                let image = generateSingleColorImage(size: CGSize(width: 1080, height: 1920), color: .black, scale: 1.0)!
-                let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
-                if let data = image.jpegData(compressionQuality: 0.85) {
-                    try? data.write(to: URL(fileURLWithPath: tempImagePath))
+            case let .message(messages):
+                let isNightTheme = mediaEditor.values.nightTheme
+                let wallpaper = getChatWallpaperImage(context: self.context, messageId: messages.first!)
+                |> map { _, image, nightImage -> UIImage? in
+                    if isNightTheme {
+                        return nightImage ?? image
+                    } else {
+                        return image
+                    }
                 }
-                videoResult = .imageFile(path: tempImagePath)
                 
-                firstFrame = .single((image, nil))
+                videoResult = wallpaper
+                |> mapToSignal { image in
+                    if let image {
+                        let tempImagePath = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max)).jpg"
+                        if let data = image.jpegData(compressionQuality: 0.85) {
+                            try? data.write(to: URL(fileURLWithPath: tempImagePath))
+                        }
+                        return .single(.imageFile(path: tempImagePath))
+                    } else {
+                        return .complete()
+                    }
+                }
+                
+                firstFrame = wallpaper
+                |> map { image in
+                    return (image, nil)
+                }
                 duration = 5.0
             }
             
-            let _ = (firstFrame
-            |> deliverOnMainQueue).start(next: { [weak self] image, additionalImage in
+            let _ = combineLatest(queue: Queue.mainQueue(), firstFrame, videoResult)
+            .start(next: { [weak self] images, videoResult in
                 if let self {
+                    let (image, additionalImage) = images
                     var currentImage = mediaEditor.resultImage
                     if let image {
                         mediaEditor.replaceSource(image, additionalImage: additionalImage, time: firstFrameTime, mirror: true)
@@ -5337,8 +5397,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         fatalError()
                     }
                 }
-            case .message:
-                exportSubject = .single(.image(image: generateSingleColorImage(size: CGSize(width: 1080, height: 1920), color: .black, scale: 1.0)!))
+            case let .message(messages):
+                let isNightTheme = mediaEditor.values.nightTheme
+                exportSubject = getChatWallpaperImage(context: self.context, messageId: messages.first!)
+                |> mapToSignal { _, image, nightImage -> Signal<MediaEditorVideoExport.Subject, NoError> in
+                    if isNightTheme {
+                        let effectiveImage = nightImage ?? image
+                        return effectiveImage.flatMap({ .single(.image(image: $0)) }) ?? .complete()
+                    } else {
+                        return image.flatMap({ .single(.image(image: $0)) }) ?? .complete()
+                    }
+                }
             }
             
             let _ = exportSubject.start(next: { [weak self] exportSubject in

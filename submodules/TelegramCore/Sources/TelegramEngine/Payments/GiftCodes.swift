@@ -197,7 +197,7 @@ public enum ApplyPremiumGiftCodeError {
 func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Never, ApplyPremiumGiftCodeError> {
     return account.network.request(Api.functions.payments.applyGiftCode(slug: slug))
     |> mapError { error -> ApplyPremiumGiftCodeError in
-        if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+        if error.errorDescription.hasPrefix("PREMIUM_SUB_ACTIVE_UNTIL_") {
             if let range = error.errorDescription.range(of: "_", options: .backwards) {
                 if let value = Int32(error.errorDescription[range.upperBound...]) {
                     return .waitForExpiration(value)

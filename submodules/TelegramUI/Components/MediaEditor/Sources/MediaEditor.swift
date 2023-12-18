@@ -636,20 +636,9 @@ public final class MediaEditor {
                 }
             }
         case let .message(messageId):
-            let context = self.context
-            textureSource = self.context.account.postbox.transaction { transaction -> TelegramWallpaper? in
-                return (transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData)?.wallpaper
-            }
-            |> mapToSignal { customWallpaper -> Signal<(UIImage?, UIImage?, AVPlayer?, AVPlayer?, GradientColors), NoError> in
-                return Signal { subscriber in
-                    Queue.mainQueue().async {
-                        let wallpaperRenderer = DrawingWallpaperRenderer(context: context, customWallpaper: customWallpaper)
-                        wallpaperRenderer.render { size, image, darkImage in
-                            subscriber.putNext((image, darkImage, nil, nil, GradientColors(top: .black, bottom: .black)))
-                        }
-                    }
-                    return EmptyDisposable
-                }
+            textureSource = getChatWallpaperImage(context: self.context, messageId: messageId)
+            |> map { _, image, nightImage in
+                return (image, nightImage, nil, nil, GradientColors(top: .black, bottom: .black))
             }
         }
         

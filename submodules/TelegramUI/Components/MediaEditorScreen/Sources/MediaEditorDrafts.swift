@@ -21,10 +21,25 @@ extension MediaEditorScreen {
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
-        let caption = self.getCaption()
+        let filteredEntities = self.node.entitiesView.entities.filter { entity in
+            if entity is DrawingMediaEntity {
+                return false
+            } else if let entity = entity as? DrawingStickerEntity, case .message = entity.content {
+                return false
+            }
+            return true
+        }
         
-        if let subject = self.node.subject, case .asset = subject, self.node.mediaEditor?.values.hasChanges == false && caption.string.isEmpty {
-            return false
+        let values = mediaEditor.values
+        let filteredValues = values.withUpdatedEntities([])
+        
+        let caption = self.getCaption()
+        if let subject = self.node.subject {
+            if case .asset = subject, !values.hasChanges && caption.string.isEmpty {
+                return false
+            } else if case .message = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
+                return false
+            }
         }
         return true
     }
