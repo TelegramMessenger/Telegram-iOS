@@ -2994,16 +2994,21 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
-                    for message in messages {
-                        if !existingStableIds.contains(message.0.stableId) {
-                            if let autoremoveAttribute = message.0.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
-                                let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
-                                if exipiresAt >= currentTimestamp - 1 {
-                                    expiredMessageStableIds.insert(message.0.stableId)
-                                } else {
-                                    expiredMessageStableIds.insert(message.0.stableId)
-                                }
+                    var isRemoved = true
+                    inner: for message in messages {
+                        if existingStableIds.contains(message.0.stableId) {
+                            isRemoved = false
+                            break inner
+                        }
+                    }
+                    if isRemoved, let message = messages.first?.0 {
+                        if let autoremoveAttribute = message.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
+                            let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
+                            if exipiresAt >= currentTimestamp - 1 {
+                                expiredMessageStableIds.insert(message.stableId)
                             }
+                        } else {
+                            expiredMessageStableIds.insert(message.stableId)
                         }
                     }
                 default:
