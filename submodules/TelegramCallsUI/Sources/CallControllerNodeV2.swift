@@ -587,7 +587,13 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
             self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-            self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.containerView.layer.allowsGroupOpacity = true
+            self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.containerView.layer.allowsGroupOpacity = false
+            })
         }
     }
     
