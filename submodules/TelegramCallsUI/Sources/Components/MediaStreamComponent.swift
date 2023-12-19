@@ -721,6 +721,7 @@ public final class MediaStreamComponent: CombinedComponent {
             var infoItem: AnyComponent<Empty>?
             if let originInfo = context.state.originInfo {
                 infoItem = AnyComponent(OriginInfoComponent(
+                    strings: environment.strings,
                     memberCount: originInfo.memberCount
                 ))
             }
@@ -933,6 +934,7 @@ public final class MediaStreamComponent: CombinedComponent {
             
             let sheet = sheet.update(
                 component: StreamSheetComponent(
+                    strings: environment.strings,
                     topOffset: topOffset,
                     sheetHeight: sheetHeight,
                     backgroundColor: (isFullscreen && !state.hasVideo) ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
@@ -1691,15 +1693,21 @@ private final class StreamTitleComponent: Component {
 
 
 private final class OriginInfoComponent: CombinedComponent {
+    let strings: PresentationStrings
     let participantsCount: Int
     
     init(
+        strings: PresentationStrings,
         memberCount: Int
     ) {
+        self.strings = strings
         self.participantsCount = memberCount
     }
     
     static func ==(lhs: OriginInfoComponent, rhs: OriginInfoComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.participantsCount != rhs.participantsCount {
             return false
         }
@@ -1713,6 +1721,7 @@ private final class OriginInfoComponent: CombinedComponent {
         return { context in
             let viewerCounter = viewerCounter.update(
                 component: ParticipantsComponent(
+                    strings: context.component.strings,
                     count: context.component.participantsCount,
                     showsSubtitle: true,
                     fontSize: 18.0,

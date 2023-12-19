@@ -574,10 +574,11 @@ final class ChannelAppearanceScreenComponent: Component {
                 })
             }
             if resolvedState.changes.contains(.wallpaper) {
-                signals.append(component.context.engine.themes.setBuiltinChannelWallpaper(peerId: component.peerId, emoji: wallpaperEmoji, wallpaper: self.resolvedCurrentTheme?.wallpaper)
+                let _ = wallpaperEmoji
+                /*signals.append(component.context.engine.themes.setBuiltinChannelWallpaper(peerId: component.peerId, emoji: wallpaperEmoji, wallpaper: self.resolvedCurrentTheme?.wallpaper)
                 |> mapError { _ -> ApplyError in
                     return .generic
-                })
+                })*/
             }
             
             self.applyDisposable = (combineLatest(signals)
