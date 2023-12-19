@@ -499,7 +499,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 self.displayBoostLevels(subject: requiredBoostSubject)
                 return
@@ -806,7 +806,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return availableSize
             }
             
-            var requiredBoostSubject: BoostSubject = .nameColors
+            var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
             
             let replyIconLevel = 5
             var profileIconLevel = 7
@@ -824,34 +824,27 @@ final class ChannelAppearanceScreenComponent: Component {
                         
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
-                requiredBoostSubject = .nameIcon
+                requiredBoostSubjects.append(.nameIcon)
             }
             
             let profileColor = resolvedState.profileColor
             if profileColor != nil {
-                requiredBoostSubject = .profileColors
+                requiredBoostSubjects.append(.profileColors)
             }
             
             let backgroundFileId = resolvedState.backgroundFileId
             if backgroundFileId != nil {
-                requiredBoostSubject = .profileIcon
+                requiredBoostSubjects.append(.profileIcon)
             }
             
             let emojiStatus = resolvedState.emojiStatus
             if emojiStatus != nil {
-                requiredBoostSubject = .emojiStatus
+                requiredBoostSubjects.append(.emojiStatus)
             }
             let statusFileId = emojiStatus?.fileId
             
             let cloudThemes: [PresentationThemeReference] = contentsData.availableThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? component.context.account.id : nil)) }
-            var chatThemes = cloudThemes.filter { $0.emoticon != nil }
-            chatThemes.insert(.builtin(.dayClassic), at: 0)
-            
-            if !chatThemes.isEmpty {
-                if self.currentTheme == nil {
-                    self.currentTheme = chatThemes[0]
-                }
-            }
+            let chatThemes = cloudThemes.filter { $0.emoticon != nil }
             
             if let currentTheme = self.currentTheme, (self.resolvedCurrentTheme?.reference != currentTheme || self.resolvedCurrentTheme?.isDark != environment.theme.overallDarkAppearance), (self.resolvingCurrentTheme?.reference != currentTheme || self.resolvingCurrentTheme?.isDark != environment.theme.overallDarkAppearance) {
                 self.resolvingCurrentTheme?.disposable.dispose()
@@ -891,8 +884,8 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
-            if self.currentTheme != nil && self.currentTheme != chatThemes.first {
-                requiredBoostSubject = .wallpaper
+            if self.currentTheme != nil {
+                requiredBoostSubjects.append(.wallpaper)
             }
             
             if case let .user(user) = peer {
@@ -913,6 +906,12 @@ final class ChannelAppearanceScreenComponent: Component {
                 )
             }
             
+            let requiredBoostSubject: BoostSubject
+            if let maxBoostSubject = requiredBoostSubjects.max(by: { $0.requiredLevel(context: component.context, configuration: premiumConfiguration) < $1.requiredLevel(context: component.context, configuration: premiumConfiguration) }) {
+                requiredBoostSubject = maxBoostSubject
+            } else {
+                requiredBoostSubject = .nameColors(colors: resolvedState.nameColor)
+            }
             self.requiredBoostSubject = requiredBoostSubject
             
             let topInset: CGFloat = 24.0
@@ -951,7 +950,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if replyFileId != nil, let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelNameIconLevel {
+            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelNameIconLevel {
                 replyLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: replyIconLevel
@@ -1047,7 +1046,7 @@ final class ChannelAppearanceScreenComponent: Component {
             
             contentHeight += sectionSpacing
             
-            if !chatThemes.isEmpty, let currentTheme {
+            if !chatThemes.isEmpty {
                 var wallpaperLogoContents: [AnyComponentWithIdentity<Empty>] = []
                 wallpaperLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
@@ -1057,7 +1056,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     )),
                     maximumNumberOfLines: 0
                 ))))
-                if currentTheme != chatThemes[0], let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelCustomWallpaperLevel {
+                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelCustomWallpaperLevel {
                     wallpaperLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                         strings: environment.strings,
                         level: themeLevel
@@ -1085,12 +1084,13 @@ final class ChannelAppearanceScreenComponent: Component {
                                     strings: environment.strings,
                                     sectionId: 0,
                                     themes: chatThemes,
+                                    hasNoTheme: true,
                                     animatedEmojiStickers: component.context.animatedEmojiStickers,
                                     themeSpecificAccentColors: [:],
                                     themeSpecificChatWallpapers: [:],
                                     nightMode: environment.theme.overallDarkAppearance,
                                     channelMode: true,
-                                    currentTheme: currentTheme,
+                                    currentTheme: self.currentTheme,
                                     updatedTheme: { [weak self] value in
                                         guard let self else {
                                             return
@@ -1138,7 +1138,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if backgroundFileId != nil, let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelProfileIconLevel {
+            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelProfileIconLevel {
                 profileLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: profileIconLevel
@@ -1249,7 +1249,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if emojiStatus != nil, let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelEmojiStatusLevel {
+            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelEmojiStatusLevel {
                 emojiStatusContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: emojiStatusLevel
@@ -1361,7 +1361,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 Text(text: "Apply Changes", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: Int(requiredLevel),

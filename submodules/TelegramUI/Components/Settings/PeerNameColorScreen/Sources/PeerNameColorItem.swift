@@ -416,7 +416,7 @@ private func ensureColorVisible(listNode: ListView, color: PeerNameColor, animat
         }
     }
     if let resultNode = resultNode {
-        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 24.0)
+        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 76.0)
         return true
     } else {
         return false
