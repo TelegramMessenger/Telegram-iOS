@@ -104,6 +104,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     private var key: PeerInfoHeaderNavigationButtonKey?
     
     private var contentsColor: UIColor = .white
+    private var canBeExpanded: Bool = false
     
     var action: ((ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -172,6 +173,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     
     func updateContentsColor(backgroundColor: UIColor, contentsColor: UIColor, canBeExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.contentsColor = contentsColor
+        self.canBeExpanded = canBeExpanded
         
         self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         
