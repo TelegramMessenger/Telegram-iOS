@@ -459,6 +459,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         var thirdColor: UIColor?
         var backgroundColor: UIColor?
         var pattern: Pattern?
+        var patternTopRightPosition: CGPoint?
         var displayProgress: Bool
         
         init(
@@ -469,6 +470,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             thirdColor: UIColor?,
             backgroundColor: UIColor?,
             pattern: Pattern?,
+            patternTopRightPosition: CGPoint?,
             displayProgress: Bool
         ) {
             self.size = size
@@ -478,6 +480,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             self.thirdColor = thirdColor
             self.backgroundColor = backgroundColor
             self.pattern = pattern
+            self.patternTopRightPosition = patternTopRightPosition
             self.displayProgress = displayProgress
         }
     }
@@ -608,6 +611,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         thirdColor: UIColor?,
         backgroundColor: UIColor?,
         pattern: Pattern?,
+        patternTopRightPosition: CGPoint? = nil,
         animation: ListViewItemUpdateAnimation
     ) {
         let params = Params(
@@ -618,6 +622,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             thirdColor: thirdColor,
             backgroundColor: backgroundColor,
             pattern: pattern,
+            patternTopRightPosition: patternTopRightPosition,
             displayProgress: self.displayProgress
         )
         if self.params == params {
@@ -751,8 +756,14 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 }
                 patternContentLayer.contents = self.patternContentsTarget?.contents
                 
+                var patternOrigin = CGPoint(x: size.width, y: 0.0)
+                if let patternTopRightPosition {
+                    patternOrigin.x -= patternTopRightPosition.x
+                    patternOrigin.y += patternTopRightPosition.y
+                }
+                
                 let itemSize = CGSize(width: placement.size / 3.0, height: placement.size / 3.0)
-                patternContentLayer.frame = CGRect(origin: CGPoint(x: size.width - placement.position.x / 3.0 - itemSize.width * 0.5, y: placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
+                patternContentLayer.frame = CGRect(origin: CGPoint(x: patternOrigin.x - placement.position.x / 3.0 - itemSize.width * 0.5, y: patternOrigin.y + placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
                 var alphaFraction = abs(placement.position.x / 3.0) / min(500.0, size.width)
                 alphaFraction = min(1.0, max(0.0, alphaFraction))
                 patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction)

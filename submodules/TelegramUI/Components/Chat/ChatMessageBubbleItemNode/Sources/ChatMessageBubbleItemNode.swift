@@ -5464,4 +5464,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         return (image, self.backgroundNode.frame)
     }
+    
+    public func isServiceLikeMessage() -> Bool {
+        for contentNode in self.contentNodes {
+            if contentNode is ChatMessageActionBubbleContentNode {
+                return true
+            }
+        }
+        return false
+    }
 }

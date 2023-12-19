@@ -332,7 +332,13 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                                 var imageSize = boundingSize
                                 let updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                                 var patternArguments: PatternWallpaperArguments?
-                                switch media.content {
+                                
+                                var mediaContent = media.content
+                                if case let .emoticon(emoticon) = mediaContent, let theme = item.associatedData.chatThemes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }), let themeWallpaper = theme.settings?.first?.wallpaper, let themeWallpaperContent = WallpaperPreviewMedia(wallpaper: themeWallpaper)?.content {
+                                    mediaContent = themeWallpaperContent
+                                }
+                                
+                                switch mediaContent {
                                 case let .file(file, patternColors, rotation, intensity, _, _):
                                     var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(item.message), media: file).resourceReference($0.resource)) })
                                     if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
@@ -385,6 +391,8 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                                 case let .gradient(colors, rotation):
                                     updateImageSignal = gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
                                 case .themeSettings:
+                                    updateImageSignal = .complete()
+                                case .emoticon:
                                     updateImageSignal = .complete()
                                 }
                                 

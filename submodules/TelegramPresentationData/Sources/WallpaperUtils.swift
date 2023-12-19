@@ -49,6 +49,15 @@ public extension TelegramWallpaper {
         }
     }
     
+    var isEmoticon: Bool {
+        switch self {
+        case .emoticon:
+            return true
+        default:
+            return false
+        }
+    }
+    
     var dimensions: CGSize? {
         if case let .file(file) = self {
             return file.file.dimensions?.cgSize

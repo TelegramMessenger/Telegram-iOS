@@ -156,13 +156,13 @@ final class ChannelAppearanceScreenComponent: Component {
     
     private final class ContentsData {
         let peer: EnginePeer?
-        let wallpaper: TelegramWallpaper?
+        let peerWallpaper: TelegramWallpaper?
         let subscriberCount: Int?
         let availableThemes: [TelegramTheme]
         
-        init(peer: EnginePeer?, wallpaper: TelegramWallpaper?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
+        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
             self.peer = peer
-            self.wallpaper = wallpaper
+            self.peerWallpaper = peerWallpaper
             self.subscriberCount = subscriberCount
             self.availableThemes = availableThemes
         }
@@ -180,7 +180,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 let (peer, subscriberCount, wallpaper) = peerData
                 return ContentsData(
                     peer: peer,
-                    wallpaper: wallpaper,
+                    peerWallpaper: wallpaper,
                     subscriberCount: subscriberCount,
                     availableThemes: cloudThemes
                 )
@@ -195,6 +195,21 @@ final class ChannelAppearanceScreenComponent: Component {
     }
     
     private struct ResolvedState {
+        struct Changes: OptionSet {
+            var rawValue: Int32
+            
+            init(rawValue: Int32) {
+                self.rawValue = rawValue
+            }
+            
+            static let nameColor = Changes(rawValue: 1 << 0)
+            static let profileColor = Changes(rawValue: 1 << 1)
+            static let replyFileId = Changes(rawValue: 1 << 2)
+            static let backgroundFileId = Changes(rawValue: 1 << 3)
+            static let emojiStatus = Changes(rawValue: 1 << 4)
+            static let wallpaper = Changes(rawValue: 1 << 5)
+        }
+        
         var nameColor: PeerNameColor
         var profileColor: PeerNameColor?
         var replyFileId: Int64?
@@ -202,16 +217,16 @@ final class ChannelAppearanceScreenComponent: Component {
         var emojiStatus: PeerEmojiStatus?
         var wallpaper: TelegramWallpaper?
         
-        var hasChanges: Bool
+        var changes: Changes
         
-        init(nameColor: PeerNameColor, profileColor: PeerNameColor?, replyFileId: Int64?, backgroundFileId: Int64?, emojiStatus: PeerEmojiStatus?, wallpaper: TelegramWallpaper?, hasChanges: Bool) {
+        init(nameColor: PeerNameColor, profileColor: PeerNameColor?, replyFileId: Int64?, backgroundFileId: Int64?, emojiStatus: PeerEmojiStatus?, wallpaper: TelegramWallpaper?, changes: Changes) {
             self.nameColor = nameColor
             self.profileColor = profileColor
             self.replyFileId = replyFileId
             self.backgroundFileId = backgroundFileId
             self.emojiStatus = emojiStatus
             self.wallpaper = wallpaper
-            self.hasChanges = hasChanges
+            self.changes = changes
         }
     }
     
@@ -334,7 +349,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return nil
             }
             
-            var hasChanges = false
+            var changes: ResolvedState.Changes = []
             
             let nameColor: PeerNameColor
             if let updatedPeerNameColor = self.updatedPeerNameColor {
@@ -345,7 +360,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 nameColor = .blue
             }
             if nameColor != peer.nameColor {
-                hasChanges = true
+                changes.insert(.nameColor)
             }
             
             let profileColor: PeerNameColor?
@@ -357,7 +372,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 profileColor = nil
             }
             if profileColor != peer.profileColor {
-                hasChanges = true
+                changes.insert(.profileColor)
             }
             
             let replyFileId: Int64?
@@ -367,7 +382,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 replyFileId = peer.backgroundEmojiId
             }
             if replyFileId != peer.backgroundEmojiId {
-                hasChanges = true
+                changes.insert(.replyFileId)
             }
             
             let backgroundFileId: Int64?
@@ -377,7 +392,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 backgroundFileId = peer.profileBackgroundEmojiId
             }
             if backgroundFileId != peer.profileBackgroundEmojiId {
-                hasChanges = true
+                changes.insert(.backgroundFileId)
             }
             
             let emojiStatus: PeerEmojiStatus?
@@ -387,7 +402,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 emojiStatus = peer.emojiStatus
             }
             if emojiStatus != peer.emojiStatus {
-                hasChanges = true
+                changes.insert(.emojiStatus)
             }
             
             let wallpaper: TelegramWallpaper?
@@ -396,13 +411,13 @@ final class ChannelAppearanceScreenComponent: Component {
                 case .remove:
                     wallpaper = nil
                 case let .emoticon(emoticon):
-                    wallpaper = contentsData.availableThemes.first(where: { $0.emoticon == emoticon })?.settings?.first?.wallpaper
+                    wallpaper = .emoticon(emoticon)
                 case .custom:
                     wallpaper = self.temporaryPeerWallpaper
                 }
-                hasChanges = true
+                changes.insert(.wallpaper)
             } else {
-                wallpaper = contentsData.wallpaper
+                wallpaper = contentsData.peerWallpaper
             }
             
             return ResolvedState(
@@ -412,7 +427,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 backgroundFileId: backgroundFileId,
                 emojiStatus: emojiStatus,
                 wallpaper: wallpaper,
-                hasChanges: hasChanges
+                changes: changes
             )
         }
         
@@ -430,7 +445,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             
-            if !resolvedState.hasChanges {
+            if resolvedState.changes.isEmpty {
                 self.environment?.controller()?.dismiss()
                 return
             }
@@ -446,28 +461,43 @@ final class ChannelAppearanceScreenComponent: Component {
                 case generic
             }
             
-            if let updatedPeerWallpaper {
-                switch updatedPeerWallpaper {
-                case .remove:
-                    let _ = component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: nil, forBoth: false).start()
-                case let .emoticon(emoticon):
-                    let _ = component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: .emoticon(emoticon), forBoth: false).start()
-                case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
-                    uploadCustomPeerWallpaper(context: component.context, wallpaper: wallpaperEntry, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: component.peerId, forBoth: false, completion: {})
-                }
-            }
-            
-            self.applyDisposable = (combineLatest([
-                component.context.engine.peers.updatePeerNameColorAndEmoji(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
+            var signals: [Signal<Never, ApplyError>] = []
+            if !resolvedState.changes.intersection([.nameColor, .profileColor, .replyFileId, .backgroundFileId]).isEmpty {
+                signals.append(component.context.engine.peers.updatePeerNameColorAndEmoji(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
                 |> ignoreValues
                 |> mapError { _ -> ApplyError in
                     return .generic
-                },
-                component.context.engine.peers.updatePeerEmojiStatus(peerId: component.peerId, fileId: statusFileId, expirationDate: nil)
+                })
+            }
+            if resolvedState.changes.contains(.emojiStatus) {
+                signals.append(component.context.engine.peers.updatePeerEmojiStatus(peerId: component.peerId, fileId: statusFileId, expirationDate: nil)
+                |> ignoreValues
                 |> mapError { _ -> ApplyError in
                     return .generic
+                })
+            }
+            if resolvedState.changes.contains(.wallpaper) {
+                if let updatedPeerWallpaper {
+                    switch updatedPeerWallpaper {
+                    case .remove:
+                        signals.append(component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: nil, forBoth: false)
+                        |> ignoreValues
+                        |> mapError { _ -> ApplyError in
+                            return .generic
+                        })
+                    case let .emoticon(emoticon):
+                        signals.append(component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: .emoticon(emoticon), forBoth: false)
+                        |> ignoreValues
+                        |> mapError { _ -> ApplyError in
+                            return .generic
+                        })
+                    case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
+                        uploadCustomPeerWallpaper(context: component.context, wallpaper: wallpaperEntry, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: component.peerId, forBoth: false, completion: {})
+                    }
                 }
-            ])
+            }
+            
+            self.applyDisposable = (combineLatest(signals)
             |> deliverOnMainQueue).start(error: { [weak self] _ in
                 guard let self, let component = self.component else {
                     return
@@ -550,7 +580,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 self.updatedPeerWallpaper = result
                 switch result {
                 case let .emoticon(emoticon):
-                    if let selectedTheme = contentsData.availableThemes.first(where: { $0.emoticon == emoticon }) {
+                    if let selectedTheme = contentsData.availableThemes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }) {
                         self.currentTheme = .cloud(PresentationCloudTheme(theme: selectedTheme, resolvedWallpaper: nil, creatorAccountId: nil))
                     }
                     self.temporaryPeerWallpaper = nil
@@ -700,13 +730,22 @@ final class ChannelAppearanceScreenComponent: Component {
             if self.contentsDataDisposable == nil {
                 self.contentsDataDisposable = (ContentsData.get(context: component.context, peerId: component.peerId)
                 |> deliverOnMainQueue).start(next: { [weak self] contentsData in
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
                     if self.contentsData == nil, case let .channel(channel) = contentsData.peer {
                         self.boostLevel = channel.approximateBoostLevel.flatMap(Int.init)
                     }
+                    if self.contentsData == nil, let peerWallpaper = contentsData.peerWallpaper {
+                        for cloudTheme in contentsData.availableThemes {
+                            if case let .emoticon(emoticon) = peerWallpaper, cloudTheme.emoticon?.strippedEmoji == emoticon.strippedEmoji {
+                                self.currentTheme = .cloud(PresentationCloudTheme(theme: cloudTheme, resolvedWallpaper: nil, creatorAccountId: cloudTheme.isCreator ? component.context.account.id : nil))
+                                break
+                            }
+                        }
+                    }
                     self.contentsData = contentsData
+                    
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
                     }
@@ -733,20 +772,11 @@ final class ChannelAppearanceScreenComponent: Component {
             
             var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
             
-            let replyIconLevel = 5
-            var profileIconLevel = 7
-            var emojiStatusLevel = 8
-            let themeLevel = 9
+            let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let profileIconLevel = Int(BoostSubject.profileIcon.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let emojiStatusLevel = Int(BoostSubject.emojiStatus.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let themeLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
             
-            if let data = component.context.currentAppConfiguration.with({ $0 }).data {
-                if let value = data["channel_profile_color_level_min"] as? Double {
-                    profileIconLevel = Int(value)
-                }
-                if let value = data["channel_emoji_status_level_min"] as? Double {
-                    emojiStatusLevel = Int(value)
-                }
-            }
-                        
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
                 requiredBoostSubjects.append(.nameIcon)
@@ -810,13 +840,13 @@ final class ChannelAppearanceScreenComponent: Component {
                     }))
                 }
             } else if self.currentTheme == nil {
-                self.resolvedCurrentTheme = nil
                 self.resolvingCurrentTheme?.disposable.dispose()
                 self.resolvingCurrentTheme = nil
+                self.resolvedCurrentTheme = nil
             }
             
             if let wallpaper = resolvedState.wallpaper {
-                if wallpaper.isPattern {
+                if wallpaper.isEmoticon {
                     requiredBoostSubjects.append(.wallpaper)
                 } else {
                     requiredBoostSubjects.append(.customWallpaper)
@@ -901,6 +931,8 @@ final class ChannelAppearanceScreenComponent: Component {
                 if let wallpaper = resolvedCurrentTheme.wallpaper {
                     chatPreviewWallpaper = wallpaper
                 }
+            } else if let initialWallpaper = contentsData.peerWallpaper, !initialWallpaper.isEmoticon {
+                chatPreviewWallpaper = initialWallpaper
             }
             
             let replySectionSize = self.replySection.update(
@@ -1002,7 +1034,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 
                 var currentTheme = self.currentTheme
                 var selectedWallpaper: TelegramWallpaper?
-                if currentTheme == nil, let wallpaper = resolvedState.wallpaper, !wallpaper.isPattern {
+                if currentTheme == nil, let wallpaper = resolvedState.wallpaper, !wallpaper.isEmoticon {
                     let theme: PresentationThemeReference = .builtin(.day)
                     currentTheme = theme
                     selectedWallpaper = wallpaper

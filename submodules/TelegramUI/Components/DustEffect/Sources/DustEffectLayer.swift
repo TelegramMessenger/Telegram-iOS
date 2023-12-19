@@ -162,7 +162,6 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         }
         
         self.lastTimeStep = deltaTimeValue
-        //print("updateItems: \(deltaTime), localDeltaTime: \(localDeltaTime)")
         
         var didRemoveItems = false
         for i in (0 ..< self.items.count).reversed() {
@@ -224,19 +223,6 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             if item.particleBuffer == nil {
                 if let particleBuffer = MetalEngine.shared.sharedBuffer(spec: BufferSpec(length: particleCount * 4 * (4 + 1))) {
                     item.particleBuffer = particleBuffer
-                    
-                    /*let particles = particleBuffer.buffer.contents().assumingMemoryBound(to: Float.self)
-                    for i in 0 ..< particleCount {
-                        particles[i * 5 + 0] = 0.0;
-                        particles[i * 5 + 1] = 0.0;
-                        
-                        let direction = Float.random(in: 0.0 ..< Float.pi * 2.0)
-                        let velocity = Float.random(in: 0.1 ... 0.2) * 420.0
-                        particles[i * 5 + 2] = cos(direction) * velocity
-                        particles[i * 5 + 3] = sin(direction) * velocity
-                        
-                        particles[i * 5 + 4] = Float.random(in: 0.7 ... 1.5)
-                    }*/
                 }
             }
         }
@@ -279,6 +265,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                     var phase = item.phase
                     computeEncoder.setBytes(&phase, length: 4, index: 2)
                     var timeStep: Float = Float(lastTimeStep) / Float(UIView.animationDurationFactor())
+                    timeStep *= 2.0
                     computeEncoder.setBytes(&timeStep, length: 4, index: 3)
                     computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
                 }

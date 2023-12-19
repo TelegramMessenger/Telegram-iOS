@@ -9,12 +9,14 @@ private let purple = UIColor(rgb: 0x3252ef)
 private let pink = UIColor(rgb: 0xe4436c)
 
 final class ParticipantsComponent: Component {
+    private let strings: PresentationStrings
     private let count: Int
     private let showsSubtitle: Bool
     private let fontSize: CGFloat
     private let gradientColors: [CGColor]
     
-    init(count: Int, showsSubtitle: Bool = true, fontSize: CGFloat = 48.0, gradientColors: [CGColor] = [pink.cgColor, purple.cgColor, purple.cgColor]) {
+    init(strings: PresentationStrings, count: Int, showsSubtitle: Bool = true, fontSize: CGFloat = 48.0, gradientColors: [CGColor] = [pink.cgColor, purple.cgColor, purple.cgColor]) {
+        self.strings = strings
         self.count = count
         self.showsSubtitle = showsSubtitle
         self.fontSize = fontSize
@@ -22,6 +24,9 @@ final class ParticipantsComponent: Component {
     }
     
     static func == (lhs: ParticipantsComponent, rhs: ParticipantsComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.count != rhs.count {
             return false
         }
@@ -41,8 +46,7 @@ final class ParticipantsComponent: Component {
     func update(view: View, availableSize: CGSize, state: ComponentFlow.EmptyComponentState, environment: ComponentFlow.Environment<ComponentFlow.Empty>, transition: ComponentFlow.Transition) -> CGSize {
         view.counter.update(
             countString: self.count > 0 ? presentationStringsFormattedNumber(Int32(count), ",") : "",
-            // TODO: localize
-            subtitle: self.showsSubtitle ? (self.count > 0 ? /*environment.strings.LiveStream_Watching*/"watching" : /*environment.strings.LiveStream_NoViewers.lowercased()*/"no viewers") : "",
+            subtitle: self.showsSubtitle ? (self.count > 0 ? self.strings.LiveStream_Watching.lowercased() : self.strings.LiveStream_NoViewers.lowercased()) : "",
             fontSize: self.fontSize,
             gradientColors: self.gradientColors
         )

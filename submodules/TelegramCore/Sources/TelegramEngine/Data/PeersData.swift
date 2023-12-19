@@ -343,10 +343,10 @@ public extension TelegramEngine.EngineData.Item {
                     return nil
                 }
                 switch cachedPeerData {
-                case let channel as CachedChannelData:
-                    return channel.wallpaper
                 case let user as CachedUserData:
                     return user.wallpaper
+                case let channel as CachedChannelData:
+                    return channel.wallpaper
                 default:
                     return nil
                 }

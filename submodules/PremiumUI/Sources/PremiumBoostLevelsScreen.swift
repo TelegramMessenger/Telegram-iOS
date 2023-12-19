@@ -722,15 +722,38 @@ private final class LimitSheetContent: CombinedComponent {
             
             var levelsHeight: CGFloat = 0.0
             var levelItems: [AnyComponentWithIdentity<Empty>] = []
+            
+            var nameColorsAtLevel: [(Int32, Int32)] = []
+            var nameColorsCountMap: [Int32: Int32] = [:]
+            for color in context.component.context.peerNameColors.displayOrder {
+                if let level = context.component.context.peerNameColors.nameColorsChannelMinRequiredBoostLevel[color] {
+                    if let current = nameColorsCountMap[level] {
+                        nameColorsCountMap[level] = current + 1
+                    } else {
+                        nameColorsCountMap[level] = 1
+                    }
+                }
+            }
+            for (key, value) in nameColorsCountMap {
+                nameColorsAtLevel.append((key, value))
+            }
+                        
             if let nextLevels {
                 for level in nextLevels {
                     var perks: [LevelSectionComponent.Perk] = []
                     perks.append(.story(level))
                     perks.append(.reaction(level))
-                    
-                    if level >= premiumConfiguration.minChannelNameColorLevel {
-                        perks.append(.nameColor(7))
+                                 
+                    var nameColorsCount: Int32 = 0
+                    for (colorLevel, count) in nameColorsAtLevel {
+                        if level >= colorLevel && colorLevel == 1 {
+                            nameColorsCount = count
+                        }
                     }
+                    if nameColorsCount > 0 {
+                        perks.append(.nameColor(nameColorsCount))
+                    }
+                    
                     if level >= premiumConfiguration.minChannelProfileColorLevel {
                         let delta = min(level - premiumConfiguration.minChannelProfileColorLevel + 1, 2)
                         perks.append(.profileColor(8 * delta))
@@ -738,10 +761,17 @@ private final class LimitSheetContent: CombinedComponent {
                     if level >= premiumConfiguration.minChannelProfileIconLevel {
                         perks.append(.profileIcon)
                     }
-                    if level >= premiumConfiguration.minChannelNameColorLevel {
-                        let delta = min(level - premiumConfiguration.minChannelNameColorLevel + 1, 3)
-                        perks.append(.linkColor(7 * delta))
+                    
+                    var linkColorsCount: Int32 = 0
+                    for (colorLevel, count) in nameColorsAtLevel {
+                        if level >= colorLevel {
+                            linkColorsCount += count
+                        }
                     }
+                    if linkColorsCount > 0 {
+                        perks.append(.linkColor(linkColorsCount))
+                    }
+                                        
                     if level >= premiumConfiguration.minChannelNameIconLevel {
                         perks.append(.linkIcon)
                     }

@@ -6,8 +6,10 @@ import AccountContext
 import AVKit
 import MultilineTextComponent
 import Display
+import TelegramPresentationData
 
 final class StreamSheetComponent: CombinedComponent {
+    let strings: PresentationStrings
     let sheetHeight: CGFloat
     let topOffset: CGFloat
     let backgroundColor: UIColor
@@ -22,6 +24,7 @@ final class StreamSheetComponent: CombinedComponent {
     let fullscreenBottomComponent: AnyComponent<Empty>
     
     init(
+        strings: PresentationStrings,
         topOffset: CGFloat,
         sheetHeight: CGFloat,
         backgroundColor: UIColor,
@@ -34,6 +37,7 @@ final class StreamSheetComponent: CombinedComponent {
         fullscreenTopComponent: AnyComponent<Empty>,
         fullscreenBottomComponent: AnyComponent<Empty>
     ) {
+        self.strings = strings
         self.topOffset = topOffset
         self.sheetHeight = sheetHeight
         self.backgroundColor = backgroundColor
@@ -49,6 +53,9 @@ final class StreamSheetComponent: CombinedComponent {
     }
     
     static func ==(lhs: StreamSheetComponent, rhs: StreamSheetComponent) -> Bool {
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.topOffset != rhs.topOffset {
             return false
         }
@@ -159,7 +166,7 @@ final class StreamSheetComponent: CombinedComponent {
             )
             
             let viewerCounter = viewerCounter.update(
-                component: ParticipantsComponent(count: context.component.participantsCount, fontSize: 44.0),
+                component: ParticipantsComponent(strings: context.component.strings, count: context.component.participantsCount, fontSize: 44.0),
                 availableSize: CGSize(width: context.availableSize.width, height: 70),
                 transition: context.transition
             )

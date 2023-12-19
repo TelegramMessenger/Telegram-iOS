@@ -9,6 +9,7 @@ public enum WallpaperPreviewMediaContent: Equatable {
     case color(UIColor)
     case gradient([UInt32], Int32?)
     case themeSettings(TelegramThemeSettings)
+    case emoticon(String)
 }
 
 public final class WallpaperPreviewMedia: Media {
@@ -64,6 +65,8 @@ public extension WallpaperPreviewMedia {
             self.init(content: .file(file: file.file, colors: file.settings.colors, rotation: file.settings.rotation, intensity: file.settings.intensity, false, false))
         case let .image(representations, _):
             self.init(content: .image(representations: representations))
+        case let .emoticon(emoticon):
+            self.init(content: .emoticon(emoticon))
         default:
             return nil
         }

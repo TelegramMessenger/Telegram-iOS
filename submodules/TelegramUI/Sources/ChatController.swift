@@ -919,6 +919,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.presentThemeSelection()
                                 return true
                             }
+                            if peer is TelegramChannel {
+                                return true
+                            }
                             strongSelf.chatDisplayNode.dismissInput()
                             var options = WallpaperPresentationOptions()
                             var intensity: Int32?
@@ -3128,9 +3131,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                     }, action: { [weak self] controller, f in
                         if let strongSelf = self {
-                            if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                                strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds([id])
-                            }
                             let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [id], type: .forLocalPeer).startStandalone()
                         }
                         f(.dismissWithoutContent)
@@ -8744,15 +8744,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             if isAction && (actions.options == .deleteGlobally || actions.options == .deleteLocally) {
-                                if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                                    strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                                }
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: actions.options == .deleteLocally ? .forLocalPeer : .forEveryone).startStandalone()
                                 completion(.dismissWithoutContent)
                             } else if (messages.first?.flags.isSending ?? false) {
-                                if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                                    strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                                }
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone, deleteAllInGroup: true).startStandalone()
                                 completion(.dismissWithoutContent)
                             } else {
@@ -17215,9 +17209,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let _ = strongSelf.context.engine.messages.deleteAllMessagesWithAuthor(peerId: peerId, authorId: author.id, namespace: Namespaces.Message.Cloud).startStandalone()
                                 let _ = strongSelf.context.engine.messages.clearAuthorHistory(peerId: peerId, memberId: author.id).startStandalone()
                             } else if actions.contains(0) {
-                                if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                                    strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                                }
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                             }
                             if actions.contains(1) {
@@ -17256,9 +17247,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                        strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                    }
                     let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                 }
             }))
@@ -17283,7 +17271,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
             }
-            contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
+            contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, f in
                 if let strongSelf = self {
                     var giveaway: TelegramMediaGiveaway?
                     for messageId in messageIds {
@@ -17296,9 +17284,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     let commit = {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                        if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                            strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                        }
                         let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                     }
                     if let giveaway {
@@ -17311,8 +17296,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         f(.default)
                     } else {
-                        commit()
-                        f(.dismissWithoutContent)
+                        c.dismiss(completion: {
+                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                                commit()
+                            })
+                        })
                     }
                 }
             })))
@@ -17320,9 +17308,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                        strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                    }
                     let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                 }
             }))
@@ -17346,29 +17331,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                     
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                        c.dismiss(completion: { [weak strongSelf] in
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
-                                guard let strongSelf else {
-                                    return
-                                }
-                                strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
-                            })
+                    c.dismiss(completion: { [weak strongSelf] in
+                        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                            guard let strongSelf else {
+                                return
+                            }
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
                         })
-                    } else {
-                        f(.dismissWithoutContent)
-                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
-                    }
+                    })
                 }
             })))
             items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                        strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                    }
                     let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
                     
                 }

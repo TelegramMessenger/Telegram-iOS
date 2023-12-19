@@ -306,7 +306,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.gridNode.addSubnode(self.colorItemNode)
         }
         self.gridNode.addSubnode(self.galleryItemNode)
-        if case let .peer(_, _, wallpaper, _, _) = mode, let wallpaper, !wallpaper.isPattern {
+        if case let .peer(_, _, wallpaper, _, _) = mode, let wallpaper, !wallpaper.isEmoticon {
             self.gridNode.addSubnode(self.removeItemNode)
         }
         self.gridNode.addSubnode(self.descriptionItemNode)
@@ -404,7 +404,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     selectedWallpaper = wallpaper
                 }
                 
-                if let selectedWallpaper, !selectedWallpaper.isPattern {
+                if let selectedWallpaper, !selectedWallpaper.isEmoticon {
                     entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: selectedWallpaper, channelMode: true, isEditable: false, isSelected: true))
                 } else {
                     let emojiFile = context.animatedEmojiStickers["❌"]?.first?.file
@@ -414,19 +414,24 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 index += 1
                 
                 for theme in themes {
-                    guard let wallpaper = theme.settings?.first?.wallpaper, let emoticon = theme.emoticon else {
+                    guard let wallpaper = theme.settings?.first?.wallpaper, let themeEmoticon = theme.emoticon else {
                         continue
                     }
                     
                     var updatedWallpaper = wallpaper
                     if let settings = wallpaper.settings {
                         var updatedSettings = settings
-                        updatedSettings.emoticon = emoticon
+                        updatedSettings.emoticon = themeEmoticon
                         updatedWallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                     }
+                    
+                    var isSelected = false
+                    if let selectedWallpaper, case let .emoticon(emoticon) = selectedWallpaper, emoticon.strippedEmoji == themeEmoticon.strippedEmoji {
+                        isSelected = true
+                    }
 
-                    let emoji = context.animatedEmojiStickers[emoticon]
-                    entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: updatedWallpaper, emoji: emoji?.first?.file, channelMode: true, isEditable: false, isSelected: selectedWallpaper?.isBasicallyEqual(to: wallpaper) ?? false))
+                    let emoji = context.animatedEmojiStickers[themeEmoticon]
+                    entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: updatedWallpaper, emoji: emoji?.first?.file, channelMode: true, isEditable: false, isSelected: isSelected))
                     index += 1
                 }
             } else {

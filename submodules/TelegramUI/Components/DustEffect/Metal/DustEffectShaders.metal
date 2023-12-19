@@ -93,13 +93,9 @@ kernel void dustEffectUpdateParticle(
     float particleXFraction = float(particleX) / float(size.x);
     float particleFraction = particleEaseInValueAt(effectFraction, particleXFraction);
     
-    //Loki rng = Loki(gid, uint(phase * timeStep));
-    //float2 offsetNorm = float2(1.0, 1.0) * 10.0 * timeStep;
-    
     Particle particle = particles[gid];
     particle.offsetFromBasePosition += (particle.velocity * timeStep) * particleFraction;
-    //particle.velocity += ((-offsetNorm) * 0.5 + float2(rng.rand(), rng.rand()) * offsetNorm) * particleFraction;
-    //particle.velocity = particle.velocity * (1.0 - particleFraction) + particle.velocity * 1.001 * particleFraction;
+    
     particle.velocity += float2(0.0, timeStep * 120.0) * particleFraction;
     particle.lifetime = max(0.0, particle.lifetime - timeStep * particleFraction);
     particles[gid] = particle;
