@@ -634,14 +634,17 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let fieldMaxHeight = textFieldMaxHeight(maxHeight, metrics: metrics)
         
         var textFieldMinHeight: CGFloat = 35.0
+        var textFieldRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
             textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
+            textFieldRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
         }
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
             let maxTextWidth = width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right
-            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth, rightInset: 0.0)
+            
+            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth, rightInset: textFieldRealInsets.right)
             let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight))
             
             let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)
