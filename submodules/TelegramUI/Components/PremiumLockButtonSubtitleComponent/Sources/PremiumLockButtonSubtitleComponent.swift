@@ -8,20 +8,24 @@ import AnimatedTextComponent
 
 public final class PremiumLockButtonSubtitleComponent: CombinedComponent {
     public let count: Int
-    public let theme: PresentationTheme
+    public let color: UIColor
     public let strings: PresentationStrings
     
-    public init(count: Int, theme: PresentationTheme, strings: PresentationStrings) {
+    public init(count: Int, color: UIColor, strings: PresentationStrings) {
         self.count = count
-        self.theme = theme
+        self.color = color
         self.strings = strings
+    }
+    
+    public convenience init(count: Int, theme: PresentationTheme, strings: PresentationStrings) {
+        self.init(count: count, color: theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7), strings: strings)
     }
     
     public static func ==(lhs: PremiumLockButtonSubtitleComponent, rhs: PremiumLockButtonSubtitleComponent) -> Bool {
         if lhs.count != rhs.count {
             return false
         }
-        if lhs.theme !== rhs.theme {
+        if lhs.color !== rhs.color {
             return false
         }
         if lhs.strings !== rhs.strings {
@@ -38,7 +42,7 @@ public final class PremiumLockButtonSubtitleComponent: CombinedComponent {
             let icon = icon.update(
                 component: BundleIconComponent(
                     name: "Chat/Input/Accessory Panels/TextLockIcon",
-                    tintColor: context.component.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7),
+                    tintColor: context.component.color,
                     maxSize: CGSize(width: 10.0, height: 10.0)
                 ),
                 availableSize: CGSize(width: 100.0, height: 100.0),
@@ -63,7 +67,7 @@ public final class PremiumLockButtonSubtitleComponent: CombinedComponent {
             }
             
             let text = text.update(
-                component: AnimatedTextComponent(font: Font.medium(11.0), color: context.component.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7), items: textItems),
+                component: AnimatedTextComponent(font: Font.medium(11.0), color: context.component.color, items: textItems),
                 availableSize: CGSize(width: context.availableSize.width - 20.0, height: 100.0),
                 transition: context.transition
             )

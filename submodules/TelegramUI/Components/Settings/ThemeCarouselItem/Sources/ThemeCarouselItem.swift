@@ -27,6 +27,7 @@ private struct ThemeCarouselThemeEntry: Comparable, Identifiable {
     let themeReference: PresentationThemeReference
     let nightMode: Bool
     let channelMode: Bool
+    let firstIsNone: Bool
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
     var selected: Bool
@@ -52,6 +53,9 @@ private struct ThemeCarouselThemeEntry: Comparable, Identifiable {
             return false
         }
         if lhs.channelMode != rhs.channelMode {
+            return false
+        }
+        if lhs.firstIsNone != rhs.firstIsNone {
             return false
         }
         if lhs.themeSpecificAccentColors != rhs.themeSpecificAccentColors {
@@ -80,7 +84,11 @@ private struct ThemeCarouselThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
-        return ThemeCarouselThemeIconItem(context: context, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, channelMode: self.channelMode, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action, contextAction: contextAction)
+        var isNone = false
+        if self.index == 0 && self.firstIsNone {
+            isNone = true
+        }
+        return ThemeCarouselThemeIconItem(context: context, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, channelMode: self.channelMode, isNone: isNone, themeSpecificAccentColors: self.themeSpecificAccentColors, themeSpecificChatWallpapers: self.themeSpecificChatWallpapers, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action, contextAction: contextAction)
     }
 }
 
@@ -89,6 +97,7 @@ public class ThemeCarouselThemeIconItem: ListViewItem {
     public let context: AccountContext
     public let emojiFile: TelegramMediaFile?
     public let themeReference: PresentationThemeReference
+    public let isNone: Bool
     public let nightMode: Bool
     public let channelMode: Bool
     public let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
@@ -100,12 +109,13 @@ public class ThemeCarouselThemeIconItem: ListViewItem {
     public let action: (PresentationThemeReference) -> Void
     public let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(context: AccountContext, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference, nightMode: Bool, channelMode: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference, nightMode: Bool, channelMode: Bool, isNone: Bool = false, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.emojiFile = emojiFile
         self.themeReference = themeReference
         self.nightMode = nightMode
         self.channelMode = channelMode
+        self.isNone = isNone
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
         self.selected = selected
@@ -309,10 +319,14 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
     }
     
     override func selected() {
-        let wasSelected = self.item?.selected ?? false
+        guard let item = self.item else {
+            return
+        }
+        
+        let wasSelected = item.selected
         super.selected()
         
-        if let animatedStickerNode = self.animatedStickerNode {
+        if let animatedStickerNode = self.animatedStickerNode, !item.isNone {
             Queue.mainQueue().after(0.1) {
                 if !wasSelected {
                     animatedStickerNode.seekTo(.frameIndex(0))
@@ -336,6 +350,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
     }
     
     func asyncLayout() -> (ThemeCarouselThemeIconItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeEmojiLayout = TextNode.asyncLayout(self.emojiNode)
         let makeImageLayout = self.imageNode.asyncLayout()
         
@@ -375,6 +390,8 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                 string = "🎨"
             }
             
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.Wallpaper_NoWallpaper, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            
             let emojiTitle = NSAttributedString(string: string ?? "", font: Font.regular(20.0), textColor: .black)
             let (_, emojiApply) = makeEmojiLayout(TextNodeLayoutArguments(attributedString: emojiTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
@@ -392,8 +409,13 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                         let color = item.themeSpecificAccentColors[themeReference.index]
                         let wallpaper = item.themeSpecificChatWallpapers[themeReference.index]
                         
-                        strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: color, wallpaper: wallpaper ?? item.wallpaper, nightMode: item.nightMode, channelMode: item.channelMode, emoticon: true))
-                        strongSelf.imageNode.backgroundColor = nil
+                        if case .builtin = themeReference, item.isNone {
+                            strongSelf.imageNode.reset()
+                            strongSelf.imageNode.backgroundColor = item.theme.list.mediaPlaceholderColor //item.theme.list.disclosureArrowColor.withAlphaComponent(0.2)
+                        } else {
+                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: color, wallpaper: wallpaper ?? item.wallpaper, nightMode: item.nightMode, channelMode: item.channelMode, emoticon: true))
+                            strongSelf.imageNode.backgroundColor = nil
+                        }
                     }
                     
                     if updatedTheme || updatedSelected {
@@ -413,8 +435,14 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                     strongSelf.emojiContainerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                     strongSelf.emojiContainerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
                     
+                    if item.isNone {
+                        let _ = textApply()
+                    }
                     let _ = emojiApply()
-
+                    
+                    let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemLayout.size.height - textLayout.size.width) / 2.0), y: floorToScreenPixels((itemLayout.size.width - textLayout.size.height) / 2.0) - 16.0), size: textLayout.size)
+                    strongSelf.textNode.frame = textFrame
+                    
                     let imageSize = CGSize(width: 82.0, height: 108.0)
                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 6.0), size: imageSize)
                     let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
@@ -525,6 +553,7 @@ public class ThemeCarouselThemeItem: ListViewItem, ItemListItem, ListItemCompone
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let themes: [PresentationThemeReference]
+    public let firstIsNone : Bool
     public let animatedEmojiStickers: [String: [StickerPackItem]]
     public let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     public let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
@@ -535,11 +564,12 @@ public class ThemeCarouselThemeItem: ListViewItem, ItemListItem, ListItemCompone
     public let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     public let tag: ItemListItemTag?
 
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], animatedEmojiStickers: [String: [StickerPackItem]], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], nightMode: Bool, channelMode: Bool = false, currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], firstIsNone: Bool = false, animatedEmojiStickers: [String: [StickerPackItem]], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], nightMode: Bool, channelMode: Bool = false, currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.themes = themes
+        self.firstIsNone = firstIsNone
         self.animatedEmojiStickers = animatedEmojiStickers
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
@@ -841,13 +871,19 @@ public class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                         if selected {
                             hasCurrentTheme = true
                         }
-                        let emojiFile = theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }
-                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: emojiFile, themeReference: theme, nightMode: item.nightMode, channelMode: item.channelMode, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil))
+                        
+                        let emojiFile: TelegramMediaFile?
+                        if item.firstIsNone && index == 0 {
+                            emojiFile = item.animatedEmojiStickers["❌"]?.first?.file
+                        } else {
+                            emojiFile = theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }
+                        }
+                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: emojiFile, themeReference: theme, nightMode: item.nightMode, channelMode: item.channelMode, firstIsNone: item.firstIsNone, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil))
                         index += 1
                     }
                     
                     if !hasCurrentTheme {
-                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: nil, themeReference: item.currentTheme, nightMode: false, channelMode: item.channelMode, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: true, theme: item.theme, strings: item.strings, wallpaper: nil))
+                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: nil, themeReference: item.currentTheme, nightMode: false, channelMode: item.channelMode, firstIsNone: item.firstIsNone, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: true, theme: item.theme, strings: item.strings, wallpaper: nil))
                     }
                     
                     let action: (PresentationThemeReference) -> Void = { [weak self] themeReference in

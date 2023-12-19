@@ -17,7 +17,17 @@ import PresentationDataUtils
 import MediaPickerUI
 import WallpaperGalleryScreen
 
+public enum WallpaperSelectionResult {
+    case remove
+    case emoticon(String)
+    case custom(wallpaperEntry: WallpaperGalleryEntry, options: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?)
+}
+
 public final class ThemeGridController: ViewController {
+    public enum Mode {
+        case generic
+        case peer(EnginePeer, [TelegramTheme], TelegramWallpaper?, Int?, Int?)
+    }
     private var controllerNode: ThemeGridControllerNode {
         return self.displayNode as! ThemeGridControllerNode
     }
@@ -28,6 +38,7 @@ public final class ThemeGridController: ViewController {
     }
     
     private let context: AccountContext
+    private let mode: Mode
     
     private var presentationData: PresentationData
     private let presentationDataPromise = Promise<PresentationData>()
@@ -46,14 +57,24 @@ public final class ThemeGridController: ViewController {
     
     private var previousContentOffset: GridNodeVisibleContentOffset?
     
-    public init(context: AccountContext) {
+    public var completion: (WallpaperSelectionResult) -> Void = { _ in }
+    
+    public init(context: AccountContext, mode: Mode = .generic) {
         self.context = context
+        self.mode = mode
+        
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(self.presentationData))
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.title = self.presentationData.strings.Wallpaper_Title
+        switch mode {
+        case .generic:
+            self.title = self.presentationData.strings.Wallpaper_Title
+        case .peer:
+            self.title = self.presentationData.strings.Wallpaper_ChannelTitle
+        }
+        
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -81,10 +102,12 @@ public final class ThemeGridController: ViewController {
             }
         })
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
-            self?.activateSearch()
-        })
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        if case .generic = mode {
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search, activate: { [weak self] in
+                self?.activateSearch()
+            })
+            self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -99,12 +122,14 @@ public final class ThemeGridController: ViewController {
         self.title = self.presentationData.strings.Wallpaper_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
-        if let isEmpty = self.isEmpty, isEmpty {
-        } else {
-            if self.editingMode {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+        if case .generic = self.mode {
+            if let isEmpty = self.isEmpty, isEmpty {
             } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                if self.editingMode {
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
+                } else {
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                }
             }
         }
         
@@ -118,35 +143,29 @@ public final class ThemeGridController: ViewController {
     }
     
     public override func loadDisplayNode() {
-        self.displayNode = ThemeGridControllerNode(context: self.context, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
-            if let strongSelf = self {
-                let controller = WallpaperGalleryController(context: strongSelf.context, source: source)
-                controller.apply = { [weak self, weak controller] wallpaper, options, editedImage, cropRect, brightness, _ in
-                    if let strongSelf = self {
-                        uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: { [weak self, weak controller] in
-                            if let strongSelf = self {
-                                strongSelf.deactivateSearch(animated: false)
-                                strongSelf.controllerNode.scrollToTop(animated: false)
-                            }
-                            if let controller = controller {
-                                switch wallpaper {
-                                case .asset, .contextResult:
-                                    controller.dismiss(animated: true)
-                                default:
-                                    break
-                                }
-                            }
-                        })
-                    }
-                }
-                self?.push(controller)
-            }
-        }, presentGallery: { [weak self] in
+        var mode: WallpaperGalleryController.Mode = .default
+        var requiredLevel: Int?
+        var requiredCustomLevel: Int?
+        if case let .peer(peer, _, _, requiredLevelValue, requiredCustomLevelValue) = self.mode {
+            mode = .peer(peer, false)
+            requiredLevel = requiredLevelValue
+            requiredCustomLevel = requiredCustomLevelValue
+        }
+        
+        self.displayNode = ThemeGridControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, presentPreviewController: { [weak self] source in
             if let strongSelf = self {
                 let dismissControllers = { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
-                        let controllers = navigationController.viewControllers.filter({ controller in
-                            if controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                        var controllers = navigationController.viewControllers.filter({ controller in
+                            if controller is ThemeGridController {
+                                return false
+                            }
+                            return true
+                        })
+                        navigationController.setViewControllers(controllers, animated: false)
+                        
+                        controllers = navigationController.viewControllers.filter({ controller in
+                            if controller is WallpaperGalleryController {
                                 return false
                             }
                             return true
@@ -155,17 +174,87 @@ public final class ThemeGridController: ViewController {
                     }
                 }
                 
+                let controller = WallpaperGalleryController(context: strongSelf.context, source: source, mode: mode)
+                controller.requiredLevel = requiredLevel
+                controller.apply = { [weak self, weak controller] wallpaper, options, editedImage, cropRect, brightness, _ in
+                    if let strongSelf = self {
+                        if case .peer = mode {
+                            var emoticon = ""
+                            if case let .wallpaper(wallpaper, _) = wallpaper {
+                                emoticon = wallpaper.settings?.emoticon ?? ""
+                            }
+                            strongSelf.completion(.emoticon(emoticon))
+                            dismissControllers()
+                        } else {
+                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: { [weak self, weak controller] in
+                                if let strongSelf = self {
+                                    strongSelf.deactivateSearch(animated: false)
+                                    strongSelf.controllerNode.scrollToTop(animated: false)
+                                }
+                                if let controller = controller {
+                                    switch wallpaper {
+                                    case .asset, .contextResult:
+                                        controller.dismiss(animated: true)
+                                    default:
+                                        break
+                                    }
+                                }
+                            })
+                        }
+                    }
+                }
+                self?.push(controller)
+            }
+        }, presentGallery: { [weak self] in
+            if let strongSelf = self {
+                let dismissControllers = { [weak self] in
+                    if let self, let navigationController = self.navigationController as? NavigationController {
+                        if case .peer = mode {
+                            var controllers = navigationController.viewControllers.filter({ controller in
+                                if controller is ThemeGridController || controller is MediaPickerScreen {
+                                    return false
+                                }
+                                return true
+                            })
+                            navigationController.setViewControllers(controllers, animated: false)
+                            
+                            controllers = navigationController.viewControllers.filter({ controller in
+                                if controller is WallpaperGalleryController {
+                                    return false
+                                }
+                                return true
+                            })
+                            navigationController.setViewControllers(controllers, animated: true)
+                        } else {
+                            let controllers = navigationController.viewControllers.filter({ controller in
+                                if controller is WallpaperGalleryController || controller is MediaPickerScreen {
+                                    return false
+                                }
+                                
+                                return true
+                            })
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    }
+                }
+                
                 let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
                 controller.customSelection = { [weak self] _, asset in
                     guard let strongSelf = self, let asset = asset as? PHAsset else {
                         return
                     }
-                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset))
+                    let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: mode)
+                    controller.requiredLevel = requiredCustomLevel
                     controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness, _ in
                         if let strongSelf = self {
-                            uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
+                            if case .peer = mode {
+                                strongSelf.completion(.custom(wallpaperEntry: wallpaper, options: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness))
                                 dismissControllers()
-                            })
+                            } else {
+                                uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
+                                    dismissControllers()
+                                })
+                            }
                         }
                     }
                     strongSelf.push(controller)
@@ -182,13 +271,15 @@ public final class ThemeGridController: ViewController {
                 if empty != strongSelf.isEmpty {
                     strongSelf.isEmpty = empty
                     
-                    if empty {
-                        strongSelf.navigationItem.setRightBarButton(nil, animated: true)
-                    } else {
-                        if strongSelf.editingMode {
-                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                    if case .generic = strongSelf.mode {
+                        if empty {
+                            strongSelf.navigationItem.setRightBarButton(nil, animated: true)
                         } else {
-                            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                            if strongSelf.editingMode {
+                                strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.donePressed))
+                            } else {
+                                strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: strongSelf, action: #selector(strongSelf.editPressed))
+                            }
                         }
                     }
                 }

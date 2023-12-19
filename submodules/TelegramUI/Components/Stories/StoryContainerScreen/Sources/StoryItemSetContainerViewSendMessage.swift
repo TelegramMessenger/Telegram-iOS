@@ -3311,20 +3311,39 @@ final class StoryItemSetContainerSendMessage {
                 action()
             }))
         case let .channelMessage(_, messageId):
-            let action = { [weak self, weak view] in
-                let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
-                |> mapToSignal { result -> Signal<Message?, NoError> in
+            let action = { [weak self, weak view, weak controller] in
+                let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: true))
+                |> mapToSignal { result -> Signal<Message?, GetMessagesError> in
                     if case let .result(messages) = result {
                         return .single(messages.first)
+                    } else {
+                        return .complete()
                     }
-                    return .single(nil)
                 })
-                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] message in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view, weak controller] message in
                     guard let self, let view else {
                         return
                     }
                     if let message, let peer = message.peers[message.id.peerId] {
                         self.openResolved(view: view, result: .channelMessage(peer: peer, messageId: message.id, timecode: nil))
+                    } else {
+                        controller?.present(UndoOverlayController(presentationData: updatedPresentationData.initial, content: .info(title: nil, text: updatedPresentationData.initial.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true }), in: .current)
+                    }
+                }, error: { [weak self, weak view] error in
+                    guard let self, let view else {
+                        return
+                    }
+                    switch error {
+                    case .privateChannel:
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] peer in
+                            guard let self, let view else {
+                                return
+                            }
+                            if let peer {
+                                self.openResolved(view: view, result: .peer(peer._asPeer(), .default))
+                            }
+                        })
                     }
                 })
             }

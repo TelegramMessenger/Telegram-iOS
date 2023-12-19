@@ -119,6 +119,7 @@ import ChatQrCodeScreen
 import PeerInfoScreen
 import MediaEditorScreen
 import WallpaperGalleryScreen
+import WallpaperGridScreen
 
 public enum ChatControllerPeekActions {
     case standard

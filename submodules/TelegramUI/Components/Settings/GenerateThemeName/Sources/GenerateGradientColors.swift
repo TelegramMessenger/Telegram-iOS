@@ -302,7 +302,7 @@ private let colorPairs: [(UInt32, UInt32)] = [
     (0x00416a, 0xe4e5e6)
 ]
 
-func generateGradientColors(color: UIColor) -> (UIColor, UIColor) {
+public func generateGradientColors(color: UIColor) -> (UIColor, UIColor) {
     var nearest: (colors: (lhs: UInt32, rhs: UInt32), distance: Int32)?
     for (lhs, rhs) in colorPairs {
         let lhsDistance = color.distance(to: UIColor(rgb: lhs))

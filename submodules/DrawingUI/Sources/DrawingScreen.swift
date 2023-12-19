@@ -3152,12 +3152,13 @@ public final class DrawingToolsInteraction {
                     }))
                 }
             }
-            #if DEBUG
-            if isRectangleImage {
+            
+            
+            if #available(iOS 17.0, *), isRectangleImage {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_CutOut, accessibilityLabel: presentationData.strings.Paint_CutOut), action: { [weak self, weak entityView] in
                     if let self, let entityView, let entity = entityView.entity as? DrawingStickerEntity, case let .image(image, _) = entity.content {
                         let _ = (cutoutStickerImage(from: image)
-                        |> deliverOnMainQueue).start(next: { [weak entity] result in
+                                 |> deliverOnMainQueue).start(next: { [weak entity] result in
                             if let result, let entity {
                                 let newEntity = DrawingStickerEntity(content: .image(result, .sticker))
                                 newEntity.referenceDrawingSize = entity.referenceDrawingSize
@@ -3180,7 +3181,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            #endif
+            
             let entityFrame = entityView.convert(entityView.selectionBounds, to: node.view).offsetBy(dx: 0.0, dy: -6.0)
             let controller = makeContextMenuController(actions: actions)
             let bounds = node.bounds.insetBy(dx: 0.0, dy: 160.0)

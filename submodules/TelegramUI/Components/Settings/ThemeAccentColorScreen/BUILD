@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "WallpaperGalleryScreen",
-    module_name = "WallpaperGalleryScreen",
+    name = "ThemeAccentColorScreen",
+    module_name = "ThemeAccentColorScreen",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -28,9 +28,10 @@ swift_library(
         "//submodules/MergeLists",
         "//submodules/ShareController",
         "//submodules/GalleryUI",
-        "//submodules/CounterContollerTitleView",
-        "//submodules/LegacyMediaPickerUI",
+        "//submodules/ChatListUI",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
         "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
+        "//submodules/TelegramUI/Components/Settings/GenerateThemeName",
         "//submodules/TelegramUI/Components/PremiumLockButtonSubtitleComponent",
     ],
     visibility = [

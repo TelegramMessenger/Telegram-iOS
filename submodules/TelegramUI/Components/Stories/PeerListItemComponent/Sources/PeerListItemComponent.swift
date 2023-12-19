@@ -116,10 +116,9 @@ public final class PeerListItemComponent: Component {
     let selectionPosition: SelectionPosition
     let isEnabled: Bool
     let hasNext: Bool
-    let action: (EnginePeer, EngineMessage.Id?) -> Void
+    let action: (EnginePeer, EngineMessage.Id?, UIView?) -> Void
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
-    let openStory: ((EnginePeer, Int32, UIView) -> Void)?
     
     public init(
         context: AccountContext,
@@ -141,10 +140,9 @@ public final class PeerListItemComponent: Component {
         selectionPosition: SelectionPosition = .left,
         isEnabled: Bool = true,
         hasNext: Bool,
-        action: @escaping (EnginePeer, EngineMessage.Id?) -> Void,
+        action: @escaping (EnginePeer, EngineMessage.Id?, UIView?) -> Void,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
-        openStories: ((EnginePeer, AvatarNode) -> Void)? = nil,
-        openStory: ((EnginePeer, Int32, UIView) -> Void)? = nil
+        openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -168,7 +166,6 @@ public final class PeerListItemComponent: Component {
         self.action = action
         self.contextAction = contextAction
         self.openStories = openStories
-        self.openStory = openStory
     }
     
     public static func ==(lhs: PeerListItemComponent, rhs: PeerListItemComponent) -> Bool {
@@ -353,7 +350,7 @@ public final class PeerListItemComponent: Component {
             guard let component = self.component, let peer = component.peer else {
                 return
             }
-            component.action(peer, component.message?.id)
+            component.action(peer, component.message?.id, self.imageNode?.view)
         }
         
         @objc private func avatarButtonPressed() {
@@ -361,13 +358,6 @@ public final class PeerListItemComponent: Component {
                 return
             }
             component.openStories?(peer, self.avatarNode)
-        }
-        
-        @objc private func imageButtonPressed() {
-            guard let component = self.component, let peer = component.peer, let story = component.story, let imageNode = self.imageNode else {
-                return
-            }
-            component.openStory?(peer, story.id, imageNode.view)
         }
         
         private func updateReactionLayer() {
@@ -505,6 +495,9 @@ public final class PeerListItemComponent: Component {
             var rightInset: CGFloat = contextInset * 2.0 + 8.0 + component.sideInset
             if component.reaction != nil || component.rightAccessory != .none {
                 rightInset += 32.0
+            }
+            if component.story != nil {
+                rightInset += 40.0
             }
             
             var avatarLeftInset: CGFloat = component.sideInset + 10.0
@@ -913,15 +906,13 @@ public final class PeerListItemComponent: Component {
                     self.imageNode = imageNode
                     
                     imageButtonView = HighlightTrackingButton()
-                    imageButtonView.addTarget(self, action: #selector(self.imageButtonPressed), for: .touchUpInside)
-                    imageButtonView.isEnabled = component.message == nil
+                    imageButtonView.isEnabled = false
                     self.imageButtonView = imageButtonView
                     
                     self.containerButton.addSubview(imageNode.view)
                     self.addSubview(imageButtonView)
                     
                     var imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-                    
                     if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
                         imageSignal = mediaGridMessagePhoto(account: component.context.account, userLocation: .peer(peer.id), photoReference: imageReference)
                     } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {

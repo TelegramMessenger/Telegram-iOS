@@ -135,6 +135,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoChatListPaneNode",
         "//submodules/MediaPickerUI",
         "//submodules/AttachmentUI",
+        "//submodules/TelegramUI/Components/Settings/BoostLevelIconComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -1575,6 +1575,102 @@ final class MediaEditorScreenComponent: Component {
             }
              
             var topButtonOffsetX: CGFloat = 0.0
+            
+            if let subject = controller.node.subject, case .message = subject {
+                let isNightTheme = mediaEditor?.values.nightTheme == true
+                
+                let dayNightContentComponent: AnyComponentWithIdentity<Empty>
+                if component.hasAppeared {
+                    dayNightContentComponent = AnyComponentWithIdentity(
+                        id: "animatedIcon",
+                        component: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(
+                                    name: isNightTheme ? "anim_sun" : "anim_sun_reverse",
+                                    mode: state.dayNightDidChange ? .animating(loop: false) : .still(position: .end)
+                                ),
+                                colors: ["__allcolors__": .white],
+                                size: CGSize(width: 30.0, height: 30.0)
+                            ).tagged(dayNightButtonTag)
+                        )
+                    )
+                } else {
+                    dayNightContentComponent = AnyComponentWithIdentity(
+                        id: "staticIcon",
+                        component: AnyComponent(
+                            BundleIconComponent(
+                                name: "Media Editor/MuteIcon",
+                                tintColor: nil
+                            )
+                        )
+                    )
+                }
+                
+                let dayNightButtonSize = self.dayNightButton.update(
+                    transition: transition,
+                    component: AnyComponent(CameraButton(
+                        content: dayNightContentComponent,
+                        action: { [weak self, weak state, weak mediaEditor] in
+                            guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
+                                return
+                            }
+                            guard !controller.node.recording.isActive else {
+                                return
+                            }
+                            
+                            if let mediaEditor {
+                                state?.dayNightDidChange = true
+                                
+                                if let snapshotView = controller.node.previewContainerView.snapshotView(afterScreenUpdates: false) {
+                                    controller.node.previewContainerView.addSubview(snapshotView)
+                                    
+                                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.1, removeOnCompletion: false, completion: { _ in
+                                        snapshotView.removeFromSuperview()
+                                    })
+                                }
+                                
+                                Queue.mainQueue().after(0.1) {
+                                    mediaEditor.toggleNightTheme()
+                                    controller.node.entitiesView.eachView { view in
+                                        if let stickerEntityView = view as? DrawingStickerEntityView {
+                                            stickerEntityView.toggleNightTheme()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 44.0, height: 44.0)
+                )
+                let dayNightButtonFrame = CGRect(
+                    origin: CGPoint(x: availableSize.width - 20.0 - dayNightButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                    size: dayNightButtonSize
+                )
+                if let dayNightButtonView = self.dayNightButton.view {
+                    if dayNightButtonView.superview == nil {
+                        setupButtonShadow(dayNightButtonView)
+                        self.addSubview(dayNightButtonView)
+                        
+                        dayNightButtonView.layer.animateAlpha(from: 0.0, to: dayNightButtonView.alpha, duration: self.animatingButtons ? 0.1 : 0.2)
+                        dayNightButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: self.animatingButtons ? 0.1 : 0.2)
+                    }
+                    transition.setPosition(view: dayNightButtonView, position: dayNightButtonFrame.center)
+                    transition.setBounds(view: dayNightButtonView, bounds: CGRect(origin: .zero, size: dayNightButtonFrame.size))
+                    transition.setScale(view: dayNightButtonView, scale: displayTopButtons ? 1.0 : 0.01)
+                    transition.setAlpha(view: dayNightButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
+                }
+                
+                topButtonOffsetX += 50.0
+            } else {
+                if let dayNightButtonView = self.dayNightButton.view, dayNightButtonView.superview != nil {
+                    dayNightButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak dayNightButtonView] _ in
+                        dayNightButtonView?.removeFromSuperview()
+                    })
+                    dayNightButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            }
+            
             if let playerState = state.playerState, playerState.hasAudio {
                 let isVideoMuted = mediaEditor?.values.videoIsMuted ?? false
                 
@@ -1632,7 +1728,7 @@ final class MediaEditorScreenComponent: Component {
                     containerSize: CGSize(width: 44.0, height: 44.0)
                 )
                 let muteButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
+                    origin: CGPoint(x: availableSize.width - 20.0 - muteButtonSize.width - 50.0 - topButtonOffsetX, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
                     size: muteButtonSize
                 )
                 if let muteButtonView = self.muteButton.view {
@@ -1733,101 +1829,6 @@ final class MediaEditorScreenComponent: Component {
                         playbackButtonView?.removeFromSuperview()
                     })
                     playbackButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                }
-            }
-            
-            if let subject = controller.node.subject, case .message = subject {
-                let isNightTheme = mediaEditor?.values.nightTheme == true
-                
-                let dayNightContentComponent: AnyComponentWithIdentity<Empty>
-                if component.hasAppeared {
-                    dayNightContentComponent = AnyComponentWithIdentity(
-                        id: "animatedIcon",
-                        component: AnyComponent(
-                            LottieAnimationComponent(
-                                animation: LottieAnimationComponent.AnimationItem(
-                                    name: isNightTheme ? "anim_sun" : "anim_sun_reverse",
-                                    mode: state.dayNightDidChange ? .animating(loop: false) : .still(position: .end)
-                                ),
-                                colors: ["__allcolors__": .white],
-                                size: CGSize(width: 30.0, height: 30.0)
-                            ).tagged(dayNightButtonTag)
-                        )
-                    )
-                } else {
-                    dayNightContentComponent = AnyComponentWithIdentity(
-                        id: "staticIcon",
-                        component: AnyComponent(
-                            BundleIconComponent(
-                                name: "Media Editor/MuteIcon",
-                                tintColor: nil
-                            )
-                        )
-                    )
-                }
-                
-                let dayNightButtonSize = self.dayNightButton.update(
-                    transition: transition,
-                    component: AnyComponent(CameraButton(
-                        content: dayNightContentComponent,
-                        action: { [weak self, weak state, weak mediaEditor] in
-                            guard let environment = self?.environment, let controller = environment.controller() as? MediaEditorScreen else {
-                                return
-                            }
-                            guard !controller.node.recording.isActive else {
-                                return
-                            }
-                            
-                            if let mediaEditor {
-                                state?.dayNightDidChange = true
-                                
-                                if let snapshotView = controller.node.previewContainerView.snapshotView(afterScreenUpdates: false) {
-                                    controller.node.previewContainerView.addSubview(snapshotView)
-                                    
-                                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, delay: 0.1, removeOnCompletion: false, completion: { _ in
-                                        snapshotView.removeFromSuperview()
-                                    })
-                                }
-                                
-                                Queue.mainQueue().after(0.1) {
-                                    mediaEditor.toggleNightTheme()
-                                    controller.node.entitiesView.eachView { view in
-                                        if let stickerEntityView = view as? DrawingStickerEntityView {
-                                            stickerEntityView.toggleNightTheme()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 44.0, height: 44.0)
-                )
-                let dayNightButtonFrame = CGRect(
-                    origin: CGPoint(x: availableSize.width - 20.0 - dayNightButtonSize.width - 50.0, y: max(environment.statusBarHeight + 10.0, environment.safeInsets.top + 20.0)),
-                    size: dayNightButtonSize
-                )
-                if let dayNightButtonView = self.dayNightButton.view {
-                    if dayNightButtonView.superview == nil {
-                        setupButtonShadow(dayNightButtonView)
-                        self.addSubview(dayNightButtonView)
-                        
-                        dayNightButtonView.layer.animateAlpha(from: 0.0, to: dayNightButtonView.alpha, duration: self.animatingButtons ? 0.1 : 0.2)
-                        dayNightButtonView.layer.animateScale(from: 0.4, to: 1.0, duration: self.animatingButtons ? 0.1 : 0.2)
-                    }
-                    transition.setPosition(view: dayNightButtonView, position: dayNightButtonFrame.center)
-                    transition.setBounds(view: dayNightButtonView, bounds: CGRect(origin: .zero, size: dayNightButtonFrame.size))
-                    transition.setScale(view: dayNightButtonView, scale: displayTopButtons ? 1.0 : 0.01)
-                    transition.setAlpha(view: dayNightButtonView, alpha: displayTopButtons && !component.isDismissing && !component.isInteractingWithEntities ? topButtonsAlpha : 0.0)
-                }
-                
-                topButtonOffsetX += 50.0
-            } else {
-                if let dayNightButtonView = self.dayNightButton.view, dayNightButtonView.superview != nil {
-                    dayNightButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak dayNightButtonView] _ in
-                        dayNightButtonView?.removeFromSuperview()
-                    })
-                    dayNightButtonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
             }
             

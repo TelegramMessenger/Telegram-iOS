@@ -7,7 +7,7 @@ import TelegramApi
 extension WallpaperSettings {
     init(apiWallpaperSettings: Api.WallPaperSettings) {
         switch apiWallpaperSettings {
-        case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, intensity, rotation, _):
+        case let .wallPaperSettings(flags, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, intensity, rotation, emoticon):
             var colors: [UInt32] = []
             if let backgroundColor = backgroundColor {
                 colors.append(UInt32(bitPattern: backgroundColor))
@@ -21,7 +21,7 @@ extension WallpaperSettings {
             if let fourthBackgroundColor = fourthBackgroundColor {
                 colors.append(UInt32(bitPattern: fourthBackgroundColor))
             }
-            self = WallpaperSettings(blur: (flags & 1 << 1) != 0, motion: (flags & 1 << 2) != 0, colors: colors, intensity: intensity, rotation: rotation)
+            self = WallpaperSettings(blur: (flags & 1 << 1) != 0, motion: (flags & 1 << 2) != 0, colors: colors, intensity: intensity, rotation: rotation, emoticon: emoticon)
         }
     }
 }
@@ -42,6 +42,9 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
     if let _ = wallpaperSettings.intensity {
         flags |= (1 << 3)
     }
+    if let _ = wallpaperSettings.emoticon {
+        flags |= (1 << 7)
+    }
     var secondBackgroundColor: Int32?
     if wallpaperSettings.colors.count >= 2 {
         flags |= (1 << 4)
@@ -57,7 +60,7 @@ func apiWallpaperSettings(_ wallpaperSettings: WallpaperSettings) -> Api.WallPap
         flags |= (1 << 6)
         fourthBackgroundColor = Int32(bitPattern: wallpaperSettings.colors[3])
     }
-    return .wallPaperSettings(flags: flags, backgroundColor: backgroundColor, secondBackgroundColor: secondBackgroundColor, thirdBackgroundColor: thirdBackgroundColor, fourthBackgroundColor: fourthBackgroundColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0, emoticon: nil)
+    return .wallPaperSettings(flags: flags, backgroundColor: backgroundColor, secondBackgroundColor: secondBackgroundColor, thirdBackgroundColor: thirdBackgroundColor, fourthBackgroundColor: fourthBackgroundColor, intensity: wallpaperSettings.intensity, rotation: wallpaperSettings.rotation ?? 0, emoticon: wallpaperSettings.emoticon)
 }
 
 extension TelegramWallpaper {
@@ -108,5 +111,9 @@ extension TelegramWallpaper {
         default:
             return nil
         }
+    }
+    
+    func apiInputWallpaper(emoticon: String) -> (Api.InputWallPaper, Api.WallPaperSettings) {
+        return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(emoticon: emoticon)))
     }
 }

@@ -121,6 +121,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/ThemeSettingsThemeItem",
         "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
         "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGridScreen",
+        "//submodules/TelegramUI/Components/Settings/ThemeAccentColorScreen",
+        "//submodules/TelegramUI/Components/Settings/GenerateThemeName",
     ],
     visibility = [
         "//visibility:public",

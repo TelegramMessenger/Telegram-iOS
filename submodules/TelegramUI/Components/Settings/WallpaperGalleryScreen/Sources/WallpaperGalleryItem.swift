@@ -1371,6 +1371,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         let centerOffset: CGFloat = 32.0
 
+        var isPattern = false
         if let entry = self.entry {
             switch entry {
                 case .asset:
@@ -1417,6 +1418,8 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                             colorsAlpha = 1.0
                         case let .file(file):
                             if file.isPattern {
+                                isPattern = true
+                                
                                 motionAlpha = 0.0
                                 patternAlpha = 1.0
 
@@ -1453,6 +1456,13 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         
         if let mode = self.mode, case let .peer(peer, _) = mode, case .channel = peer {
             motionAlpha = 0.0
+            if isPattern {
+                patternAlpha = 0.0
+                colorsAlpha = 0.0
+                blurAlpha = 0.0
+                playAlpha = 0.0
+                self.shareButtonNode.isHidden = true
+            }
             blurFrame = centerButtonFrame
         }
         
@@ -1487,8 +1497,12 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.nativeNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
         
         var bottomInset: CGFloat = 132.0
-        if let mode = self.mode, case let .peer(peer, _) = mode, case .user = peer {
-            bottomInset += 58.0
+        if let mode = self.mode, case let .peer(peer, _) = mode {
+            if case .user = peer {
+                bottomInset += 58.0
+            } else if case .channel = peer, let entry = self.entry, case let .wallpaper(wallpaper, _) = entry, case let .file(file) = wallpaper, file.isPattern {
+                bottomInset -= 42.0
+            }
         }
 
         var items: [ListViewItem] = []

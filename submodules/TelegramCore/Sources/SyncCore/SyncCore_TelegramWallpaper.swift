@@ -6,13 +6,15 @@ public struct WallpaperSettings: Codable, Equatable {
     public var colors: [UInt32]
     public var intensity: Int32?
     public var rotation: Int32?
+    public var emoticon: String?
     
-    public init(blur: Bool = false, motion: Bool = false, colors: [UInt32] = [], intensity: Int32? = nil, rotation: Int32? = nil) {
+    public init(blur: Bool = false, motion: Bool = false, colors: [UInt32] = [], intensity: Int32? = nil, rotation: Int32? = nil, emoticon: String? = nil) {
         self.blur = blur
         self.motion = motion
         self.colors = colors
         self.intensity = intensity
         self.rotation = rotation
+        self.emoticon = emoticon
     }
     
     public init(from decoder: Decoder) throws {
@@ -32,6 +34,7 @@ public struct WallpaperSettings: Codable, Equatable {
 
         self.intensity = try container.decodeIfPresent(Int32.self, forKey: "i")
         self.rotation = try container.decodeIfPresent(Int32.self, forKey: "r")
+        self.emoticon = try container.decodeIfPresent(String.self, forKey: "e")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -42,6 +45,7 @@ public struct WallpaperSettings: Codable, Equatable {
         try container.encode(self.colors.map(Int32.init(bitPattern:)), forKey: "colors")
         try container.encodeIfPresent(self.intensity, forKey: "i")
         try container.encodeIfPresent(self.rotation, forKey: "r")
+        try container.encodeIfPresent(self.emoticon, forKey: "e")
     }
     
     public static func ==(lhs: WallpaperSettings, rhs: WallpaperSettings) -> Bool {
@@ -58,6 +62,9 @@ public struct WallpaperSettings: Codable, Equatable {
             return false
         }
         if lhs.rotation != rhs.rotation {
+            return false
+        }
+        if lhs.emoticon != rhs.emoticon {
             return false
         }
         return true

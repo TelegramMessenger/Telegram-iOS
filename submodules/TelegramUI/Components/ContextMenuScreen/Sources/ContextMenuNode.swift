@@ -64,6 +64,7 @@ private final class ArrowNode: HighlightTrackingButtonNode {
 }
 
 final class ContextMenuNode: ASDisplayNode {
+    private let blurred: Bool
     private let isDark: Bool
     
     private let actions: [ContextMenuAction]
@@ -93,6 +94,7 @@ final class ContextMenuNode: ASDisplayNode {
     private let feedback: HapticFeedback?
     
     init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, dismissOnTap: @escaping (UIView, CGPoint) -> Bool, catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool = false, isDark: Bool = true) {
+        self.blurred = blurred
         self.isDark = isDark
         
         self.actions = actions
@@ -264,9 +266,11 @@ final class ContextMenuNode: ASDisplayNode {
             self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
         }
         
-        self.allowsGroupOpacity = true
-        self.layer.rasterizationScale = UIScreen.main.scale
-        self.layer.shouldRasterize = true
+        if !(self.blurred && self.isDark) {
+            self.allowsGroupOpacity = true
+            self.layer.rasterizationScale = UIScreen.main.scale
+            self.layer.shouldRasterize = true
+        }
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak self] _ in
             self?.allowsGroupOpacity = false
             self?.layer.shouldRasterize = false
@@ -278,9 +282,11 @@ final class ContextMenuNode: ASDisplayNode {
     }
     
     func animateOut(bounce: Bool, completion: @escaping () -> Void) {
-        self.allowsGroupOpacity = true
-        self.layer.rasterizationScale = UIScreen.main.scale
-        self.layer.shouldRasterize = true
+        if !(self.blurred && self.isDark) {
+            self.allowsGroupOpacity = true
+            self.layer.rasterizationScale = UIScreen.main.scale
+            self.layer.shouldRasterize = true
+        }
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
             self?.allowsGroupOpacity = false
             self?.layer.shouldRasterize = false

@@ -72,7 +72,7 @@ final class StoryItemSetViewListComponent: Component {
     let openMessage: (EnginePeer, EngineMessage.Id) -> Void
     let peerContextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void
     let openPeerStories: (EnginePeer, AvatarNode) -> Void
-    let openStory: (EnginePeer, Int32, [(EnginePeer, EngineStoryItem)], UIView) -> Void
+    let openReposts: (EnginePeer, Int32, UIView) -> Void
     let openPremiumIntro: () -> Void
     let setIsSearchActive: (Bool) -> Void
     let controller: () -> ViewController?
@@ -98,7 +98,7 @@ final class StoryItemSetViewListComponent: Component {
         openMessage: @escaping (EnginePeer, EngineMessage.Id) -> Void,
         peerContextAction: @escaping (EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void,
         openPeerStories: @escaping (EnginePeer, AvatarNode) -> Void,
-        openStory: @escaping (EnginePeer, Int32, [(EnginePeer, EngineStoryItem)], UIView) -> Void,
+        openReposts: @escaping (EnginePeer, Int32, UIView) -> Void,
         openPremiumIntro: @escaping () -> Void,
         setIsSearchActive: @escaping (Bool) -> Void,
         controller: @escaping () -> ViewController?
@@ -123,7 +123,7 @@ final class StoryItemSetViewListComponent: Component {
         self.openMessage = openMessage
         self.peerContextAction = peerContextAction
         self.openPeerStories = openPeerStories
-        self.openStory = openStory
+        self.openReposts = openReposts
         self.openPremiumIntro = openPremiumIntro
         self.setIsSearchActive = setIsSearchActive
         self.controller = controller
@@ -580,12 +580,14 @@ final class StoryItemSetViewListComponent: Component {
                             message: item.message,
                             selectionState: .none,
                             hasNext: index != viewListState.totalCount - 1 || itemLayout.premiumFooterSize != nil,
-                            action: { [weak self] peer, messageId in
+                            action: { [weak self] peer, messageId, sourceView in
                                 guard let self, let component = self.component else {
                                     return
                                 }
                                 if let messageId {
                                     component.openMessage(peer, messageId)
+                                } else if let storyItem, let sourceView {
+                                    component.openReposts(peer, storyItem.id, sourceView)
                                 } else {
                                     component.openPeer(peer)
                                 }
@@ -598,19 +600,6 @@ final class StoryItemSetViewListComponent: Component {
                                     return
                                 }
                                 component.openPeerStories(peer, avatarNode)
-                            },
-                            openStory: { [weak self] peer, id, sourceView in
-                                guard let self, let component = self.component, let state = self.viewListState else {
-                                    return
-                                }
-
-                                var stories: [(EnginePeer, EngineStoryItem)] = []
-                                for item in state.items {
-                                    if let story = item.story {
-                                        stories.append((item.peer, story))
-                                    }
-                                }
-                                component.openStory(peer, id, stories, sourceView)
                             }
                         )),
                         environment: {},
@@ -801,7 +790,7 @@ final class StoryItemSetViewListComponent: Component {
                 } else {
                     let defaultSortMode: SortMode
                     if component.peerId.isGroupOrChannel {
-                        defaultSortMode = .recentFirst
+                        defaultSortMode = .repostsFirst
                     } else {
                         defaultSortMode = .reactionsFirst
                     }
@@ -933,7 +922,7 @@ final class StoryItemSetViewListComponent: Component {
                     presence: nil,
                     selectionState: .none,
                     hasNext: true,
-                    action: { _, _ in
+                    action: { _, _, _ in
                     }
                 )),
                 environment: {},
@@ -1494,7 +1483,7 @@ final class StoryItemSetViewListComponent: Component {
             
             if self.mainViewList == nil {
                 if component.peerId.isGroupOrChannel {
-                    self.sortMode = .recentFirst
+                    self.sortMode = .repostsFirst
                 } else {
                     self.sortMode = .reactionsFirst
                 }

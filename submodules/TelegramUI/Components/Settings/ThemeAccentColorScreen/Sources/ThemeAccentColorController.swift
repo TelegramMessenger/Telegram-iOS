@@ -11,16 +11,17 @@ import AccountContext
 import PresentationDataUtils
 import MediaResources
 import WallpaperGalleryScreen
+import GenerateThemeName
 
 private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
 
-extension TelegramThemeSettings {
+public extension TelegramThemeSettings {
     convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, outgoingAccentColor: UIColor?, messageColors: [UInt32], animateMessageColors: Bool, wallpaper: TelegramWallpaper?) {
         self.init(baseTheme: baseTheme, accentColor: accentColor.argb, outgoingAccentColor: outgoingAccentColor?.argb, messageColors: messageColors, animateMessageColors: animateMessageColors, wallpaper: wallpaper)
     }
 }
 
-enum ThemeAccentColorControllerMode {
+public enum ThemeAccentColorControllerMode {
     case colors(themeReference: PresentationThemeReference, create: Bool)
     case background(themeReference: PresentationThemeReference)
     case edit(settings: TelegramThemeSettings?, theme: PresentationTheme, wallpaper: TelegramWallpaper?, generalThemeReference: PresentationThemeReference?, defaultThemeReference: PresentationThemeReference?, create: Bool, completion: (PresentationTheme, TelegramThemeSettings?) -> Void)
@@ -35,8 +36,8 @@ enum ThemeAccentColorControllerMode {
     }
 }
 
-final class ThemeAccentColorController: ViewController {
-    enum ResultMode {
+public final class ThemeAccentColorController: ViewController {
+    public enum ResultMode {
         case `default`
         case peer(EnginePeer)
     }
@@ -53,7 +54,7 @@ final class ThemeAccentColorController: ViewController {
     }
     
     private let _ready = Promise<Bool>()
-    override public var ready: Promise<Bool> {
+    public override var ready: Promise<Bool> {
         return self._ready
     }
 
@@ -61,9 +62,9 @@ final class ThemeAccentColorController: ViewController {
     
     private var applyDisposable = MetaDisposable()
     
-    var completion: (() -> Void)?
+    public var completion: (() -> Void)?
     
-    init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ResultMode = .default) {
+    public init(context: AccountContext, mode: ThemeAccentColorControllerMode, resultMode: ResultMode = .default) {
         self.context = context
         self.mode = mode
         self.resultMode = resultMode
@@ -136,13 +137,13 @@ final class ThemeAccentColorController: ViewController {
         self.dismiss()
     }
 
-    override func viewDidAppear(_ animated: Bool) {
+    public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
         self.controllerNode.animateWallpaperAppeared()
     }
     
-    override func loadDisplayNode() {
+    public override func loadDisplayNode() {
         super.loadDisplayNode()
         
         let theme: PresentationTheme
@@ -631,7 +632,7 @@ final class ThemeAccentColorController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)

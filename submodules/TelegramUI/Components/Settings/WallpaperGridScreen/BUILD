@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "WallpaperGalleryScreen",
-    module_name = "WallpaperGalleryScreen",
+    name = "WallpaperGridScreen",
+    module_name = "WallpaperGridScreen",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -28,10 +28,15 @@ swift_library(
         "//submodules/MergeLists",
         "//submodules/ShareController",
         "//submodules/GalleryUI",
-        "//submodules/CounterContollerTitleView",
-        "//submodules/LegacyMediaPickerUI",
+        "//submodules/GridMessageSelectionNode",
+        "//submodules/SearchUI",
+        "//submodules/MediaPickerUI",
+        "//submodules/ItemListPeerActionItem",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
         "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
+        "//submodules/TelegramUI/Components/Settings/ThemeAccentColorScreen",
         "//submodules/TelegramUI/Components/PremiumLockButtonSubtitleComponent",
+        "//submodules/TelegramUI/Components/Settings/BoostLevelIconComponent",
     ],
     visibility = [
         "//visibility:public",
