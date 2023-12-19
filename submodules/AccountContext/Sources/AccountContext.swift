@@ -1388,7 +1388,8 @@ public class PeerNameColors: Equatable {
             profilePaletteDarkColors: [:],
             profileStoryColors: [:],
             profileStoryDarkColors: [:],
-            profileDisplayOrder: []
+            profileDisplayOrder: [],
+            nameColorsChannelMinRequiredBoostLevel: [:]
         )
     }
     
@@ -1403,6 +1404,8 @@ public class PeerNameColors: Equatable {
     public let profileStoryColors: [Int32: Colors]
     public let profileStoryDarkColors: [Int32: Colors]
     public let profileDisplayOrder: [Int32]
+    
+    public let nameColorsChannelMinRequiredBoostLevel: [Int32: Int32]
     
     public func get(_ color: PeerNameColor, dark: Bool = false) -> Colors {
         if dark, let colors = self.darkColors[color.rawValue] {
@@ -1453,7 +1456,8 @@ public class PeerNameColors: Equatable {
         profilePaletteDarkColors: [Int32: Colors],
         profileStoryColors: [Int32: Colors],
         profileStoryDarkColors: [Int32: Colors],
-        profileDisplayOrder: [Int32]
+        profileDisplayOrder: [Int32],
+        nameColorsChannelMinRequiredBoostLevel: [Int32: Int32]
     ) {
         self.colors = colors
         self.darkColors = darkColors
@@ -1465,6 +1469,7 @@ public class PeerNameColors: Equatable {
         self.profileStoryColors = profileStoryColors
         self.profileStoryDarkColors = profileStoryDarkColors
         self.profileDisplayOrder = profileDisplayOrder
+        self.nameColorsChannelMinRequiredBoostLevel = nameColorsChannelMinRequiredBoostLevel
     }
     
     public static func with(availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions) -> PeerNameColors {
@@ -1479,8 +1484,14 @@ public class PeerNameColors: Equatable {
         var profileStoryDarkColors: [Int32: Colors] = [:]
         var profileDisplayOrder: [Int32] = []
         
+        var nameColorsChannelMinRequiredBoostLevel: [Int32: Int32] = [:]
+        
         if !availableReplyColors.options.isEmpty {
             for option in availableReplyColors.options {
+                if let requiredChannelMinBoostLevel = option.value.requiredChannelMinBoostLevel {
+                    nameColorsChannelMinRequiredBoostLevel[option.key] = requiredChannelMinBoostLevel
+                }
+                
                 if let parsedLight = PeerNameColors.Colors(colors: option.value.light.background) {
                     colors[option.key] = parsedLight
                 }
@@ -1539,7 +1550,8 @@ public class PeerNameColors: Equatable {
             profilePaletteDarkColors: profilePaletteDarkColors,
             profileStoryColors: profileStoryColors,
             profileStoryDarkColors: profileStoryDarkColors,
-            profileDisplayOrder: profileDisplayOrder
+            profileDisplayOrder: profileDisplayOrder,
+            nameColorsChannelMinRequiredBoostLevel: nameColorsChannelMinRequiredBoostLevel
         )
     }
     

@@ -2427,9 +2427,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                     
+                    let maybeFile = messages.first?.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile
+                    
                     let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
                     renderer.render(completion: { size, dayImage, nightImage in
-                        let messageEntity = DrawingStickerEntity(content: .message(messageIds, size))
+                        let messageEntity = DrawingStickerEntity(content: .message(messageIds, maybeFile?.isVideo == true ? maybeFile : nil, size))
                         messageEntity.renderImage = dayImage
                         messageEntity.secondaryRenderImage = nightImage
                         messageEntity.referenceDrawingSize = storyDimensions

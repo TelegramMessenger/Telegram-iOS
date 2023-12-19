@@ -12,6 +12,7 @@ public enum ServerProvidedSuggestion: String {
     case upgradePremium = "PREMIUM_UPGRADE"
     case annualPremium = "PREMIUM_ANNUAL"
     case restorePremium = "PREMIUM_RESTORE"
+    case xmasPremiumGift = "PREMIUM_GIFT_XMAS"
 }
 
 private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])

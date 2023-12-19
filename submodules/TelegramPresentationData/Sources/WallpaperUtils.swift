@@ -7,6 +7,8 @@ public extension TelegramWallpaper {
         switch self {
         case .image:
             return false
+        case .emoticon:
+            return false
         case let .file(file):
             if self.isPattern, file.settings.colors.count == 1 && (file.settings.colors[0] == 0xffffff || file.settings.colors[0] == 0xffffffff) {
                 return true

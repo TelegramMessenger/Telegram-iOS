@@ -80,7 +80,7 @@ public struct TelegramWallpaperNativeCodable: Codable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
-
+        
         switch try container.decode(Int32.self, forKey: "v") {
         case 0:
             let settings = try container.decode(WallpaperSettings.self, forKey: "settings")
@@ -113,9 +113,9 @@ public struct TelegramWallpaperNativeCodable: Codable {
             }
         case 4:
             let settings = try container.decode(WallpaperSettings.self, forKey: "settings")
-
+            
             var colors: [UInt32] = []
-
+            
             if let topColor = (try container.decodeIfPresent(Int32.self, forKey: "c1")).flatMap(UInt32.init(bitPattern:)) {
                 colors.append(topColor)
                 if let bottomColor = (try container.decodeIfPresent(Int32.self, forKey: "c2")).flatMap(UInt32.init(bitPattern:)) {
@@ -124,12 +124,14 @@ public struct TelegramWallpaperNativeCodable: Codable {
             } else {
                 colors = (try container.decode([Int32].self, forKey: "colors")).map(UInt32.init(bitPattern:))
             }
-
+            
             self.value = .gradient(TelegramWallpaper.Gradient(
                 id: try container.decodeIfPresent(Int64.self, forKey: "id"),
                 colors: colors,
                 settings: settings
             ))
+        case 5:
+            self.value = .emoticon(try container.decode(String.self, forKey: "e"))
         default:
             assertionFailure()
             self.value = .color(0xffffff)
@@ -138,41 +140,48 @@ public struct TelegramWallpaperNativeCodable: Codable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
-
+        
         switch self.value {
-            case let .builtin(settings):
-                try container.encode(0 as Int32, forKey: "v")
-                try container.encode(settings, forKey: "settings")
-            case let .color(color):
-                try container.encode(1 as Int32, forKey: "v")
-                try container.encode(Int32(bitPattern: color), forKey: "c")
-            case let .gradient(gradient):
-                try container.encode(4 as Int32, forKey: "v")
-                try container.encodeIfPresent(gradient.id, forKey: "id")
-                try container.encode(gradient.colors.map(Int32.init(bitPattern:)), forKey: "colors")
-                try container.encode(gradient.settings, forKey: "settings")
-            case let .image(representations, settings):
-                try container.encode(2 as Int32, forKey: "v")
-                try container.encode(representations.map { item in
-                    return PostboxEncoder().encodeObjectToRawData(item)
-                }, forKey: "i")
-                try container.encode(settings, forKey: "settings")
-            case let .file(file):
-                try container.encode(3 as Int32, forKey: "v")
-                try container.encode(file.id, forKey: "id")
-                try container.encode(file.accessHash, forKey: "accessHash")
-                try container.encode((file.isCreator ? 1 : 0) as Int32, forKey: "isCreator")
-                try container.encode((file.isDefault ? 1 : 0) as Int32, forKey: "isDefault")
-                try container.encode((file.isPattern ? 1 : 0) as Int32, forKey: "isPattern")
-                try container.encode((file.isDark ? 1 : 0) as Int32, forKey: "isDark")
-                try container.encode(file.slug, forKey: "slug")
-                try container.encode(PostboxEncoder().encodeObjectToRawData(file.file), forKey: "file")
-                try container.encode(file.settings, forKey: "settings")
+        case let .builtin(settings):
+            try container.encode(0 as Int32, forKey: "v")
+            try container.encode(settings, forKey: "settings")
+        case let .color(color):
+            try container.encode(1 as Int32, forKey: "v")
+            try container.encode(Int32(bitPattern: color), forKey: "c")
+        case let .gradient(gradient):
+            try container.encode(4 as Int32, forKey: "v")
+            try container.encodeIfPresent(gradient.id, forKey: "id")
+            try container.encode(gradient.colors.map(Int32.init(bitPattern:)), forKey: "colors")
+            try container.encode(gradient.settings, forKey: "settings")
+        case let .image(representations, settings):
+            try container.encode(2 as Int32, forKey: "v")
+            try container.encode(representations.map { item in
+                return PostboxEncoder().encodeObjectToRawData(item)
+            }, forKey: "i")
+            try container.encode(settings, forKey: "settings")
+        case let .file(file):
+            try container.encode(3 as Int32, forKey: "v")
+            try container.encode(file.id, forKey: "id")
+            try container.encode(file.accessHash, forKey: "accessHash")
+            try container.encode((file.isCreator ? 1 : 0) as Int32, forKey: "isCreator")
+            try container.encode((file.isDefault ? 1 : 0) as Int32, forKey: "isDefault")
+            try container.encode((file.isPattern ? 1 : 0) as Int32, forKey: "isPattern")
+            try container.encode((file.isDark ? 1 : 0) as Int32, forKey: "isDark")
+            try container.encode(file.slug, forKey: "slug")
+            try container.encode(PostboxEncoder().encodeObjectToRawData(file.file), forKey: "file")
+            try container.encode(file.settings, forKey: "settings")
+        case let .emoticon(emoticon):
+            try container.encode(5 as Int32, forKey: "v")
+            try container.encode(emoticon, forKey: "e")
         }
     }
 }
 
 public enum TelegramWallpaper: Equatable {
+    public static func emoticonWallpaper(emoticon: String) -> TelegramWallpaper {
+        return .file(File(id: -1, accessHash: -1, isCreator: false, isDefault: false, isPattern: false, isDark: false, slug: "", file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: EmptyMediaResource(), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(emoticon: emoticon)))
+    }
+    
     public struct Gradient: Equatable {
         public var id: Int64?
         public var colors: [UInt32]
@@ -228,6 +237,7 @@ public enum TelegramWallpaper: Equatable {
     case gradient(Gradient)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
     case file(File)
+    case emoticon(String)
     
     public var hasWallpaper: Bool {
         switch self {
@@ -270,6 +280,12 @@ public enum TelegramWallpaper: Equatable {
                 } else {
                     return false
                 }
+            case let .emoticon(emoticon):
+                if case .emoticon(emoticon) = rhs {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -305,6 +321,12 @@ public enum TelegramWallpaper: Equatable {
                 } else {
                     return false
                 }
+            case let .emoticon(emoticon):
+                if case .emoticon(emoticon) = wallpaper {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -335,6 +357,8 @@ public enum TelegramWallpaper: Equatable {
         case var .file(file):
             file.settings = settings
             return .file(file)
+        case .emoticon:
+            return self
         }
     }
 }

@@ -327,7 +327,7 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
             }
         } else if let wallpaper = self.wallpaper {
             switch wallpaper {
-                case .builtin, .color, .gradient:
+                case .builtin, .color, .gradient, .emoticon:
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .image(representations, _):

@@ -100,6 +100,7 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
+    let openPremiumGift: () -> Void
     let openActiveSessions: () -> Void
     let performActiveSessionAction: (NewSessionReview, Bool) -> Void
     let openChatFolderUpdates: () -> Void
@@ -150,6 +151,7 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
+        openPremiumGift: @escaping () -> Void,
         openActiveSessions: @escaping () -> Void,
         performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
@@ -187,6 +189,7 @@ public final class ChatListNodeInteraction {
         self.openStorageManagement = openStorageManagement
         self.openPasswordSetup = openPasswordSetup
         self.openPremiumIntro = openPremiumIntro
+        self.openPremiumGift = openPremiumGift
         self.openActiveSessions = openActiveSessions
         self.performActiveSessionAction = performActiveSessionAction
         self.openChatFolderUpdates = openChatFolderUpdates
@@ -708,6 +711,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .xmasPremiumGift:
+                            nodeInteraction?.openPremiumGift()
                         case .reviewLogin:
                             break
                         }
@@ -1028,6 +1033,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .xmasPremiumGift:
+                            nodeInteraction?.openPremiumGift()
                         case .reviewLogin:
                             break
                         }
@@ -1604,6 +1611,17 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
+        }, openPremiumGift: { [weak self] in
+            guard let self else {
+                return
+            }
+            Queue.mainQueue().after(0.6) { [weak self] in
+                if let self {
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .xmasPremiumGift).startStandalone()
+                }
+            }
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
+            self.push?(controller)
         }, openActiveSessions: { [weak self] in
             guard let self else {
                 return
@@ -1793,7 +1811,9 @@ public final class ChatListNode: ListView {
                         return .single(.setupPassword)
                     }
                 }
-                if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
+                if suggestions.contains(.xmasPremiumGift) {
+                    return .single(.xmasPremiumGift)
+                } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
                     return inAppPurchaseManager.availableProducts
                     |> map { products -> ChatListNotice? in
                         if products.count > 1 {

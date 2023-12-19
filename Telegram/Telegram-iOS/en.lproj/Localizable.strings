@@ -10768,3 +10768,6 @@ Sorry for the inconvenience.";
 "Wallpaper.ChannelCustomBackgroundInfo" = "Upload your own background image for the channel.";
 "Wallpaper.ChannelRemoveBackground" = "Remove Wallpaper";
 "Wallpaper.NoWallpaper" = "No\nWallpaper";
+
+"ChatList.PremiumXmasGiftTitle" = "Send gifts to **your friends**! 🎄";
+"ChatList.PremiumXmasGiftText" = "Gift Telegram Premium for Christmas.";

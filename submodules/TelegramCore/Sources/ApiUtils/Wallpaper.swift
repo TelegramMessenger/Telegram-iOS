@@ -80,7 +80,11 @@ extension TelegramWallpaper {
                     self = .color(0xffffff)
                 }
             case let .wallPaperNoFile(id, _, settings):
-                if let settings = settings, case let .wallPaperSettings(_, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, _, rotation, _) = settings {
+                if let settings = settings, case let .wallPaperSettings(_, backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor, _, rotation, emoticon) = settings {
+                    if id == 0, let emoticon = emoticon {
+                        self = .emoticon(emoticon)
+                        return
+                    }
                     let colors: [UInt32] = ([backgroundColor, secondBackgroundColor, thirdBackgroundColor, fourthBackgroundColor] as [Int32?]).compactMap({ color -> UInt32? in
                         return color.flatMap(UInt32.init(bitPattern:))
                     })
@@ -108,12 +112,10 @@ extension TelegramWallpaper {
             return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(colors: [color])))
         case let .gradient(gradient):
             return (.inputWallPaperNoFile(id: gradient.id ?? 0), apiWallpaperSettings(WallpaperSettings(colors: gradient.colors, rotation: gradient.settings.rotation)))
+        case let .emoticon(emoticon):
+            return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(emoticon: emoticon)))
         default:
             return nil
         }
-    }
-    
-    func apiInputWallpaper(emoticon: String) -> (Api.InputWallPaper, Api.WallPaperSettings) {
-        return (.inputWallPaperNoFile(id: 0), apiWallpaperSettings(WallpaperSettings(emoticon: emoticon)))
     }
 }

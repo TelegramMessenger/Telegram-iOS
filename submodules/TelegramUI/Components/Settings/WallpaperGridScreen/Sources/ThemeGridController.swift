@@ -249,7 +249,9 @@ public final class ThemeGridController: ViewController {
                         if let strongSelf = self {
                             if case .peer = mode {
                                 strongSelf.completion(.custom(wallpaperEntry: wallpaper, options: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness))
-                                dismissControllers()
+                                Queue.mainQueue().after(0.15) {
+                                    dismissControllers()
+                                }
                             } else {
                                 uploadCustomWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, completion: {
                                     dismissControllers()

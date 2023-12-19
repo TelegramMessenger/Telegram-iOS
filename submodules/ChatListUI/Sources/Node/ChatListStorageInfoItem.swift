@@ -7,6 +7,7 @@ import TelegramPresentationData
 import ListSectionHeaderNode
 import AppBundle
 import ItemListUI
+import Markdown
 
 class ChatListStorageInfoItem: ListViewItem {
     enum Action {
@@ -203,6 +204,9 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case .xmasPremiumGift:
+                titleString = parseMarkdownIntoAttributedString(item.strings.ChatList_PremiumXmasGiftTitle, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))                
+                textString = NSAttributedString(string: item.strings.ChatList_PremiumXmasGiftText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case let .reviewLogin(newSessionReview, totalCount):
                 spacing = 2.0
                 alignment = .center

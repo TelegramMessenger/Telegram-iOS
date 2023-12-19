@@ -628,6 +628,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
                     self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
                     self.notifyDismissedInteractivelyOnPanGestureApply = true
+                    self.callScreen.beginPictureInPictureIfPossible()
                 }
                 
                 self.update(transition: .animated(duration: 0.4, curve: .spring))

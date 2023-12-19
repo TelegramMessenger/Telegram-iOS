@@ -33,7 +33,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case animatedImage(Data, UIImage)
         case video(TelegramMediaFile)
         case dualVideoReference(Bool)
-        case message([MessageId], CGSize)
+        case message([MessageId], TelegramMediaFile?, CGSize)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -67,8 +67,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
-            case let .message(messageIds, size):
-                if case .message(messageIds, size) = rhs {
+            case let .message(messageIds, innerFile, size):
+                if case .message(messageIds, innerFile, size) = rhs {
                     return true
                 } else {
                     return false
@@ -108,6 +108,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         didSet {
             if case let .file(_, type) = self.content, case .reaction = type {
                 self.scale = max(0.59, min(1.77, self.scale))
+            } else if case .message = self.content {
+                self.scale = max(1.0, min(4.0, self.scale))
             }
         }
     }
@@ -144,7 +146,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             dimensions = CGSize(width: 512.0, height: 512.0)
-        case let .message(_, size):
+        case let .message(_, _, size):
             dimensions = size
         }
         
@@ -174,7 +176,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case .dualVideoReference:
             return true
         case .message:
-            return false
+            return !(self.renderSubEntities ?? []).isEmpty
         }
     }
     
@@ -216,7 +218,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         if let messageIds = try container.decodeIfPresent([MessageId].self, forKey: .messageIds) {
             let size = try container.decodeIfPresent(CGSize.self, forKey: .explicitSize) ?? .zero
-            self.content = .message(messageIds, size)
+            self.content = .message(messageIds, nil, size)
         } else if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
             let isAdditional = try container.decodeIfPresent(Bool.self, forKey: .isAdditionalVideo) ?? false
             self.content = .dualVideoReference(isAdditional)
@@ -311,8 +313,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .dualVideoReference(isAdditional):
             try container.encode(true, forKey: .dualVideo)
             try container.encode(isAdditional, forKey: .isAdditionalVideo)
-        case let .message(messageIds, size):
+        case let .message(messageIds, innerFile, size):
             try container.encode(messageIds, forKey: .messageIds)
+            let _ = innerFile
             try container.encode(size, forKey: .explicitSize)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)

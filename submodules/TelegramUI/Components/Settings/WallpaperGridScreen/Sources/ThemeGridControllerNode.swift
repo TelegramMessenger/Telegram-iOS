@@ -46,6 +46,7 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
         case gradient([UInt32])
         case file(Int64, [UInt32], Int32)
         case image(String)
+        case emoticon(String)
     }
 
     var index: Int
@@ -77,6 +78,8 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
             } else {
                 return .image("")
             }
+        case let .emoticon(emoticon):
+            return .emoticon(emoticon)
         }
     }
     
@@ -303,7 +306,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.gridNode.addSubnode(self.colorItemNode)
         }
         self.gridNode.addSubnode(self.galleryItemNode)
-        if case let .peer(_, _, wallpaper, _, _) = mode, wallpaper != nil {
+        if case let .peer(_, _, wallpaper, _, _) = mode, let wallpaper, !wallpaper.isPattern {
             self.gridNode.addSubnode(self.removeItemNode)
         }
         self.gridNode.addSubnode(self.descriptionItemNode)
@@ -662,6 +665,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.galleryItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: presentationData.theme.list.itemAccentColor), title: presentationData.strings.Wallpaper_SetCustomBackground, additionalBadgeIcon: requiredCustomWallpaperLevel.flatMap { generateDisclosureActionBoostLevelBadgeImage(text: "Level \($0)") }, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .accent, editing: false, action: { [weak self] in
                 self?.presentGallery()
             })
+            self.removeItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: presentationData.theme.list.itemDestructiveColor), title: presentationData.strings.Wallpaper_ChannelRemoveBackground, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .destructive, editing: false, action: { [weak self] in
+                self?.presentGallery()
+            })
         }
         
         self.descriptionItem = ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(presentationData.strings.Wallpaper_SetCustomBackgroundInfo), sectionId: 0)
@@ -751,6 +757,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let makeColorLayout = self.colorItemNode.asyncLayout()
         let makeGalleryLayout = (self.galleryItemNode as? ItemListActionItemNode)?.asyncLayout()
         let makeGalleryIconLayout = (self.galleryItemNode as? ItemListPeerActionItemNode)?.asyncLayout()
+        let makeRemoveLayout = self.removeItemNode.asyncLayout()
         let makeDescriptionLayout = self.descriptionItemNode.asyncLayout()
         
         var listInsets = insets
@@ -773,33 +780,43 @@ final class ThemeGridControllerNode: ASDisplayNode {
         }
         
         var isChannel = false
-        if case .peer = self.mode {
+        var hasCustomWallpaper = false
+        if case let .peer(_, _, wallpaper, _, _) = self.mode {
             isChannel = true
+            if let wallpaper, !wallpaper.isPattern {
+                hasCustomWallpaper = true
+            }
         }
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right, availableHeight: layout.size.height)
         let (colorLayout, colorApply) = makeColorLayout(self.colorItem, params, ItemListNeighbors(top: .none, bottom: .sameSection(alwaysPlain: false)))
         let (galleryLayout, galleryApply): (ListViewItemNodeLayout, (Bool) -> Void)
         if let makeGalleryIconLayout, let galleryItem = self.galleryItem as? ItemListPeerActionItem {
-            (galleryLayout, galleryApply) = makeGalleryIconLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: true)))
+            (galleryLayout, galleryApply) = makeGalleryIconLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: !hasCustomWallpaper)))
         } else if let makeGalleryLayout, let galleryItem = self.galleryItem as? ItemListActionItem {
-            (galleryLayout, galleryApply) = makeGalleryLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: true)))
+            (galleryLayout, galleryApply) = makeGalleryLayout(galleryItem, params, ItemListNeighbors(top: isChannel ? .none : .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: false)))
         } else {
             fatalError()
         }
+        let (removeLayout, removeApply) = makeRemoveLayout(self.removeItem, params, ItemListNeighbors(top: .sameSection(alwaysPlain: false), bottom: .none))
         
         let (descriptionLayout, descriptionApply) = makeDescriptionLayout(self.descriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
         
+        
         colorApply(false)
         galleryApply(false)
+        removeApply(false)
         descriptionApply()
         
         let buttonTopInset: CGFloat = 32.0
         let buttonHeight: CGFloat = 44.0
-        let buttonBottomInset: CGFloat = descriptionLayout.contentSize.height + 17.0
+        var buttonBottomInset: CGFloat = descriptionLayout.contentSize.height + 17.0
+        if hasCustomWallpaper {
+            buttonBottomInset = 17.0
+        }
         
         var buttonInset: CGFloat = buttonTopInset + buttonHeight + buttonBottomInset
-        if !isChannel {
+        if !isChannel || hasCustomWallpaper {
             buttonInset += buttonHeight
         }
         let buttonOffset = buttonInset + 10.0
@@ -815,7 +832,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.galleryItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: galleryLayout.contentSize))
         originY += galleryLayout.contentSize.height
         
-        transition.updateFrame(node: self.descriptionItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: descriptionLayout.contentSize))
+        if hasCustomWallpaper {
+            self.descriptionItemNode.isHidden = true
+            self.removeItemNode.isHidden = false
+            
+            transition.updateFrame(node: self.removeItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: removeLayout.contentSize))
+        } else {
+            self.descriptionItemNode.isHidden = false
+            self.removeItemNode.isHidden = true
+            transition.updateFrame(node: self.descriptionItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: descriptionLayout.contentSize))
+        }
         
         self.leftOverlayNode.frame = CGRect(x: 0.0, y: -buttonOffset, width: listInsets.left, height: buttonTopInset + colorLayout.contentSize.height + galleryLayout.contentSize.height + 10000.0)
         self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: -buttonOffset, width: listInsets.right, height: buttonTopInset + colorLayout.contentSize.height + galleryLayout.contentSize.height + 10000.0)

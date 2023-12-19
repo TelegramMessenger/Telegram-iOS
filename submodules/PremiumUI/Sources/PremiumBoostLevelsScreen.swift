@@ -20,10 +20,37 @@ import SolidRoundedButtonComponent
 import BlurredBackgroundComponent
 import UndoUI
 
+func requiredBoostSubjectLevel(subject: BoostSubject, context: AccountContext, configuration: PremiumConfiguration) -> Int32 {
+    switch subject {
+    case .stories:
+        return 1
+    case let .channelReactions(reactionCount):
+        return reactionCount
+    case let .nameColors(colors):
+        if let value = context.peerNameColors.nameColorsChannelMinRequiredBoostLevel[colors.rawValue] {
+            return value
+        } else {
+            return 1
+        }
+    case .nameIcon:
+        return configuration.minChannelNameIconLevel
+    case .profileColors:
+        return configuration.minChannelProfileColorLevel
+    case .profileIcon:
+        return configuration.minChannelProfileIconLevel
+    case .emojiStatus:
+        return configuration.minChannelEmojiStatusLevel
+    case .wallpaper:
+        return configuration.minChannelWallpaperLevel
+    case .customWallpaper:
+        return configuration.minChannelCustomWallpaperLevel
+    }
+}
+
 public enum BoostSubject: Equatable {
     case stories
     case channelReactions(reactionCount: Int32)
-    case nameColors
+    case nameColors(colors: PeerNameColor)
     case nameIcon
     case profileColors
     case profileIcon
@@ -31,27 +58,8 @@ public enum BoostSubject: Equatable {
     case wallpaper
     case customWallpaper
     
-    public func requiredLevel(_ configuration: PremiumConfiguration) -> Int32 {
-        switch self {
-        case .stories:
-            return 1
-        case let .channelReactions(reactionCount):
-            return reactionCount
-        case .nameColors:
-            return configuration.minChannelNameColorLevel
-        case .nameIcon:
-            return configuration.minChannelNameIconLevel
-        case .profileColors:
-            return configuration.minChannelProfileColorLevel
-        case .profileIcon:
-            return configuration.minChannelProfileIconLevel
-        case .emojiStatus:
-            return configuration.minChannelEmojiStatusLevel
-        case .wallpaper:
-            return configuration.minChannelWallpaperLevel
-        case .customWallpaper:
-            return configuration.minChannelCustomWallpaperLevel
-        }
+    public func requiredLevel(context: AccountContext, configuration: PremiumConfiguration) -> Int32 {
+        return requiredBoostSubjectLevel(subject: self, context: context, configuration: configuration)
     }
 }
 
@@ -479,7 +487,9 @@ private final class LimitSheetContent: CombinedComponent {
                     textString = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
                     needsSecondParagraph = false
                 case .nameColors:
-                    textString = strings.ChannelBoost_EnableNameColorLevelText("\(premiumConfiguration.minChannelNameColorLevel)").string
+                    let colorLevel = component.subject.requiredLevel(context: context.component.context, configuration: premiumConfiguration)
+                    
+                    textString = strings.ChannelBoost_EnableNameColorLevelText("\(colorLevel)").string
                 case .nameIcon:
                     textString = strings.ChannelBoost_EnableNameIconLevelText("\(premiumConfiguration.minChannelNameIconLevel)").string
                 case .profileColors:

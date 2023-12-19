@@ -624,6 +624,8 @@ public func serviceColor(for wallpaper: (TelegramWallpaper, UIImage?)) -> UIColo
             } else {
                 return UIColor(rgb: 0x000000, alpha: 0.3)
             }
+        case .emoticon:
+            return UIColor(rgb: 0x000000, alpha: 0.3)
     }
 }
 
@@ -708,6 +710,8 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                     serviceBackgroundColorForWallpaper = (wallpaper, color)
                 }
             }
+        case .emoticon:
+            return .single(UIColor(rgb: 0x000000, alpha: 0.3))
         }
     }
 }

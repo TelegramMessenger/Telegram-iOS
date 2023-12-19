@@ -247,6 +247,7 @@ final class ChannelAppearanceScreenComponent: Component {
         private var updatedPeerProfileEmoji: Int64??
         private var updatedPeerStatus: PeerEmojiStatus??
         private var updatedPeerWallpaper: WallpaperSelectionResult?
+        private var temporaryPeerWallpaper: TelegramWallpaper?
         
         private var requiredBoostSubject: BoostSubject?
         
@@ -396,14 +397,10 @@ final class ChannelAppearanceScreenComponent: Component {
                     wallpaper = nil
                 case let .emoticon(emoticon):
                     wallpaper = contentsData.availableThemes.first(where: { $0.emoticon == emoticon })?.settings?.first?.wallpaper
-                case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
-                    let _ = wallpaperEntry
-                    let _ = options
-                    let _ = editedImage
-                    let _ = cropRect
-                    let _ = brightness
-                    wallpaper = nil
+                case .custom:
+                    wallpaper = self.temporaryPeerWallpaper
                 }
+                hasChanges = true
             } else {
                 wallpaper = contentsData.wallpaper
             }
@@ -427,7 +424,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 self.displayBoostLevels(subject: requiredBoostSubject)
                 return
@@ -447,6 +444,17 @@ final class ChannelAppearanceScreenComponent: Component {
             
             enum ApplyError {
                 case generic
+            }
+            
+            if let updatedPeerWallpaper {
+                switch updatedPeerWallpaper {
+                case .remove:
+                    let _ = component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: nil, forBoth: false).start()
+                case let .emoticon(emoticon):
+                    let _ = component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: .emoticon(emoticon), forBoth: false).start()
+                case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
+                    uploadCustomPeerWallpaper(context: component.context, wallpaper: wallpaperEntry, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: component.peerId, forBoth: false, completion: {})
+                }
             }
             
             self.applyDisposable = (combineLatest([
@@ -526,8 +534,8 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             let level = boostStatus.level
-            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(premiumConfiguration))
-            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(premiumConfiguration))
+            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
             
             let selectedWallpaper = resolvedState.wallpaper
             
@@ -536,7 +544,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 mode: .peer(peer, contentsData.availableThemes, selectedWallpaper, level < requiredWallpaperLevel ? requiredWallpaperLevel : nil, level < requiredCustomWallpaperLevel ? requiredCustomWallpaperLevel : nil)
             )
             controller.completion = { [weak self] result in
-                guard let self, let contentsData = self.contentsData else {
+                guard let self, let component = self.component, let contentsData = self.contentsData else {
                     return
                 }
                 self.updatedPeerWallpaper = result
@@ -545,12 +553,19 @@ final class ChannelAppearanceScreenComponent: Component {
                     if let selectedTheme = contentsData.availableThemes.first(where: { $0.emoticon == emoticon }) {
                         self.currentTheme = .cloud(PresentationCloudTheme(theme: selectedTheme, resolvedWallpaper: nil, creatorAccountId: nil))
                     }
+                    self.temporaryPeerWallpaper = nil
                 case .remove:
-                    self.currentTheme = .builtin(.dayClassic)
-                case .custom:
-                    self.currentTheme = .builtin(.dayClassic)
+                    self.currentTheme = nil
+                    self.temporaryPeerWallpaper = nil
+                case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
+                    let _ = (getTemporaryCustomPeerWallpaper(context: component.context, wallpaper: wallpaperEntry, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] wallpaper in
+                        self?.temporaryPeerWallpaper = wallpaper
+                        self?.state?.updated(transition: .immediate)
+                    })
+                    self.currentTheme = nil
                 }
-                self.state?.updated(transition: .spring(duration: 0.4))
+                self.state?.updated(transition: .immediate)
             }
             self.environment?.controller()?.push(controller)
         }
@@ -716,7 +731,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return availableSize
             }
             
-            var requiredBoostSubject: BoostSubject = .nameColors
+            var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
             
             let replyIconLevel = 5
             var profileIconLevel = 7
@@ -734,35 +749,28 @@ final class ChannelAppearanceScreenComponent: Component {
                         
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
-                requiredBoostSubject = .nameIcon
+                requiredBoostSubjects.append(.nameIcon)
             }
             
             let profileColor = resolvedState.profileColor
             if profileColor != nil {
-                requiredBoostSubject = .profileColors
+                requiredBoostSubjects.append(.profileColors)
             }
             
             let backgroundFileId = resolvedState.backgroundFileId
             if backgroundFileId != nil {
-                requiredBoostSubject = .profileIcon
+                requiredBoostSubjects.append(.profileIcon)
             }
             
             let emojiStatus = resolvedState.emojiStatus
             if emojiStatus != nil {
-                requiredBoostSubject = .emojiStatus
+                requiredBoostSubjects.append(.emojiStatus)
             }
             let statusFileId = emojiStatus?.fileId
             
             let cloudThemes: [PresentationThemeReference] = contentsData.availableThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? component.context.account.id : nil)) }
-            var chatThemes = cloudThemes.filter { $0.emoticon != nil }
-            chatThemes.insert(.builtin(.dayClassic), at: 0)
-            
-            if !chatThemes.isEmpty {
-                if self.currentTheme == nil {
-                    self.currentTheme = chatThemes[0]
-                }
-            }
-            
+            let chatThemes = cloudThemes.filter { $0.emoticon != nil }
+                        
             if let currentTheme = self.currentTheme, (self.resolvedCurrentTheme?.reference != currentTheme || self.resolvedCurrentTheme?.isDark != environment.theme.overallDarkAppearance), (self.resolvingCurrentTheme?.reference != currentTheme || self.resolvingCurrentTheme?.isDark != environment.theme.overallDarkAppearance) {
                 self.resolvingCurrentTheme?.disposable.dispose()
                 
@@ -780,7 +788,9 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
                 if let presentationTheme {
                     let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
-                    if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+                    if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
+                        resolvedWallpaper = .single(temporaryPeerWallpaper)
+                    } else if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
                         resolvedWallpaper = cachedWallpaper(account: component.context.account, slug: file.slug, settings: file.settings)
                         |> map { wallpaper -> TelegramWallpaper? in
                             return wallpaper?.wallpaper
@@ -799,13 +809,17 @@ final class ChannelAppearanceScreenComponent: Component {
                         }
                     }))
                 }
+            } else if self.currentTheme == nil {
+                self.resolvedCurrentTheme = nil
+                self.resolvingCurrentTheme?.disposable.dispose()
+                self.resolvingCurrentTheme = nil
             }
             
-            if resolvedState.wallpaper != nil {
-                if self.currentTheme != chatThemes.first {
-                    requiredBoostSubject = .wallpaper
+            if let wallpaper = resolvedState.wallpaper {
+                if wallpaper.isPattern {
+                    requiredBoostSubjects.append(.wallpaper)
                 } else {
-                    requiredBoostSubject = .customWallpaper
+                    requiredBoostSubjects.append(.customWallpaper)
                 }
             }
             
@@ -827,6 +841,12 @@ final class ChannelAppearanceScreenComponent: Component {
                 )
             }
             
+            let requiredBoostSubject: BoostSubject
+            if let maxBoostSubject = requiredBoostSubjects.max(by: { $0.requiredLevel(context: component.context, configuration: premiumConfiguration) < $1.requiredLevel(context: component.context, configuration: premiumConfiguration) }) {
+                requiredBoostSubject = maxBoostSubject
+            } else {
+                requiredBoostSubject = .nameColors(colors: resolvedState.nameColor)
+            }
             self.requiredBoostSubject = requiredBoostSubject
             
             let topInset: CGFloat = 24.0
@@ -874,7 +894,9 @@ final class ChannelAppearanceScreenComponent: Component {
             
             var chatPreviewTheme: PresentationTheme = environment.theme
             var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
-            if let resolvedCurrentTheme = self.resolvedCurrentTheme {
+            if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
+                chatPreviewWallpaper = temporaryPeerWallpaper
+            } else if let resolvedCurrentTheme = self.resolvedCurrentTheme {
                 chatPreviewTheme = resolvedCurrentTheme.theme
                 if let wallpaper = resolvedCurrentTheme.wallpaper {
                     chatPreviewWallpaper = wallpaper
@@ -961,7 +983,7 @@ final class ChannelAppearanceScreenComponent: Component {
             
             contentHeight += sectionSpacing
             
-            if !chatThemes.isEmpty, let currentTheme {
+            if !chatThemes.isEmpty {
                 var wallpaperLogoContents: [AnyComponentWithIdentity<Empty>] = []
                 wallpaperLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
@@ -976,6 +998,14 @@ final class ChannelAppearanceScreenComponent: Component {
                         strings: environment.strings,
                         level: themeLevel
                     ))))
+                }
+                
+                var currentTheme = self.currentTheme
+                var selectedWallpaper: TelegramWallpaper?
+                if currentTheme == nil, let wallpaper = resolvedState.wallpaper, !wallpaper.isPattern {
+                    let theme: PresentationThemeReference = .builtin(.day)
+                    currentTheme = theme
+                    selectedWallpaper = wallpaper
                 }
                 
                 let wallpaperSectionSize = self.wallpaperSection.update(
@@ -999,22 +1029,24 @@ final class ChannelAppearanceScreenComponent: Component {
                                     strings: environment.strings,
                                     sectionId: 0,
                                     themes: chatThemes,
-                                    firstIsNone: true,
+                                    hasNoTheme: true,
                                     animatedEmojiStickers: component.context.animatedEmojiStickers,
                                     themeSpecificAccentColors: [:],
                                     themeSpecificChatWallpapers: [:],
                                     nightMode: environment.theme.overallDarkAppearance,
                                     channelMode: true,
+                                    selectedWallpaper: selectedWallpaper,
                                     currentTheme: currentTheme,
                                     updatedTheme: { [weak self] value in
                                         guard let self else {
                                             return
                                         }
                                         self.currentTheme = value
-                                        if case .builtin = value {
-                                            self.updatedPeerWallpaper = .remove
-                                        } else {
+                                        self.temporaryPeerWallpaper = nil
+                                        if let value {
                                             self.updatedPeerWallpaper = .emoticon(value.emoticon ?? "")
+                                        } else {
+                                            self.updatedPeerWallpaper = .remove
                                         }
                                         self.state?.updated(transition: .spring(duration: 0.4))
                                     },
@@ -1281,7 +1313,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 Text(text: "Apply Changes", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: Int(requiredLevel),

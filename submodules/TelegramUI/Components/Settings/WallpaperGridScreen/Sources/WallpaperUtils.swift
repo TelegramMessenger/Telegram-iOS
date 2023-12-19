@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import LegacyComponents
 import WallpaperGalleryScreen
+import ImageBlur
 
 public func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, completion: @escaping () -> Void) {
     var imageSignal: Signal<UIImage, NoError>
@@ -162,6 +163,98 @@ public func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperG
         }
         return croppedImage
     }).start()
+}
+
+public func getTemporaryCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?) -> Signal<TelegramWallpaper?, NoError> {
+    var imageSignal: Signal<UIImage, NoError>
+    switch wallpaper {
+        case .wallpaper:
+            fatalError()
+        case let .asset(asset):
+            imageSignal = fetchPhotoLibraryImage(localIdentifier: asset.localIdentifier, thumbnail: false)
+            |> filter { value in
+                return !(value?.1 ?? true)
+            }
+            |> mapToSignal { result -> Signal<UIImage, NoError> in
+                if let result = result {
+                    return .single(result.0)
+                } else {
+                    return .complete()
+                }
+            }
+        case let .contextResult(result):
+            var imageResource: TelegramMediaResource?
+            switch result {
+                case let .externalReference(externalReference):
+                    if let content = externalReference.content {
+                        imageResource = content.resource
+                    }
+                case let .internalReference(internalReference):
+                    if let image = internalReference.image {
+                        if let imageRepresentation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 1000, height: 800)) {
+                            imageResource = imageRepresentation.resource
+                        }
+                    }
+            }
+            
+            if let imageResource = imageResource {
+                imageSignal = .single(context.account.postbox.mediaBox.completedResourcePath(imageResource))
+                |> mapToSignal { path -> Signal<UIImage, NoError> in
+                    if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe]), let image = UIImage(data: data) {
+                        return .single(image)
+                    } else {
+                        return .complete()
+                    }
+                }
+            } else {
+                imageSignal = .complete()
+            }
+    }
+    
+    if let editedImage {
+        imageSignal = .single(editedImage)
+    }
+    
+    return imageSignal
+    |> map { image -> TelegramWallpaper? in
+        var croppedImage = UIImage()
+        
+        let finalCropRect: CGRect
+        if let cropRect = cropRect {
+            finalCropRect = cropRect
+        } else {
+            let screenSize = TGScreenSize()
+            let fittedSize = TGScaleToFit(screenSize, image.size)
+            finalCropRect = CGRect(x: (image.size.width - fittedSize.width) / 2.0, y: (image.size.height - fittedSize.height) / 2.0, width: fittedSize.width, height: fittedSize.height)
+        }
+        croppedImage = TGPhotoEditorCrop(image, nil, .up, 0.0, finalCropRect, false, CGSize(width: 1440.0, height: 2960.0), image.size, true)
+                
+        let thumbnailDimensions = finalCropRect.size.fitted(CGSize(width: 320.0, height: 320.0))
+        let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
+        
+        if let data = croppedImage.jpegData(compressionQuality: 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
+            let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData, synchronous: true)
+            
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            
+            let _ = context.sharedContext.accountManager.mediaBox.cachedResourceRepresentation(resource, representation: CachedBlurredWallpaperRepresentation(), complete: true, fetch: true).start()
+            
+            var intensity: Int32?
+            if let brightness {
+                intensity = max(0, min(100, Int32(brightness * 100.0)))
+            }
+            
+            let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
+            let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
+                
+            return temporaryWallpaper
+        }
+        return nil
+    }
 }
 
 public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, forBoth: Bool, completion: @escaping () -> Void) {
