@@ -29,6 +29,7 @@ import ChatBotInfoItem
 import ChatMessageItem
 import ChatMessageItemImpl
 import ChatMessageItemView
+import ChatMessageBubbleItemNode
 import ChatMessageTransitionNode
 import ChatControllerInteraction
 import DustEffect
@@ -677,6 +678,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     private var toLang: String?
     
+    private var allowDustEffect: Bool = true
     private var dustEffectLayer: DustEffectLayer?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
@@ -694,8 +696,13 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.controllerInteraction = controllerInteraction
         self.mode = mode
         
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_unread_alignment"] {
-            self.enableUnreadAlignment = false
+        if let data = context.currentAppConfiguration.with({ $0 }).data {
+            if let _ = data["ios_killswitch_disable_unread_alignment"] {
+                self.enableUnreadAlignment = false
+            }
+            if let _ = data["ios_killswitch_disable_dust_effect"] {
+                self.allowDustEffect = false
+            }
         }
         
         let presentationData = updatedPresentationData.initial
@@ -2957,22 +2964,16 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.hasActiveTransition = true
         let transition = self.enqueuedHistoryViewTransitions.removeFirst()
         
-        var expiredMessageIds = Set<MessageId>()
+        var expiredMessageStableIds = Set<UInt32>()
         if let previousHistoryView = self.historyView, transition.options.contains(.AnimateInsertion) {
-            let demoDustEffect = self.context.sharedContext.immediateExperimentalUISettings.dustEffect
-            
-            var existingIds = Set<MessageId>()
+            var existingStableIds = Set<UInt32>()
             for entry in transition.historyView.filteredEntries {
                 switch entry {
                 case let .MessageEntry(message, _, _, _, _, _):
-                    if message.autoremoveAttribute != nil || demoDustEffect {
-                        existingIds.insert(message.id)
-                    }
+                    existingStableIds.insert(message.stableId)
                 case let .MessageGroupEntry(_, messages, _):
                     for message in messages {
-                        if message.0.autoremoveAttribute != nil || demoDustEffect {
-                            existingIds.insert(message.0.id)
-                        }
+                        existingStableIds.insert(message.0.stableId)
                     }
                 default:
                     break
@@ -2982,25 +2983,25 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             for entry in previousHistoryView.filteredEntries {
                 switch entry {
                 case let .MessageEntry(message, _, _, _, _, _):
-                    if !existingIds.contains(message.id) {
+                    if !existingStableIds.contains(message.stableId) {
                         if let autoremoveAttribute = message.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
                             let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
                             if exipiresAt >= currentTimestamp - 1 {
-                                expiredMessageIds.insert(message.id)
+                                expiredMessageStableIds.insert(message.stableId)
                             }
-                        } else if demoDustEffect {
-                            expiredMessageIds.insert(message.id)
+                        } else {
+                            expiredMessageStableIds.insert(message.stableId)
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
                     for message in messages {
-                        if !existingIds.contains(message.0.id) {
+                        if !existingStableIds.contains(message.0.stableId) {
                             if let autoremoveAttribute = message.0.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
                                 let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
                                 if exipiresAt >= currentTimestamp - 1 {
-                                    expiredMessageIds.insert(message.0.id)
-                                } else if demoDustEffect {
-                                    expiredMessageIds.insert(message.0.id)
+                                    expiredMessageStableIds.insert(message.0.stableId)
+                                } else {
+                                    expiredMessageStableIds.insert(message.0.stableId)
                                 }
                             }
                         }
@@ -3010,17 +3011,23 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
             }
         }
-        self.currentDeleteAnimationCorrelationIds.formUnion(expiredMessageIds)
+        self.currentDeleteAnimationCorrelationIds.formUnion(expiredMessageStableIds)
         
-        var appliedDeleteAnimationCorrelationIds = Set<MessageId>()
-        if !self.currentDeleteAnimationCorrelationIds.isEmpty {
+        var appliedDeleteAnimationCorrelationIds = Set<UInt32>()
+        if !self.currentDeleteAnimationCorrelationIds.isEmpty && self.allowDustEffect {
             var foundItemNodes: [ChatMessageItemView] = []
             self.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                     for (message, _) in item.content {
-                        if self.currentDeleteAnimationCorrelationIds.contains(message.id) {
-                            appliedDeleteAnimationCorrelationIds.insert(message.id)
-                            self.currentDeleteAnimationCorrelationIds.remove(message.id)
+                        if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                            if itemNode.isServiceLikeMessage() {
+                                continue
+                            }
+                        }
+                        
+                        if self.currentDeleteAnimationCorrelationIds.contains(message.stableId) {
+                            appliedDeleteAnimationCorrelationIds.insert(message.stableId)
+                            self.currentDeleteAnimationCorrelationIds.remove(message.stableId)
                             foundItemNodes.append(itemNode)
                         }
                     }
@@ -4051,11 +4058,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.currentSendAnimationCorrelationIds = value
     }
     
-    private var currentDeleteAnimationCorrelationIds = Set<MessageId>()
-    func setCurrentDeleteAnimationCorrelationIds(_ value: Set<MessageId>) {
+    private var currentDeleteAnimationCorrelationIds = Set<UInt32>()
+    func setCurrentDeleteAnimationCorrelationIds(_ value: Set<UInt32>) {
         self.currentDeleteAnimationCorrelationIds = value
     }
-    private var currentAppliedDeleteAnimationCorrelationIds = Set<MessageId>()
+    private var currentAppliedDeleteAnimationCorrelationIds = Set<UInt32>()
 
     var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?
 
@@ -4155,8 +4162,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         if !self.currentAppliedDeleteAnimationCorrelationIds.isEmpty {
             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                 for (message, _) in item.content {
-                    if self.currentAppliedDeleteAnimationCorrelationIds.contains(message.id) {
-                        return 1.5
+                    if self.currentAppliedDeleteAnimationCorrelationIds.contains(message.stableId) {
+                        return 0.8
                     }
                 }
             }
