@@ -148,7 +148,12 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
+        var useV2 = self.call.context.sharedContext.immediateExperimentalUISettings.callV2
         if let data = self.call.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_callui_v2"] {
+            useV2 = false
+        }
+        
+        if !useV2 {
             self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
             self.isContentsReady.set(.single(true))
         } else {

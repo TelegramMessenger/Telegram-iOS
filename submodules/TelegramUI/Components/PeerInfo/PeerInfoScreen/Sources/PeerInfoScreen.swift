@@ -1673,10 +1673,13 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
                     
                     var boostIcon: UIImage?
+                    var additionalBadge: String?
                     if let approximateBoostLevel = channel.approximateBoostLevel, approximateBoostLevel < 1 {
                         boostIcon = generateDisclosureActionBoostLevelBadgeImage(text: presentationData.strings.Channel_Info_BoostLevelPlusBadge("1").string)
+                    } else {
+                        additionalBadge = presentationData.strings.Settings_New
                     }
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: presentationData.strings.Channel_Info_AppearanceItem, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeLabel: additionalBadge, additionalBadgeIcon: boostIcon, text: presentationData.strings.Channel_Info_AppearanceItem, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
                     }))
                 }

@@ -72,7 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
     case unidirectionalSwipeToReply(Bool)
-    case dustEffect(Bool)
+    case callV2(Bool)
     case alternativeStoryMedia(Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case crashOnMemoryPressure(PresentationTheme, Bool)
@@ -125,7 +125,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .webViewInspection, .resetWebViewCache:
             return DebugControllerSection.web.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .dustEffect, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
+        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .callV2, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
@@ -178,7 +178,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 16
         case .unidirectionalSwipeToReply:
             return 17
-        case .dustEffect:
+        case .callV2:
             return 18
         case .alternativeStoryMedia:
             return 19
@@ -951,11 +951,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
-        case let .dustEffect(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Dust Effect", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .callV2(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "CallV2", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     var settings = settings
-                    settings.dustEffect = value
+                    settings.callV2 = value
                     return settings
                 }).start()
             })
@@ -1426,7 +1426,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
         #endif
         entries.append(.unidirectionalSwipeToReply(experimentalSettings.unidirectionalSwipeToReply))
-        entries.append(.dustEffect(experimentalSettings.dustEffect))
+        entries.append(.callV2(experimentalSettings.callV2))
         entries.append(.alternativeStoryMedia(experimentalSettings.alternativeStoryMedia))
     }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
