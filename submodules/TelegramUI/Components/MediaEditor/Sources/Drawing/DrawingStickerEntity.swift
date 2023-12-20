@@ -109,7 +109,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             if case let .file(_, type) = self.content, case .reaction = type {
                 self.scale = max(0.59, min(1.77, self.scale))
             } else if case .message = self.content {
-                self.scale = max(1.0, min(4.0, self.scale))
+                self.scale = max(2.5, self.scale)
             }
         }
     }

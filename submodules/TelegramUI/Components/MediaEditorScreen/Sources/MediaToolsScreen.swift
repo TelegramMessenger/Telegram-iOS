@@ -127,17 +127,20 @@ private final class MediaToolsScreenComponent: Component {
     let context: AccountContext
     let mediaEditor: MediaEditor
     let section: MediaToolsSection
+    let hiddenTools: [EditorToolKey]
     let sectionUpdated: (MediaToolsSection) -> Void
     
     init(
         context: AccountContext,
         mediaEditor: MediaEditor,
         section: MediaToolsSection,
+        hiddenTools: [EditorToolKey],
         sectionUpdated: @escaping (MediaToolsSection) -> Void
     ) {
         self.context = context
         self.mediaEditor = mediaEditor
         self.section = section
+        self.hiddenTools = hiddenTools
         self.sectionUpdated = sectionUpdated
     }
     
@@ -146,6 +149,9 @@ private final class MediaToolsScreenComponent: Component {
             return false
         }
         if lhs.section != rhs.section {
+            return false
+        }
+        if lhs.hiddenTools != rhs.hiddenTools {
             return false
         }
         return true
@@ -362,7 +368,6 @@ private final class MediaToolsScreenComponent: Component {
                 if availableSize.height < previewSize.height + 30.0 {
                     topInset = 0.0
                     controlsBottomInset = -75.0
-//                    self.buttonsBackgroundView.backgroundColor = .black
                 } else {
                     self.buttonsBackgroundView.backgroundColor = .clear
                 }
@@ -657,6 +662,8 @@ private final class MediaToolsScreenComponent: Component {
 //                        startValue: 0.0
 //                    )
                 ]
+                
+                tools = tools.filter { !component.hiddenTools.contains($0.key) }
                 
                 if !component.mediaEditor.sourceIsVideo {
                     tools.insert(AdjustmentTool(
@@ -1044,6 +1051,7 @@ public final class MediaToolsScreen: ViewController {
                         context: self.context,
                         mediaEditor: controller.mediaEditor,
                         section: self.currentSection,
+                        hiddenTools: controller.hiddenTools,
                         sectionUpdated: { [weak self] section in
                             if let self {
                                 self.currentSection = section
@@ -1087,15 +1095,17 @@ public final class MediaToolsScreen: ViewController {
     }
     
     fileprivate let context: AccountContext
+    fileprivate let hiddenTools: [EditorToolKey]
     fileprivate let mediaEditor: MediaEditor
     
     public var dismissed: () -> Void = {}
     
     private var initialValues: MediaEditorValues
         
-    public init(context: AccountContext, mediaEditor: MediaEditor) {
+    public init(context: AccountContext, mediaEditor: MediaEditor, hiddenTools: [EditorToolKey]) {
         self.context = context
         self.mediaEditor = mediaEditor
+        self.hiddenTools = hiddenTools
         self.initialValues = mediaEditor.values.makeCopy()
         
         super.init(navigationBarPresentationData: nil)

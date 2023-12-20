@@ -2422,6 +2422,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
                 
+                var canShareToStory = true
                 if let message = messages.first, message.media.contains(where: { media in
                     if media is TelegramMediaContact || media is TelegramMediaPoll {
                         return true
@@ -2431,7 +2432,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                 }) {
-                } else {
+                    canShareToStory = false
+                }
+                if message.text.containsOnlyEmoji {
+                    canShareToStory = false
+                }
+                
+                if canShareToStory {
                     shareController.shareStory = { [weak self] in
                         guard let self else {
                             return

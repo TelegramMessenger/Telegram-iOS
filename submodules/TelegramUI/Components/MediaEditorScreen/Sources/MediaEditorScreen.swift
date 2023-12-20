@@ -2438,7 +2438,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         messageEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
                         
                         let fraction = max(size.width, size.height) / 353.0
-                        messageEntity.scale = 3.3 * fraction
+                        messageEntity.scale = min(6.0, 3.3 * fraction)
 
                         self.entitiesView.add(messageEntity, announce: false)
                         
@@ -2698,8 +2698,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        private var enhanceInitialTranslation: Float?
+        private var canEnhance: Bool {
+            if case .message = self.subject {
+                return false
+            }
+            return true
+        }
         
+        private var enhanceInitialTranslation: Float?
         @objc func handleDismissPan(_ gestureRecognizer: UIPanGestureRecognizer) {
             guard let controller = self.controller, let layout = self.validLayout, (layout.inputHeight ?? 0.0).isZero else {
                 return
@@ -2724,7 +2730,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.isDismissBySwipeSuppressed = controller.isEligibleForDraft()
                         controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
-                } else if abs(translation.x) > 10.0 && !self.isDismissing && !self.isEnhancing {
+                } else if abs(translation.x) > 10.0 && !self.isDismissing && !self.isEnhancing && self.canEnhance {
                     self.isEnhancing = true
                     controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
                 }
@@ -2770,7 +2776,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.isDismissing = false
                         controller.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                     }
-                } else {
+                } else if self.isEnhancing {
                     self.isEnhancing = false
                     Queue.mainQueue().after(0.5) {
                         controller.requestLayout(transition: .animated(duration: 0.3, curve: .easeInOut))
@@ -4008,7 +4014,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 if self.entitiesView.hasSelection {
                                     self.entitiesView.selectEntity(nil)
                                 }
-                                let controller = MediaToolsScreen(context: self.context, mediaEditor: mediaEditor)
+                                let controller = MediaToolsScreen(context: self.context, mediaEditor: mediaEditor, hiddenTools: !self.canEnhance ? [.enhance] : [])
                                 controller.dismissed = { [weak self] in
                                     if let self {
                                         self.animateInFromTool()
