@@ -79,7 +79,7 @@ public enum ChatListNodeEntryPromoInfo: Equatable {
     case psa(type: String, message: String?)
 }
 
-enum ChatListNotice: Equatable {
+public enum ChatListNotice: Equatable {
     case clearStorage(sizeFraction: Double)
     case setupPassword
     case premiumUpgrade(discount: Int32)

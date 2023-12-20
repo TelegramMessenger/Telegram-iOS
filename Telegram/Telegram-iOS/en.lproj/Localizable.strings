@@ -10773,3 +10773,6 @@ Sorry for the inconvenience.";
 "ChatList.PremiumXmasGiftText" = "Gift Telegram Premium for Christmas.";
 
 "ReassignBoost.DescriptionWithLink" = "To boost **%1$@**, reassign a previous boost or [gift Telegram Premium]() to a friend to get **%2$@** additional boosts.";
+
+"ChatList.PremiumGiftInSettingsInfo" = "You can gift **Telegram Premium** to a friend later in **Settings**.";
+
