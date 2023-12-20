@@ -10788,13 +10788,44 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.ChannelChangedWallpaper" = "%1$@ set a new wallpaper";
 
+"Channel.Appearance.Title" = "Appearance";
 "Channel.Appearance.UnsavedChangesAlertTitle" = "Unsaved Changes";
 "Channel.Appearance.UnsavedChangesAlertText" = "You have changed the channel appearance settings. Apply changes?";
 "Channel.Appearance.UnsavedChangesAlertDiscard" = "Discard";
 "Channel.Appearance.UnsavedChangesAlertApply" = "Apply";
+"Channel.Appearance.ToastAppliedText" = "Appearance settings have been updated.";
+
+"Channel.Appearance.ExampleReplyText" = "Reply to your channel";
+"Channel.Appearance.ExampleText" = "The color you select will be used for the channel's name";
+"Channel.Appearance.ExampleLinkWebsite" = "Telegram";
+"Channel.Appearance.ExampleLinkTitle" = "Link Preview";
+"Channel.Appearance.ExampleLinkText" = "This preview will also be tinted.";
+
+"Channel.Appearance.NameIcon" = "Replies Logo";
+"Channel.Appearance.NameColorFooter" = "Choose a color for the name of your channel, the link it sends, and replies to its messages.";
+
+"Channel.Appearance.Wallpaper" = "Channel Wallpaper";
+"Channel.Appearance.WallpaperFooter" = "Set a wallpaper that will be visible to everyone reading your channel.";
+
+"Channel.Appearance.ProfileHeader" = "PROFILE PAGE COLOR";
+"Channel.Appearance.ProfileFooter" = "Choose a color and a logo for the channel's profile.";
+"Channel.Appearance.ProfileIcon" = "Profile Logo";
+"Channel.Appearance.ResetProfileColor" = "Reset Profile Color";
+
+"Channel.Appearance.Status" = "Channel Emoji Status";
+"Channel.Appearance.StatusFooter" = "Choose a status that will be shown next to the channel's name.";
+
+"Channel.Appearance.ApplyButton" = "Apply Changes";
 
 "ChatList.PremiumGiftInSettingsInfo" = "You can gift **Telegram Premium** to a friend later in **Settings**.";
 
 "ChannelAppearance.BoostLevel" = "Level %@";
 
 "Message.FullDateFormat" = "%1$@, %2$@";
+
+"SavedMessages.OpenChannel" = "Open Channel";
+"SavedMessages.OpenGroup" = "Open Group";
+"SavedMessages.OpenChat" = "Open Chat";
+
+"Channel.Info.BoostLevelPlusBadge" = "Level %@+";
+"Channel.Info.AppearanceItem" = "Appearance";
