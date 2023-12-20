@@ -512,7 +512,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var cutout: TextNodeCutout? = nil
                 if item.presentationData.isPreview {
                     moreLayoutAndApply = moreLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Conversation_ReadMore, font: textFont, textColor: messageTheme.accentTextColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize))
-                    cutout = TextNodeCutout(bottomRight: moreLayoutAndApply?.0.size)
+                    if let moreSize = moreLayoutAndApply?.0.size {
+                        cutout = TextNodeCutout(bottomRight: CGSize(width: moreSize.width + 8.0, height: moreSize.height))
+                    }
                 }
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)

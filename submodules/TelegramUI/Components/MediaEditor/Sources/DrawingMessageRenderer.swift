@@ -34,17 +34,17 @@ public final class DrawingWallpaperRenderer {
         self.darkWallpaperBackgroundNode.update(wallpaper: darkWallpaper, animated: false)
     }
     
-    public func render(completion: @escaping (CGSize, UIImage?, UIImage?) -> Void) {
+    public func render(completion: @escaping (CGSize, UIImage?, UIImage?, CGRect?) -> Void) {
         self.updateLayout(size: CGSize(width: 360.0, height: 640.0))
         
         let resultSize = CGSize(width: 1080, height: 1920)
         self.generate(view: self.wallpaperBackgroundNode.view) { dayImage in
             if self.customWallpaper != nil {
-                completion(resultSize, dayImage, nil)
+                completion(resultSize, dayImage, nil, nil)
             } else {
                 Queue.mainQueue().justDispatch {
                     self.generate(view: self.darkWallpaperBackgroundNode.view) { nightImage in
-                        completion(resultSize, dayImage, nightImage)
+                        completion(resultSize, dayImage, nightImage, nil)
                     }
                 }
             }

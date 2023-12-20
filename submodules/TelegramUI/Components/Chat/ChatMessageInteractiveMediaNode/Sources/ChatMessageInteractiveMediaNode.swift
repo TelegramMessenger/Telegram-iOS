@@ -791,7 +791,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         }
                     case .themeSettings, .image:
                         unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
-                    case .color, .gradient:
+                    case .color, .gradient, .emoticon:
                         unboundSize = CGSize(width: 128.0, height: 128.0)
                 }
             } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
@@ -1312,7 +1312,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 switch wallpaper.content {
                                     case let .file(file, _, _, _, isTheme, _):
                                         if isTheme {
-                                            return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .file(FileMediaReference.message(message: MessageReference(message), media: file)))
+                                            return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, source: .file(FileMediaReference.message(message: MessageReference(message), media: file)), synchronousLoad: synchronousLoad)
                                         } else {
                                             var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
                                             if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
@@ -1328,7 +1328,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                                     }
                                                 }
                                             } else {
-                                                return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true)
+                                                return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file), representations: representations, alwaysShowThumbnailFirst: false, thumbnail: true, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
                                             }
                                         }
                                     case let .image(representations):
@@ -1339,6 +1339,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         return solidColorImage(color)
                                     case let .gradient(colors, rotation):
                                         return gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
+                                    case .emoticon:
+                                        return solidColorImage(.black)
                                 }
                             }
                             
@@ -1404,7 +1406,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)
                                     }
-                                case .themeSettings, .color, .gradient, .image:
+                                case .themeSettings, .color, .gradient, .image, .emoticon:
                                     updatedStatusSignal = .single((.Local, nil))
                             }
                         }

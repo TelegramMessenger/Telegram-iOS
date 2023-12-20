@@ -31,6 +31,7 @@ swift_library(
         "//submodules/CounterContollerTitleView",
         "//submodules/LegacyMediaPickerUI",
         "//submodules/TelegramUI/Components/Settings/SettingsThemeWallpaperNode",
+        "//submodules/TelegramUI/Components/PremiumLockButtonSubtitleComponent",
     ],
     visibility = [
         "//visibility:public",

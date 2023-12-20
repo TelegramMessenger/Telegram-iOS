@@ -20,6 +20,8 @@ import UndoUI
 import PremiumUI
 import PeerNameColorScreen
 import ThemeCarouselItem
+import ThemeAccentColorScreen
+import WallpaperGridScreen
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext

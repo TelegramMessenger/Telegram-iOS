@@ -108,6 +108,9 @@ extension ChatControllerImpl {
             let _ = (combineLatest(
                 self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)),
                 self.context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
+                |> `catch` { _ in
+                    return .single(.result([]))
+                }
                 |> mapToSignal { result -> Signal<[Message], NoError> in
                     guard case let .result(result) = result else {
                         return .complete()

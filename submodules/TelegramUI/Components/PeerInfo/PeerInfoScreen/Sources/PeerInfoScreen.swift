@@ -101,6 +101,7 @@ import ChatHistorySearchContainerNode
 import PeerInfoPaneNode
 import MediaPickerUI
 import AttachmentUI
+import BoostLevelIconComponent
 
 public enum PeerInfoAvatarEditingMode {
     case generic

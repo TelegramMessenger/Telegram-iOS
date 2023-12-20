@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import ManagedAnimationNode
+import ComponentFlow
+import PremiumLockButtonSubtitleComponent
 
 public enum WallpaperGalleryToolbarCancelButtonType {
     case cancel
@@ -33,9 +35,13 @@ public protocol WallpaperGalleryToolbar: ASDisplayNode {
 
 public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar {
     class ButtonNode: ASDisplayNode {
+        private let strings: PresentationStrings
+        
         private let doneButton = HighlightTrackingButtonNode()
         private var doneButtonBackgroundNode: ASDisplayNode
         private let doneButtonTitleNode: ImmediateTextNode
+        private var doneButtonSubtitle: ComponentView<Empty>?
+        
         private let doneButtonSolidBackgroundNode: ASDisplayNode
         private let doneButtonSolidTitleNode: ImmediateTextNode
         
@@ -49,7 +55,11 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
             }
         }
         
-        override init() {
+        var requiredLevel: Int?
+        
+        init(strings: PresentationStrings) {
+            self.strings = strings
+            
             self.doneButtonBackgroundNode = WallpaperLightButtonBackgroundNode()
             self.doneButtonBackgroundNode.cornerRadius = 14.0
             
@@ -102,6 +112,9 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
                             strongSelf.doneButtonBackgroundNode.alpha = 0.55
                             strongSelf.doneButtonTitleNode.layer.removeAnimation(forKey: "opacity")
                             strongSelf.doneButtonTitleNode.alpha = 0.55
+                            
+                            strongSelf.doneButtonSubtitle?.view?.layer.removeAnimation(forKey: "opacity")
+                            strongSelf.doneButtonSubtitle?.view?.alpha = 0.55
                         }
                     } else {
                         if strongSelf.isSolid {
@@ -114,6 +127,9 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
                             strongSelf.doneButtonBackgroundNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                             strongSelf.doneButtonTitleNode.alpha = 1.0
                             strongSelf.doneButtonTitleNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                            
+                            strongSelf.doneButtonSubtitle?.view?.alpha = 1.0
+                            strongSelf.doneButtonSubtitle?.view?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         }
                     }
                 }
@@ -168,7 +184,45 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
             let titleOriginX = floorToScreenPixels((bounds.width - totalWidth) / 2.0)
             
             self.animationNode.frame = CGRect(origin: CGPoint(x: titleOriginX, y: floorToScreenPixels((bounds.height - iconSize.height) / 2.0)), size: iconSize)
-            self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: titleOriginX + totalWidth - doneTitleSize.width, y: floorToScreenPixels((bounds.height - doneTitleSize.height) / 2.0)), size: doneTitleSize).offsetBy(dx: bounds.minX, dy: bounds.minY)
+            
+            var titleFrame = CGRect(origin: CGPoint(x: titleOriginX + totalWidth - doneTitleSize.width, y: floorToScreenPixels((bounds.height - doneTitleSize.height) / 2.0)), size: doneTitleSize).offsetBy(dx: bounds.minX, dy: bounds.minY)
+            
+            if let requiredLevel = self.requiredLevel {
+                let subtitle: ComponentView<Empty>
+                if let current = self.doneButtonSubtitle {
+                    subtitle = current
+                } else {
+                    subtitle = ComponentView<Empty>()
+                    self.doneButtonSubtitle = subtitle
+                }
+                
+                let subtitleSize = subtitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        PremiumLockButtonSubtitleComponent(
+                            count: requiredLevel,
+                            color: UIColor(rgb: 0xffffff, alpha: 0.7),
+                            strings: self.strings
+                        )
+                    ),
+                    environment: {},
+                    containerSize: size
+                )
+                
+                if let view = subtitle.view {
+                    if view.superview == nil {
+                        view.isUserInteractionEnabled = false
+                        self.view.addSubview(view)
+                    }
+                    
+                    titleFrame.origin.y -= 8.0
+                    
+                    let subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 3.0), size: subtitleSize)
+                    view.frame = subtitleFrame
+                }
+            }
+            
+            self.doneButtonTitleNode.frame = titleFrame
             
             let _ = self.doneButtonSolidTitleNode.updateLayout(constrainedSize)
             self.doneButtonSolidTitleNode.frame = self.doneButtonTitleNode.frame
@@ -223,17 +277,26 @@ public final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryT
         }
     }
     
-    private let applyButton = ButtonNode()
-    private let applyForBothButton = ButtonNode()
+    private let applyButton: ButtonNode
+    private let applyForBothButton: ButtonNode
     
     public var cancel: (() -> Void)?
     public var done: ((Bool) -> Void)?
+    
+    var requiredLevel: Int? {
+        didSet {
+            self.applyButton.requiredLevel = self.requiredLevel
+        }
+    }
     
     public init(theme: PresentationTheme, strings: PresentationStrings, cancelButtonType: WallpaperGalleryToolbarCancelButtonType = .cancel, doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set) {
         self.theme = theme
         self.strings = strings
         self.cancelButtonType = cancelButtonType
         self.doneButtonType = doneButtonType
+        
+        self.applyButton = ButtonNode(strings: strings)
+        self.applyForBothButton = ButtonNode(strings: strings)
         
         super.init()
         

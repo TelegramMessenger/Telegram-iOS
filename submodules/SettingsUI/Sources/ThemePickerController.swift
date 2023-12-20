@@ -20,6 +20,7 @@ import UndoUI
 import ItemListPeerActionItem
 import AnimationUI
 import ThemeSettingsThemeItem
+import ThemeAccentColorScreen
 
 private final class ThemePickerControllerArguments {
     let context: AccountContext

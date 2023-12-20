@@ -32,6 +32,8 @@ import ComponentDisplayAdapters
 import WallpaperResources
 import MediaPickerUI
 import WallpaperGalleryScreen
+import WallpaperGridScreen
+import BoostLevelIconComponent
 
 private final class EmojiActionIconComponent: Component {
     let context: AccountContext
@@ -115,107 +117,6 @@ private final class EmojiActionIconComponent: Component {
             }
             
             return size
-        }
-    }
-    
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
-public func generateDisclosureActionBoostLevelBadgeImage(text: String) -> UIImage {
-    let attributedText = NSAttributedString(string: text, attributes: [
-        .font: Font.medium(12.0),
-        .foregroundColor: UIColor.white
-    ])
-    let bounds = attributedText.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-    let leftInset: CGFloat = 16.0
-    let rightInset: CGFloat = 4.0
-    let size = CGSize(width: leftInset + rightInset + ceil(bounds.width), height: 20.0)
-    return generateImage(size, rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 6.0).cgPath)
-        context.clip()
-        
-        var locations: [CGFloat] = [0.0, 1.0]
-        let colors: [CGColor] = [UIColor(rgb: 0x9076FF).cgColor, UIColor(rgb: 0xB86DEA).cgColor]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
-        
-        context.resetClip()
-        
-        UIGraphicsPushContext(context)
-        
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white) {
-            let imageFit: CGFloat = 14.0
-            let imageSize = image.size.aspectFitted(CGSize(width: imageFit, height: imageFit))
-            let imageRect = CGRect(origin: CGPoint(x: 2.0, y: UIScreenPixel + floorToScreenPixels((size.height - imageSize.height) * 0.5)), size: imageSize)
-            image.draw(in: imageRect)
-        }
-        
-        attributedText.draw(at: CGPoint(x: leftInset, y: floorToScreenPixels((size.height - bounds.height) * 0.5)))
-        
-        UIGraphicsPopContext()
-    })!
-}
-
-private final class BoostLevelIconComponent: Component {
-    let strings: PresentationStrings
-    let level: Int
-    
-    init(
-        strings: PresentationStrings,
-        level: Int
-    ) {
-        self.strings = strings
-        self.level = level
-    }
-    
-    static func ==(lhs: BoostLevelIconComponent, rhs: BoostLevelIconComponent) -> Bool {
-        if lhs.strings !== rhs.strings {
-            return false
-        }
-        if lhs.level != rhs.level {
-            return false
-        }
-        return true
-    }
-    
-    final class View: UIView {
-        private let imageView: UIImageView
-        
-        private var component: BoostLevelIconComponent?
-        
-        override init(frame: CGRect) {
-            self.imageView = UIImageView()
-            
-            super.init(frame: frame)
-            
-            self.addSubview(self.imageView)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        func update(component: BoostLevelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            if self.component != component {
-                //TODO:localize
-                self.imageView.image = generateDisclosureActionBoostLevelBadgeImage(text: "Level \(component.level)")
-            }
-            self.component = component
-            
-            if let image = self.imageView.image {
-                self.imageView.frame = CGRect(origin: CGPoint(), size: image.size)
-                return image.size
-            } else {
-                return CGSize(width: 1.0, height: 20.0)
-            }
         }
     }
     
@@ -360,6 +261,8 @@ final class ChannelAppearanceScreenComponent: Component {
         private var updatedPeerProfileColor: PeerNameColor??
         private var updatedPeerProfileEmoji: Int64??
         private var updatedPeerStatus: PeerEmojiStatus??
+        private var updatedPeerWallpaper: WallpaperSelectionResult?
+        private var temporaryPeerWallpaper: TelegramWallpaper?
         
         private var requiredBoostSubject: BoostSubject?
         
@@ -502,9 +405,19 @@ final class ChannelAppearanceScreenComponent: Component {
                 changes.insert(.emojiStatus)
             }
             
-            let wallpaper = self.resolvedCurrentTheme?.wallpaper
-            if wallpaper != contentsData.peerWallpaper {
+            let wallpaper: TelegramWallpaper?
+            if let updatedPeerWallpaper = self.updatedPeerWallpaper {
+                switch updatedPeerWallpaper {
+                case .remove:
+                    wallpaper = nil
+                case let .emoticon(emoticon):
+                    wallpaper = .emoticon(emoticon)
+                case .custom:
+                    wallpaper = self.temporaryPeerWallpaper
+                }
                 changes.insert(.wallpaper)
+            } else {
+                wallpaper = contentsData.peerWallpaper
             }
             
             return ResolvedState(
@@ -544,16 +457,6 @@ final class ChannelAppearanceScreenComponent: Component {
             
             let statusFileId = resolvedState.emojiStatus?.fileId
             
-            var wallpaperEmoji: String?
-            if let currentTheme = self.currentTheme {
-                switch currentTheme {
-                case let .cloud(cloudTheme):
-                    wallpaperEmoji = cloudTheme.theme.emoticon
-                default:
-                    break
-                }
-            }
-            
             enum ApplyError {
                 case generic
             }
@@ -574,11 +477,24 @@ final class ChannelAppearanceScreenComponent: Component {
                 })
             }
             if resolvedState.changes.contains(.wallpaper) {
-                let _ = wallpaperEmoji
-                /*signals.append(component.context.engine.themes.setBuiltinChannelWallpaper(peerId: component.peerId, emoji: wallpaperEmoji, wallpaper: self.resolvedCurrentTheme?.wallpaper)
-                |> mapError { _ -> ApplyError in
-                    return .generic
-                })*/
+                if let updatedPeerWallpaper {
+                    switch updatedPeerWallpaper {
+                    case .remove:
+                        signals.append(component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: nil, forBoth: false)
+                        |> ignoreValues
+                        |> mapError { _ -> ApplyError in
+                            return .generic
+                        })
+                    case let .emoticon(emoticon):
+                        signals.append(component.context.engine.themes.setChatWallpaper(peerId: component.peerId, wallpaper: .emoticon(emoticon), forBoth: false)
+                        |> ignoreValues
+                        |> mapError { _ -> ApplyError in
+                            return .generic
+                        })
+                    case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
+                        uploadCustomPeerWallpaper(context: component.context, wallpaper: wallpaperEntry, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: component.peerId, forBoth: false, completion: {})
+                    }
+                }
             }
             
             self.applyDisposable = (combineLatest(signals)
@@ -644,55 +560,44 @@ final class ChannelAppearanceScreenComponent: Component {
         }
         
         private func openCustomWallpaperSetup() {
-            guard let _ = self.component, let contentsData = self.contentsData else {
+            guard let component = self.component, let contentsData = self.contentsData, let peer = contentsData.peer, let premiumConfiguration = self.premiumConfiguration, let boostStatus = self.boostStatus, let resolvedState = self.resolveState() else {
                 return
             }
-//            let dismissControllers = { [weak self] in
-//                if let self, let navigationController = self.controller?.navigationController as? NavigationController {
-//                    let controllers = navigationController.viewControllers.filter({ controller in
-//                        if controller is WallpaperGalleryController || controller is AttachmentController || controller is PeerInfoScreenImpl {
-//                            return false
-//                        }
-//                        return true
-//                    })
-//                    navigationController.setViewControllers(controllers, animated: true)
-//                }
-//            }
-//            var openWallpaperPickerImpl: ((Bool) -> Void)?
-            let openWallpaperPicker: (Bool) -> Void = { [weak self] animateAppearance in
-                guard let self, let component = self.component, let peer = contentsData.peer else {
+            let level = boostStatus.level
+            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            
+            let selectedWallpaper = resolvedState.wallpaper
+            
+            let controller = ThemeGridController(
+                context: component.context,
+                mode: .peer(peer, contentsData.availableThemes, selectedWallpaper, level < requiredWallpaperLevel ? requiredWallpaperLevel : nil, level < requiredCustomWallpaperLevel ? requiredCustomWallpaperLevel : nil)
+            )
+            controller.completion = { [weak self] result in
+                guard let self, let component = self.component, let contentsData = self.contentsData else {
                     return
                 }
-                let controller = wallpaperMediaPickerController(
-                    context: component.context,
-                    updatedPresentationData: nil,
-                    peer: peer,
-                    animateAppearance: true,
-                    completion: { [weak self] _, result in
-                        guard let self, let component = self.component, let asset = result as? PHAsset else {
-                            return
-                        }
-                        let controller = WallpaperGalleryController(context: component.context, source: .asset(asset), mode: .peer(peer, false))
-                        controller.navigationPresentation = .modal
-                        controller.apply = { wallpaper, options, editedImage, cropRect, brightness, forBoth in
-//                            if let strongSelf = self {
-//                                uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peer.id, forBoth: forBoth, completion: {
-//                                    Queue.mainQueue().after(0.3, {
-//                                        dismissControllers()
-//                                    })
-//                                })
-//                            }
-                        }
-                        self.environment?.controller()?.push(controller)
-                    },
-                    openColors: {
+                self.updatedPeerWallpaper = result
+                switch result {
+                case let .emoticon(emoticon):
+                    if let selectedTheme = contentsData.availableThemes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }) {
+                        self.currentTheme = .cloud(PresentationCloudTheme(theme: selectedTheme, resolvedWallpaper: nil, creatorAccountId: nil))
                     }
-                )
-                controller.navigationPresentation = .flatModal
-                self.environment?.controller()?.push(controller)
+                    self.temporaryPeerWallpaper = nil
+                case .remove:
+                    self.currentTheme = nil
+                    self.temporaryPeerWallpaper = nil
+                case let .custom(wallpaperEntry, options, editedImage, cropRect, brightness):
+                    let _ = (getTemporaryCustomPeerWallpaper(context: component.context, wallpaper: wallpaperEntry, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] wallpaper in
+                        self?.temporaryPeerWallpaper = wallpaper
+                        self?.state?.updated(transition: .immediate)
+                    })
+                    self.currentTheme = nil
+                }
+                self.state?.updated(transition: .immediate)
             }
-//            openWallpaperPickerImpl = openWallpaperPicker
-            openWallpaperPicker(true)
+            self.environment?.controller()?.push(controller)
         }
         
         private enum EmojiSetupSubject {
@@ -833,20 +738,9 @@ final class ChannelAppearanceScreenComponent: Component {
                     }
                     if self.contentsData == nil, let peerWallpaper = contentsData.peerWallpaper {
                         for cloudTheme in contentsData.availableThemes {
-                            let settings: TelegramThemeSettings?
-                            if let exactSettings = cloudTheme.settings?.first(where: { ($0.baseTheme == .night || $0.baseTheme == .tinted || $0.baseTheme == .classic || $0.baseTheme == .day) }) {
-                                settings = exactSettings
-                            } else if let firstSettings = cloudTheme.settings?.first {
-                                settings = firstSettings
-                            } else {
-                                settings = nil
-                            }
-                            
-                            if let settings {
-                                if settings.wallpaper == peerWallpaper {
-                                    self.currentTheme = .cloud(PresentationCloudTheme(theme: cloudTheme, resolvedWallpaper: nil, creatorAccountId: cloudTheme.isCreator ? component.context.account.id : nil))
-                                    break
-                                }
+                            if case let .emoticon(emoticon) = peerWallpaper, cloudTheme.emoticon?.strippedEmoji == emoticon.strippedEmoji {
+                                self.currentTheme = .cloud(PresentationCloudTheme(theme: cloudTheme, resolvedWallpaper: nil, creatorAccountId: cloudTheme.isCreator ? component.context.account.id : nil))
+                                break
                             }
                         }
                     }
@@ -906,7 +800,7 @@ final class ChannelAppearanceScreenComponent: Component {
             
             let cloudThemes: [PresentationThemeReference] = contentsData.availableThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? component.context.account.id : nil)) }
             let chatThemes = cloudThemes.filter { $0.emoticon != nil }
-            
+                        
             if let currentTheme = self.currentTheme, (self.resolvedCurrentTheme?.reference != currentTheme || self.resolvedCurrentTheme?.isDark != environment.theme.overallDarkAppearance), (self.resolvingCurrentTheme?.reference != currentTheme || self.resolvingCurrentTheme?.isDark != environment.theme.overallDarkAppearance) {
                 self.resolvingCurrentTheme?.disposable.dispose()
                 
@@ -924,7 +818,9 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
                 if let presentationTheme {
                     let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
-                    if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+                    if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
+                        resolvedWallpaper = .single(temporaryPeerWallpaper)
+                    } else if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
                         resolvedWallpaper = cachedWallpaper(account: component.context.account, slug: file.slug, settings: file.settings)
                         |> map { wallpaper -> TelegramWallpaper? in
                             return wallpaper?.wallpaper
@@ -946,12 +842,15 @@ final class ChannelAppearanceScreenComponent: Component {
             } else if self.currentTheme == nil {
                 self.resolvingCurrentTheme?.disposable.dispose()
                 self.resolvingCurrentTheme = nil
-                
                 self.resolvedCurrentTheme = nil
             }
             
-            if self.currentTheme != nil {
-                requiredBoostSubjects.append(.wallpaper)
+            if let wallpaper = resolvedState.wallpaper {
+                if wallpaper.isEmoticon {
+                    requiredBoostSubjects.append(.wallpaper)
+                } else {
+                    requiredBoostSubjects.append(.customWallpaper)
+                }
             }
             
             if case let .user(user) = peer {
@@ -1025,11 +924,16 @@ final class ChannelAppearanceScreenComponent: Component {
             
             var chatPreviewTheme: PresentationTheme = environment.theme
             var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
-            if let resolvedCurrentTheme = self.resolvedCurrentTheme {
+            if let updatedWallpaper = self.updatedPeerWallpaper, case .remove = updatedWallpaper {  
+            } else if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
+                chatPreviewWallpaper = temporaryPeerWallpaper
+            } else if let resolvedCurrentTheme = self.resolvedCurrentTheme {
                 chatPreviewTheme = resolvedCurrentTheme.theme
                 if let wallpaper = resolvedCurrentTheme.wallpaper {
                     chatPreviewWallpaper = wallpaper
                 }
+            } else if let initialWallpaper = contentsData.peerWallpaper, !initialWallpaper.isEmoticon {
+                chatPreviewWallpaper = initialWallpaper
             }
             
             let replySectionSize = self.replySection.update(
@@ -1129,6 +1033,14 @@ final class ChannelAppearanceScreenComponent: Component {
                     ))))
                 }
                 
+                var currentTheme = self.currentTheme
+                var selectedWallpaper: TelegramWallpaper?
+                if currentTheme == nil, let wallpaper = resolvedState.wallpaper, !wallpaper.isEmoticon {
+                    let theme: PresentationThemeReference = .builtin(.day)
+                    currentTheme = theme
+                    selectedWallpaper = wallpaper
+                }
+                
                 let wallpaperSectionSize = self.wallpaperSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(
@@ -1156,12 +1068,19 @@ final class ChannelAppearanceScreenComponent: Component {
                                     themeSpecificChatWallpapers: [:],
                                     nightMode: environment.theme.overallDarkAppearance,
                                     channelMode: true,
-                                    currentTheme: self.currentTheme,
+                                    selectedWallpaper: selectedWallpaper,
+                                    currentTheme: currentTheme,
                                     updatedTheme: { [weak self] value in
-                                        guard let self else {
+                                        guard let self, value != .builtin(.day) else {
                                             return
                                         }
                                         self.currentTheme = value
+                                        self.temporaryPeerWallpaper = nil
+                                        if let value {
+                                            self.updatedPeerWallpaper = .emoticon(value.emoticon ?? "")
+                                        } else {
+                                            self.updatedPeerWallpaper = .remove
+                                        }
                                         self.state?.updated(transition: .spring(duration: 0.4))
                                     },
                                     contextAction: nil
@@ -1538,8 +1457,10 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
             peerId: peerId
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
         
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         //TODO:localize
         self.title = "Appearance"
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.ready.set(.never())
         

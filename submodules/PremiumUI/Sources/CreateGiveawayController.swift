@@ -182,17 +182,17 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return 202
         case .prizeDescriptionInfo:
             return 203
-        case .timeHeader:
-            return 204
-        case .timeExpiryDate:
-            return 205
-        case .timeCustomPicker:
-            return 206
-        case .timeInfo:
-            return 207
         case .winners:
-            return 208
+            return 204
         case .winnersInfo:
+            return 205
+        case .timeHeader:
+            return 206
+        case .timeExpiryDate:
+            return 207
+        case .timeCustomPicker:
+            return 208
+        case .timeInfo:
             return 209
         }
     }
@@ -777,12 +777,12 @@ private func createGiveawayControllerEntries(
         }
         entries.append(.prizeDescriptionInfo(presentationData.theme, prizeDescriptionInfoText))
         
+        entries.append(.winners(presentationData.theme, presentationData.strings.BoostGift_Winners, state.showWinners))
+        entries.append(.winnersInfo(presentationData.theme, presentationData.strings.BoostGift_WinnersInfo))
+        
         entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
         entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate, state.pickingExpiryDate, state.pickingExpiryTime))
         entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
-        
-        entries.append(.winners(presentationData.theme, presentationData.strings.BoostGift_Winners, state.showWinners))
-        entries.append(.winnersInfo(presentationData.theme, presentationData.strings.BoostGift_WinnersInfo))
     case .gift:
         appendDurationEntries()
     }
@@ -803,7 +803,7 @@ private struct CreateGiveawayControllerState: Equatable {
     var selectedMonths: Int32?
     var countries: [String] = []
     var onlyNewEligible: Bool = false
-    var showWinners: Bool = false
+    var showWinners: Bool = true
     var showPrizeDescription: Bool = false
     var prizeDescription: String = ""
     var time: Int32

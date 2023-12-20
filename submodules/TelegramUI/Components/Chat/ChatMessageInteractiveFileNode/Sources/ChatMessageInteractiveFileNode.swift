@@ -686,7 +686,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             candidateTitleString = NSAttributedString(string: title ?? (arguments.file.fileName ?? "Unknown Track"), font: titleFont, textColor: arguments.customTintColor ?? messageTheme.fileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
-                                descriptionText = performer
+                                descriptionText = performer.trimmingTrailingSpaces()
                             } else if let size = arguments.file.size, size > 0 && size != .max {
                                 descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: arguments.presentationData))
                             } else {
@@ -876,7 +876,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     var viewCount: Int?
                     var dateReplies = 0
                     var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: arguments.associatedData.accountPeer, message: arguments.topMessage)
-                    if arguments.topMessage.isRestricted(platform: "ios", contentSettings: arguments.context.currentContentSettings.with { $0 }) {
+                    if arguments.topMessage.isRestricted(platform: "ios", contentSettings: arguments.context.currentContentSettings.with { $0 }) || arguments.presentationData.isPreview {
                         dateReactionsAndPeers = ([], [])
                     }
                     for attribute in arguments.message.attributes {
@@ -954,7 +954,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
                 }
                 
+                var statusHeightAddition: CGFloat = 0.0
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    if statusSuggestedWidthAndContinue.0 > minLayoutWidth {
+                        statusHeightAddition = 6.0
+                    }
                     minLayoutWidth = max(minLayoutWidth, statusSuggestedWidthAndContinue.0)
                 }
                 
@@ -1020,6 +1024,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 statusOffset = -10.0
                                 fittedLayoutSize.height += statusOffset
                             }
+                            fittedLayoutSize.height += statusHeightAddition
                         }
                     }
                     
@@ -1223,7 +1228,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 if textString != nil {
                                     statusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width - 6.0 - statusSizeAndApply.0.width, y: textFrame.maxY + 4.0), size: statusSizeAndApply.0)
                                 } else {
-                                    statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
+                                    statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset + statusHeightAddition), size: statusSizeAndApply.0)
                                 }
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.dateAndStatusNode.frame = statusFrame

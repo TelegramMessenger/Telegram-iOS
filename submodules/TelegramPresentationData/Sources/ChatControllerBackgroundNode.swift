@@ -34,7 +34,7 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
     } else {
         var succeed = true
         switch wallpaper {
-            case .builtin:
+            case .builtin, .emoticon:
                 if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
                     backgroundImage = UIImage(contentsOfFile: filePath)?.precomposed()
                 }
@@ -114,7 +114,7 @@ public func chatControllerBackgroundImageSignal(wallpaper: TelegramWallpaper, me
         }
         
         switch wallpaper {
-            case .builtin:
+            case .builtin, .emoticon:
                 if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
                     return .single((UIImage(contentsOfFile: filePath)?.precomposed(), true))
                     |> afterNext { image in

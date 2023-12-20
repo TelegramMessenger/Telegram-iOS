@@ -234,6 +234,8 @@ public class WallpaperGalleryController: ViewController {
     private var savedPatternWallpaper: TelegramWallpaper?
     private var savedPatternIntensity: Int32?
     
+    public var requiredLevel: Int?
+    
     public init(context: AccountContext, source: WallpaperListSource, mode: Mode = .default) {
         self.context = context
         self.source = source
@@ -506,6 +508,7 @@ public class WallpaperGalleryController: ViewController {
         }
                 
         let toolbarNode = WallpaperGalleryToolbarNode(theme: presentationData.theme, strings: presentationData.strings, doneButtonType: doneButtonType)
+        toolbarNode.requiredLevel = self.requiredLevel
         switch self.source {
         case .asset, .contextResult:
             toolbarNode.dark = false

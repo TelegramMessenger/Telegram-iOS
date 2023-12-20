@@ -140,7 +140,7 @@ public func getChatWallpaperImage(context: AccountContext, messageId: EngineMess
         return Signal { subscriber in
             Queue.mainQueue().async {
                 let wallpaperRenderer = DrawingWallpaperRenderer(context: context, customWallpaper: customWallpaper)
-                wallpaperRenderer.render { size, image, darkImage in
+                wallpaperRenderer.render { size, image, darkImage, mediaRect in
                     subscriber.putNext((size, image, darkImage))
                     subscriber.putCompletion()
                 }

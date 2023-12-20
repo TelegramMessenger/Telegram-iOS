@@ -119,6 +119,7 @@ import ChatQrCodeScreen
 import PeerInfoScreen
 import MediaEditorScreen
 import WallpaperGalleryScreen
+import WallpaperGridScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -916,6 +917,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .setChatWallpaper(wallpaper, _):
                             guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 strongSelf.presentThemeSelection()
+                                return true
+                            }
+                            if peer is TelegramChannel {
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()
@@ -6364,6 +6368,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
 
+                if let wallpaper = chatWallpaper, case let .emoticon(wallpaperEmoticon) = wallpaper, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == wallpaperEmoticon.strippedEmoji }) {
+                    if let themeWallpaper = theme.settings?.first?.wallpaper {
+                        chatWallpaper = themeWallpaper
+                    }
+                }
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == themeEmoticon.strippedEmoji }) {
                     if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
@@ -7396,17 +7405,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let peerId = self.chatLocation.peerId {
             self.chatThemeEmoticonPromise.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peerId)))
-            let chatWallpaper = self.context.account.viewTracker.peerView(peerId)
+            let chatWallpaper = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Wallpaper(id: peerId))
             |> take(1)
-            |> map { view -> TelegramWallpaper? in
-                if let cachedData = view.cachedData as? CachedUserData {
-                    return cachedData.wallpaper
-                } else if let cachedData = view.cachedData as? CachedChannelData {
-                    return cachedData.wallpaper
-                } else {
-                    return nil
-                }
-            }
             self.chatWallpaperPromise.set(chatWallpaper)
         } else {
             self.chatThemeEmoticonPromise.set(.single(nil))

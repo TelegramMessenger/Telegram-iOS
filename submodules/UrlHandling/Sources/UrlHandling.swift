@@ -702,6 +702,9 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                                     let messageId = MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: id)
                                     return context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: false))
+                                    |> `catch` { _ in
+                                        return .single(.result([]))
+                                    }
                                     |> take(1)
                                     |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
                                         switch result {
@@ -830,6 +833,9 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                             } else {
                                 return context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: false))
+                                |> `catch` { _ in
+                                    return .single(.result([]))
+                                }
                                 |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
                                     switch result {
                                     case .progress:

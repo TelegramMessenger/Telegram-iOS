@@ -1452,7 +1452,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
             let outgoingColors = theme.chat.message.outgoing.bubble.withoutWallpaper.fill
             let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
             switch wallpaper {
-                case .builtin:
+                case .builtin, .emoticon:
                     backgroundColor = (UIColor(rgb: 0xd6e2ee), nil, [])
                 case let .color(color):
                     backgroundColor = (UIColor(rgb: color), nil, [])
@@ -1463,8 +1463,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                         backgroundColor = (.white, nil, [])
                     }
                     rotation = gradient.settings.rotation
-                case .image:
+                case let .image(representations, options):
                     backgroundColor = (.black, nil, [])
+                    if let largest = representations.first, let path = account.postbox.mediaBox.completedResourcePath(largest.resource), let image = UIImage(contentsOfFile: path)?.precomposed() {
+                        wallpaperSignal = .single((backgroundColor, incomingColors, outgoingColors, image, options.blur, false, 1.0, rotation))
+                    }
                 case let .file(file):
                     rotation = file.settings.rotation
                     if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
@@ -1578,12 +1581,16 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                 let isBlack = UIColor.average(of: colors.0.2.map(UIColor.init(rgb:))).hsb.b <= 0.01
                 var patternIntensity: CGFloat = 0.5
                 var isPattern = false
-                if let wallpaper = wallpaper, case let .file(file) = wallpaper {
-                    if !file.settings.colors.isEmpty {
-                        isPattern = file.isPattern
-                        if let intensity = file.settings.intensity {
-                            patternIntensity = CGFloat(intensity) / 100.0
+                if let wallpaper = wallpaper {
+                    if case let .file(file) = wallpaper {
+                        if !file.settings.colors.isEmpty {
+                            isPattern = file.isPattern
+                            if let intensity = file.settings.intensity {
+                                patternIntensity = CGFloat(intensity) / 100.0
+                            }
                         }
+                    } else {
+                        patternIntensity = 0.0
                     }
                 }
                                 

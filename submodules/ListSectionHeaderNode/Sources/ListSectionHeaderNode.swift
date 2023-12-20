@@ -93,6 +93,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         self.label = ImmediateTextNode()
         self.label.isUserInteractionEnabled = false
         self.label.isAccessibilityElement = true
+        self.label.displaysAsynchronously = false
         
         super.init()
         

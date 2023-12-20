@@ -52,7 +52,7 @@ public class ItemListActionItem: ListViewItem, ItemListItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply() })
+                    return (nil, { _ in apply(false) })
                 })
             }
         }
@@ -67,7 +67,7 @@ public class ItemListActionItem: ListViewItem, ItemListItem {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply()
+                            apply(false)
                         })
                     }
                 }
@@ -130,7 +130,7 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    public func asyncLayout() -> (_ item: ItemListActionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListActionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
@@ -179,7 +179,7 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
-            return (layout, { [weak self] in
+            return (layout, { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.item = item
                     

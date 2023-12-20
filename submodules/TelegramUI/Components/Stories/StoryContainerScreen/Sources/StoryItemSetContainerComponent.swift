@@ -3162,7 +3162,13 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 for (id, views) in preloadViewListIds {
                     if component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] == nil {
-                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.peer.id, id: id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                        let defaultSortMode: EngineStoryViewListContext.SortMode
+                        if component.slice.peer.id.isGroupOrChannel {
+                            defaultSortMode = .repostsFirst
+                        } else {
+                            defaultSortMode = .reactionsFirst
+                        }
+                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.peer.id, id: id, views: views, listMode: .everyone, sortMode: defaultSortMode)
                         component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] = viewList
                     }
                 }
@@ -3512,7 +3518,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 self.openPeerStories(peer: peer, avatarNode: avatarNode)
                             },
-                            openStory: { [weak self] peer, id, stories, sourceView in
+                            openReposts: { [weak self] peer, id, sourceView in
                                 guard let self else {
                                     return
                                 }

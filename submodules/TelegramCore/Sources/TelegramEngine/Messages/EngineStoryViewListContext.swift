@@ -427,7 +427,7 @@ public final class EngineStoryViewListContext {
             let sortMode = self.sortMode
             let searchQuery = self.searchQuery
             let currentOffset = state.nextOffset
-            let limit = state.items.isEmpty ? 50 : 100
+            let limit = 50
            
             let signal: Signal<InternalState, NoError> 
             
@@ -662,6 +662,9 @@ public final class EngineStoryViewListContext {
                     }
                     
                     var flags: Int32 = 0
+                    if let _ = currentOffset {
+                        flags |= (1 << 1)
+                    }
                     if case .repostsFirst = sortMode {
                         flags |= (1 << 2)
                     }
@@ -887,4 +890,3 @@ public final class EngineStoryViewListContext {
         }
     }
 }
-

@@ -36,6 +36,7 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
 private func prepareForRendering(entityView: DrawingEntityView) {
     if let entityView = entityView as? DrawingStickerEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()
+        entityView.entity.renderSubEntities = entityView.getRenderSubEntities()
     }
     if let entityView = entityView as? DrawingBubbleEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()

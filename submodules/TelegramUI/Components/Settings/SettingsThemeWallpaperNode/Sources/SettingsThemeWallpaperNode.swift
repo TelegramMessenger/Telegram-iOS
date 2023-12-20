@@ -10,6 +10,9 @@ import AccountContext
 import RadialStatusNode
 import WallpaperResources
 import GradientBackground
+import StickerResources
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
@@ -46,11 +49,18 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
     public var wallpaper: TelegramWallpaper?
     private var arguments: PatternWallpaperArguments?
     
+    private var emojiFile: TelegramMediaFile?
+    
     public let buttonNode = HighlightTrackingButtonNode()
     public let backgroundNode = ASImageNode()
     public let imageNode = TransformImageNode()
     private var gradientNode: GradientBackgroundNode?
     private let statusNode: RadialStatusNode
+    
+    private let emojiContainerNode: ASDisplayNode
+    private let emojiImageNode: TransformImageNode
+    private var animatedStickerNode: AnimatedStickerNode?
+    private let stickerFetchedDisposable = MetaDisposable()
     
     public var pressed: (() -> Void)?
 
@@ -69,6 +79,9 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
         self.statusNode.isUserInteractionEnabled = false
         
+        self.emojiContainerNode = ASDisplayNode()
+        self.emojiImageNode = TransformImageNode()
+        
         super.init()
         
         self.addSubnode(self.backgroundNode)
@@ -76,11 +89,34 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.statusNode)
         
+        self.addSubnode(self.emojiContainerNode)
+//        self.emojiContainerNode.addSubnode(self.emojiNode)
+        self.emojiContainerNode.addSubnode(self.emojiImageNode)
+        
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        
+        var firstTime = true
+        self.emojiImageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.emojiImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            firstTime = false
+        }
     }
 
     deinit {
         self.isLoadedDisposable.dispose()
+        self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+
     }
     
     public func setSelected(_ selected: Bool, animated: Bool = false) {
@@ -114,7 +150,7 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.statusNode.backgroundNodeColor = color
     }
     
-    public func setWallpaper(context: AccountContext, wallpaper: TelegramWallpaper, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
+    public func setWallpaper(context: AccountContext, theme: PresentationTheme? = nil, wallpaper: TelegramWallpaper, isEmpty: Bool = false, emojiFile: TelegramMediaFile? = nil, selected: Bool, size: CGSize, cornerRadius: CGFloat = 0.0, synchronousLoad: Bool = false) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -175,6 +211,11 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
                 self.backgroundNode.backgroundColor = UIColor(rgb: colors[0])
             }
         }
+        
+        if isEmpty, let theme {
+            self.backgroundNode.image = nil
+            self.backgroundNode.backgroundColor = theme.list.mediaPlaceholderColor
+        }
 
         if let gradientNode = self.gradientNode {
             gradientNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -186,7 +227,7 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
         
         let corners = ImageCorners(radius: cornerRadius)
     
-        if self.wallpaper != wallpaper {
+        if self.wallpaper != wallpaper && !isEmpty {
             self.wallpaper = wallpaper
             switch wallpaper {
                 case .builtin:
@@ -286,7 +327,7 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
             }
         } else if let wallpaper = self.wallpaper {
             switch wallpaper {
-                case .builtin, .color, .gradient:
+                case .builtin, .color, .gradient, .emoticon:
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .image(representations, _):
@@ -300,6 +341,51 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
         }
 
         self.setSelected(selected, animated: false)
+        
+        
+        self.emojiContainerNode.frame = self.backgroundNode.frame
+        
+        var emojiFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 42.0) / 2.0), y: 98.0), size: CGSize(width: 42.0, height: 42.0))
+        if isEmpty {
+            emojiFrame = emojiFrame.insetBy(dx: 3.0, dy: 3.0)
+        }
+        if let file = emojiFile, self.emojiFile?.id != emojiFile?.id {
+            self.emojiFile = file
+            
+            let imageApply = self.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
+            imageApply()
+            self.emojiImageNode.setSignal(chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: file.resource, animated: true, nilIfEmpty: true))
+            self.emojiImageNode.frame = emojiFrame
+            
+            let animatedStickerNode: AnimatedStickerNode
+            if let current = self.animatedStickerNode {
+                animatedStickerNode = current
+            } else {
+                animatedStickerNode = DefaultAnimatedStickerNodeImpl()
+                animatedStickerNode.started = { [weak self] in
+                    self?.emojiImageNode.isHidden = true
+                }
+                self.animatedStickerNode = animatedStickerNode
+                self.emojiContainerNode.addSubnode(animatedStickerNode)
+                let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: file.resource), width: 128, height: 128, playbackMode: .still(.start), mode: .direct(cachePathPrefix: pathPrefix))
+                
+                animatedStickerNode.anchorPoint = CGPoint(x: 0.5, y: 1.0)
+            }
+            animatedStickerNode.autoplay = true
+            animatedStickerNode.visibility = true
+            
+            self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+            
+//            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
+//            self.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: thumbnailDimensions.cgSize)
+//            self.placeholderNode.frame = emojiFrame
+        }
+        
+        if let animatedStickerNode = self.animatedStickerNode {
+            animatedStickerNode.frame = emojiFrame
+            animatedStickerNode.updateLayout(size: emojiFrame.size)
+        }
     }
     
     @objc func buttonPressed() {

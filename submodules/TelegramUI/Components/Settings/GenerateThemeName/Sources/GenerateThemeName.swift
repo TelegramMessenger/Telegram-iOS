@@ -297,7 +297,7 @@ private let subjectives: [String] = [
     "Zone"
 ]
 
-func generateThemeName(accentColor: UIColor) -> String {
+public func generateThemeName(accentColor: UIColor) -> String {
     var nearest: (color: UInt32, distance: Int32)?
     for (color, _) in colors {
         let distance = accentColor.distance(to: UIColor(rgb: color))

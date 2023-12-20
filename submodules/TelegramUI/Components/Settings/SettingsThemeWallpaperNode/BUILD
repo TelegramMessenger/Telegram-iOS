@@ -18,8 +18,11 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/GradientBackground",
         "//submodules/WallpaperResources",
+        "//submodules/StickerResources",
         "//submodules/AccountContext",
         "//submodules/RadialStatusNode",
+        "//submodules/AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

@@ -10694,7 +10694,7 @@ Sorry for the inconvenience.";
 
 "Premium.Gift.ApplyLink" = "Apply for Free";
 "Premium.Gift.ApplyLink.AlreadyHasPremium.Title" = "You already have Telegram Premium";
-"Premium.Gift.ApplyLink.AlreadyHasPremium.Text" = "You can activate this gift link after %@ or [send the link]() to a friend.";
+"Premium.Gift.ApplyLink.AlreadyHasPremium.Text" = "You can activate this gift link after **%@** or [send the link]() to a friend.";
 
 "Premium.Gift.Link.Text" = "This link allows you or [anyone you choose]() to activate a **Telegram Premium** subscription.";
 "Premium.Gift.UsedLink.Text" = "This link was used to activate a **Telegram Premium** subscription.";
@@ -10742,17 +10742,17 @@ Sorry for the inconvenience.";
 "ChannelBoost.EmojiStatus" = "Use Emoji Statuses";
 "ChannelBoost.EnableEmojiStatusLevelText" = "Your channel needs **Level %1$@** to use emoji statuses.";
 
-"ChannelBoost.Wallpaper" = "Set Channel Background";
-"ChannelBoost.EnableWallpaperLevelText" = "Your channel needs **Level %1$@** to set channel background.";
+"ChannelBoost.Wallpaper" = "Set Channel Wallpaper";
+"ChannelBoost.EnableWallpaperLevelText" = "Your channel needs **Level %1$@** to set channel wallpaper.";
 
-"ChannelBoost.CustomWallpaper" = "Set Custom Channel Background";
-"ChannelBoost.EnableCustomWallpaperLevelText" = "Your channel needs **Level %1$@** to set custom channel background.";
+"ChannelBoost.CustomWallpaper" = "Set Custom Channel Wallpaper";
+"ChannelBoost.EnableCustomWallpaperLevelText" = "Your channel needs **Level %1$@** to set custom channel wallpaper.";
 
 "WallpaperPreview.ChannelHeader" = "All subscribers will see this wallpaper";
 "WallpaperPreview.ChannelTopText" = "Details to follow shortly.\nStay tuned!";
 "WallpaperPreview.ChannelReplyText" = "Breaking News";
 
-"Wallpaper.ApplyForChannel" = "Apply Background";
+"Wallpaper.ApplyForChannel" = "Apply Wallpaper";
 "Notification.ChannelChangedWallpaper" = "Channel set a new wallpaper";
 
 "Story.MessageReposted.Personal" = "Message reposted to your stories.";
@@ -10763,3 +10763,13 @@ Sorry for the inconvenience.";
 "Share.RepostToStory" = "Repost\nto Story";
 
 "Conversation.ReadMore" = "Read More";
+
+"Wallpaper.ChannelTitle" = "Channel Wallpaper";
+"Wallpaper.ChannelCustomBackgroundInfo" = "Upload your own background image for the channel.";
+"Wallpaper.ChannelRemoveBackground" = "Remove Wallpaper";
+"Wallpaper.NoWallpaper" = "No\nWallpaper";
+
+"ChatList.PremiumXmasGiftTitle" = "Send gifts to **your friends**! 🎄";
+"ChatList.PremiumXmasGiftText" = "Gift Telegram Premium for Christmas.";
+
+"ReassignBoost.DescriptionWithLink" = "To boost **%1$@**, reassign a previous boost or [gift Telegram Premium]() to a friend to get **%2$@** additional boosts.";
