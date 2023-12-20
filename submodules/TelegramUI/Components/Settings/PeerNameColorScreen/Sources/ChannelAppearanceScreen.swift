@@ -924,7 +924,8 @@ final class ChannelAppearanceScreenComponent: Component {
             
             var chatPreviewTheme: PresentationTheme = environment.theme
             var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
-            if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
+            if let updatedWallpaper = self.updatedPeerWallpaper, case .remove = updatedWallpaper {  
+            } else if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
                 chatPreviewWallpaper = temporaryPeerWallpaper
             } else if let resolvedCurrentTheme = self.resolvedCurrentTheme {
                 chatPreviewTheme = resolvedCurrentTheme.theme
@@ -1070,7 +1071,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                     selectedWallpaper: selectedWallpaper,
                                     currentTheme: currentTheme,
                                     updatedTheme: { [weak self] value in
-                                        guard let self else {
+                                        guard let self, value != .builtin(.day) else {
                                             return
                                         }
                                         self.currentTheme = value

@@ -401,7 +401,12 @@ public final class ThemeGridController: ViewController {
         self.controllerNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch(animated: true)
         }
-        
+        self.controllerNode.requestWallpaperRemoval = { [weak self] in
+            if let self {
+                self.completion(.remove)
+                self.dismiss()
+            }
+        }
         self.controllerNode.gridNode.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
                 if let searchContentNode = strongSelf.searchContentNode {

@@ -1615,11 +1615,6 @@ public final class ChatListNode: ListView {
             guard let self else {
                 return
             }
-            Queue.mainQueue().after(0.6) { [weak self] in
-                if let self {
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .xmasPremiumGift).startStandalone()
-                }
-            }
             let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
             self.push?(controller)
         }, openActiveSessions: { [weak self] in

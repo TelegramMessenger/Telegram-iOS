@@ -30,12 +30,14 @@ final class ThemeGridControllerInteraction {
     let deleteSelectedWallpapers: () -> Void
     let shareSelectedWallpapers: () -> Void
     var selectionState: (Bool, Set<ThemeGridControllerEntry.StableId>) = (false, Set())
+    var removeWallpaper: () -> Void
     
-    init(openWallpaper: @escaping (TelegramWallpaper) -> Void, toggleWallpaperSelection: @escaping (ThemeGridControllerEntry.StableId, Bool) -> Void, deleteSelectedWallpapers: @escaping () -> Void, shareSelectedWallpapers: @escaping () -> Void) {
+    init(openWallpaper: @escaping (TelegramWallpaper) -> Void, toggleWallpaperSelection: @escaping (ThemeGridControllerEntry.StableId, Bool) -> Void, deleteSelectedWallpapers: @escaping () -> Void, shareSelectedWallpapers: @escaping () -> Void, removeWallpaper: @escaping () -> Void) {
         self.openWallpaper = openWallpaper
         self.toggleWallpaperSelection = toggleWallpaperSelection
         self.deleteSelectedWallpapers = deleteSelectedWallpapers
         self.shareSelectedWallpapers = shareSelectedWallpapers
+        self.removeWallpaper = removeWallpaper
     }
 }
 
@@ -161,6 +163,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private let resetWallpapers: () -> Void
     
     var requestDeactivateSearch: (() -> Void)?
+    var requestWallpaperRemoval: (() -> Void)?
     
     let ready = ValuePromise<Bool>()
     private let wallpapersPromise = Promise<[Wallpaper]>()
@@ -262,8 +265,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.galleryItemNode = ItemListPeerActionItemNode()
         }
         
+        var removeImpl: (() -> Void)?
         self.removeItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: presentationData.theme.list.itemDestructiveColor), title: presentationData.strings.Wallpaper_ChannelRemoveBackground, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .destructive, editing: false, action: {
-            presentGallery()
+            removeImpl?()
         })
         self.removeItemNode = ItemListPeerActionItemNode()
 
@@ -390,6 +394,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if let strongSelf = self, let entries = entries {
                 shareWallpapers(selectedWallpapers(entries: entries, state: strongSelf.currentState))
             }
+        }, removeWallpaper: { [weak self] in
+            if let self {
+                self.requestWallpaperRemoval?()
+            }
         })
         self.controllerInteraction = interaction
         
@@ -515,6 +523,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 strongSelf.enqueueTransition(transition)
             }
         })
+        
+        removeImpl = { [weak self] in
+            self?.controllerInteraction?.removeWallpaper()
+        }
 
         self.updateWallpapers()
     }
@@ -541,6 +553,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                         highlightedNode = strongSelf.galleryItemNode
                     } else if strongSelf.resetItemNode.frame.contains(point) {
                         highlightedNode = strongSelf.resetItemNode
+                    } else if strongSelf.removeItemNode.frame.contains(point) {
+                        highlightedNode = strongSelf.removeItemNode
                     }
                 }
                 
@@ -550,6 +564,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     strongSelf.colorItemNode.setHighlighted(false, at: CGPoint(), animated: true)
                     strongSelf.galleryItemNode.setHighlighted(false, at: CGPoint(), animated: true)
                     strongSelf.resetItemNode.setHighlighted(false, at: CGPoint(), animated: true)
+                    strongSelf.removeItemNode.setHighlighted(false, at: CGPoint(), animated: true)
                 }
             }
         }
@@ -595,6 +610,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                                 }
                             } else if self.resetItemNode.frame.contains(location) {
                                 self.resetItem.action()
+                            } else if self.removeItemNode.frame.contains(location) {
+                                self.removeItem.action?()
                             }
                         default:
                             break
@@ -671,7 +688,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 self?.presentGallery()
             })
             self.removeItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: presentationData.theme.list.itemDestructiveColor), title: presentationData.strings.Wallpaper_ChannelRemoveBackground, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .destructive, editing: false, action: { [weak self] in
-                self?.presentGallery()
+                self?.controllerInteraction?.removeWallpaper()
             })
         }
         
