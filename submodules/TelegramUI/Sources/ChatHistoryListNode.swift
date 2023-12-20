@@ -902,6 +902,13 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
                 }
                 
+                var lastMessageId: MessageId?
+                if let historyView = (strongSelf.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
+                    if historyView.originalView.laterId == nil && !historyView.originalView.holeLater {
+                        lastMessageId = historyView.originalView.entries.last?.message.id
+                    }
+                }
+                
                 var maxMessage: MessageIndex?
                 strongSelf.forEachVisibleMessageItemNode { itemNode in
                     if let item = itemNode.item {
@@ -913,6 +920,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             matches = true
                         } else if itemNode.frame.minY >= strongSelf.insets.top - 100.0 {
                             matches = true
+                        } else if let lastMessageId {
+                            for (message, _) in item.content {
+                                if message.id == lastMessageId {
+                                    matches = true
+                                }
+                            }
                         }
                         
                         if matches {
@@ -940,7 +953,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                 }
                 if let maxMessage {
-                    //print("read \(maxMessage.text)")
                     strongSelf.updateMaxVisibleReadIncomingMessageIndex(maxMessage)
                 }
             }
@@ -2998,7 +3010,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 expiredMessageStableIds.insert(message.stableId)
                             }
                         } else {
-                            expiredMessageStableIds.insert(message.stableId)
+                            //expiredMessageStableIds.insert(message.stableId)
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
@@ -3016,7 +3028,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 expiredMessageStableIds.insert(message.stableId)
                             }
                         } else {
-                            expiredMessageStableIds.insert(message.stableId)
+                            //expiredMessageStableIds.insert(message.stableId)
                         }
                     }
                 default:
@@ -3298,7 +3310,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             
                             if let messageIndex = messageIndex {
                                 let _ = messageIndex
-                                //strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                             }
                         }
                     }
