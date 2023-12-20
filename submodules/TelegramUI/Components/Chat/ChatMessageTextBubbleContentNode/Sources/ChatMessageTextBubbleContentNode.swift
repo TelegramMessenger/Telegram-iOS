@@ -521,6 +521,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             maximumNumberOfLines = 6
                         }
+                    } else if let _ = item.message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage {
+                        maximumNumberOfLines = 9
                     } else {
                         maximumNumberOfLines = 12
                     }

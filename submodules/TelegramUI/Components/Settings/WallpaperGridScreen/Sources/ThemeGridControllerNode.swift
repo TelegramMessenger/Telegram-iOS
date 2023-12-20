@@ -258,8 +258,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if case let .peer(_, _, _, _, customLevel) = mode {
                 requiredCustomWallpaperLevel = customLevel
             }
-            //TODO:localize
-            self.galleryItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: presentationData.theme.list.itemAccentColor), title: presentationData.strings.Wallpaper_SetCustomBackground, additionalBadgeIcon: requiredCustomWallpaperLevel.flatMap { generateDisclosureActionBoostLevelBadgeImage(text: "Level \($0)") }, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .accent, editing: false, action: {
+
+            self.galleryItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: presentationData.theme.list.itemAccentColor), title: presentationData.strings.Wallpaper_SetCustomBackground, additionalBadgeIcon: requiredCustomWallpaperLevel.flatMap { generateDisclosureActionBoostLevelBadgeImage(text: presentationData.strings.ChannelAppearance_BoostLevel("\($0)").string) }, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .accent, editing: false, action: {
                 presentGallery()
             })
             self.galleryItemNode = ItemListPeerActionItemNode()
@@ -684,7 +684,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if case let .peer(_, _, _, _, customLevel) = mode {
                 requiredCustomWallpaperLevel = customLevel
             }
-            self.galleryItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: presentationData.theme.list.itemAccentColor), title: presentationData.strings.Wallpaper_SetCustomBackground, additionalBadgeIcon: requiredCustomWallpaperLevel.flatMap { generateDisclosureActionBoostLevelBadgeImage(text: "Level \($0)") }, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .accent, editing: false, action: { [weak self] in
+            self.galleryItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/Image"), color: presentationData.theme.list.itemAccentColor), title: presentationData.strings.Wallpaper_SetCustomBackground, additionalBadgeIcon: requiredCustomWallpaperLevel.flatMap { generateDisclosureActionBoostLevelBadgeImage(text: presentationData.strings.ChannelAppearance_BoostLevel("\($0)").string) }, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .accent, editing: false, action: { [weak self] in
                 self?.presentGallery()
             })
             self.removeItem = ItemListPeerActionItem(presentationData: ItemListPresentationData(presentationData), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: presentationData.theme.list.itemDestructiveColor), title: presentationData.strings.Wallpaper_ChannelRemoveBackground, alwaysPlain: false, hasSeparator: true, sectionId: 0, height: .generic, color: .destructive, editing: false, action: { [weak self] in
@@ -805,7 +805,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         var hasCustomWallpaper = false
         if case let .peer(_, _, wallpaper, _, _) = self.mode {
             isChannel = true
-            if let wallpaper, !wallpaper.isPattern {
+            if let wallpaper, !wallpaper.isEmoticon {
                 hasCustomWallpaper = true
             }
         }

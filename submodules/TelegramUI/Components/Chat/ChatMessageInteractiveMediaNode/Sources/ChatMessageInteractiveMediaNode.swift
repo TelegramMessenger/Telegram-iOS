@@ -1862,6 +1862,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: string, iconName: nil)
             }
         }
+        
+        let gifTitle = game != nil ? strings.Message_Game.uppercased() : strings.Message_Animation.uppercased()
+        
         var animated = animated
         if let updatingMedia = attributes.updatingMedia, case .update = updatingMedia.media {
             state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(updatingMedia.progress), cancelEnabled: true, animateRotation: true)
@@ -1915,9 +1918,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                 }
             }
-            
-            let gifTitle = game != nil ? strings.Message_Game.uppercased() : strings.Message_Animation.uppercased()
-            
+                        
             let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
             
             var media = self.media
@@ -2079,7 +2080,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
             }
         }
-        if isPreview, let _ = media as? TelegramMediaFile {
+        if isPreview, let file = media as? TelegramMediaFile {
+            if let duration = file.duration, !file.isVideoSticker {
+                let durationString = file.isAnimated ? gifTitle : stringForDuration(Int32(duration), position: nil)
+                badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: false, active: false)
+            }
             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
         }
         
@@ -2123,6 +2128,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 animated = true
             } else if case .progress = statusNode.state, case .download = state {
                 animated = true
+            }
+            
+            if isPreview {
+                if case .play = state {
+                } else {
+                    state = .none
+                }
             }
             
             statusNode.transitionToState(state, animated: animated, completion: { [weak statusNode] in

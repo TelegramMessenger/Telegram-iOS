@@ -2415,14 +2415,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first {
                 let chatPresentationInterfaceState = strongSelf.presentationInterfaceState
                 var warnAboutPrivate = false
+                var canShareToStory = false
                 if case .peer = chatPresentationInterfaceState.chatLocation, let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                    canShareToStory = true
                     if channel.addressName == nil {
                         warnAboutPrivate = true
                     }
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
                 
-                var canShareToStory = true
                 if let message = messages.first, message.media.contains(where: { media in
                     if media is TelegramMediaContact || media is TelegramMediaPoll {
                         return true
@@ -6376,7 +6377,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
 
                 if let wallpaper = chatWallpaper, case let .emoticon(wallpaperEmoticon) = wallpaper, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == wallpaperEmoticon.strippedEmoji }) {
-                    if let themeWallpaper = theme.settings?.first?.wallpaper {
+                    let themeSettings: TelegramThemeSettings?
+                    if let matching = theme.settings?.first(where: { $0.baseTheme == presentationData.theme.referenceTheme.baseTheme }) {
+                        themeSettings = matching
+                    } else {
+                        themeSettings = theme.settings?.first
+                    }
+                    if let themeWallpaper = themeSettings?.wallpaper {
                         chatWallpaper = themeWallpaper
                     }
                 }

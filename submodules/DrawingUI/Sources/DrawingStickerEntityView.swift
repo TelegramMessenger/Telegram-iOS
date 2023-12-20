@@ -983,9 +983,9 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             var count = 12
             if case .message = entity.content {
                 cornerRadius *= 2.1
-                count = 20
+                count = 24
             } else if case .image = entity.content {
-                count = 20
+                count = 24
             }
             
             let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
