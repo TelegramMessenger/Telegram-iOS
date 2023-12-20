@@ -49,7 +49,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
     case .messageActionScreenshotTaken:
         return TelegramMediaAction(action: .historyScreenshot)
     case let .messageActionCustomAction(message):
-        return TelegramMediaAction(action: .customText(text: message, entities: []))
+        return TelegramMediaAction(action: .customText(text: message, entities: [], additionalAttributes: nil))
     case let .messageActionBotAllowed(flags, domain, app):
         if let domain = domain {
             return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain))

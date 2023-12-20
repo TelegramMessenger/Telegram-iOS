@@ -830,9 +830,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         }
                     }
                     
-                    if peerId == context.account.peerId, case .peer = chatLocation {
+                    /*if peerId == context.account.peerId, case .peer = chatLocation {
                         availablePanes?.insert(.savedMessagesChats, at: 0)
-                    }
+                    }*/
                 } else {
                     availablePanes = nil
                 }

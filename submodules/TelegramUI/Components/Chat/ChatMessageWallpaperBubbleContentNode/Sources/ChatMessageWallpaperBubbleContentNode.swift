@@ -282,7 +282,10 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                         }
                     }
                 } else {
-                    if item.message.id.peerId.isGroupOrChannel {
+                    if item.associatedData.isRecentActions {
+                        let authorName = item.message.author.flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
+                        text = item.presentationData.strings.Channel_AdminLog_ChannelChangedWallpaper(authorName).string
+                    } else if item.message.id.peerId.isGroupOrChannel {
                         text = item.presentationData.strings.Notification_ChannelChangedWallpaper
                     } else {
                         text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string

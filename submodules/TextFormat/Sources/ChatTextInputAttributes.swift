@@ -277,16 +277,21 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         case topicInfo
     }
     
+    public enum Custom: Codable {
+        case topic(id: Int64, info: EngineMessageHistoryThread.Info)
+        case nameColors([UInt32])
+    }
+    
     public let interactivelySelectedFromPackId: ItemCollectionId?
     public let fileId: Int64
     public let file: TelegramMediaFile?
-    public let topicInfo: (Int64, EngineMessageHistoryThread.Info)?
+    public let custom: Custom?
     
-    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, topicInfo: (Int64, EngineMessageHistoryThread.Info)? = nil) {
+    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, custom: Custom? = nil) {
         self.interactivelySelectedFromPackId = interactivelySelectedFromPackId
         self.fileId = fileId
         self.file = file
-        self.topicInfo = topicInfo
+        self.custom = custom
         
         super.init()
     }
@@ -296,11 +301,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         self.interactivelySelectedFromPackId = try container.decodeIfPresent(ItemCollectionId.self, forKey: .interactivelySelectedFromPackId)
         self.fileId = try container.decode(Int64.self, forKey: .fileId)
         self.file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file)
-        if let topicId = try container.decodeIfPresent(Int64.self, forKey: .topicId), let topicInfo = try container.decodeIfPresent(EngineMessageHistoryThread.Info.self, forKey: .topicInfo) {
-            self.topicInfo = (topicId, topicInfo)
-        } else {
-            self.topicInfo = nil
-        }
+        self.custom = nil
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -308,16 +309,11 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         try container.encodeIfPresent(self.interactivelySelectedFromPackId, forKey: .interactivelySelectedFromPackId)
         try container.encode(self.fileId, forKey: .fileId)
         try container.encodeIfPresent(self.file, forKey: .file)
-        if let (topicId, topicInfo) = self.topicInfo {
-            try container.encode(topicId, forKey: .topicId)
-            try container.encode(topicInfo, forKey: .topicInfo)
-        }
     }
     
     override public func isEqual(_ object: Any?) -> Bool {
         if let other = object as? ChatTextInputTextCustomEmojiAttribute {
             return self === other
-            //return self.stickerPack == other.stickerPack && self.fileId == other.fileId && self.file?.fileId == other.file?.fileId
         } else {
             return false
         }

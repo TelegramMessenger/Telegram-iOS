@@ -262,10 +262,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
                 let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                if let title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                }
                 self.textNode.attributedText = attributedText
-                displayUndo = true
-                undoText = cancel
+                if let cancel {
+                    displayUndo = true
+                    undoText = cancel
+                } else {
+                    displayUndo = false
+                }
                 self.originalRemainingSeconds = 5
             case let .linkCopied(text):
                 self.avatarNode = nil
@@ -1341,7 +1347,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
                 let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                if let title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                }
                 self.textNode.attributedText = attributedText
             default:
                 break

@@ -2257,6 +2257,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var translationState: ChatTranslationState?
     private var translationStateDisposable: Disposable?
     
+    private var boostStatus: ChannelBoostStatus?
+    private var boostStatusDisposable: Disposable?
+    
     private var expiringStoryList: PeerExpiringStoryListContext?
     private var expiringStoryListState: PeerExpiringStoryListContext.State?
     private var expiringStoryListDisposable: Disposable?
@@ -4048,6 +4051,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })
             
             let _ = context.engine.peers.requestRecommendedChannels(peerId: peerId, forceUpdate: true).startStandalone()
+            
+            self.boostStatusDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> mapToSignal { peer -> Signal<ChannelBoostStatus?, NoError> in
+                if case let .channel(channel) = peer, (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
+                    return context.engine.peers.getChannelBoostStatus(peerId: peerId)
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                guard let self else {
+                    return
+                }
+                self.boostStatus = boostStatus
+            })
         }
         
         if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudUser {
@@ -4154,6 +4172,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.storyUploadProgressDisposable?.dispose()
         self.updateAvatarDisposable.dispose()
         self.joinChannelDisposable.dispose()
+        self.boostStatusDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -7196,7 +7215,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .account)
             self.controller?.push(controller)
         } else if let peer = self.data?.peer, peer is TelegramChannel {
-            self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
+            self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, boostStatus: self.boostStatus))
         }
     }
         

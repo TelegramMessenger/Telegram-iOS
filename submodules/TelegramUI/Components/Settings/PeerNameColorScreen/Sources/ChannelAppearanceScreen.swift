@@ -134,13 +134,16 @@ final class ChannelAppearanceScreenComponent: Component {
     
     let context: AccountContext
     let peerId: EnginePeer.Id
+    let boostStatus: ChannelBoostStatus?
 
     init(
         context: AccountContext,
-        peerId: EnginePeer.Id
+        peerId: EnginePeer.Id,
+        boostStatus: ChannelBoostStatus?
     ) {
         self.context = context
         self.peerId = peerId
+        self.boostStatus = boostStatus
     }
 
     static func ==(lhs: ChannelAppearanceScreenComponent, rhs: ChannelAppearanceScreenComponent) -> Bool {
@@ -322,6 +325,33 @@ final class ChannelAppearanceScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component, let resolvedState = self.resolveState() else {
+                return true
+            }
+            if self.isApplyingSettings {
+                return false
+            }
+            
+            if !resolvedState.changes.isEmpty {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertTitle, text: presentationData.strings.Channel_Appearance_UnsavedChangesAlertText, actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertDiscard, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.dismiss()
+                    }),
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertApply, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.applySettings()
+                    })
+                ]), in: .window(.root))
+                
+                return false
+            }
+            
             return true
         }
         
@@ -462,8 +492,15 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             var signals: [Signal<Never, ApplyError>] = []
-            if !resolvedState.changes.intersection([.nameColor, .profileColor, .replyFileId, .backgroundFileId]).isEmpty {
-                signals.append(component.context.engine.peers.updatePeerNameColorAndEmoji(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
+            if !resolvedState.changes.intersection([.nameColor, .replyFileId]).isEmpty {
+                signals.append(component.context.engine.peers.updatePeerNameColor(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId)
+                |> ignoreValues
+                |> mapError { _ -> ApplyError in
+                    return .generic
+                })
+            }
+            if !resolvedState.changes.intersection([.profileColor, .backgroundFileId]).isEmpty {
+                signals.append(component.context.engine.peers.updatePeerProfileColor(peerId: component.peerId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
                 |> ignoreValues
                 |> mapError { _ -> ApplyError in
                     return .generic
@@ -512,7 +549,17 @@ final class ChannelAppearanceScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let navigationController: NavigationController? = self.environment?.controller()?.navigationController as? NavigationController
+                
                 self.environment?.controller()?.dismiss()
+                
+                if let lastController = navigationController?.viewControllers.last as? ViewController {
+                    //TODO:localize
+                    let tipController = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: "Appearance settings have been updated.", cancel: nil, destructive: false), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                    lastController.present(tipController, in: .window(.root))
+                }
             })
         }
         
@@ -733,8 +780,13 @@ final class ChannelAppearanceScreenComponent: Component {
                     guard let self, let component = self.component else {
                         return
                     }
-                    if self.contentsData == nil, case let .channel(channel) = contentsData.peer {
-                        self.boostLevel = channel.approximateBoostLevel.flatMap(Int.init)
+                    if self.contentsData == nil && self.boostStatus == nil {
+                        if let boostStatus = component.boostStatus {
+                            self.boostStatus = boostStatus
+                            self.boostLevel = boostStatus.level
+                        } else if case let .channel(channel) = contentsData.peer {
+                            self.boostLevel = channel.approximateBoostLevel.flatMap(Int.init)
+                        }
                     }
                     if self.contentsData == nil, let peerWallpaper = contentsData.peerWallpaper {
                         for cloudTheme in contentsData.availableThemes {
@@ -1448,13 +1500,15 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
-        peerId: EnginePeer.Id
+        peerId: EnginePeer.Id,
+        boostStatus: ChannelBoostStatus?
     ) {
         self.context = context
         
         super.init(context: context, component: ChannelAppearanceScreenComponent(
             context: context,
-            peerId: peerId
+            peerId: peerId,
+            boostStatus: boostStatus
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
