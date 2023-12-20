@@ -564,7 +564,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         context: item.context,
                         presentationData: item.presentationData,
                         edited: edited && !item.presentationData.isPreview,
-                        impressionCount: viewCount,
+                        impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                         dateText: dateText,
                         type: statusType,
                         layoutInput: dateLayoutInput,

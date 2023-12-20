@@ -2093,7 +2093,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     context: item.context,
                     presentationData: item.presentationData,
                     edited: edited && !item.presentationData.isPreview,
-                    impressionCount: viewCount,
+                    impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                     dateText: dateText,
                     type: statusType,
                     layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),

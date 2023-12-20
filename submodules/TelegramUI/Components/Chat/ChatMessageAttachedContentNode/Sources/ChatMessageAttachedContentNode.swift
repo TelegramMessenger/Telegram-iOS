@@ -634,8 +634,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             let statusLayoutAndContinueValue = makeStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                                 context: context,
                                 presentationData: presentationData,
-                                edited: edited,
-                                impressionCount: viewCount,
+                                edited: edited && !isPreview,
+                                impressionCount: !isPreview ? viewCount : nil,
                                 dateText: dateText,
                                 type: statusType,
                                 layoutInput: .trailingContent(

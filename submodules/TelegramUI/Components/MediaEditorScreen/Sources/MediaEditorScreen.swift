@@ -668,7 +668,7 @@ final class MediaEditorScreenComponent: Component {
             if self.component == nil {
                 if let initialCaption = controller.initialCaption {
                     self.inputPanelExternalState.initialText = initialCaption
-                } else if case let .draft(draft, _) = controller.node.subject {
+                } else if case let .draft(draft, _) = controller.node.actualSubject {
                     self.inputPanelExternalState.initialText = draft.caption
                 }
             }
@@ -1633,7 +1633,7 @@ final class MediaEditorScreenComponent: Component {
                                     mediaEditor.toggleNightTheme()
                                     controller.node.entitiesView.eachView { view in
                                         if let stickerEntityView = view as? DrawingStickerEntityView {
-                                            stickerEntityView.toggleNightTheme()
+                                            stickerEntityView.isNightTheme = mediaEditor.values.nightTheme
                                         }
                                     }
                                 }
@@ -2036,6 +2036,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private let initializationTimestamp = CACurrentMediaTime()
         
         var subject: MediaEditorScreen.Subject?
+        var actualSubject: MediaEditorScreen.Subject?
+        
         private var subjectDisposable: Disposable?
         private var appInForegroundDisposable: Disposable?
         
@@ -2270,7 +2272,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         private func setup(with subject: MediaEditorScreen.Subject) {
-            self.subject = subject
+            self.actualSubject = subject
+            
+            var effectiveSubject = subject
+            if case let .draft(draft, _ ) = subject {
+                for entity in draft.values.entities {
+                    if case let .sticker(sticker) = entity, case let .message(ids, _, _) = sticker.content {
+                        effectiveSubject = .message(ids)
+                        break
+                    }
+                }
+            }
+            self.subject = effectiveSubject
+            
             guard let controller = self.controller else {
                 return
             }
@@ -2299,7 +2313,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.isSavingAvailable = isSavingAvailable
             controller.requestLayout(transition: .immediate)
             
-            let mediaDimensions = subject.dimensions
+            let mediaDimensions = effectiveSubject.dimensions
             let maxSide: CGFloat = 1920.0 / UIScreen.main.scale
             let fittedSize = mediaDimensions.cgSize.fitted(CGSize(width: maxSide, height: maxSide))
             let mediaEntity = DrawingMediaEntity(size: fittedSize)
@@ -2354,7 +2368,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
-            let mediaEditor = MediaEditor(context: self.context, subject: subject.editorSubject, values: initialValues, hasHistogram: true)
+            let mediaEditor = MediaEditor(context: self.context, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
             if let initialVideoPosition = controller.initialVideoPosition {
                 mediaEditor.seek(initialVideoPosition, andPlay: true)
             }
@@ -2372,12 +2386,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             }
             
-            if case .message = subject {
+            if case .message = effectiveSubject {
             } else {
                 self.readyValue.set(.single(true))
             }
             
-            if case let .image(_, _, additionalImage, position) = subject, let additionalImage {
+            if case let .image(_, _, additionalImage, position) = effectiveSubject, let additionalImage {
                 let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
                     let bounds = CGRect(origin: .zero, size: size)
                     context.clear(bounds)
@@ -2393,7 +2407,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 imageEntity.scale = 1.625
                 imageEntity.position = position.getPosition(storyDimensions)
                 self.entitiesView.add(imageEntity, announce: false)
-            } else if case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position) = subject {
+            } else if case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position) = effectiveSubject {
                 mediaEditor.setVideoIsMirrored(mirror)
                 if let additionalVideoPath {
                     let videoEntity = DrawingStickerEntity(content: .dualVideoReference(false))
@@ -2412,7 +2426,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                 }
-            } else if case let .message(messageIds) = subject {
+            } else if case let .message(messageIds) = effectiveSubject {
+                let isNightTheme = mediaEditor.values.nightTheme
                 let _ = ((self.context.engine.data.get(
                     EngineDataMap(messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
                 ))
@@ -2431,16 +2446,30 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     
                     let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
                     renderer.render(completion: { size, dayImage, nightImage in
-                        let messageEntity = DrawingStickerEntity(content: .message(messageIds, maybeFile?.isVideo == true ? maybeFile : nil, size))
-                        messageEntity.renderImage = dayImage
-                        messageEntity.secondaryRenderImage = nightImage
-                        messageEntity.referenceDrawingSize = storyDimensions
-                        messageEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
-                        
-                        let fraction = max(size.width, size.height) / 353.0
-                        messageEntity.scale = min(6.0, 3.3 * fraction)
-
-                        self.entitiesView.add(messageEntity, announce: false)
+                        if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
+                            if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }) as? DrawingStickerEntityView {
+                            existingEntityView.isNightTheme = isNightTheme
+                            let messageEntity = existingEntityView.entity as! DrawingStickerEntity
+                            messageEntity.renderImage = dayImage
+                            messageEntity.secondaryRenderImage = nightImage
+                            existingEntityView.update(animated: false)
+                        } else {
+                            let messageEntity = DrawingStickerEntity(content: .message(messageIds, maybeFile?.isVideo == true ? maybeFile : nil, size))
+                            messageEntity.renderImage = dayImage
+                            messageEntity.secondaryRenderImage = nightImage
+                            messageEntity.referenceDrawingSize = storyDimensions
+                            messageEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
+                            
+                            let fraction = max(size.width, size.height) / 353.0
+                            messageEntity.scale = min(6.0, 3.3 * fraction)
+                            
+                            self.entitiesView.add(messageEntity, announce: false)
+                        }
                         
                         self.readyValue.set(.single(true))
                     })
@@ -2477,7 +2506,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if controller.isEmbeddedEditor == true {
                 mediaEditor.onFirstDisplay = { [weak self] in
                     if let self {
-                        if subject.isPhoto {
+                        if effectiveSubject.isPhoto {
                             self.previewContainerView.layer.allowsGroupOpacity = true
                             self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                 self.previewContainerView.layer.allowsGroupOpacity = false
@@ -2955,7 +2984,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
             } else {
-                if case .message = self.subject, let layout = self.validLayout {
+                if case .message = self.actualSubject, let layout = self.validLayout {
                     self.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                     completion()
                 } else if let view = self.componentHost.view as? MediaEditorScreenComponent.View {
@@ -4862,7 +4891,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let title: String
         let save: String
-        if case .draft = self.node.subject {
+        if case .draft = self.node.actualSubject {
             title = presentationData.strings.Story_Editor_DraftDiscardDraft
             save = presentationData.strings.Story_Editor_DraftKeepDraft
         } else {
@@ -4898,7 +4927,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.dismissAllTooltips()
         
         var showDraftTooltip = saveDraft
-        if let subject = self.node.subject, case .draft = subject {
+        if let subject = self.node.actualSubject, case .draft = subject {
             showDraftTooltip = false
         }
         if saveDraft {
@@ -4957,7 +4986,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
     private var didComplete = false
     func requestCompletion(animated: Bool) {
-        guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, !self.didComplete else {
+        guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, let actualSubject = self.node.actualSubject, !self.didComplete else {
             return
         }
         
@@ -4983,14 +5012,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         var hasEntityChanges = false
         let randomId: Int64
-        if case let .draft(_, id) = subject, let id {
+        if case let .draft(_, id) = actualSubject, let id {
             randomId = id
         } else {
             randomId = Int64.random(in: .min ... .max)
         }
         
         var mediaAreas: [MediaArea] = []
-        if case let .draft(draft, _) = subject {
+        if case let .draft(draft, _) = actualSubject {
             if draft.values.entities != codableEntities {
                 hasEntityChanges = true
             }
@@ -5281,7 +5310,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             })
         
-            if case let .draft(draft, id) = subject, id == nil {
+            if case let .draft(draft, id) = actualSubject, id == nil {
                 removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
             }
         } else {
@@ -5299,7 +5328,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 }
                             })
                         })
-                        if case let .draft(draft, id) = subject, id == nil {
+                        if case let .draft(draft, id) = actualSubject, id == nil {
                             removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
                         }
                     }

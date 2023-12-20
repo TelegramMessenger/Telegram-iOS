@@ -10777,3 +10777,5 @@ Sorry for the inconvenience.";
 "ChatList.PremiumGiftInSettingsInfo" = "You can gift **Telegram Premium** to a friend later in **Settings**.";
 
 "ChannelAppearance.BoostLevel" = "Level %@";
+
+"Message.FullDateFormat" = "%1$@, %2$@";

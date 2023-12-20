@@ -73,6 +73,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         case values
         case caption
         case privacy
+        case forwardInfo
         case timestamp
         case locationLatitude
         case locationLongitude
@@ -87,11 +88,12 @@ public final class MediaEditorDraft: Codable, Equatable {
     public let values: MediaEditorValues
     public let caption: NSAttributedString
     public let privacy: MediaEditorResultPrivacy?
+    public let forwardInfo: StoryId?
     public let timestamp: Int32
     public let location: CLLocationCoordinate2D?
     public let expiresOn: Int32?
         
-    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, timestamp: Int32, location: CLLocationCoordinate2D?, expiresOn: Int32?) {
+    public init(path: String, isVideo: Bool, thumbnail: UIImage, dimensions: PixelDimensions, duration: Double?, values: MediaEditorValues, caption: NSAttributedString, privacy: MediaEditorResultPrivacy?, forwardInfo: StoryId?, timestamp: Int32, location: CLLocationCoordinate2D?, expiresOn: Int32?) {
         self.path = path
         self.isVideo = isVideo
         self.thumbnail = thumbnail
@@ -100,6 +102,7 @@ public final class MediaEditorDraft: Codable, Equatable {
         self.values = values
         self.caption = caption
         self.privacy = privacy
+        self.forwardInfo = forwardInfo
         self.timestamp = timestamp
         self.location = location
         self.expiresOn = expiresOn
@@ -134,6 +137,8 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             self.privacy = nil
         }
+        
+        self.forwardInfo = try container.decodeIfPresent(StoryId.self, forKey: .forwardInfo)
         
         self.timestamp = try container.decodeIfPresent(Int32.self, forKey: .timestamp) ?? 1688909663
         
@@ -172,6 +177,8 @@ public final class MediaEditorDraft: Codable, Equatable {
         } else {
             try container.encodeNil(forKey: .privacy)
         }
+        try container.encodeIfPresent(self.forwardInfo, forKey: .forwardInfo)
+        
         try container.encode(self.timestamp, forKey: .timestamp)
         
         if let location = self.location {

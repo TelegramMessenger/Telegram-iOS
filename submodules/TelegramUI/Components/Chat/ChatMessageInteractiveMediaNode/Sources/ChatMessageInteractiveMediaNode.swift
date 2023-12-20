@@ -862,7 +862,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     context: context,
                     presentationData: presentationData,
                     edited: dateAndStatus.edited && !presentationData.isPreview,
-                    impressionCount: dateAndStatus.viewCount,
+                    impressionCount: !presentationData.isPreview ? dateAndStatus.viewCount : nil,
                     dateText: dateAndStatus.dateText,
                     type: dateAndStatus.type,
                     layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium, forceInline: associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
