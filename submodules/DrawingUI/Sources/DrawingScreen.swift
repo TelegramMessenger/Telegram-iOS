@@ -3158,7 +3158,7 @@ public final class DrawingToolsInteraction {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_CutOut, accessibilityLabel: presentationData.strings.Paint_CutOut), action: { [weak self, weak entityView] in
                     if let self, let entityView, let entity = entityView.entity as? DrawingStickerEntity, case let .image(image, _) = entity.content {
                         let _ = (cutoutStickerImage(from: image)
-                                 |> deliverOnMainQueue).start(next: { [weak entity] result in
+                        |> deliverOnMainQueue).start(next: { [weak entity] result in
                             if let result, let entity {
                                 let newEntity = DrawingStickerEntity(content: .image(result, .sticker))
                                 newEntity.referenceDrawingSize = entity.referenceDrawingSize
@@ -3168,10 +3168,13 @@ public final class DrawingToolsInteraction {
                                 newEntity.mirrored = entity.mirrored
                                 let newEntityView = self.entitiesView.add(newEntity)
                                 
+                                entityView.selectionView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                                 if let newEntityView = newEntityView as? DrawingStickerEntityView {
-                                    newEntityView.playCutoffAnimation()
+                                    newEntityView.playCutoutAnimation()
                                 }
                                 self.entitiesView.selectEntity(newEntity, animate: false)
+                                newEntityView.selectionView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                
                                 if let entityView = entityView as? DrawingStickerEntityView {
                                     entityView.playDissolveAnimation()
                                     self.entitiesView.remove(uuid: entity.uuid, animated: false)

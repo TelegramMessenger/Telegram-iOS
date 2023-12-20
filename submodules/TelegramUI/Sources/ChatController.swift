@@ -2417,7 +2417,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var warnAboutPrivate = false
                 var canShareToStory = false
                 if case .peer = chatPresentationInterfaceState.chatLocation, let channel = message.peers[message.id.peerId] as? TelegramChannel {
-                    canShareToStory = true
+                    if case .broadcast = channel.info {
+                        canShareToStory = true
+                    }
                     if channel.addressName == nil {
                         warnAboutPrivate = true
                     }
