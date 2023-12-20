@@ -337,8 +337,17 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                                 var patternArguments: PatternWallpaperArguments?
                                 
                                 var mediaContent = media.content
-                                if case let .emoticon(emoticon) = mediaContent, let theme = item.associatedData.chatThemes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }), let themeWallpaper = theme.settings?.first?.wallpaper, let themeWallpaperContent = WallpaperPreviewMedia(wallpaper: themeWallpaper)?.content {
-                                    mediaContent = themeWallpaperContent
+                                if case let .emoticon(emoticon) = mediaContent, let theme = item.associatedData.chatThemes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }) {
+                                    let themeSettings: TelegramThemeSettings?
+                                    if let matching = theme.settings?.first(where: { $0.baseTheme == item.presentationData.theme.theme.referenceTheme.baseTheme }) {
+                                        themeSettings = matching
+                                    } else {
+                                        themeSettings = theme.settings?.first
+                                    }
+                                    
+                                    if let themeWallpaper = themeSettings?.wallpaper, let themeWallpaperContent = WallpaperPreviewMedia(wallpaper: themeWallpaper)?.content {
+                                        mediaContent = themeWallpaperContent
+                                    }
                                 }
                                 
                                 switch mediaContent {

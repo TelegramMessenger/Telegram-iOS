@@ -2251,6 +2251,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let sourceNode = sourceNode as? ChatListItemNode {
                 self.interaction.openStories?(id, sourceNode.avatarNode)
             }
+        }, dismissNotice: { _ in
         })
         chatListInteraction.isSearchMode = true
         
@@ -3561,6 +3562,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, performActiveSessionAction: { _, _ in
             }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
             }, openStories: { _, _ in
+            }, dismissNotice: { _ in
             })
             var isInlineMode = false
             if case .topics = key {

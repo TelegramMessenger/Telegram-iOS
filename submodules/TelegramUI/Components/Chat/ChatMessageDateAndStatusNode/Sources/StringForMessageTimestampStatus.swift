@@ -111,9 +111,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         } else {
             dayText = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
         }
-        
-        //TODO:localize
-        dateText = "\(dayText), \(stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat))"
+        dateText = strings.Message_FullDateFormat(dayText, stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)).string
     }
     else if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
         dateText = strings.Message_ImportedDateFormat(dateStringForDay(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: forwardInfo.date), stringForMessageTimestamp(timestamp: forwardInfo.date, dateTimeFormat: dateTimeFormat), dateText).string

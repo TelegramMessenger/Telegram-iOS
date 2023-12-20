@@ -106,6 +106,7 @@ public final class ChatListNodeInteraction {
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
+    let dismissNotice: (ChatListNotice) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -156,7 +157,8 @@ public final class ChatListNodeInteraction {
         performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
-        openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
+        openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void,
+        dismissNotice: @escaping (ChatListNotice) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -195,6 +197,7 @@ public final class ChatListNodeInteraction {
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
         self.openStories = openStories
+        self.dismissNotice = dismissNotice
     }
 }
 
@@ -701,7 +704,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     hideChatListContacts(context: context)
                 } : nil), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
                     switch action {
                     case .activate:
                         switch notice {
@@ -717,10 +720,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             break
                         }
                     case .hide:
-                        switch notice {
-                        default:
-                            break
-                        }
+                        nodeInteraction?.dismissNotice(notice)
                     case let .buttonChoice(isPositive):
                         switch notice {
                         case let .reviewLogin(newSessionReview, _):
@@ -1023,7 +1023,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     hideChatListContacts(context: context)
                 } : nil), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
                     switch action {
                     case .activate:
                         switch notice {
@@ -1039,10 +1039,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             break
                         }
                     case .hide:
-                        switch notice {
-                        default:
-                            break
-                        }
+                        nodeInteraction?.dismissNotice(notice)
                     case let .buttonChoice(isPositive):
                         switch notice {
                         case let .reviewLogin(newSessionReview, _):
@@ -1703,6 +1700,20 @@ public final class ChatListNode: ListView {
                 return
             }
             self.openStories?(subject, itemNode)
+        }, dismissNotice: { [weak self] notice in
+            guard let self else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            switch notice {
+            case .xmasPremiumGift:
+                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .xmasPremiumGift).startStandalone()
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                    return true
+                }))
+            default:
+                break
+            }
         })
         nodeInteraction.isInlineMode = isInlineMode
         

@@ -276,19 +276,26 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.animatedImageView = imageView
             self.addSubview(imageView)
             self.setNeedsLayout()
-        } else if case let .message(_, innerFile, _) = self.stickerEntity.content {
-            let imageView = UIImageView()
-            imageView.contentMode = .scaleAspectFit
-            imageView.image = self.stickerEntity.renderImage
-            self.animatedImageView = imageView
-            self.addSubview(imageView)
-            self.setNeedsLayout()
-  
-            let _ = innerFile
-//            if let innerFile, innerFile.isAnimated {
-//                self.setupWithVideo(innerFile)
-//            }
+        } else if case .message = self.stickerEntity.content {
+            if let image = self.stickerEntity.renderImage {
+                self.setupWithImage(image)
+            }
         }
+    }
+    
+    private func setupWithImage(_ image: UIImage) {
+        let imageView: UIImageView
+        if let current = self.animatedImageView {
+            imageView = current
+        } else {
+            imageView = UIImageView()
+            imageView.contentMode = .scaleAspectFit
+            self.addSubview(imageView)
+            self.animatedImageView = imageView
+        }
+        imageView.image = image
+        self.currentSize = nil
+        self.setNeedsLayout()
     }
     
     private func setupWithVideo(_ file: TelegramMediaFile) {
@@ -366,10 +373,10 @@ public class DrawingStickerEntityView: DrawingEntityView {
         self.applyVisibility()
     }
     
-    private var isNight = false
-    public func toggleNightTheme() {
-        self.isNight = !self.isNight
-        self.animatedImageView?.image = self.isNight ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+    public var isNightTheme = false {
+        didSet {
+            self.animatedImageView?.image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+        }
     }
     
     func applyVisibility() {
@@ -615,6 +622,13 @@ public class DrawingStickerEntityView: DrawingEntityView {
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
         self.updateAnimationColor()
+
+        if case .message = self.stickerEntity.content, self.animatedImageView == nil {
+            let image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+            if let image {
+                self.setupWithImage(image)
+            }
+        }
         
         self.updateMirroring(animated: animated)
         
@@ -983,9 +997,9 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             var count = 12
             if case .message = entity.content {
                 cornerRadius *= 2.1
-                count = 20
+                count = 24
             } else if case .image = entity.content {
-                count = 20
+                count = 24
             }
             
             let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))

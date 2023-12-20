@@ -554,7 +554,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 context: item.context,
                 presentationData: item.presentationData,
                 edited: edited && !sentViaBot && !item.presentationData.isPreview,
-                impressionCount: item.presentationData.isPreview ? nil : viewCount,
+                impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                 dateText: dateText,
                 type: statusType,
                 layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),

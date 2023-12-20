@@ -521,6 +521,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             maximumNumberOfLines = 6
                         }
+                    } else if let _ = item.message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage {
+                        maximumNumberOfLines = 9
                     } else {
                         maximumNumberOfLines = 12
                     }
@@ -562,7 +564,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         context: item.context,
                         presentationData: item.presentationData,
                         edited: edited && !item.presentationData.isPreview,
-                        impressionCount: viewCount,
+                        impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                         dateText: dateText,
                         type: statusType,
                         layoutInput: dateLayoutInput,

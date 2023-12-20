@@ -10796,3 +10796,9 @@ Sorry for the inconvenience.";
 "Channel.Appearance.UnsavedChangesAlertText" = "You have changed the channel appearance settings. Apply changes?";
 "Channel.Appearance.UnsavedChangesAlertDiscard" = "Discard";
 "Channel.Appearance.UnsavedChangesAlertApply" = "Apply";
+
+"ChatList.PremiumGiftInSettingsInfo" = "You can gift **Telegram Premium** to a friend later in **Settings**.";
+
+"ChannelAppearance.BoostLevel" = "Level %@";
+
+"Message.FullDateFormat" = "%1$@, %2$@";
