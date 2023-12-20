@@ -11,26 +11,28 @@ import WallpaperBackgroundNode
 
 public final class DrawingWallpaperRenderer {
     private let context: AccountContext
-    private let customWallpaper: TelegramWallpaper?
+    private let customDayWallpaper: TelegramWallpaper?
+    private let customNightWallpaper: TelegramWallpaper?
     
     private let wallpaperBackgroundNode: WallpaperBackgroundNode
     private let darkWallpaperBackgroundNode: WallpaperBackgroundNode
     
-    public init (context: AccountContext, customWallpaper: TelegramWallpaper?) {
+    public init (context: AccountContext, customDayWallpaper: TelegramWallpaper?, customNightWallpaper: TelegramWallpaper?) {
         self.context = context
-        self.customWallpaper = customWallpaper
+        self.customDayWallpaper = customDayWallpaper
+        self.customNightWallpaper = customNightWallpaper
         
         self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.wallpaperBackgroundNode.displaysAsynchronously = false
         
-        let wallpaper = self.customWallpaper ?? context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
+        let wallpaper = self.customDayWallpaper ?? context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
         
         self.darkWallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.darkWallpaperBackgroundNode.displaysAsynchronously = false
         
         let darkTheme = defaultDarkColorPresentationTheme
-        let darkWallpaper = darkTheme.chat.defaultWallpaper
+        let darkWallpaper = self.customNightWallpaper ?? darkTheme.chat.defaultWallpaper
         self.darkWallpaperBackgroundNode.update(wallpaper: darkWallpaper, animated: false)
     }
     
@@ -39,7 +41,7 @@ public final class DrawingWallpaperRenderer {
         
         let resultSize = CGSize(width: 1080, height: 1920)
         self.generate(view: self.wallpaperBackgroundNode.view) { dayImage in
-            if self.customWallpaper != nil {
+            if self.customDayWallpaper != nil && self.customNightWallpaper == nil {
                 completion(resultSize, dayImage, nil, nil)
             } else {
                 Queue.mainQueue().justDispatch {

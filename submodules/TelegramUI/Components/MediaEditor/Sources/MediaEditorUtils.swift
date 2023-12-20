@@ -136,10 +136,36 @@ public func getChatWallpaperImage(context: AccountContext, messageId: EngineMess
     return context.account.postbox.transaction { transaction -> TelegramWallpaper? in
         return (transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData)?.wallpaper
     }
-    |> mapToSignal { customWallpaper -> Signal<(CGSize, UIImage?, UIImage?), NoError> in
+    |> mapToSignal { wallpaper -> Signal<(TelegramWallpaper?, TelegramWallpaper?), NoError> in
+        if let wallpaper, case let .emoticon(emoticon) = wallpaper {
+            return context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager)
+            |> map { themes -> (TelegramWallpaper?, TelegramWallpaper?) in
+                if let theme = themes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }) {
+                    if let dayMatch = theme.settings?.first(where: { $0.baseTheme == .classic || $0.baseTheme == .day }) {
+                        if let dayWallpaper = dayMatch.wallpaper {
+                            var nightWallpaper: TelegramWallpaper?
+                            if let nightMatch = theme.settings?.first(where: { $0.baseTheme == .night || $0.baseTheme == .tinted }) {
+                                nightWallpaper = nightMatch.wallpaper
+                            }
+                            return (dayWallpaper, nightWallpaper)
+                        } else {
+                            return (nil, nil)
+                        }
+                    } else {
+                        return (nil, nil)
+                    }
+                } else {
+                    return (nil, nil)
+                }
+            }
+        } else {
+            return .single((wallpaper, nil))
+        }
+    }
+    |> mapToSignal { customDayWallpaper, customNightWallpaper -> Signal<(CGSize, UIImage?, UIImage?), NoError> in
         return Signal { subscriber in
             Queue.mainQueue().async {
-                let wallpaperRenderer = DrawingWallpaperRenderer(context: context, customWallpaper: customWallpaper)
+                let wallpaperRenderer = DrawingWallpaperRenderer(context: context, customDayWallpaper: customDayWallpaper, customNightWallpaper: customNightWallpaper)
                 wallpaperRenderer.render { size, image, darkImage, mediaRect in
                     subscriber.putNext((size, image, darkImage))
                     subscriber.putCompletion()
