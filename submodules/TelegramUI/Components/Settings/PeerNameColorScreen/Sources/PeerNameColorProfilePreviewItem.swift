@@ -16,6 +16,7 @@ import AvatarNode
 import EmojiStatusComponent
 import ListItemComponentAdaptor
 import ComponentDisplayAdapters
+import MultilineTextComponent
 
 final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     let context: AccountContext
@@ -328,24 +329,33 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                     backgroundColor = .clear
                 }
                 
-                let titleString: String = item.peer?.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) ?? " "
-                let titleSize = self.title.update(
-                    transition: .immediate,
-                    component: AnyComponent(Text(
-                        text: titleString, font: Font.semibold(28.0), color: titleColor
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: coverFrame.width - 16.0, height: 100.0)
-                )
-                
-                var titleContentWidth = titleSize.width
                 var hasStatusIcon = false
                 if case .none = emojiStatusContent {
                 } else {
                     hasStatusIcon = true
+                }
+                
+                var maxTitleWidth = coverFrame.width - 16.0
+                if hasStatusIcon {
+                    maxTitleWidth -= 4.0 + 34.0
+                }
+                
+                let titleString: String = item.peer?.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) ?? " "
+                let titleSize = self.title.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: titleString, font: Font.semibold(28.0), textColor: titleColor)),
+                        maximumNumberOfLines: 1
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: maxTitleWidth, height: 100.0)
+                )
+                
+                var titleContentWidth = titleSize.width
+                if case .none = emojiStatusContent {
+                } else {
                     titleContentWidth += 4.0 + 34.0
                 }
-                let _ = hasStatusIcon
                 
                 let titleFrame = CGRect(origin: CGPoint(x: coverFrame.minX + floor((coverFrame.width - titleContentWidth) * 0.5), y: avatarFrame.maxY + 10.0), size: titleSize)
                 if let titleView = self.title.view {
