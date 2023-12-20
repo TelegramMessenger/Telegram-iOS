@@ -82,7 +82,7 @@ public final class BoostLevelIconComponent: Component {
         
         func update(component: BoostLevelIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             if self.component != component {
-                self.imageView.image = generateDisclosureActionBoostLevelBadgeImage(text: component.strings.Channel_Appearance_BoostLevel("\(component.level)"))
+                self.imageView.image = generateDisclosureActionBoostLevelBadgeImage(text: component.strings.Channel_Appearance_BoostLevel("\(component.level)").string)
             }
             self.component = component
             
