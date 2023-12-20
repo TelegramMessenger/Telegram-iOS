@@ -10120,10 +10120,6 @@ Sorry for the inconvenience.";
 
 "Notification.GiveawayStarted" = "%1$@ just started a giveaway of Telegram Premium subscriptions for its followers.";
 
-"Channel.AdminLog.MessageChangedNameColorSet" = "%1$@ set name color to %2$@";
-"Channel.AdminLog.MessageChangedBackgroundEmojiSet" = "%1$@ set background emoji to %2$@";
-"Channel.AdminLog.MessageChangedBackgroundEmojiRemoved" = "%1$@ removed background emoji";
-
 "Appearance.NameColor" = "Your Name Color";
 
 "NameColor.Title.Account" = "Your Name Color";
