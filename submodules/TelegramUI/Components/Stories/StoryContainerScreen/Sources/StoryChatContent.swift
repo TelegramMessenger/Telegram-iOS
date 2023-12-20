@@ -236,6 +236,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         timestamp: item.timestamp,
                         expirationTimestamp: item.expirationTimestamp,
                         media: EngineMedia(media),
+                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
@@ -282,6 +283,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 timestamp: item.timestamp,
                                 expirationTimestamp: Int32.max,
                                 media: EngineMedia(item.media),
+                                alternativeMedia: nil,
                                 mediaAreas: item.mediaAreas,
                                 text: item.text,
                                 entities: item.entities,
@@ -944,6 +946,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     peer: peerReference,
                     storyId: item.id,
                     media: item.media,
+                    alternativeMedia: item.alternativeMedia,
                     reactions: reactions,
                     priority: .top(position: nextPriority)
                 )
@@ -955,7 +958,7 @@ public final class StoryContentContextImpl: StoryContentContext {
         for (id, info) in resultResources.sorted(by: { $0.value.priority < $1.value.priority }) {
             validIds.append(id)
             if self.preloadStoryResourceDisposables[id] == nil {
-                self.preloadStoryResourceDisposables[id] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).startStrict()
+                self.preloadStoryResourceDisposables[id] = preloadStoryMedia(context: context, info: info).startStrict()
             }
         }
         
@@ -1220,6 +1223,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     timestamp: itemValue.timestamp,
                     expirationTimestamp: itemValue.expirationTimestamp,
                     media: EngineMedia(media),
+                    alternativeMedia: itemValue.alternativeMedia.flatMap(EngineMedia.init),
                     mediaAreas: itemValue.mediaAreas,
                     text: itemValue.text,
                     entities: itemValue.entities,
@@ -1530,6 +1534,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                                 peer: peerReference,
                                 storyId: item.id,
                                 media: item.media,
+                                alternativeMedia: item.alternativeMedia,
                                 reactions: reactions,
                                 priority: .top(position: nextPriority)
                             )
@@ -1543,7 +1548,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     if let mediaId = info.media.id {
                         validIds.append(mediaId)
                         if self.preloadStoryResourceDisposables[mediaId] == nil {
-                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).startStrict()
+                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: context, info: info).startStrict()
                         }
                     }
                 }
@@ -1629,13 +1634,20 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     }
 }
 
-public func preloadStoryMedia(context: AccountContext, peer: PeerReference, storyId: Int32, media: EngineMedia, reactions: [MessageReaction.Reaction]) -> Signal<Never, NoError> {
+public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -> Signal<Never, NoError> {
     var signals: [Signal<Never, NoError>] = []
     
-    switch media {
+    let selectedMedia: EngineMedia
+    if context.sharedContext.immediateExperimentalUISettings.alternativeStoryMedia, let alternativeMedia = info.alternativeMedia {
+        selectedMedia = alternativeMedia
+    } else {
+        selectedMedia = info.media
+    }
+    
+    switch selectedMedia {
     case let .image(image):
         if let representation = largestImageRepresentation(image.representations) {
-            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyId, media: media._asMedia()), resource: representation.resource), range: nil)
+            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: representation.resource), range: nil)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
@@ -1652,7 +1664,7 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
             }
         }
         
-        signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(peer.id), userContentType: .story, reference: .media(media: .story(peer: peer, id: storyId, media: media._asMedia()), resource: file.resource), range: fetchRange)
+        signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: file.resource), range: fetchRange)
         |> ignoreValues
         |> `catch` { _ -> Signal<Never, NoError> in
             return .complete()
@@ -1665,7 +1677,7 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
     
     var builtinReactions: [String] = []
     var customReactions: [Int64] = []
-    for reaction in reactions {
+    for reaction in info.reactions {
         switch reaction {
         case let .builtin(value):
             if !builtinReactions.contains(value) {
@@ -1716,8 +1728,6 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
                         return Void()
                     }
                     
-                    //let fileFetchPriorityDisposable = context.engine.resources.pushPriorityDownload(resourceId: file.resource.id.stringRepresentation, priority: 1)
-                    
                     let statusDisposable = statusSignal.start(completed: {
                         subscriber.putCompletion()
                     })
@@ -1726,7 +1736,6 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
                     return ActionDisposable {
                         statusDisposable.dispose()
                         loadDisposable.dispose()
-                        //fileFetchPriorityDisposable.dispose()
                     }
                 }
             })
@@ -1771,12 +1780,9 @@ public func preloadStoryMedia(context: AccountContext, peer: PeerReference, stor
                     })
                     let loadDisposable = loadSignal.start()
                     
-                    //let fileFetchPriorityDisposable = context.engine.resources.pushPriorityDownload(resourceId: file.resource.id.stringRepresentation, priority: 1)
-                    
                     return ActionDisposable {
                         statusDisposable.dispose()
                         loadDisposable.dispose()
-                        //fileFetchPriorityDisposable.dispose()
                     }
                 }
             })
@@ -2038,6 +2044,7 @@ private func getCachedStory(storyId: StoryId, transaction: Transaction) -> Engin
             timestamp: item.timestamp,
             expirationTimestamp: item.expirationTimestamp,
             media: EngineMedia(media),
+            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
             mediaAreas: item.mediaAreas,
             text: item.text,
             entities: item.entities,
@@ -2686,6 +2693,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                     peer: peerReference,
                     storyId: item.id,
                     media: item.media,
+                    alternativeMedia: item.alternativeMedia,
                     reactions: reactions,
                     priority: .top(position: nextPriority)
                 )
@@ -2697,7 +2705,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
         for (id, info) in resultResources.sorted(by: { $0.value.priority < $1.value.priority }) {
             validIds.append(id)
             if self.preloadStoryResourceDisposables[id] == nil {
-                self.preloadStoryResourceDisposables[id] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).startStrict()
+                self.preloadStoryResourceDisposables[id] = preloadStoryMedia(context: context, info: info).startStrict()
             }
         }
         
