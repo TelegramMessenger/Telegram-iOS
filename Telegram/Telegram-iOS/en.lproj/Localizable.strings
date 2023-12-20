@@ -10120,10 +10120,6 @@ Sorry for the inconvenience.";
 
 "Notification.GiveawayStarted" = "%1$@ just started a giveaway of Telegram Premium subscriptions for its followers.";
 
-"Channel.AdminLog.MessageChangedNameColorSet" = "%1$@ set name color to %2$@";
-"Channel.AdminLog.MessageChangedBackgroundEmojiSet" = "%1$@ set background emoji to %2$@";
-"Channel.AdminLog.MessageChangedBackgroundEmojiRemoved" = "%1$@ removed background emoji";
-
 "Appearance.NameColor" = "Your Name Color";
 
 "NameColor.Title.Account" = "Your Name Color";
@@ -10774,8 +10770,62 @@ Sorry for the inconvenience.";
 
 "ReassignBoost.DescriptionWithLink" = "To boost **%1$@**, reassign a previous boost or [gift Telegram Premium]() to a friend to get **%2$@** additional boosts.";
 
+"Channel.AdminLog.ChannelChangedNameColorAndIcon" = "%1$@ changed the channel name color and icon to %2$@ %3$@";
+"Channel.AdminLog.ChannelChangedNameColor" = "%1$@ changed the channel name color to %2$@";
+"Channel.AdminLog.ChannelChangedNameIcon" = "%1$@ changed the channel name icon to %2$@";
+
+"Channel.AdminLog.ChannelChangedProfileColorAndIcon" = "%1$@ changed the channel profile color and icon to %2$@ %3$@";
+"Channel.AdminLog.ChannelChangedProfileColor" = "%1$@ changed the channel profile color to %2$@";
+"Channel.AdminLog.ChannelChangedProfileIcon" = "%1$@ changed the channel profile icon to %2$@";
+"Channel.AdminLog.ChannelRemovedProfileColorAndIcon" = "%1$@ changed the removed profile color and icon";
+"Channel.AdminLog.ChannelRemovedProfileColor" = "%1$@ removed profile color";
+"Channel.AdminLog.ChannelRemovedProfileIcon" = "%1$@ removed profile icon";
+
+"Channel.AdminLog.ChannelUpdatedStatus" = "%1$@ changed the channel status to %2$@";
+"Channel.AdminLog.ChannelRemovedStatus" = "%1$@ removed the channel status";
+
+"Channel.AdminLog.ChannelRemovedWallpaper" = "%1$@ removed wallpaper";
+
+"Channel.AdminLog.ChannelChangedWallpaper" = "%1$@ set a new wallpaper";
+
+"Channel.Appearance.Title" = "Appearance";
+"Channel.Appearance.UnsavedChangesAlertTitle" = "Unsaved Changes";
+"Channel.Appearance.UnsavedChangesAlertText" = "You have changed the channel appearance settings. Apply changes?";
+"Channel.Appearance.UnsavedChangesAlertDiscard" = "Discard";
+"Channel.Appearance.UnsavedChangesAlertApply" = "Apply";
+"Channel.Appearance.ToastAppliedText" = "Appearance settings have been updated.";
+
+"Channel.Appearance.ExampleReplyText" = "Reply to your channel";
+"Channel.Appearance.ExampleText" = "The color you select will be used for the channel's name";
+"Channel.Appearance.ExampleLinkWebsite" = "Telegram";
+"Channel.Appearance.ExampleLinkTitle" = "Link Preview";
+"Channel.Appearance.ExampleLinkText" = "This preview will also be tinted.";
+
+"Channel.Appearance.NameIcon" = "Replies Logo";
+"Channel.Appearance.NameColorFooter" = "Choose a color for the name of your channel, the link it sends, and replies to its messages.";
+
+"Channel.Appearance.Wallpaper" = "Channel Wallpaper";
+"Channel.Appearance.WallpaperFooter" = "Set a wallpaper that will be visible to everyone reading your channel.";
+
+"Channel.Appearance.ProfileHeader" = "PROFILE PAGE COLOR";
+"Channel.Appearance.ProfileFooter" = "Choose a color and a logo for the channel's profile.";
+"Channel.Appearance.ProfileIcon" = "Profile Logo";
+"Channel.Appearance.ResetProfileColor" = "Reset Profile Color";
+
+"Channel.Appearance.Status" = "Channel Emoji Status";
+"Channel.Appearance.StatusFooter" = "Choose a status that will be shown next to the channel's name.";
+
+"Channel.Appearance.ApplyButton" = "Apply Changes";
+
 "ChatList.PremiumGiftInSettingsInfo" = "You can gift **Telegram Premium** to a friend later in **Settings**.";
 
 "ChannelAppearance.BoostLevel" = "Level %@";
 
 "Message.FullDateFormat" = "%1$@, %2$@";
+
+"SavedMessages.OpenChannel" = "Open Channel";
+"SavedMessages.OpenGroup" = "Open Group";
+"SavedMessages.OpenChat" = "Open Chat";
+
+"Channel.Info.BoostLevelPlusBadge" = "Level %@+";
+"Channel.Info.AppearanceItem" = "Appearance";

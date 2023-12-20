@@ -1534,9 +1534,25 @@ final class HistoryViewLoadedState {
                         author = updatedAuthor
                         rebuild = true
                     }
+                    var associatedMessages = message.associatedMessages
+                    for (id, associatedMessage) in message.associatedMessages {
+                        var peers = associatedMessage.peers
+                        var author = associatedMessage.author
+                        for (peerId, _) in associatedMessage.peers {
+                            if let updatedPeer = updatedPeers[peerId] {
+                                peers[peerId] = updatedPeer
+                                rebuild = true
+                            }
+                        }
+                        if let authorValue = author, let updatedAuthor = updatedPeers[authorValue.id] {
+                            author = updatedAuthor
+                            rebuild = true
+                        }
+                        associatedMessages[id] = associatedMessage.withUpdatedPeers(peers).withUpdatedAuthor(author)
+                    }
                     
                     if rebuild {
-                        let updatedMessage = message.withUpdatedPeers(peers).withUpdatedAuthor(author)
+                        let updatedMessage = message.withUpdatedPeers(peers).withUpdatedAuthor(author).withUpdatedAssociatedMessages(associatedMessages)
                         return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
                     }
                 case .IntermediateMessageEntry:

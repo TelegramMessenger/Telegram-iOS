@@ -1,4 +1,5 @@
 import Postbox
+import Foundation
 
 public enum PhoneCallDiscardReason: Int32 {
     case missed = 0
@@ -73,6 +74,18 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         }
     }
     
+    public struct CustomTextAttributes: Equatable {
+        public var attributes: [(NSRange, NSAttributedString.Key, Any)]
+        
+        public init(attributes: [(NSRange, NSAttributedString.Key, Any)]) {
+            self.attributes = attributes
+        }
+        
+        public static func ==(lhs: CustomTextAttributes, rhs: CustomTextAttributes) -> Bool {
+            return true
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -89,7 +102,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?, isVideo: Bool)
     case paymentSent(currency: String, totalAmount: Int64, invoiceSlug: String?, isRecurringInit: Bool, isRecurringUsed: Bool)
-    case customText(text: String, entities: [MessageTextEntity])
+    case customText(text: String, entities: [MessageTextEntity], additionalAttributes: CustomTextAttributes?)
     case botDomainAccessGranted(domain: String)
     case botAppAccessGranted(appName: String?, type: BotSendMessageAccessGrantedType?)
     case botSentSecureValues(types: [SentSecureValueType])
@@ -152,7 +165,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 15:
             self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0), invoiceSlug: decoder.decodeOptionalStringForKey("invoiceSlug"), isRecurringInit: decoder.decodeBoolForKey("isRecurringInit", orElse: false), isRecurringUsed: decoder.decodeBoolForKey("isRecurringUsed", orElse: false))
         case 16:
-            self = .customText(text: decoder.decodeStringForKey("text", orElse: ""), entities: decoder.decodeObjectArrayWithDecoderForKey("ent"))
+            self = .customText(text: decoder.decodeStringForKey("text", orElse: ""), entities: decoder.decodeObjectArrayWithDecoderForKey("ent"), additionalAttributes: nil)
         case 17:
             self = .botDomainAccessGranted(domain: decoder.decodeStringForKey("do", orElse: ""))
         case 18:
@@ -298,7 +311,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeNil(forKey: "d")
             }
             encoder.encodeInt32(isVideo ? 1 : 0, forKey: "vc")
-        case let .customText(text, entities):
+        case let .customText(text, entities, _):
             encoder.encodeInt32(16, forKey: "_rawValue")
             encoder.encodeString(text, forKey: "text")
             encoder.encodeObjectArray(entities, forKey: "ent")

@@ -718,6 +718,14 @@ public extension TelegramEngine {
             return _internal_updatePeerNameColorAndEmoji(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
         }
         
+        public func updatePeerNameColor(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+            return _internal_updatePeerNameColor(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId)
+        }
+        
+        public func updatePeerProfileColor(peerId: EnginePeer.Id, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+            return _internal_updatePeerProfileColor(account: self.account, peerId: peerId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
+        }
+        
         public func updatePeerEmojiStatus(peerId: EnginePeer.Id, fileId: Int64?, expirationDate: Int32?) -> Signal<Never, UpdatePeerEmojiStatusError> {
             return _internal_updatePeerEmojiStatus(account: self.account, peerId: peerId, fileId: fileId, expirationDate: expirationDate)
         }

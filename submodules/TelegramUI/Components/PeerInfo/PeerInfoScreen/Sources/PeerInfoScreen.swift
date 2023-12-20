@@ -1672,12 +1672,11 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }
                     let colorImage = generateSettingsMenuPeerColorsLabelIcon(colors: colors)
                     
-                    //TODO:localize
                     var boostIcon: UIImage?
-                    if let approximateBoostLevel = channel.approximateBoostLevel, approximateBoostLevel < 1 {
-                        boostIcon = generateDisclosureActionBoostLevelBadgeImage(text: "Level 1+")
+                    if let approximateBoostLevel = channel.approximateBoostLevel, approximateBoostLevel < 100 {
+                        boostIcon = generateDisclosureActionBoostLevelBadgeImage(text: presentationData.strings.Channel_Info_BoostLevelPlusBadge("1").string)
                     }
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: "Appearance", icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: presentationData.strings.Channel_Info_AppearanceItem, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
                     }))
                 }
@@ -2256,6 +2255,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private var translationState: ChatTranslationState?
     private var translationStateDisposable: Disposable?
+    
+    private var boostStatus: ChannelBoostStatus?
+    private var boostStatusDisposable: Disposable?
     
     private var expiringStoryList: PeerExpiringStoryListContext?
     private var expiringStoryListState: PeerExpiringStoryListContext.State?
@@ -4048,6 +4050,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             })
             
             let _ = context.engine.peers.requestRecommendedChannels(peerId: peerId, forceUpdate: true).startStandalone()
+            
+            self.boostStatusDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> mapToSignal { peer -> Signal<ChannelBoostStatus?, NoError> in
+                if case let .channel(channel) = peer, (channel.flags.contains(.isCreator) || channel.adminRights != nil) {
+                    return context.engine.peers.getChannelBoostStatus(peerId: peerId)
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                guard let self else {
+                    return
+                }
+                self.boostStatus = boostStatus
+            })
         }
         
         if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudUser {
@@ -4154,6 +4171,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.storyUploadProgressDisposable?.dispose()
         self.updateAvatarDisposable.dispose()
         self.joinChannelDisposable.dispose()
+        self.boostStatusDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -7196,7 +7214,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .account)
             self.controller?.push(controller)
         } else if let peer = self.data?.peer, peer is TelegramChannel {
-            self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
+            self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, boostStatus: self.boostStatus))
         }
     }
         

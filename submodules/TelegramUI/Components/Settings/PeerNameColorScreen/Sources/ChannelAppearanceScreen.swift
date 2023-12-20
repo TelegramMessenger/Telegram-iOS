@@ -134,13 +134,16 @@ final class ChannelAppearanceScreenComponent: Component {
     
     let context: AccountContext
     let peerId: EnginePeer.Id
+    let boostStatus: ChannelBoostStatus?
 
     init(
         context: AccountContext,
-        peerId: EnginePeer.Id
+        peerId: EnginePeer.Id,
+        boostStatus: ChannelBoostStatus?
     ) {
         self.context = context
         self.peerId = peerId
+        self.boostStatus = boostStatus
     }
 
     static func ==(lhs: ChannelAppearanceScreenComponent, rhs: ChannelAppearanceScreenComponent) -> Bool {
@@ -322,6 +325,33 @@ final class ChannelAppearanceScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component, let resolvedState = self.resolveState() else {
+                return true
+            }
+            if self.isApplyingSettings {
+                return false
+            }
+            
+            if !resolvedState.changes.isEmpty {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertTitle, text: presentationData.strings.Channel_Appearance_UnsavedChangesAlertText, actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertDiscard, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.environment?.controller()?.dismiss()
+                    }),
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertApply, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.applySettings()
+                    })
+                ]), in: .window(.root))
+                
+                return false
+            }
+            
             return true
         }
         
@@ -462,8 +492,15 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             var signals: [Signal<Never, ApplyError>] = []
-            if !resolvedState.changes.intersection([.nameColor, .profileColor, .replyFileId, .backgroundFileId]).isEmpty {
-                signals.append(component.context.engine.peers.updatePeerNameColorAndEmoji(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
+            if !resolvedState.changes.intersection([.nameColor, .replyFileId]).isEmpty {
+                signals.append(component.context.engine.peers.updatePeerNameColor(peerId: component.peerId, nameColor: resolvedState.nameColor, backgroundEmojiId: resolvedState.replyFileId)
+                |> ignoreValues
+                |> mapError { _ -> ApplyError in
+                    return .generic
+                })
+            }
+            if !resolvedState.changes.intersection([.profileColor, .backgroundFileId]).isEmpty {
+                signals.append(component.context.engine.peers.updatePeerProfileColor(peerId: component.peerId, profileColor: resolvedState.profileColor, profileBackgroundEmojiId: resolvedState.backgroundFileId)
                 |> ignoreValues
                 |> mapError { _ -> ApplyError in
                     return .generic
@@ -512,7 +549,16 @@ final class ChannelAppearanceScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                let navigationController: NavigationController? = self.environment?.controller()?.navigationController as? NavigationController
+                
                 self.environment?.controller()?.dismiss()
+                
+                if let lastController = navigationController?.viewControllers.last as? ViewController {
+                    let tipController = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Channel_Appearance_ToastAppliedText, cancel: nil, destructive: false), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                    lastController.present(tipController, in: .window(.root))
+                }
             })
         }
         
@@ -733,8 +779,13 @@ final class ChannelAppearanceScreenComponent: Component {
                     guard let self, let component = self.component else {
                         return
                     }
-                    if self.contentsData == nil, case let .channel(channel) = contentsData.peer {
-                        self.boostLevel = channel.approximateBoostLevel.flatMap(Int.init)
+                    if self.contentsData == nil && self.boostStatus == nil {
+                        if let boostStatus = component.boostStatus {
+                            self.boostStatus = boostStatus
+                            self.boostLevel = boostStatus.level
+                        } else if case let .channel(channel) = contentsData.peer {
+                            self.boostLevel = channel.approximateBoostLevel.flatMap(Int.init)
+                        }
                     }
                     if self.contentsData == nil, let peerWallpaper = contentsData.peerWallpaper {
                         for cloudTheme in contentsData.availableThemes {
@@ -893,7 +944,6 @@ final class ChannelAppearanceScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let messageItem = PeerNameColorChatPreviewItem.MessageItem(
                 outgoing: false,
                 peerId: EnginePeer.Id(namespace: peer.id.namespace, id: PeerId.Id._internalFromInt64Value(0)),
@@ -901,15 +951,15 @@ final class ChannelAppearanceScreenComponent: Component {
                 photo: peer.profileImageRepresentations,
                 nameColor: resolvedState.nameColor,
                 backgroundEmojiId: replyFileId,
-                reply: (peer.compactDisplayTitle, "Reply to your channel"),
-                linkPreview: ("Telegram", "Link Preview", "This preview will also be tinted."),
-                text: "The color you select will be used for the channel's name"
+                reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText),
+                linkPreview: (environment.strings.Channel_Appearance_ExampleLinkWebsite, environment.strings.Channel_Appearance_ExampleLinkTitle, environment.strings.Channel_Appearance_ExampleLinkText),
+                text: environment.strings.Channel_Appearance_ExampleText
             )
             
             var replyLogoContents: [AnyComponentWithIdentity<Empty>] = []
             replyLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                 text: .plain(NSAttributedString(
-                    string: "Replies Logo", //TODO:localize
+                    string: environment.strings.Channel_Appearance_NameIcon,
                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                     textColor: environment.theme.list.itemPrimaryTextColor
                 )),
@@ -943,7 +993,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Choose a color for the name of your channel, the link it sends, and replies to its messages.", //TODO:localize
+                            string: environment.strings.Channel_Appearance_NameColorFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1020,7 +1070,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 var wallpaperLogoContents: [AnyComponentWithIdentity<Empty>] = []
                 wallpaperLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "Channel Wallpaper", //TODO:localize
+                        string: environment.strings.Channel_Appearance_Wallpaper,
                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                         textColor: environment.theme.list.itemPrimaryTextColor
                     )),
@@ -1048,7 +1098,7 @@ final class ChannelAppearanceScreenComponent: Component {
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Set a wallpaper that will be visible to everyone reading your channel.", //TODO:localize
+                                string: environment.strings.Channel_Appearance_WallpaperFooter,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1117,7 +1167,7 @@ final class ChannelAppearanceScreenComponent: Component {
             var profileLogoContents: [AnyComponentWithIdentity<Empty>] = []
             profileLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                 text: .plain(NSAttributedString(
-                    string: "Profile Logo", //TODO:localize
+                    string: environment.strings.Channel_Appearance_ProfileIcon,
                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                     textColor: environment.theme.list.itemPrimaryTextColor
                 )),
@@ -1143,7 +1193,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     background: bannerBackground,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "PROFILE PAGE COLOR", //TODO:localize
+                            string: environment.strings.Channel_Appearance_ProfileHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1151,7 +1201,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Choose a color and a logo for the channel's profile.", //TODO:localize
+                            string: environment.strings.Channel_Appearance_ProfileFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1228,7 +1278,7 @@ final class ChannelAppearanceScreenComponent: Component {
             var emojiStatusContents: [AnyComponentWithIdentity<Empty>] = []
             emojiStatusContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                 text: .plain(NSAttributedString(
-                    string: "Channel Emoji Status", //TODO:localize
+                    string: environment.strings.Channel_Appearance_Status,
                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                     textColor: environment.theme.list.itemPrimaryTextColor
                 )),
@@ -1252,7 +1302,7 @@ final class ChannelAppearanceScreenComponent: Component {
                             theme: environment.theme,
                             title: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "Reset Profile Color", //TODO:localize
+                                    string: environment.strings.Channel_Appearance_ResetProfileColor,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemAccentColor
                                 )),
@@ -1300,7 +1350,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Choose a status that will be shown next to the channel's name.", //TODO:localize
+                            string: environment.strings.Channel_Appearance_StatusFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1341,9 +1391,8 @@ final class ChannelAppearanceScreenComponent: Component {
             contentHeight += bottomContentInset
             
             var buttonContents: [AnyComponentWithIdentity<Empty>] = []
-            //TODO:localize
             buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                Text(text: "Apply Changes", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                Text(text: environment.strings.Channel_Appearance_ApplyButton, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
             let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
@@ -1448,18 +1497,19 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
-        peerId: EnginePeer.Id
+        peerId: EnginePeer.Id,
+        boostStatus: ChannelBoostStatus?
     ) {
         self.context = context
         
         super.init(context: context, component: ChannelAppearanceScreenComponent(
             context: context,
-            peerId: peerId
+            peerId: peerId,
+            boostStatus: boostStatus
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        //TODO:localize
-        self.title = "Appearance"
+        self.title = presentationData.strings.Channel_Appearance_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.ready.set(.never())

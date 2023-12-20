@@ -1001,8 +1001,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             case .recommended:
                 title = presentationData.strings.PeerInfo_PaneRecommended
             case .savedMessagesChats:
-                //TODO:localized
-                title = "Chats"
+                title = presentationData.strings.DialogList_TabTitle
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
         }, selectedPane: self.currentPaneKey, transitionFraction: self.transitionFraction, transition: transition)

@@ -87,7 +87,10 @@ public enum AdminLogEventAction {
     case pinTopic(prevInfo: EngineMessageHistoryThread.Info?, newInfo: EngineMessageHistoryThread.Info?)
     case toggleForum(isForum: Bool)
     case toggleAntiSpam(isEnabled: Bool)
-    case changeNameColor(prev: PeerNameColor, new: PeerNameColor)
+    case changeNameColor(prevColor: PeerNameColor, prevIcon: Int64?, newColor: PeerNameColor, newIcon: Int64?)
+    case changeProfileColor(prevColor: PeerNameColor?, prevIcon: Int64?, newColor: PeerNameColor?, newIcon: Int64?)
+    case changeWallpaper(prev: TelegramWallpaper?, new: TelegramWallpaper?)
+    case changeStatus(prev: PeerEmojiStatus?, new: PeerEmojiStatus?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -348,22 +351,69 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                 case let .channelAdminLogEventActionToggleAntiSpam(newValue):
                                     action = .toggleAntiSpam(isEnabled: newValue == .boolTrue)
                                 case let .channelAdminLogEventActionChangePeerColor(prevValue, newValue):
-                                    let _ = prevValue
-                                    let _ = newValue
-                                    action = nil
-//                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
+                                    var prevColorIndex: Int32
+                                    var prevEmojiId: Int64?
+                                    switch prevValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        prevColorIndex = color ?? 0
+                                        prevEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    var newColorIndex: Int32
+                                    var newEmojiId: Int64?
+                                    switch newValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        newColorIndex = color ?? 0
+                                        newEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    action = .changeNameColor(prevColor: PeerNameColor(rawValue: prevColorIndex), prevIcon: prevEmojiId, newColor: PeerNameColor(rawValue: newColorIndex), newIcon: newEmojiId)
                                 case let .channelAdminLogEventActionChangeProfilePeerColor(prevValue, newValue):
-                                    let _ = prevValue
-                                    let _ = newValue
-                                    action = nil
+                                    var prevColorIndex: Int32?
+                                    var prevEmojiId: Int64?
+                                    switch prevValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        prevColorIndex = color
+                                        prevEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    var newColorIndex: Int32?
+                                    var newEmojiId: Int64?
+                                    switch newValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        newColorIndex = color
+                                        newEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    action = .changeProfileColor(prevColor: prevColorIndex.flatMap(PeerNameColor.init(rawValue:)), prevIcon: prevEmojiId, newColor: newColorIndex.flatMap(PeerNameColor.init(rawValue:)), newIcon: newEmojiId)
                                 case let .channelAdminLogEventActionChangeWallpaper(prevValue, newValue):
-                                    let _ = prevValue
-                                    let _ = newValue
-                                    action = nil
+                                    let prev: TelegramWallpaper?
+                                    if case let .wallPaperNoFile(_, _, settings) = prevValue {
+                                        if settings == nil {
+                                            prev = nil
+                                        } else if case let .wallPaperSettings(flags, _, _, _, _, _, _, _) = settings, flags == 0 {
+                                            prev = nil
+                                        } else {
+                                            prev = TelegramWallpaper(apiWallpaper: prevValue)
+                                        }
+                                    } else {
+                                        prev = TelegramWallpaper(apiWallpaper: prevValue)
+                                    }
+                                    let new: TelegramWallpaper?
+                                    if case let .wallPaperNoFile(_, _, settings) = newValue {
+                                        if settings == nil {
+                                            new = nil
+                                        } else if case let .wallPaperSettings(flags, _, _, _, _, _, _, _) = settings, flags == 0 {
+                                            new = nil
+                                        } else {
+                                            new = TelegramWallpaper(apiWallpaper: newValue)
+                                        }
+                                    } else {
+                                        new = TelegramWallpaper(apiWallpaper: newValue)
+                                    }
+                                    action = .changeWallpaper(prev: prev, new: new)
                                 case let .channelAdminLogEventActionChangeEmojiStatus(prevValue, newValue):
-                                    let _ = prevValue
-                                    let _ = newValue
-                                    action = nil
+                                    action = .changeStatus(prev: PeerEmojiStatus(apiStatus: prevValue), new: PeerEmojiStatus(apiStatus: newValue))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

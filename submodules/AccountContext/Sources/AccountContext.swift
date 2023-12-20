@@ -1335,19 +1335,19 @@ public class PeerNameColors: Equatable {
         public let secondary: UIColor?
         public let tertiary: UIColor?
         
-        init(main: UIColor, secondary: UIColor?, tertiary: UIColor?) {
+        public init(main: UIColor, secondary: UIColor?, tertiary: UIColor?) {
             self.main = main
             self.secondary = secondary
             self.tertiary = tertiary
         }
         
-        init(main: UIColor) {
+        public init(main: UIColor) {
             self.main = main
             self.secondary = nil
             self.tertiary = nil
         }
         
-        init?(colors: [UIColor]) {
+        public init?(colors: [UIColor]) {
             guard let first = colors.first else {
                 return nil
             }

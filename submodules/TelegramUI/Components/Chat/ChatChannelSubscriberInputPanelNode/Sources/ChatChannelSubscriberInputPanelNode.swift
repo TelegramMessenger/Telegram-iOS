@@ -47,14 +47,11 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
         case .hidePinnedMessages:
             return (strings.Chat_PanelHidePinnedMessages, theme.chat.inputPanel.panelControlAccentColor)
         case .openChannel:
-            //TODO:localize
-            return ("Open Channel", theme.chat.inputPanel.panelControlAccentColor)
+            return (strings.SavedMessages_OpenChannel, theme.chat.inputPanel.panelControlAccentColor)
         case .openGroup:
-            //TODO:localize
-            return ("Open Group", theme.chat.inputPanel.panelControlAccentColor)
+            return (strings.SavedMessages_OpenGroup, theme.chat.inputPanel.panelControlAccentColor)
         case .openChat:
-            //TODO:localize
-            return ("Open Chat", theme.chat.inputPanel.panelControlAccentColor)
+            return (strings.SavedMessages_OpenChat, theme.chat.inputPanel.panelControlAccentColor)
     }
 }
 
