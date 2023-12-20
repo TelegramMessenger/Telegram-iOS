@@ -45,7 +45,7 @@ extension MediaEditorScreen {
     }
     
     func saveDraft(id: Int64?) {
-        guard let subject = self.node.subject, let mediaEditor = self.node.mediaEditor else {
+        guard let subject = self.node.subject, let actualSubject = self.node.actualSubject, let mediaEditor = self.node.mediaEditor else {
             return
         }
         try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
@@ -60,7 +60,7 @@ extension MediaEditorScreen {
         var timestamp: Int32
         var location: CLLocationCoordinate2D?
         let expiresOn: Int32
-        if case let .draft(draft, _) = subject {
+        if case let .draft(draft, _) = actualSubject {
             timestamp = draft.timestamp
             location = draft.location
             if let _ = id {
@@ -189,11 +189,14 @@ extension MediaEditorScreen {
                     } else if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
                         innerSaveDraft(media: .image(image: image, dimensions: draft.dimensions))
                     }
-                    removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
                 case .message:
                     if let pixel = generateSingleColorImage(size: CGSize(width: 1, height: 1), color: .black) {
                         innerSaveDraft(media: .image(image: pixel, dimensions: PixelDimensions(width: 1080, height: 1920)))
                     }
+                }
+                
+                if case let .draft(draft, _) = actualSubject {
+                    removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
                 }
             })
         }

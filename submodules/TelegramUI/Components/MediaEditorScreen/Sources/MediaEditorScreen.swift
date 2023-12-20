@@ -3010,7 +3010,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.backgroundDimView.layer.animateAlpha(from: previousDimAlpha, to: 0.0, duration: 0.15)
             
             var isNew: Bool? = false
-            if let subject = self.subject {
+            if let subject = self.actualSubject {
                 if saveDraft {
                     isNew = true
                 }
@@ -3397,7 +3397,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
                         
             var location: CLLocationCoordinate2D?
-            if let subject = self.subject {
+            if let subject = self.actualSubject {
                 if case let .asset(asset) = subject {
                     location = asset.location?.coordinate
                 } else if case let .draft(draft, _) = subject {
@@ -4933,7 +4933,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         if saveDraft {
             self.saveDraft(id: nil)
         } else {
-            if case let .draft(draft, id) = self.node.subject, id == nil {
+            if case let .draft(draft, id) = self.node.actualSubject, id == nil {
                 removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
             }
         }

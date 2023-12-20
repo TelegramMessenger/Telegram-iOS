@@ -1013,7 +1013,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let controller = ItemListController(context: context, state: signal)
     controller.navigationPresentation = .modal
     controller.beganInteractiveDragging = {
-        dismissInputImpl?()
+//        dismissInputImpl?()
     }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
