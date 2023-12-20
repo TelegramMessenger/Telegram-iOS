@@ -1887,7 +1887,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else {
             bubbleReactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
         }
-        if !bubbleReactions.reactions.isEmpty {
+        if !bubbleReactions.reactions.isEmpty && !item.presentationData.isPreview {
             bottomNodeMergeStatus = .Both
         }
         

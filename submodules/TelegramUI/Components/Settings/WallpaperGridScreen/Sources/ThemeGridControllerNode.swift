@@ -329,7 +329,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if let strongSelf = self, !strongSelf.currentState.editing {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
-                    let wallpapers = entries.map { $0.wallpaper }
+                    let wallpapers = entries.map { $0.wallpaper }.filter { !$0.isColorOrGradient }
                     
                     var options = WallpaperPresentationOptions()
                     if wallpaper == strongSelf.presentationData.chatWallpaper, let settings = wallpaper.settings {
