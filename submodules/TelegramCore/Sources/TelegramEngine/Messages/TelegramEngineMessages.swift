@@ -18,6 +18,7 @@ public final class StoryPreloadInfo {
     public let peer: PeerReference
     public let storyId: Int32
     public let media: EngineMedia
+    public let alternativeMedia: EngineMedia?
     public let reactions: [MessageReaction.Reaction]
     public let priority: Priority
     
@@ -25,12 +26,14 @@ public final class StoryPreloadInfo {
         peer: PeerReference,
         storyId: Int32,
         media: EngineMedia,
+        alternativeMedia: EngineMedia?,
         reactions: [MessageReaction.Reaction],
         priority: Priority
     ) {
         self.peer = peer
         self.storyId = storyId
         self.media = media
+        self.alternativeMedia = alternativeMedia
         self.reactions = reactions
         self.priority = priority
     }
@@ -1136,6 +1139,7 @@ public extension TelegramEngine {
                             peer: peerReference,
                             storyId: itemAndPeer.item.id,
                             media: EngineMedia(media),
+                            alternativeMedia: itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init),
                             reactions: reactions,
                             priority: .top(position: nextPriority)
                         )
@@ -1168,6 +1172,7 @@ public extension TelegramEngine {
                                     timestamp: item.timestamp,
                                     expirationTimestamp: item.expirationTimestamp,
                                     media: item.media,
+                                    alternativeMedia: item.alternativeMedia,
                                     mediaAreas: item.mediaAreas,
                                     text: item.text,
                                     entities: item.entities,

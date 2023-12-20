@@ -574,16 +574,34 @@ final class StoryItemContentComponent: Component {
             
             let peerReference = PeerReference(component.peer._asPeer())
             
+            let selectedMedia: EngineMedia
             var messageMedia: EngineMedia?
-            switch component.item.media {
-            case let .image(image):
-                messageMedia = .image(image)
-            case let .file(file):
-                messageMedia = .file(file)
-            case .unsupported:
-                self.contentLoaded = true
-            default:
-                break
+            if component.context.sharedContext.immediateExperimentalUISettings.alternativeStoryMedia, let alternativeMedia = component.item.alternativeMedia {
+                selectedMedia = alternativeMedia
+                
+                switch alternativeMedia {
+                case let .image(image):
+                    messageMedia = .image(image)
+                case let .file(file):
+                    messageMedia = .file(file)
+                case .unsupported:
+                    self.contentLoaded = true
+                default:
+                    break
+                }
+            } else {
+                selectedMedia = component.item.media
+                
+                switch component.item.media {
+                case let .image(image):
+                    messageMedia = .image(image)
+                case let .file(file):
+                    messageMedia = .file(file)
+                case .unsupported:
+                    self.contentLoaded = true
+                default:
+                    break
+                }
             }
             
             var reloadMedia = false
@@ -678,7 +696,7 @@ final class StoryItemContentComponent: Component {
                     strings: component.strings,
                     peer: component.peer,
                     storyId: component.item.id,
-                    media: component.item.media,
+                    media: messageMedia,
                     size: availableSize,
                     isCaptureProtected: component.item.isForwardingDisabled,
                     attemptSynchronous: synchronousLoad,
@@ -720,7 +738,7 @@ final class StoryItemContentComponent: Component {
                 }
             }
             
-            switch component.item.media {
+            switch selectedMedia {
             case .image, .file:
                 if let unsupportedText = self.unsupportedText {
                     self.unsupportedText = nil
