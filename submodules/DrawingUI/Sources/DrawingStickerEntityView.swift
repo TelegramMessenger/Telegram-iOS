@@ -519,22 +519,30 @@ public class DrawingStickerEntityView: DrawingEntityView {
         }
         
         let dustEffectLayer = DustEffectLayer()
-        dustEffectLayer.position = containerView.bounds.center
+        dustEffectLayer.position = self.center
         dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: containerView.bounds.size)
+        containerView.layer.insertSublayer(dustEffectLayer, below: self.layer)
+        
         dustEffectLayer.animationSpeed = 2.2
         dustEffectLayer.becameEmpty = { [weak dustEffectLayer] in
             dustEffectLayer?.removeFromSuperlayer()
             completion()
         }
-        containerView.layer.insertSublayer(dustEffectLayer, below: self.layer)
+
+        let maxSize = CGSize(width: 512.0, height: 512.0)
+        let itemSize = CGSize(width: self.bounds.width * self.entity.scale, height: self.bounds.height * self.entity.scale)
+        let fittedSize = itemSize.aspectFittedOrSmaller(maxSize)
+        let scale = itemSize.width / fittedSize.width
         
-        let itemFrame = self.layer.convert(self.bounds, to: dustEffectLayer)
+        dustEffectLayer.transform = CATransform3DScale(CATransform3DMakeRotation(self.stickerEntity.rotation, 0.0, 0.0, 1.0), scale, scale, 1.0)
+        
+        let itemFrame = CGRect(origin: CGPoint(x: (containerView.bounds.width - fittedSize.width) / 2.0, y: (containerView.bounds.height - fittedSize.height) / 2.0), size: fittedSize)
         dustEffectLayer.addItem(frame: itemFrame, image: scaledImage)
         
         self.isHidden = true
     }
     
-    public func playCutoffAnimation() {
+    public func playCutoutAnimation() {
         let values = [self.entity.scale, self.entity.scale * 1.1, self.entity.scale]
         let keyTimes = [0.0, 0.67, 1.0]
         self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.35, keyPath: "transform.scale")

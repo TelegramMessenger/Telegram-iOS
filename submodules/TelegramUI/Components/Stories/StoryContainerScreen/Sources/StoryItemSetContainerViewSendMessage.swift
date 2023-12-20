@@ -3265,6 +3265,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
         
+    private var selectedMediaArea: MediaArea?
     func activateMediaArea(view: StoryItemSetContainerComponent.View, mediaArea: MediaArea, immediate: Bool = false) {
         guard let component = view.component, let controller = component.controller() else {
             return
@@ -3350,6 +3351,11 @@ final class StoryItemSetContainerSendMessage {
             if immediate {
                 action()
                 return
+            } else {
+                if self.selectedMediaArea == mediaArea {
+                    action()
+                    return
+                }
             }
             actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewMessage, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
                 action()
@@ -3357,6 +3363,8 @@ final class StoryItemSetContainerSendMessage {
         case .reaction:
             return
         }
+        
+        self.selectedMediaArea =  mediaArea
         
         let referenceSize = view.controlsContainerView.frame.size
         let size = CGSize(width: 16.0, height: mediaArea.coordinates.height / 100.0 * referenceSize.height * 1.1)
@@ -3368,6 +3376,7 @@ final class StoryItemSetContainerSendMessage {
         menuController.centerHorizontally = true
         menuController.dismissed = { [weak self, weak view] in
             if let self, let view {
+                self.selectedMediaArea = nil
                 Queue.mainQueue().after(0.1) {
                     self.menuController = nil
                     view.updateIsProgressPaused()
