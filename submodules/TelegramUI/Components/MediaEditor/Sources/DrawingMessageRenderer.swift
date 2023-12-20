@@ -11,28 +11,28 @@ import WallpaperBackgroundNode
 
 public final class DrawingWallpaperRenderer {
     private let context: AccountContext
-    private let customDayWallpaper: TelegramWallpaper?
-    private let customNightWallpaper: TelegramWallpaper?
+    private let dayWallpaper: TelegramWallpaper?
+    private let nightWallpaper: TelegramWallpaper?
     
     private let wallpaperBackgroundNode: WallpaperBackgroundNode
     private let darkWallpaperBackgroundNode: WallpaperBackgroundNode
     
-    public init (context: AccountContext, customDayWallpaper: TelegramWallpaper?, customNightWallpaper: TelegramWallpaper?) {
+    public init (context: AccountContext, dayWallpaper: TelegramWallpaper?, nightWallpaper: TelegramWallpaper?) {
         self.context = context
-        self.customDayWallpaper = customDayWallpaper
-        self.customNightWallpaper = customNightWallpaper
+        self.dayWallpaper = dayWallpaper
+        self.nightWallpaper = nightWallpaper
         
         self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.wallpaperBackgroundNode.displaysAsynchronously = false
         
-        let wallpaper = self.customDayWallpaper ?? context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
+        let wallpaper = self.dayWallpaper ?? context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
         
         self.darkWallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false)
         self.darkWallpaperBackgroundNode.displaysAsynchronously = false
         
         let darkTheme = defaultDarkColorPresentationTheme
-        let darkWallpaper = self.customNightWallpaper ?? darkTheme.chat.defaultWallpaper
+        let darkWallpaper = self.nightWallpaper ?? darkTheme.chat.defaultWallpaper
         self.darkWallpaperBackgroundNode.update(wallpaper: darkWallpaper, animated: false)
     }
     
@@ -40,13 +40,15 @@ public final class DrawingWallpaperRenderer {
         self.updateLayout(size: CGSize(width: 360.0, height: 640.0))
         
         let resultSize = CGSize(width: 1080, height: 1920)
-        self.generate(view: self.wallpaperBackgroundNode.view) { dayImage in
-            if self.customDayWallpaper != nil && self.customNightWallpaper == nil {
-                completion(resultSize, dayImage, nil, nil)
-            } else {
-                Queue.mainQueue().justDispatch {
-                    self.generate(view: self.darkWallpaperBackgroundNode.view) { nightImage in
-                        completion(resultSize, dayImage, nightImage, nil)
+        Queue.mainQueue().justDispatch {
+            self.generate(view: self.wallpaperBackgroundNode.view) { dayImage in
+                if self.dayWallpaper != nil && self.nightWallpaper == nil {
+                    completion(resultSize, dayImage, nil, nil)
+                } else {
+                    Queue.mainQueue().justDispatch {
+                        self.generate(view: self.darkWallpaperBackgroundNode.view) { nightImage in
+                            completion(resultSize, dayImage, nightImage, nil)
+                        }
                     }
                 }
             }
@@ -129,7 +131,7 @@ public final class DrawingMessageRenderer {
             let layout = ContainerViewLayout(size: CGSize(width: 360.0, height: 640.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: .portrait), deviceMetrics: .iPhoneX, intrinsicInsets: .zero, safeInsets: .zero, additionalInsets: .zero, statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
             let size = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             
-            Queue.mainQueue().after(0.03, {
+            Queue.mainQueue().after(0.05, {
                 self.generate(size: size) { image in
                     completion(size, image)
                 }
