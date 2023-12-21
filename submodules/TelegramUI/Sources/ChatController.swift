@@ -17355,11 +17355,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         f(.default)
                     } else {
-                        c.dismiss(completion: {
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
-                                commit()
+                        if "".isEmpty {
+                            f(.dismissWithoutContent)
+                            commit()
+                        } else {
+                            c.dismiss(completion: {
+                                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                                    commit()
+                                })
                             })
-                        })
+                        }
                     }
                 }
             })))
@@ -17390,14 +17395,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                     
-                    c.dismiss(completion: { [weak strongSelf] in
-                        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
-                            guard let strongSelf else {
-                                return
-                            }
-                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
+                    let commit: () -> Void = {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
+                    }
+                    
+                    if "".isEmpty {
+                        f(.dismissWithoutContent)
+                        commit()
+                    } else {
+                        c.dismiss(completion: {
+                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                                commit()
+                            })
                         })
-                    })
+                    }
                 }
             })))
             items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak self, weak actionSheet] in
