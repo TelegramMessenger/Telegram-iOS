@@ -1090,6 +1090,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .premiumGiftCode:
                         break
+                    case .premiumMultiGift:
+                        break
                 }
             }
         }))

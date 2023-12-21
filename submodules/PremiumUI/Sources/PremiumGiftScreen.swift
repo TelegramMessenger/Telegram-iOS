@@ -21,11 +21,7 @@ import TextFormat
 import UniversalMediaPlayer
 import InstantPageCache
 
-public enum PremiumGiftSource: Equatable {
-    case profile
-    case attachMenu
-    case settings
-    
+extension PremiumGiftSource {
     var identifier: String? {
         switch self {
         case .profile:
@@ -34,6 +30,16 @@ public enum PremiumGiftSource: Equatable {
             return "attach"
         case .settings:
             return "settings"
+        case .chatList:
+            return "chats"
+        case .channelBoost:
+            return "channel_boost"
+        case let .deeplink(reference):
+            if let reference = reference {
+                return "deeplink_\(reference)"
+            } else {
+                return "deeplink"
+            }
         }
     }
 }

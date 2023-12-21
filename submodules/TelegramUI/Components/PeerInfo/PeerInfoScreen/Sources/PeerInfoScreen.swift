@@ -8666,9 +8666,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         case .language:
             push(LocalizationListController(context: self.context))
         case .premium:
-            self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
+            let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
+            self.controller?.push(controller)
         case .premiumGift:
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings)
             self.controller?.push(controller)
         case .stickers:
             if let settings = self.data?.globalSettings {

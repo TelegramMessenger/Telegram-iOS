@@ -842,6 +842,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                     }
                     handleResolvedUrl(.premiumOffer(reference: reference))
+                } else if parsedUrl.host == "premium_multigift" {
+                    var reference: String?
+                    if let components = URLComponents(string: "/?" + query) {
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "ref" {
+                                        reference = value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    handleResolvedUrl(.premiumMultiGift(reference: reference))
                 } else if parsedUrl.host == "addlist" {
                     if let components = URLComponents(string: "/?" + query) {
                         var slug: String?
