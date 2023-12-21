@@ -7251,9 +7251,10 @@ public final class EmojiPagerContentComponent: Component {
             }
             |> take(1)
         } else if case .channelStatus = subject {
-            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedStatusEmoji)
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedChannelStatusEmoji)
+            orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudDisabledChannelStatusEmoji)
             
-            iconStatusEmoji = context.engine.stickers.loadedStickerPack(reference: .iconStatusEmoji, forceActualized: false)
+            iconStatusEmoji = context.engine.stickers.loadedStickerPack(reference: .iconChannelStatusEmoji, forceActualized: false)
             |> map { result -> [TelegramMediaFile] in
                 switch result {
                 case let .result(_, items, _):
@@ -7298,7 +7299,7 @@ public final class EmojiPagerContentComponent: Component {
         } else if case .status = subject {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .status)
         } else if case .channelStatus = subject {
-            searchCategories = context.engine.stickers.emojiSearchCategories(kind: .status)
+            searchCategories = .single(nil)
         } else if [.profilePhoto, .groupPhoto].contains(subject) {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .avatar)
         } else {
@@ -7436,6 +7437,8 @@ public final class EmojiPagerContentComponent: Component {
             
             var recentEmoji: OrderedItemListView?
             var featuredStatusEmoji: OrderedItemListView?
+            var featuredChannelStatusEmoji: OrderedItemListView?
+            var disabledChannelStatusEmoji: OrderedItemListView?
             var recentStatusEmoji: OrderedItemListView?
             var topReactions: OrderedItemListView?
             var recentReactions: OrderedItemListView?
@@ -7446,6 +7449,10 @@ public final class EmojiPagerContentComponent: Component {
                     recentEmoji = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedStatusEmoji {
                     featuredStatusEmoji = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudFeaturedChannelStatusEmoji {
+                    featuredChannelStatusEmoji = orderedView
+                } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudDisabledChannelStatusEmoji {
+                    disabledChannelStatusEmoji = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentStatusEmoji {
                     recentStatusEmoji = orderedView
                 } else if orderedView.collectionId == Namespaces.OrderedItemList.CloudRecentReactions {
@@ -7700,7 +7707,17 @@ public final class EmojiPagerContentComponent: Component {
                 
                 var existingIds = Set<MediaId>()
                 
-                for file in iconStatusEmoji.prefix(7) {
+                if let disabledChannelStatusEmoji {
+                    for item in disabledChannelStatusEmoji.items {
+                        guard let item = item.contents.get(RecentMediaItem.self) else {
+                            continue
+                        }
+                        let file = item.media
+                        existingIds.insert(file.fileId)
+                    }
+                }
+                
+                for file in iconStatusEmoji {
                     if existingIds.contains(file.fileId) {
                         continue
                     }
@@ -7740,58 +7757,8 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
                 
-                if let recentStatusEmoji = recentStatusEmoji {
-                    for item in recentStatusEmoji.items {
-                        guard let item = item.contents.get(RecentMediaItem.self) else {
-                            continue
-                        }
-                        
-                        let file = item.media
-                        if existingIds.contains(file.fileId) {
-                            continue
-                        }
-                        existingIds.insert(file.fileId)
-                        
-                        var tintMode: Item.TintMode = .none
-                        if file.isCustomTemplateEmoji {
-                            tintMode = .accent
-                        }
-                        for attribute in file.attributes {
-                            if case let .CustomEmoji(_, _, _, packReference) = attribute {
-                                switch packReference {
-                                case let .id(id, _):
-                                    if id == 773947703670341676 || id == 2964141614563343 {
-                                        tintMode = .accent
-                                    }
-                                default:
-                                    break
-                                }
-                            }
-                        }
-                        
-                        let resultItem: EmojiPagerContentComponent.Item
-                        
-                        let animationData = EntityKeyboardAnimationData(file: file)
-                        resultItem = EmojiPagerContentComponent.Item(
-                            animationData: animationData,
-                            content: .animation(animationData),
-                            itemFile: file,
-                            subgroupId: nil,
-                            icon: .none,
-                            tintMode: tintMode
-                        )
-                        
-                        if let groupIndex = itemGroupIndexById[groupId] {
-                            if itemGroups[groupIndex].items.count >= (5 + 8) * 8 {
-                                break
-                            }
-                            
-                            itemGroups[groupIndex].items.append(resultItem)
-                        }
-                    }
-                }
-                if let featuredStatusEmoji = featuredStatusEmoji {
-                    for item in featuredStatusEmoji.items {
+                if let featuredChannelStatusEmoji {
+                    for item in featuredChannelStatusEmoji.items {
                         guard let item = item.contents.get(RecentMediaItem.self) else {
                             continue
                         }
@@ -7832,9 +7799,9 @@ public final class EmojiPagerContentComponent: Component {
                         )
                         
                         if let groupIndex = itemGroupIndexById[groupId] {
-                            if itemGroups[groupIndex].items.count >= (5 + 8) * 8 {
+                            /*if itemGroups[groupIndex].items.count >= (5 + 8) * 8 {
                                 break
-                            }
+                            }*/
                             
                             itemGroups[groupIndex].items.append(resultItem)
                         }
@@ -8296,6 +8263,13 @@ public final class EmojiPagerContentComponent: Component {
             if !hasPremium {
                 maybeAppendUnicodeEmoji()
             }
+            
+            var itemCollectionMapping: [ItemCollectionId: StickerPackCollectionInfo] = [:]
+            for (id, info, _) in view.collectionInfos {
+                if let info = info as? StickerPackCollectionInfo {
+                    itemCollectionMapping[id] = info
+                }
+            }
                         
             var skippedCollectionIds = Set<AnyHashable>()
             if areCustomEmojiEnabled {
@@ -8314,6 +8288,15 @@ public final class EmojiPagerContentComponent: Component {
                     
                     if skippedCollectionIds.contains(groupId) {
                         continue
+                    }
+                    
+                    if case .channelStatus = subject {
+                        guard let collection = itemCollectionMapping[entry.index.collectionId] else {
+                            continue
+                        }
+                        if !collection.flags.contains(.isAvailableAsChannelStatus) {
+                            continue
+                        }
                     }
                     
                     var isTemplate = false
@@ -8400,6 +8383,12 @@ public final class EmojiPagerContentComponent: Component {
                         
                         if skippedCollectionIds.contains(groupId) {
                             continue
+                        }
+                        
+                        if case .channelStatus = subject {
+                            if !featuredEmojiPack.info.flags.contains(.isAvailableAsChannelStatus) {
+                                continue
+                            }
                         }
                         
                         for item in featuredEmojiPack.topItems {

@@ -333,6 +333,13 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             if !resolvedState.changes.isEmpty {
+                if let premiumConfiguration = self.premiumConfiguration, let requiredBoostSubject = self.requiredBoostSubject{
+                    let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+                    if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
+                        return true
+                    }
+                }
+                
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                 self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertTitle, text: presentationData.strings.Channel_Appearance_UnsavedChangesAlertText, actions: [
                     TextAlertAction(type: .genericAction, title: presentationData.strings.Channel_Appearance_UnsavedChangesAlertDiscard, action: { [weak self] in

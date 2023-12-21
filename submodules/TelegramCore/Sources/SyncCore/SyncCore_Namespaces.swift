@@ -51,6 +51,7 @@ public struct Namespaces {
         public static let CloudEmojiGenericAnimations: Int32 = 9
         public static let CloudIconStatusEmoji: Int32 = 10
         public static let CloudIconTopicEmoji: Int32 = 11
+        public static let CloudIconChannelStatusEmoji: Int32 = 12
     }
     
     public struct OrderedItemList {
@@ -81,6 +82,8 @@ public struct Namespaces {
         public static let CloudFeaturedGroupPhotoEmoji: Int32 = 24
         public static let NewSessionReviews: Int32 = 25
         public static let CloudFeaturedBackgroundIconEmoji: Int32 = 26
+        public static let CloudFeaturedChannelStatusEmoji: Int32 = 27
+        public static let CloudDisabledChannelStatusEmoji: Int32 = 28
     }
     
     public struct CachedItemCollection {
