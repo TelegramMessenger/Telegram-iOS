@@ -1612,7 +1612,7 @@ public final class ChatListNode: ListView {
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList)
             self.push?(controller)
         }, openActiveSessions: { [weak self] in
             guard let self else {

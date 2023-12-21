@@ -1805,10 +1805,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
+        var modal = true
         let mappedSource: PremiumSource
         switch source {
         case .settings:
             mappedSource = .settings
+            modal = false
         case .stickers:
             mappedSource = .stickers
         case .reactions:
@@ -1872,7 +1874,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         case .wallpapers:
             mappedSource = .wallpapers
         }
-        let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
+        let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
         return controller
     }
@@ -1949,16 +1951,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }
     
-    public func makePremiumGiftController(context: AccountContext) -> ViewController {
+    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource) -> ViewController {
         let options = Promise<[PremiumGiftCodeOption]>()
         options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
-        
+                
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         let limit: Int32 = 10
         var reachedLimitImpl: ((Int32) -> Void)?
         let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .premiumGifting, options: [], isPeerEnabled: { peer in
-            if case let .user(user) = peer, user.botInfo == nil {
+            if case let .user(user) = peer, user.botInfo == nil && !peer.isService && !user.flags.contains(.isSupport) {
                 return true
             } else {
                 return false
@@ -1990,11 +1992,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                 })
             }
+            guard !peerIds.isEmpty else {
+                return
+            }
             
             let mappedOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
             var pushImpl: ((ViewController) -> Void)?
             var filterImpl: (() -> Void)?
-            let giftController = PremiumGiftScreen(context: context, peerIds: peerIds, options: mappedOptions, source: .settings, pushController: { c in
+            let giftController = PremiumGiftScreen(context: context, peerIds: peerIds, options: mappedOptions, source: source, pushController: { c in
                 pushImpl?(c)
             }, completion: {
                 filterImpl?()
