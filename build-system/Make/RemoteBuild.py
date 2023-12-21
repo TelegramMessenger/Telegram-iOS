@@ -55,9 +55,7 @@ def session_ssh(session, command):
     return os.system(ssh_command)
 
 
-def remote_build(darwin_containers_path, darwin_containers_host, bazel_cache_host, configuration, build_input_data_path):
-    macos_version = '13.0'
-
+def remote_build(darwin_containers_path, darwin_containers_host, macos_version, bazel_cache_host, configuration, build_input_data_path):
     DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     base_dir = os.getcwd()
@@ -181,9 +179,7 @@ def remote_build(darwin_containers_path, darwin_containers_host, bazel_cache_hos
     )
 
 
-def remote_deploy_testflight(darwin_containers_path, darwin_containers_host, ipa_path, dsyms_path, username, password):
-    macos_version = '13.0'
-
+def remote_deploy_testflight(darwin_containers_path, darwin_containers_host, macos_version, ipa_path, dsyms_path, username, password):
     DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     configuration_path = 'versions.json'
@@ -240,9 +236,7 @@ def remote_deploy_testflight(darwin_containers_path, darwin_containers_host, ipa
     )
 
 
-def remote_ipa_diff(darwin_containers_path, darwin_containers_host, ipa1_path, ipa2_path):
-    macos_version = '13.0'
-
+def remote_ipa_diff(darwin_containers_path, darwin_containers_host, macos_version, ipa1_path, ipa2_path):
     DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
     configuration_path = 'versions.json'

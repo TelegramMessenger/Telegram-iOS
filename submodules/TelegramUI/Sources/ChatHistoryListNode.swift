@@ -680,6 +680,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var toLang: String?
     
     private var allowDustEffect: Bool = true
+    private var allowDustEffectForAllMessages: Bool = true
     private var dustEffectLayer: DustEffectLayer?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
@@ -705,6 +706,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 self.allowDustEffect = false
             }
         }
+        
+        self.allowDustEffectForAllMessages = context.sharedContext.immediateExperimentalUISettings.dustEffect
         
         let presentationData = updatedPresentationData.initial
         self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
@@ -3010,7 +3013,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 expiredMessageStableIds.insert(message.stableId)
                             }
                         } else {
-                            //expiredMessageStableIds.insert(message.stableId)
+                            if self.allowDustEffectForAllMessages {
+                                expiredMessageStableIds.insert(message.stableId)
+                            }
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
@@ -3028,7 +3033,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 expiredMessageStableIds.insert(message.stableId)
                             }
                         } else {
-                            //expiredMessageStableIds.insert(message.stableId)
+                            if self.allowDustEffectForAllMessages {
+                                expiredMessageStableIds.insert(message.stableId)
+                            }
                         }
                     }
                 default:

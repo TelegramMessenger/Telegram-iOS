@@ -140,6 +140,10 @@ class BuildEnvironmentVersions:
                 raise Exception('Missing xcode version in {}'.format(configuration_path))
             else:
                 self.xcode_version = configuration_dict['xcode']
+            if configuration_dict['macos'] is None:
+                raise Exception('Missing macos version in {}'.format(configuration_path))
+            else:
+                self.macos_version = configuration_dict['macos']
 
 class BuildEnvironment:
     def __init__(
@@ -179,3 +183,4 @@ class BuildEnvironment:
         self.app_version = versions.app_version
         self.xcode_version = versions.xcode_version
         self.bazel_version = versions.bazel_version
+        self.macos_version = versions.macos_version
