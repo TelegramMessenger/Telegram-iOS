@@ -71,7 +71,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case redactSensitiveData(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
-    case unidirectionalSwipeToReply(Bool)
+    case dustEffect(Bool)
     case callV2(Bool)
     case alternativeStoryMedia(Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
@@ -125,7 +125,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .webViewInspection, .resetWebViewCache:
             return DebugControllerSection.web.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .callV2, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
+        case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .callV2, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
@@ -176,7 +176,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 15
         case .skipReadHistory:
             return 16
-        case .unidirectionalSwipeToReply:
+        case .dustEffect:
             return 17
         case .callV2:
             return 18
@@ -943,11 +943,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
-        case let .unidirectionalSwipeToReply(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Legacy swipe to reply", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .dustEffect(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Dust Debug", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     var settings = settings
-                    settings.unidirectionalSwipeToReply = value
+                    settings.dustEffect = value
                     return settings
                 }).start()
             })
@@ -1425,7 +1425,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         #if DEBUG
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
         #endif
-        entries.append(.unidirectionalSwipeToReply(experimentalSettings.unidirectionalSwipeToReply))
+        entries.append(.dustEffect(experimentalSettings.dustEffect))
         entries.append(.callV2(experimentalSettings.callV2))
         entries.append(.alternativeStoryMedia(experimentalSettings.alternativeStoryMedia))
     }
