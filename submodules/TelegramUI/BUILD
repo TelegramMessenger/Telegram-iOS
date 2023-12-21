@@ -1,5 +1,10 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+VEGADEPS = [
+	"//VEGA/lyra-ios-profile/LyraProfile",
+	"//VEGA/VEGAProfileUI",
+]
+
 load(
     "@build_configuration//:variables.bzl",
     "telegram_bundle_id",
@@ -48,7 +53,7 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    deps = [
+    deps = VEGADEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

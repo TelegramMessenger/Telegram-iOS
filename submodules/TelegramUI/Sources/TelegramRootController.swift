@@ -28,6 +28,7 @@ import ImageCompression
 import TextFormat
 import MediaEditor
 import PeerInfoScreen
+import VEGAProfileUI
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -75,6 +76,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     public var contactsController: ContactsController?
     public var callListController: CallListController?
     public var chatListController: ChatListController?
+    public var profileController: VEGAProfileController?
     public var accountSettingsController: PeerInfoScreen?
     
     private var permissionsDisposable: Disposable?
@@ -178,7 +180,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             chatListController.tabBarItem.badgeValue = sharedContext.switchingData.chatListBadge
         }
         let callListController = CallListController(context: self.context, mode: .tab)
-        
+        let profileController = VEGAProfileController(context: self.context)
+
         var controllers: [ViewController] = []
         
         let contactsController = ContactsController(context: self.context)
@@ -190,6 +193,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         if showCallsTab {
             controllers.append(callListController)
         }
+        controllers.append(profileController)
         controllers.append(chatListController)
         
         var restoreSettignsController: (ViewController & SettingsController)?
@@ -214,6 +218,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController
+        self.profileController = profileController
         self.callListController = callListController
         self.chatListController = chatListController
         self.accountSettingsController = accountSettingsController

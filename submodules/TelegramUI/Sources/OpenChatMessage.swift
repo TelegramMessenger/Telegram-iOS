@@ -94,14 +94,14 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                                     if state.progress == 0.0 {
                                         view.frame = CGRect(origin: CGPoint(), size: state.destinationSize)
                                     }
-                                    
-                                    let toScaleX = state.sourceSize.width / state.destinationSize.width
-                                    let toScaleY = state.sourceSize.height / state.destinationSize.height
-                                    let fromScaleX: CGFloat = 1.0
-                                    let fromScaleY: CGFloat = 1.0
-                                    let scaleX = toScaleX.interpolate(to: fromScaleX, amount: state.progress)
-                                    let scaleY = toScaleY.interpolate(to: fromScaleY, amount: state.progress)
-                                    transition.setTransform(view: view, transform: CATransform3DMakeScale(scaleX, scaleY, 1.0))
+//                                    
+//                                    let toScaleX = state.sourceSize.width / state.destinationSize.width
+//                                    let toScaleY = state.sourceSize.height / state.destinationSize.height
+//                                    let fromScaleX: CGFloat = 1.0
+//                                    let fromScaleY: CGFloat = 1.0
+//                                    let scaleX = toScaleX.interpolate(to: fromScaleX, amount: state.progress)
+//                                    let scaleY = toScaleY.interpolate(to: fromScaleY, amount: state.progress)
+//                                    transition.setTransform(view: view, transform: CATransform3DMakeScale(scaleX, scaleY, 1.0))
                                 },
                                 insertCloneTransitionView: { view in
                                     params.addToTransitionSurface(view)

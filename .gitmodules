@@ -32,3 +32,30 @@ url=../tgcalls.git
 [submodule "build-system/bazel-rules/rules_xcodeproj"]
 	path = build-system/bazel-rules/rules_xcodeproj
 	url = https://github.com/MobileNativeFoundation/rules_xcodeproj.git
+[submodule "VEGA/SimpleKeychain"]
+	path = VEGA/SimpleKeychain
+	url = org-2824157@github.com:auth0/SimpleKeychain.git
+[submodule "VEGA/lyra-ios-core-utilities"]
+	path = VEGA/lyra-ios-core-utilities
+	url = git@github.com:vg-engineering/lyra-ios-core-utilities.git
+[submodule "VEGA/lyra-ios-core-theme"]
+	path = VEGA/lyra-ios-core-theme
+	url = git@github.com:vg-engineering/lyra-ios-core-theme.git
+[submodule "VEGA/lyra-ios-core-ui"]
+	path = VEGA/lyra-ios-core-ui
+	url = git@github.com:vg-engineering/lyra-ios-core-ui.git
+[submodule "VEGA/vg-ios-octo"]
+	path = VEGA/vg-ios-octo
+	url = git@github.com:vg-engineering/vg-ios-octo.git
+[submodule "VEGA/lyra-ios-data"]
+	path = VEGA/lyra-ios-data
+	url = git@github.com:vg-engineering/lyra-ios-data.git
+[submodule "VEGA/Auth0.swift"]
+	path = VEGA/Auth0.swift
+	url = org-2824157@github.com:auth0/Auth0.swift.git
+[submodule "VEGA/JWTDecode.swift"]
+	path = VEGA/JWTDecode.swift
+	url = org-2824157@github.com:auth0/JWTDecode.swift.git
+[submodule "VEGA/lyra-ios-profile"]
+	path = VEGA/lyra-ios-profile
+	url = git@github.com:vg-engineering/lyra-ios-profile.git

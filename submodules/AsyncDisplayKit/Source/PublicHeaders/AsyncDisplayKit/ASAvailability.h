@@ -76,10 +76,10 @@
 #endif
 
 #define AS_PIN_REMOTE_IMAGE __has_include(<PINRemoteImage/PINRemoteImage.h>)
-#define AS_IG_LIST_KIT __has_include(<IGListKit/IGListKit.h>)
+#define AS_IG_LIST_KIT __has_include("IGListKit.h")
 
 /**
  * For IGListKit versions < 3.0, you have to use IGListCollectionView.
  * For 3.0 and later, that class is removed and you use UICollectionView.
  */
-#define IG_LIST_COLLECTION_VIEW __has_include(<IGListKit/IGListCollectionView.h>)
+#define IG_LIST_COLLECTION_VIEW __has_include(<IGListCollectionView.h>)
