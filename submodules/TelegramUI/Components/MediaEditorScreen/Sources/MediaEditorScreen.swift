@@ -2372,6 +2372,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if let initialVideoPosition = controller.initialVideoPosition {
                 mediaEditor.seek(initialVideoPosition, andPlay: true)
             }
+            if case .message = subject, self.context.sharedContext.currentPresentationData.with({$0}).autoNightModeTriggered {
+                mediaEditor.setNightTheme(true)
+            }
             mediaEditor.attachPreviewView(self.previewView)
             mediaEditor.valuesUpdated = { [weak self] values in
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
@@ -2468,7 +2471,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             let fraction = max(size.width, size.height) / 353.0
                             messageEntity.scale = min(6.0, 3.3 * fraction)
                             
-                            self.entitiesView.add(messageEntity, announce: false)
+                            if let entityView = self.entitiesView.add(messageEntity, announce: false) as? DrawingStickerEntityView {
+                                if isNightTheme {
+                                    entityView.isNightTheme = true
+                                }
+                            }
                         }
                         
                         self.readyValue.set(.single(true))

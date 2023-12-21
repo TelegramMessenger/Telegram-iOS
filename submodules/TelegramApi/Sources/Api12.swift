@@ -683,7 +683,7 @@ public extension Api {
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
         case messageActionPinMessage
-        case messageActionRequestedPeer(buttonId: Int32, peer: Api.Peer)
+        case messageActionRequestedPeer(buttonId: Int32, peers: [Api.Peer])
         case messageActionScreenshotTaken
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
@@ -920,12 +920,16 @@ public extension Api {
                     }
                     
                     break
-                case .messageActionRequestedPeer(let buttonId, let peer):
+                case .messageActionRequestedPeer(let buttonId, let peers):
                     if boxed {
-                        buffer.appendInt32(-25742243)
+                        buffer.appendInt32(827428507)
                     }
                     serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peers.count))
+                    for item in peers {
+                        item.serialize(buffer, true)
+                    }
                     break
                 case .messageActionScreenshotTaken:
                     if boxed {
@@ -1076,8 +1080,8 @@ public extension Api {
                 return ("messageActionPhoneCall", [("flags", flags as Any), ("callId", callId as Any), ("reason", reason as Any), ("duration", duration as Any)])
                 case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
-                case .messageActionRequestedPeer(let buttonId, let peer):
-                return ("messageActionRequestedPeer", [("buttonId", buttonId as Any), ("peer", peer as Any)])
+                case .messageActionRequestedPeer(let buttonId, let peers):
+                return ("messageActionRequestedPeer", [("buttonId", buttonId as Any), ("peers", peers as Any)])
                 case .messageActionScreenshotTaken:
                 return ("messageActionScreenshotTaken", [])
                 case .messageActionSecureValuesSent(let types):
@@ -1505,14 +1509,14 @@ public extension Api {
         public static func parse_messageActionRequestedPeer(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            var _2: [Api.Peer]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.MessageAction.messageActionRequestedPeer(buttonId: _1!, peer: _2!)
+                return Api.MessageAction.messageActionRequestedPeer(buttonId: _1!, peers: _2!)
             }
             else {
                 return nil

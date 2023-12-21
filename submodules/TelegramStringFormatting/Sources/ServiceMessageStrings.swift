@@ -886,10 +886,19 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .attachMenuBotAllowed:
                 attributedString = NSAttributedString(string: strings.Notification_BotWriteAllowed, font: titleFont, textColor: primaryTextColor)
-            case let .requestedPeer(_, peerId):
+            case let .requestedPeer(_, peerIds):
                 let botName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
-                let peerName = message.peers[peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
-                attributedString = addAttributesToStringWithRanges(strings.Notification_RequestedPeer(peerName, botName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId), (1, message.id.peerId)]))
+                var attributePeerIds: [(Int, EnginePeer.Id?)] = []
+                let resultTitleString: PresentationStrings.FormattedString
+                if peerIds.count == 1 {
+                    attributePeerIds.append((0, peerIds.first))
+                    attributePeerIds.append((1, message.id.peerId))
+                    resultTitleString = strings.Notification_RequestedPeer(peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
+                } else {
+                    attributePeerIds.append((1, message.id.peerId))
+                    resultTitleString = strings.Notification_RequestedPeerMultiple(peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
+                }
+                attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case let .setChatWallpaper(_, forBoth):
                 if message.author?.id == accountPeerId {
                     if forBoth {

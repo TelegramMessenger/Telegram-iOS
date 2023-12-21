@@ -4174,23 +4174,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             }
-        }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId in
+        }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {
                 return
             }
             let botName = self.presentationInterfaceState.renderedPeer?.peer.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
             let context = self.context
             let peerId = self.chatLocation.peerId
-            var createNewGroupImpl: (() -> Void)?
-            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: [peerType], hasContactSelector: false, createNewGroup: {
-                createNewGroupImpl?()
-            }, hasCreation: true))
             
             let presentConfirmation: (String, Bool, @escaping () -> Void) -> Void = { [weak self] peerName, isChannel, completion in
                 guard let strongSelf = self else {
                     return
                 }
-
+                
                 var attributedTitle: NSAttributedString?
                 let attributedText: NSAttributedString
                 
@@ -4240,62 +4236,109 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-                               
+                
                 let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.RequestPeer_SelectionConfirmationSend, action: {
-                    
                     completion()
                 })])
                 strongSelf.present(controller, in: .window(.root))
             }
             
-            controller.peerSelected = { [weak self, weak controller] peer, _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                if case .user = peerType {
-                    let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).startStandalone()
-                    controller?.dismiss()
-                } else {
-                    var isChannel = false
-                    if case let .channel(channel) = peer, case .broadcast = channel.info {
-                        isChannel = true
+            if case .user = peerType, maxQuantity > 1 {
+                let presentationData = self.presentationData
+                var reachedLimitImpl: ((Int32) -> Void)?
+                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .requestedUsersSelection, options: [], isPeerEnabled: { peer in
+                    if case let .user(user) = peer, user.botInfo == nil {
+                        return true
+                    } else {
+                        return false
                     }
-                    let peerName = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-                    presentConfirmation(peerName, isChannel, {
-                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peer.id).startStandalone()
+                }, limit: maxQuantity, reachedLimit: { limit in
+                    reachedLimitImpl?(limit)
+                }))
+                controller.navigationPresentation = .modal
+                reachedLimitImpl = { [weak controller] limit in
+                    guard let controller else {
+                        return
+                    }
+                    HapticFeedback().error()
+                    controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.RequestPeer_ReachedMaximum(limit), timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                }
+                
+                let _ = (controller.result
+                |> deliverOnMainQueue).startStandalone(next: { [weak controller] result in
+                    guard let controller else {
+                        return
+                    }
+                    var peerIds: [PeerId] = []
+                    if case let .result(peerIdsValue, _) = result {
+                        peerIds = peerIdsValue.compactMap({ peerId in
+                            if case let .peer(peerId) = peerId {
+                                return peerId
+                            } else {
+                                return nil
+                            }
+                        })
+                    }
+                    let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerIds: peerIds).startStandalone()
+                    controller.dismiss()
+                })
+                
+                self.push(controller)
+            } else {
+                var createNewGroupImpl: (() -> Void)?
+                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: [peerType], hasContactSelector: false, createNewGroup: {
+                    createNewGroupImpl?()
+                }, hasCreation: true))
+                   
+                controller.peerSelected = { [weak self, weak controller] peer, _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if case .user = peerType {
+                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerIds: [peer.id]).startStandalone()
                         controller?.dismiss()
-                    })
-                }
-            }
-            createNewGroupImpl = { [weak controller] in
-                switch peerType {
-                case .user:
-                    break
-                case let .group(group):
-                    let createGroupController = createGroupControllerImpl(context: context, peerIds: group.botParticipant || group.botAdminRights != nil ? (peerId.flatMap { [$0] } ?? []) : [], mode: .requestPeer(group), willComplete: { peerName, complete in
-                        presentConfirmation(peerName, false, {
-                            complete()
+                    } else {
+                        var isChannel = false
+                        if case let .channel(channel) = peer, case .broadcast = channel.info {
+                            isChannel = true
+                        }
+                        let peerName = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                        presentConfirmation(peerName, isChannel, {
+                            let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerIds: [peer.id]).startStandalone()
+                            controller?.dismiss()
                         })
-                    }, completion: { peerId, dismiss in
-                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peerId).startStandalone()
-                        dismiss()
-                    })
-                    createGroupController.navigationPresentation = .modal
-                    controller?.replace(with: createGroupController)
-                case let .channel(channel):
-                    let createChannelController = createChannelController(context: context, mode: .requestPeer(channel), willComplete: { peerName, complete in
-                        presentConfirmation(peerName, true, {
-                            complete()
-                        })
-                    }, completion: { peerId, dismiss in
-                        let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerId: peerId).startStandalone()
-                        dismiss()
-                    })
-                    createChannelController.navigationPresentation = .modal
-                    controller?.replace(with: createChannelController)
+                    }
                 }
+                createNewGroupImpl = { [weak controller] in
+                    switch peerType {
+                    case .user:
+                        break
+                    case let .group(group):
+                        let createGroupController = createGroupControllerImpl(context: context, peerIds: group.botParticipant || group.botAdminRights != nil ? (peerId.flatMap { [$0] } ?? []) : [], mode: .requestPeer(group), willComplete: { peerName, complete in
+                            presentConfirmation(peerName, false, {
+                                complete()
+                            })
+                        }, completion: { peerId, dismiss in
+                            let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerIds: [peerId]).startStandalone()
+                            dismiss()
+                        })
+                        createGroupController.navigationPresentation = .modal
+                        controller?.replace(with: createGroupController)
+                    case let .channel(channel):
+                        let createChannelController = createChannelController(context: context, mode: .requestPeer(channel), willComplete: { peerName, complete in
+                            presentConfirmation(peerName, true, {
+                                complete()
+                            })
+                        }, completion: { peerId, dismiss in
+                            let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerIds: [peerId]).startStandalone()
+                            dismiss()
+                        })
+                        createChannelController.navigationPresentation = .modal
+                        controller?.replace(with: createChannelController)
+                    }
+                }
+                self.push(controller)
             }
-            self.push(controller)
         }, saveMediaToFiles: { [weak self] messageId in
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
             |> deliverOnMainQueue).startStandalone(next: { message in

@@ -235,17 +235,17 @@ public enum SendBotRequestedPeerError {
     case generic
 }
 
-func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId: MessageId, buttonId: Int32, requestedPeerId: PeerId) -> Signal<Void, SendBotRequestedPeerError> {
-    let signal = account.postbox.transaction { transaction -> Signal<Void, SendBotRequestedPeerError> in
-        
-        
-        if let peer = transaction.getPeer(peerId), let requestedPeer = transaction.getPeer(requestedPeerId) {
-            
-            let inputPeer = apiInputPeer(peer)
-            let inputRequestedPeer = apiInputPeer(requestedPeer)
-
-            if let inputPeer = inputPeer, let inputRequestedPeer = inputRequestedPeer {
-                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(peer: inputPeer, msgId: messageId.id, buttonId: buttonId, requestedPeer: inputRequestedPeer))
+func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId: MessageId, buttonId: Int32, requestedPeerIds: [PeerId]) -> Signal<Void, SendBotRequestedPeerError> {
+    return account.postbox.transaction { transaction -> Signal<Void, SendBotRequestedPeerError> in
+        if let peer = transaction.getPeer(peerId) {
+            var inputRequestedPeers: [Api.InputPeer] = []
+            for requestedPeerId in requestedPeerIds {
+                if let requestedPeer = transaction.getPeer(requestedPeerId), let inputRequestedPeer = apiInputPeer(requestedPeer) {
+                    inputRequestedPeers.append(inputRequestedPeer)
+                }
+            }
+            if let inputPeer = apiInputPeer(peer), !inputRequestedPeers.isEmpty {
+                let signal = account.network.request(Api.functions.messages.sendBotRequestedPeer(peer: inputPeer, msgId: messageId.id, buttonId: buttonId, requestedPeers: inputRequestedPeers))
                 |> mapError { error -> SendBotRequestedPeerError in
                     return .generic
                 }
@@ -254,12 +254,9 @@ func _internal_sendBotRequestedPeer(account: Account, peerId: PeerId, messageId:
                 }
                 return signal
             }
-            
         }
         return .single(Void())
     }
     |> castError(SendBotRequestedPeerError.self)
-    
-    return signal
     |> switchToLatest
 }

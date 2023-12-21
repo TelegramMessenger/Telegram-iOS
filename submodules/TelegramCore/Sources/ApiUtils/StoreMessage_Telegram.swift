@@ -242,8 +242,8 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     for id in userIds {
                         result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)))
                     }
-                case let .messageActionRequestedPeer(_, peer):
-                    result.append(peer.peerId)
+                case let .messageActionRequestedPeer(_, peers):
+                    result.append(contentsOf: peers.map(\.peerId))
                 case let .messageActionGiftCode(_, boostPeer, _, _, _, _, _, _):
                     if let boostPeer = boostPeer {
                         result.append(boostPeer.peerId)

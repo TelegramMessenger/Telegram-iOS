@@ -329,6 +329,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func getChannelDefaultEmojiStatuses(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1999087573)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getChannelDefaultEmojiStatuses", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.EmojiStatuses? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.EmojiStatuses?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.EmojiStatuses
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func getChannelRestrictedStatusEmojis(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.EmojiList>) {
                     let buffer = Buffer()
                     buffer.appendInt32(900325589)
@@ -6750,14 +6765,18 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendBotRequestedPeer(peer: Api.InputPeer, msgId: Int32, buttonId: Int32, requestedPeer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendBotRequestedPeer(peer: Api.InputPeer, msgId: Int32, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-29831141)
+                    buffer.appendInt32(-1850552224)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     serializeInt32(buttonId, buffer: buffer, boxed: false)
-                    requestedPeer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.sendBotRequestedPeer", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("requestedPeer", String(describing: requestedPeer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(requestedPeers.count))
+                    for item in requestedPeers {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "messages.sendBotRequestedPeer", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("buttonId", String(describing: buttonId)), ("requestedPeers", String(describing: requestedPeers))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

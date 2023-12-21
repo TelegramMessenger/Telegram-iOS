@@ -108,6 +108,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
                 proceedImpl?()
             })
+        case .requestedUsersSelection:
+            placeholder = self.presentationData.strings.RequestPeer_SelectUsers_SearchPlaceholder
+            self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
+                proceedImpl?()
+            })
         default:
             placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
             self.footerPanelNode = nil
@@ -148,6 +153,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         } else {
             var displayTopPeers = false
             if case .premiumGifting = mode {
+                displayTopPeers = true
+            } else if case .requestedUsersSelection = mode {
                 displayTopPeers = true
             }
             self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
@@ -233,7 +240,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchGroups = true
                             searchChannels = true
                             globalSearch = false
-                        case .premiumGifting:
+                        case .premiumGifting, .requestedUsersSelection:
                             searchChatList = true
                         }
                         let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
