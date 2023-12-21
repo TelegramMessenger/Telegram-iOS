@@ -183,4 +183,4 @@ class BuildEnvironment:
         self.app_version = versions.app_version
         self.xcode_version = versions.xcode_version
         self.bazel_version = versions.bazel_version
-        self.macos_version = versions.macos
+        self.macos_version = versions.macos_version
