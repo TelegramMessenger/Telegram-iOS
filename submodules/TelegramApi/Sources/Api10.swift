@@ -325,6 +325,7 @@ public extension Api {
         case inputStickerSetAnimatedEmoji
         case inputStickerSetAnimatedEmojiAnimations
         case inputStickerSetDice(emoticon: String)
+        case inputStickerSetEmojiChannelDefaultStatuses
         case inputStickerSetEmojiDefaultStatuses
         case inputStickerSetEmojiDefaultTopicIcons
         case inputStickerSetEmojiGenericAnimations
@@ -352,6 +353,12 @@ public extension Api {
                         buffer.appendInt32(-427863538)
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
+                    break
+                case .inputStickerSetEmojiChannelDefaultStatuses:
+                    if boxed {
+                        buffer.appendInt32(1232373075)
+                    }
+                    
                     break
                 case .inputStickerSetEmojiDefaultStatuses:
                     if boxed {
@@ -407,6 +414,8 @@ public extension Api {
                 return ("inputStickerSetAnimatedEmojiAnimations", [])
                 case .inputStickerSetDice(let emoticon):
                 return ("inputStickerSetDice", [("emoticon", emoticon as Any)])
+                case .inputStickerSetEmojiChannelDefaultStatuses:
+                return ("inputStickerSetEmojiChannelDefaultStatuses", [])
                 case .inputStickerSetEmojiDefaultStatuses:
                 return ("inputStickerSetEmojiDefaultStatuses", [])
                 case .inputStickerSetEmojiDefaultTopicIcons:
@@ -440,6 +449,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_inputStickerSetEmojiChannelDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiChannelDefaultStatuses
         }
         public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses

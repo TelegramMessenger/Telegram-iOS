@@ -119,7 +119,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case topicEdited(components: [ForumTopicEditComponent])
     case suggestedProfilePhoto(image: TelegramMediaImage?)
     case attachMenuBotAllowed
-    case requestedPeer(buttonId: Int32, peerId: PeerId)
+    case requestedPeer(buttonId: Int32, peerIds: [PeerId])
     case setChatWallpaper(wallpaper: TelegramWallpaper, forBoth: Bool)
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
     case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32, currency: String?, amount: Int64?, cryptoCurrency: String?, cryptoAmount: Int64?)
@@ -205,7 +205,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 31:
             self = .attachMenuBotAllowed
         case 32:
-            self = .requestedPeer(buttonId: decoder.decodeInt32ForKey("b", orElse: 0), peerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)))
+            var peerIds = decoder.decodeInt64ArrayForKey("pis").map { PeerId($0) }
+            if peerIds.isEmpty {
+                peerIds = [PeerId(decoder.decodeInt64ForKey("pi", orElse: 0))]
+            }
+            self = .requestedPeer(buttonId: decoder.decodeInt32ForKey("b", orElse: 0), peerIds: peerIds)
         case 33:
             if let wallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value {
                 self = .setChatWallpaper(wallpaper: wallpaper, forBoth: decoder.decodeBoolForKey("both", orElse: false))
@@ -385,10 +389,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
         case .attachMenuBotAllowed:
             encoder.encodeInt32(31, forKey: "_rawValue")
-        case let .requestedPeer(buttonId, peerId):
+        case let .requestedPeer(buttonId, peerIds):
             encoder.encodeInt32(32, forKey: "_rawValue")
             encoder.encodeInt32(buttonId, forKey: "b")
-            encoder.encodeInt64(peerId.toInt64(), forKey: "pi")
+            encoder.encodeInt64Array(peerIds.map { $0.toInt64() }, forKey: "pis")
         case let .setChatWallpaper(wallpaper, forBoth):
             encoder.encodeInt32(33, forKey: "_rawValue")
             encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
@@ -466,8 +470,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return [from, to]
         case let .inviteToGroupPhoneCall(_, _, peerIds):
             return peerIds
-        case let .requestedPeer(_, peerId):
-            return [peerId]
+        case let .requestedPeer(_, peerIds):
+            return peerIds
         case let .giftCode(_, _, _, boostPeerId, _, _, _, _, _):
             return boostPeerId.flatMap { [$0] } ?? []
         default:

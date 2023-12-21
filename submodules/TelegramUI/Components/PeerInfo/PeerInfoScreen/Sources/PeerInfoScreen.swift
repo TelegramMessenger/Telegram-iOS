@@ -2996,7 +2996,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _ in
-        }, openRequestedPeerSelection: { _, _, _ in
+        }, openRequestedPeerSelection: { _, _, _, _ in
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {
         }, displayGiveawayParticipationStatus: { _ in

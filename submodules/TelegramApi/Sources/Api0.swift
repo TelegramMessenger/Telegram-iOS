@@ -404,6 +404,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[42402760] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmoji($0) }
     dict[215889721] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmojiAnimations($0) }
     dict[-427863538] = { return Api.InputStickerSet.parse_inputStickerSetDice($0) }
+    dict[1232373075] = { return Api.InputStickerSet.parse_inputStickerSetEmojiChannelDefaultStatuses($0) }
     dict[701560302] = { return Api.InputStickerSet.parse_inputStickerSetEmojiDefaultStatuses($0) }
     dict[1153562857] = { return Api.InputStickerSet.parse_inputStickerSetEmojiDefaultTopicIcons($0) }
     dict[80008398] = { return Api.InputStickerSet.parse_inputStickerSetEmojiGenericAnimations($0) }
@@ -447,7 +448,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[901503851] = { return Api.KeyboardButton.parse_keyboardButtonCallback($0) }
     dict[1358175439] = { return Api.KeyboardButton.parse_keyboardButtonGame($0) }
     dict[-59151553] = { return Api.KeyboardButton.parse_keyboardButtonRequestGeoLocation($0) }
-    dict[218842764] = { return Api.KeyboardButton.parse_keyboardButtonRequestPeer($0) }
+    dict[1406648280] = { return Api.KeyboardButton.parse_keyboardButtonRequestPeer($0) }
     dict[-1318425559] = { return Api.KeyboardButton.parse_keyboardButtonRequestPhone($0) }
     dict[-1144565411] = { return Api.KeyboardButton.parse_keyboardButtonRequestPoll($0) }
     dict[-1598009252] = { return Api.KeyboardButton.parse_keyboardButtonSimpleWebView($0) }
@@ -503,7 +504,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1892568281] = { return Api.MessageAction.parse_messageActionPaymentSentMe($0) }
     dict[-2132731265] = { return Api.MessageAction.parse_messageActionPhoneCall($0) }
     dict[-1799538451] = { return Api.MessageAction.parse_messageActionPinMessage($0) }
-    dict[-25742243] = { return Api.MessageAction.parse_messageActionRequestedPeer($0) }
+    dict[827428507] = { return Api.MessageAction.parse_messageActionRequestedPeer($0) }
     dict[1200788123] = { return Api.MessageAction.parse_messageActionScreenshotTaken($0) }
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
@@ -1262,7 +1263,7 @@ public extension Api {
                 return parser(reader)
             }
             else {
-                telegramApiLog("Type constructor \(String(UInt32(bitPattern: signature), radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }

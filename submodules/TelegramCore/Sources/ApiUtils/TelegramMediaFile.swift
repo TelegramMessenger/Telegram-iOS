@@ -70,6 +70,8 @@ extension StickerPackReference {
             self = .iconStatusEmoji
         case .inputStickerSetEmojiDefaultTopicIcons:
             self = .iconTopicEmoji
+        case .inputStickerSetEmojiChannelDefaultStatuses:
+            return nil
         }
     }
 }

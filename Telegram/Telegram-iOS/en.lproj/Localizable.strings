@@ -8719,6 +8719,7 @@ Sorry for the inconvenience.";
 "CreateGroup.PublicLinkInfo" = "You can use **a-z**, **0-9** and underscores. Minimum length is **5** characters.";
 
 "Notification.RequestedPeer" = "You shared %1$@ with %2$@.";
+"Notification.RequestedPeerMultiple" = "You shared %1$@ with %2$@.";
 
 "Conversation.ViewInChannel" = "View in Channel";
 
@@ -10829,3 +10830,8 @@ Sorry for the inconvenience.";
 
 "Channel.Info.BoostLevelPlusBadge" = "Level %@+";
 "Channel.Info.AppearanceItem" = "Appearance";
+
+"RequestPeer.SelectUsers" = "Choose Users";
+"RequestPeer.SelectUsers.SearchPlaceholder" = "Search";
+"RequestPeer.ReachedMaximum_1" = "You can select up to %@ user.";
+"RequestPeer.ReachedMaximum_any" = "You can select up to %@ users.";

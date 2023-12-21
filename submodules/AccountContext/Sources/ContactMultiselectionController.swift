@@ -70,6 +70,7 @@ public enum ContactMultiselectionControllerMode {
     case channelCreation
     case chatSelection(ChatSelection)
     case premiumGifting
+    case requestedUsersSelection
 }
 
 public enum ContactListFilter {
