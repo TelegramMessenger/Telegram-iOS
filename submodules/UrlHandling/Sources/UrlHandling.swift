@@ -719,7 +719,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                                         return .progress
                                                     case let .result(info):
                                                         if let _ = info {
-                                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
                                                         } else {
                                                             return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                                         }
@@ -744,7 +744,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                             return .progress
                                         case let .result(info):
                                             if let _ = info {
-                                                return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: replyThreadMessageId.id)), threadId: Int64(replyThreadMessageId.id), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId)))
+                                                return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: Int64(replyThreadMessageId.id), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId)))
                                             } else {
                                                 return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                             }
@@ -760,7 +760,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         guard let result = result else {
                                             return .result(.channelMessage(peer: peer._asPeer(), messageId: replyThreadMessageId, timecode: nil))
                                         }
-                                        return .result(.replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId)))
+                                        return .result(.replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.peerId, namespace: Namespaces.Message.Cloud, id: replyId)))
                                     })
                                 }
                             case let .voiceChat(invite):
@@ -825,7 +825,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         return .progress
                                     case let .result(info):
                                         if let _ = info {
-                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: Int64(threadId), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: Int64(threadId), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
                                         } else {
                                             return .result(.peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                         }
@@ -849,7 +849,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                                     return .progress
                                                 case let .result(info):
                                                     if let _ = info {
-                                                        return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                                        return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(peerId: channel.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
                                                     } else {
                                                         return .result(.peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                                                     }

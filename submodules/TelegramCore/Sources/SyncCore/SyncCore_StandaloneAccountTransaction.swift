@@ -190,6 +190,13 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 }
             }
             return false
+        },
+        automaticThreadIndexInfo: { peerId, _ in
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                return StoredMessageHistoryThreadInfo(data: CodableEntry(data: Data()), summary: StoredMessageHistoryThreadInfo.Summary(totalUnreadCount: 0, mutedUntil: nil))
+            } else {
+                return nil
+            }
         }
     )
 }()

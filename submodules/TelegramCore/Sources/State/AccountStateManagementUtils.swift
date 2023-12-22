@@ -1444,7 +1444,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateChannelUserTyping(_, channelId, topMsgId, userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
                     let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
-                    let threadId = topMsgId.flatMap { makeMessageThreadId(MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: $0)) }
+                    let threadId = topMsgId.flatMap { Int64($0) }
                     
                     let activity = PeerInputActivity(apiType: type, peerId: nil, timestamp: date)
                     var category: PeerActivitySpace.Category = .global
@@ -3480,16 +3480,16 @@ func replayFinalState(
         var removedCount: Int = 0
         var peers: [ReplyThreadUserMessage] = []
     }
-    var messageThreadStatsDifferences: [MessageId: MessageThreadStatsRecord] = [:]
-    func addMessageThreadStatsDifference(threadMessageId: MessageId, remove: Int, addedMessagePeer: PeerId?, addedMessageId: MessageId?, isOutgoing: Bool) {
-        if let value = messageThreadStatsDifferences[threadMessageId] {
+    var messageThreadStatsDifferences: [MessageThreadKey: MessageThreadStatsRecord] = [:]
+    func addMessageThreadStatsDifference(threadKey: MessageThreadKey, remove: Int, addedMessagePeer: PeerId?, addedMessageId: MessageId?, isOutgoing: Bool) {
+        if let value = messageThreadStatsDifferences[threadKey] {
             value.removedCount += remove
             if let addedMessagePeer = addedMessagePeer, let addedMessageId = addedMessageId {
                 value.peers.append(ReplyThreadUserMessage(id: addedMessagePeer, messageId: addedMessageId, isOutgoing: isOutgoing))
             }
         } else {
             let value = MessageThreadStatsRecord()
-            messageThreadStatsDifferences[threadMessageId] = value
+            messageThreadStatsDifferences[threadKey] = value
             value.removedCount = remove
             if let addedMessagePeer = addedMessagePeer, let addedMessageId = addedMessageId {
                 value.peers.append(ReplyThreadUserMessage(id: addedMessagePeer, messageId: addedMessageId, isOutgoing: isOutgoing))
@@ -3540,10 +3540,9 @@ func replayFinalState(
                                     }
                                 }
                                 
-                                let messageThreadId = makeThreadIdMessageId(peerId: message.id.peerId, threadId: threadId)
                                 if id.peerId.namespace == Namespaces.Peer.CloudChannel {
                                     if !transaction.messageExists(id: id) {
-                                        addMessageThreadStatsDifference(threadMessageId: messageThreadId, remove: 0, addedMessagePeer: message.authorId, addedMessageId: id, isOutgoing: !message.flags.contains(.Incoming))
+                                        addMessageThreadStatsDifference(threadKey: MessageThreadKey(peerId: message.id.peerId, threadId: threadId), remove: 0, addedMessagePeer: message.authorId, addedMessageId: id, isOutgoing: !message.flags.contains(.Incoming))
                                     }
                                 }
                                 
@@ -3736,7 +3735,7 @@ func replayFinalState(
                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
                 _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
-                    addMessageThreadStatsDifference(threadMessageId: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
+                    addMessageThreadStatsDifference(threadKey: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
                 })
                 deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
             case let .UpdateMinAvailableMessage(id):
@@ -4784,8 +4783,8 @@ func replayFinalState(
 //        }
 //    }
     
-    for (threadMessageId, difference) in messageThreadStatsDifferences {
-        updateMessageThreadStats(transaction: transaction, threadMessageId: threadMessageId, removedCount: difference.removedCount, addedMessagePeers: difference.peers)
+    for (threadKey, difference) in messageThreadStatsDifferences {
+        updateMessageThreadStats(transaction: transaction, threadKey: threadKey, removedCount: difference.removedCount, addedMessagePeers: difference.peers)
     }
     
     if !peerActivityTimestamps.isEmpty {

@@ -35,7 +35,7 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                 case let .peer(peerId):
                     return .peer(peerId)
                 case let .replyThread(replyThreaMessage):
-                    return .peer(replyThreaMessage.messageId.peerId)
+                    return .peer(replyThreaMessage.peerId)
                 case let .feed(id):
                     return .feed(id)
                 }

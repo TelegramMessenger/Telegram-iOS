@@ -268,7 +268,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                                     return true
                                 }
                             case let .replyThread(replyThreadMessage):
-                                if message.id.peerId == replyThreadMessage.messageId.peerId {
+                                if message.id.peerId == replyThreadMessage.peerId {
                                     return true
                                 }
                             }

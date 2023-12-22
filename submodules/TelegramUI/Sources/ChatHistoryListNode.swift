@@ -383,7 +383,7 @@ private func extractAssociatedData(
             }
         }
     } else if case let .replyThread(message) = chatLocation, message.isForumPost {
-        automaticDownloadPeerId = message.messageId.peerId
+        automaticDownloadPeerId = message.peerId
     }
     
     return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes)
@@ -1145,11 +1145,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             additionalData.append(.totalUnreadState)
         }
         if case let .replyThread(replyThreadMessage) = self.chatLocation {
-            additionalData.append(.cachedPeerData(replyThreadMessage.messageId.peerId))
-            additionalData.append(.peerNotificationSettings(replyThreadMessage.messageId.peerId))
-            if replyThreadMessage.messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
-                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: replyThreadMessage.messageId.peerId)))
-                additionalData.append(.peer(replyThreadMessage.messageId.peerId))
+            additionalData.append(.cachedPeerData(replyThreadMessage.peerId))
+            additionalData.append(.peerNotificationSettings(replyThreadMessage.peerId))
+            if replyThreadMessage.peerId.namespace == Namespaces.Peer.CloudChannel {
+                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: replyThreadMessage.peerId)))
+                additionalData.append(.peer(replyThreadMessage.peerId))
             }
             
             additionalData.append(.message(replyThreadMessage.effectiveTopId))

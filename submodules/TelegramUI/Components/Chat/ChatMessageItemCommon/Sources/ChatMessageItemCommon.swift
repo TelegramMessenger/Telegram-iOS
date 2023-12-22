@@ -234,7 +234,7 @@ public func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -
 
 public extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
-        return self.channelMessageId ?? self.messageId
+        return self.channelMessageId ?? MessageId(peerId: self.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: self.threadId))
     }
 }
 

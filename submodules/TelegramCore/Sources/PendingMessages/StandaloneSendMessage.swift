@@ -320,7 +320,7 @@ private func sendUploadedMessageContent(
             var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
             var messageEntities: [Api.MessageEntity]?
             var replyMessageId: Int32? = threadId.flatMap { threadId in
-                makeThreadIdMessageId(peerId: peerId, threadId: threadId).id
+                return Int32(clamping: threadId)
             }
             var replyToStoryId: StoryId?
             var scheduleTime: Int32?
