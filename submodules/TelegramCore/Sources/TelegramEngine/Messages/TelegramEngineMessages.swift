@@ -110,6 +110,14 @@ public extension TelegramEngine {
         }
 
         public func deleteMessagesInteractively(messageIds: [MessageId], type: InteractiveMessagesDeletionType, deleteAllInGroup: Bool = false) -> Signal<Void, NoError> {
+            self.account.stateManager.messagesRemovedContext.addIsMessagesDeletedInteractively(ids: messageIds.map { id -> DeletedMessageId in
+                if id.namespace == Namespaces.Message.Cloud && (id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup) {
+                    return .global(id.id)
+                } else {
+                    return .messageId(id)
+                }
+            })
+            
             return _internal_deleteMessagesInteractively(account: self.account, messageIds: messageIds, type: type, deleteAllInGroup: deleteAllInGroup)
         }
 
@@ -1277,6 +1285,10 @@ public extension TelegramEngine {
         
         public func getStory(peerId: EnginePeer.Id, id: Int32) -> Signal<EngineStoryItem?, NoError> {
             return _internal_getStoryById(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId, id: id)
+        }
+        
+        public func synchronouslyIsMessageDeletedInteractively(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
+            return account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
         }
     }
 }

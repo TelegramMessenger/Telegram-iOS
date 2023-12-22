@@ -680,7 +680,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var toLang: String?
     
     private var allowDustEffect: Bool = true
-    private var allowDustEffectForAllMessages: Bool = true
     private var dustEffectLayer: DustEffectLayer?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
@@ -706,8 +705,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 self.allowDustEffect = false
             }
         }
-        
-        self.allowDustEffectForAllMessages = context.sharedContext.immediateExperimentalUISettings.dustEffect
         
         let presentationData = updatedPresentationData.initial
         self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
@@ -3003,6 +3000,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
             }
             let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent())
+            var maybeRemovedInteractivelyMessageIds: [(UInt32, EngineMessage.Id)] = []
             for entry in previousHistoryView.filteredEntries {
                 switch entry {
                 case let .MessageEntry(message, _, _, _, _, _):
@@ -3013,9 +3011,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 expiredMessageStableIds.insert(message.stableId)
                             }
                         } else {
-                            if self.allowDustEffectForAllMessages {
-                                expiredMessageStableIds.insert(message.stableId)
-                            }
+                            maybeRemovedInteractivelyMessageIds.append((message.stableId, message.id))
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
@@ -3033,13 +3029,26 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 expiredMessageStableIds.insert(message.stableId)
                             }
                         } else {
-                            if self.allowDustEffectForAllMessages {
-                                expiredMessageStableIds.insert(message.stableId)
-                            }
+                            maybeRemovedInteractivelyMessageIds.append((message.stableId, message.id))
                         }
                     }
                 default:
                     break
+                }
+            }
+            
+            var testIds: [MessageId] = []
+            if !maybeRemovedInteractivelyMessageIds.isEmpty {
+                for (_, id) in maybeRemovedInteractivelyMessageIds {
+                    testIds.append(id)
+                }
+            }
+            for id in self.context.engine.messages.synchronouslyIsMessageDeletedInteractively(ids: testIds) {
+                inner: for (stableId, listId) in maybeRemovedInteractivelyMessageIds {
+                    if listId == id {
+                        expiredMessageStableIds.insert(stableId)
+                        break inner
+                    }
                 }
             }
         }
