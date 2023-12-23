@@ -573,7 +573,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         var quote = replyToMessageId.quote
                         let isQuote = quote != nil
                         if let replyMessage = transaction.getMessage(replyToMessageId.messageId) {
-                            threadMessageId = replyMessage.effectiveReplyThreadMessageId
+                            if replyMessage.id.namespace == Namespaces.Message.Cloud, let threadId = replyMessage.threadId {
+                                threadMessageId = MessageId(peerId: replyMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))
+                            }
                             if quote == nil, replyToMessageId.messageId.peerId != peerId {
                                 let nsText = replyMessage.text as NSString
                                 var replyMedia: Media?
@@ -712,14 +714,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                             threadId = threadIdValue
                                         } else {
                                             if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                                                threadId = makeMessageThreadId(replyToMessageId.messageId)
+                                                threadId = Int64(replyToMessageId.messageId.id)
                                             }
                                         }
                                     } else {
                                         threadId = threadIdValue
                                     }
                                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                                    threadId = makeMessageThreadId(replyToMessageId.messageId)
+                                    threadId = Int64(replyToMessageId.messageId.id)
                                 }
                             }
                         }
@@ -902,7 +904,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                             } else if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadMessageId = attribute.threadMessageId {
-                                    threadId = makeMessageThreadId(threadMessageId)
+                                    threadId = Int64(threadMessageId.id)
                                 }
                             } else if let attribute = attribute as? SendAsMessageAttribute {
                                 if let peer = transaction.getPeer(attribute.peerId) {

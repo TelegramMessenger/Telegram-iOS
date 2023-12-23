@@ -1,4 +1,62 @@
 public extension Api.messages {
+    enum SavedGifs: TypeConstructorDescription {
+        case savedGifs(hash: Int64, gifs: [Api.Document])
+        case savedGifsNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .savedGifs(let hash, let gifs):
+                    if boxed {
+                        buffer.appendInt32(-2069878259)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(gifs.count))
+                    for item in gifs {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .savedGifsNotModified:
+                    if boxed {
+                        buffer.appendInt32(-402498398)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedGifs(let hash, let gifs):
+                return ("savedGifs", [("hash", hash as Any), ("gifs", gifs as Any)])
+                case .savedGifsNotModified:
+                return ("savedGifsNotModified", [])
+    }
+    }
+    
+        public static func parse_savedGifs(_ reader: BufferReader) -> SavedGifs? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.SavedGifs.savedGifs(hash: _1!, gifs: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_savedGifsNotModified(_ reader: BufferReader) -> SavedGifs? {
+            return Api.messages.SavedGifs.savedGifsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum SearchCounter: TypeConstructorDescription {
         case searchCounter(flags: Int32, filter: Api.MessagesFilter, count: Int32)
     
@@ -1474,88 +1532,6 @@ public extension Api.phone {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, participantsNextOffset: _3!, chats: _4!, users: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.phone {
-    enum GroupCallStreamChannels: TypeConstructorDescription {
-        case groupCallStreamChannels(channels: [Api.GroupCallStreamChannel])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .groupCallStreamChannels(let channels):
-                    if boxed {
-                        buffer.appendInt32(-790330702)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(channels.count))
-                    for item in channels {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .groupCallStreamChannels(let channels):
-                return ("groupCallStreamChannels", [("channels", channels as Any)])
-    }
-    }
-    
-        public static func parse_groupCallStreamChannels(_ reader: BufferReader) -> GroupCallStreamChannels? {
-            var _1: [Api.GroupCallStreamChannel]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallStreamChannel.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.phone.GroupCallStreamChannels.groupCallStreamChannels(channels: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.phone {
-    enum GroupCallStreamRtmpUrl: TypeConstructorDescription {
-        case groupCallStreamRtmpUrl(url: String, key: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .groupCallStreamRtmpUrl(let url, let key):
-                    if boxed {
-                        buffer.appendInt32(767505458)
-                    }
-                    serializeString(url, buffer: buffer, boxed: false)
-                    serializeString(key, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .groupCallStreamRtmpUrl(let url, let key):
-                return ("groupCallStreamRtmpUrl", [("url", url as Any), ("key", key as Any)])
-    }
-    }
-    
-        public static func parse_groupCallStreamRtmpUrl(_ reader: BufferReader) -> GroupCallStreamRtmpUrl? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.phone.GroupCallStreamRtmpUrl.groupCallStreamRtmpUrl(url: _1!, key: _2!)
             }
             else {
                 return nil

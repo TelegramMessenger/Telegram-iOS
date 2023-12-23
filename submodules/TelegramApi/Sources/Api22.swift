@@ -550,6 +550,7 @@ public extension Api {
         case updatePinnedChannelMessages(flags: Int32, channelId: Int64, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updatePinnedDialogs(flags: Int32, folderId: Int32?, order: [Api.DialogPeer]?)
         case updatePinnedMessages(flags: Int32, peer: Api.Peer, messages: [Int32], pts: Int32, ptsCount: Int32)
+        case updatePinnedSavedDialogs(flags: Int32, order: [Api.DialogPeer]?)
         case updatePrivacy(key: Api.PrivacyKey, rules: [Api.PrivacyRule])
         case updatePtsChanged
         case updateReadChannelDiscussionInbox(flags: Int32, channelId: Int64, topMsgId: Int32, readMaxId: Int32, broadcastId: Int64?, broadcastPost: Int32?)
@@ -565,6 +566,7 @@ public extension Api {
         case updateRecentEmojiStatuses
         case updateRecentReactions
         case updateRecentStickers
+        case updateSavedDialogPinned(flags: Int32, peer: Api.DialogPeer)
         case updateSavedGifs
         case updateSavedRingtones
         case updateSentStoryReaction(peer: Api.Peer, storyId: Int32, reaction: Api.Reaction)
@@ -1372,6 +1374,17 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+                case .updatePinnedSavedDialogs(let flags, let order):
+                    if boxed {
+                        buffer.appendInt32(1751942566)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(order!.count))
+                    for item in order! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
                 case .updatePrivacy(let key, let rules):
                     if boxed {
                         buffer.appendInt32(-298113238)
@@ -1497,6 +1510,13 @@ public extension Api {
                         buffer.appendInt32(-1706939360)
                     }
                     
+                    break
+                case .updateSavedDialogPinned(let flags, let peer):
+                    if boxed {
+                        buffer.appendInt32(-1364222348)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     break
                 case .updateSavedGifs:
                     if boxed {
@@ -1828,6 +1848,8 @@ public extension Api {
                 return ("updatePinnedDialogs", [("flags", flags as Any), ("folderId", folderId as Any), ("order", order as Any)])
                 case .updatePinnedMessages(let flags, let peer, let messages, let pts, let ptsCount):
                 return ("updatePinnedMessages", [("flags", flags as Any), ("peer", peer as Any), ("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
+                case .updatePinnedSavedDialogs(let flags, let order):
+                return ("updatePinnedSavedDialogs", [("flags", flags as Any), ("order", order as Any)])
                 case .updatePrivacy(let key, let rules):
                 return ("updatePrivacy", [("key", key as Any), ("rules", rules as Any)])
                 case .updatePtsChanged:
@@ -1858,6 +1880,8 @@ public extension Api {
                 return ("updateRecentReactions", [])
                 case .updateRecentStickers:
                 return ("updateRecentStickers", [])
+                case .updateSavedDialogPinned(let flags, let peer):
+                return ("updateSavedDialogPinned", [("flags", flags as Any), ("peer", peer as Any)])
                 case .updateSavedGifs:
                 return ("updateSavedGifs", [])
                 case .updateSavedRingtones:
@@ -3538,6 +3562,22 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updatePinnedSavedDialogs(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.DialogPeer]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogPeer.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updatePinnedSavedDialogs(flags: _1!, order: _2)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updatePrivacy(_ reader: BufferReader) -> Update? {
             var _1: Api.PrivacyKey?
             if let signature = reader.readInt32() {
@@ -3750,6 +3790,22 @@ public extension Api {
         }
         public static func parse_updateRecentStickers(_ reader: BufferReader) -> Update? {
             return Api.Update.updateRecentStickers
+        }
+        public static func parse_updateSavedDialogPinned(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.DialogPeer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DialogPeer
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateSavedDialogPinned(flags: _1!, peer: _2!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_updateSavedGifs(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedGifs

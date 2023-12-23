@@ -105,14 +105,15 @@ public final class SparseMessageList {
                 self.sparseItemsDisposable = (self.account.postbox.transaction { transaction -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }
-                                              |> mapToSignal { inputPeer -> Signal<SparseItems, NoError> in
+                |> mapToSignal { inputPeer -> Signal<SparseItems, NoError> in
                     guard let inputPeer = inputPeer else {
                         return .single(SparseItems(items: []))
                     }
                     guard let messageFilter = messageFilterForTagMask(messageTag) else {
                         return .single(SparseItems(items: []))
                     }
-                    return account.network.request(Api.functions.messages.getSearchResultsPositions(peer: inputPeer, filter: messageFilter, offsetId: 0, limit: 1000))
+                    //TODO:api
+                    return account.network.request(Api.functions.messages.getSearchResultsPositions(flags: 0, peer: inputPeer, savedPeerId: nil, filter: messageFilter, offsetId: 0, limit: 1000))
                     |> map { result -> SparseItems in
                         switch result {
                         case let .searchResultsPositions(totalCount, positions):
@@ -817,7 +818,8 @@ public final class SparseMessageCalendar {
                 guard let messageFilter = messageFilterForTagMask(messageTag) else {
                     return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
                 }
-                return self.account.network.request(Api.functions.messages.getSearchResultsCalendar(peer: inputPeer, filter: messageFilter, offsetId: nextRequestOffset, offsetDate: 0))
+                //TODO:api
+                return self.account.network.request(Api.functions.messages.getSearchResultsCalendar(flags: 0, peer: inputPeer, savedPeerId: nil, filter: messageFilter, offsetId: nextRequestOffset, offsetDate: 0))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.SearchResultsCalendar?, NoError> in
                     return .single(nil)

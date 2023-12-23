@@ -14,7 +14,7 @@ public extension ChatLocation {
         case let .peer(peerId):
             return peerId
         case let .replyThread(replyThreadMessage):
-            return replyThreadMessage.messageId.peerId
+            return replyThreadMessage.peerId
         case .feed:
             return nil
         }
@@ -25,7 +25,7 @@ public extension ChatLocation {
         case .peer:
             return nil
         case let .replyThread(replyThreadMessage):
-            return Int64(replyThreadMessage.messageId.id)
+            return replyThreadMessage.threadId
         case .feed:
             return nil
         }

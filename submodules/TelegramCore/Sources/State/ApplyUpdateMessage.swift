@@ -96,7 +96,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                case let .message(_, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _):
                     updatedTimestamp = date
                 case .messageEmpty:
                     break
@@ -287,9 +287,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         if let updatedMessage = updatedMessage, case let .Id(updatedId) = updatedMessage.id {
             if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
                 if let threadId = updatedMessage.threadId {
-                    let messageThreadId = makeThreadIdMessageId(peerId: updatedMessage.id.peerId, threadId: threadId)
                     if let authorId = updatedMessage.authorId {
-                        updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 0, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
+                        updateMessageThreadStats(transaction: transaction, threadKey: MessageThreadKey(peerId: updatedMessage.id.peerId, threadId: threadId), removedCount: 0, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
                     }
                 }
             }

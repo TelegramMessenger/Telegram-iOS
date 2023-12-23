@@ -56,7 +56,7 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
 }
 
 private func actionForPeer(context: AccountContext, peer: Peer, interfaceState: ChatPresentationInterfaceState, isJoining: Bool, isMuted: Bool) -> SubscriberAction? {
-    if case let .replyThread(message) = interfaceState.chatLocation, message.messageId.peerId == context.account.peerId {
+    if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == context.account.peerId {
         if let peer = interfaceState.savedMessagesTopicPeer {
             if case let .channel(channel) = peer {
                 if case .broadcast = channel.info {

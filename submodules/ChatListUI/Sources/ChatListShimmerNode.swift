@@ -124,13 +124,13 @@ final class ShimmerEffectNode: ASDisplayNode {
     }
 }
 
-final class ChatListShimmerNode: ASDisplayNode {
+public final class ChatListShimmerNode: ASDisplayNode {
     private let backgroundColorNode: ASDisplayNode
     private let effectNode: ShimmerEffectNode
     private let maskNode: ASImageNode
     private var currentParams: (size: CGSize, presentationData: PresentationData)?
     
-    override init() {
+    override public init() {
         self.backgroundColorNode = ASDisplayNode()
         self.effectNode = ShimmerEffectNode()
         self.maskNode = ASImageNode()
@@ -144,7 +144,7 @@ final class ChatListShimmerNode: ASDisplayNode {
         self.addSubnode(self.maskNode)
     }
     
-    func update(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, size: CGSize, isInlineMode: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    public func update(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, size: CGSize, isInlineMode: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         if self.currentParams?.size != size || self.currentParams?.presentationData !== presentationData {
             self.currentParams = (size, presentationData)
                         

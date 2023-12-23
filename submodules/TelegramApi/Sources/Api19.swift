@@ -607,6 +607,52 @@ public extension Api {
     }
 }
 public extension Api {
+    enum SavedDialog: TypeConstructorDescription {
+        case savedDialog(flags: Int32, peer: Api.Peer, topMessage: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .savedDialog(let flags, let peer, let topMessage):
+                    if boxed {
+                        buffer.appendInt32(-1115174036)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedDialog(let flags, let peer, let topMessage):
+                return ("savedDialog", [("flags", flags as Any), ("peer", peer as Any), ("topMessage", topMessage as Any)])
+    }
+    }
+    
+        public static func parse_savedDialog(_ reader: BufferReader) -> SavedDialog? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SavedDialog.savedDialog(flags: _1!, peer: _2!, topMessage: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum SearchResultsCalendarPeriod: TypeConstructorDescription {
         case searchResultsCalendarPeriod(date: Int32, minMsgId: Int32, maxMsgId: Int32, count: Int32)
     

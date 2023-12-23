@@ -44,6 +44,10 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
     private var presentationDataDisposable: Disposable?
     
     private let chatListNode: ChatListNode
+    
+    private var emptyShimmerEffectNode: ChatListShimmerNode?
+    private var shimmerNodeOffset: CGFloat = 0.0
+    private var floatingHeaderOffset: CGFloat?
         
     public init(context: AccountContext, navigationController: @escaping () -> NavigationController?) {
         self.context = context
@@ -94,10 +98,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                 navigationController: navigationController,
                 context: self.context,
                 chatLocation: .replyThread(ChatReplyThreadMessage(
-                    messageId: makeThreadIdMessageId(
-                        peerId: self.context.account.peerId,
-                        threadId: peer.id.toInt64()
-                    ),
+                    peerId: self.context.account.peerId,
                     threadId: peer.id.toInt64(),
                     channelMessageId: nil,
                     isChannelPost: false,
@@ -114,6 +115,53 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                 keepStack: .always
             ))
             self.chatListNode.clearHighlightAnimated(true)
+        }
+        
+        self.chatListNode.isEmptyUpdated = { [weak self] isEmptyState, _, transition in
+            guard let self else {
+                return
+            }
+            var needsShimmerNode = false
+            let shimmerNodeOffset: CGFloat = 0.0
+            
+            switch isEmptyState {
+            case let .empty(isLoadingValue, _):
+                if isLoadingValue {
+                    needsShimmerNode = true
+                }
+            case .notEmpty:
+                break
+            }
+            
+            if needsShimmerNode {
+                self.shimmerNodeOffset = shimmerNodeOffset
+                if self.emptyShimmerEffectNode == nil {
+                    let emptyShimmerEffectNode = ChatListShimmerNode()
+                    self.emptyShimmerEffectNode = emptyShimmerEffectNode
+                    self.insertSubnode(emptyShimmerEffectNode, belowSubnode: self.chatListNode)
+                    if let currentParams = self.currentParams, let offset = self.floatingHeaderOffset {
+                        self.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: currentParams.size, insets: UIEdgeInsets(top: currentParams.topInset, left: currentParams.sideInset, bottom: currentParams.bottomInset, right: currentParams.sideInset), verticalOffset: offset + self.shimmerNodeOffset, transition: .immediate)
+                    }
+                }
+            } else if let emptyShimmerEffectNode = self.emptyShimmerEffectNode {
+                self.emptyShimmerEffectNode = nil
+                let emptyNodeTransition = transition.isAnimated ? transition : .animated(duration: 0.3, curve: .easeInOut)
+                emptyNodeTransition.updateAlpha(node: emptyShimmerEffectNode, alpha: 0.0, completion: { [weak emptyShimmerEffectNode] _ in
+                    emptyShimmerEffectNode?.removeFromSupernode()
+                })
+                self.chatListNode.alpha = 0.0
+                emptyNodeTransition.updateAlpha(node: self.chatListNode, alpha: 1.0)
+            }
+        }
+        
+        self.chatListNode.updateFloatingHeaderOffset = { [weak self] offset, transition in
+            guard let self else {
+                return
+            }
+            self.floatingHeaderOffset = offset
+            if let currentParams = self.currentParams, let emptyShimmerEffectNode = self.emptyShimmerEffectNode {
+                self.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: currentParams.size, insets: UIEdgeInsets(top: currentParams.topInset, left: currentParams.sideInset, bottom: currentParams.bottomInset, right: currentParams.sideInset), verticalOffset: offset + self.shimmerNodeOffset, transition: transition)
+            }
         }
     }
     
@@ -162,6 +210,11 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
     
     override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
+    }
+    
+    private func layoutEmptyShimmerEffectNode(node: ChatListShimmerNode, size: CGSize, insets: UIEdgeInsets, verticalOffset: CGFloat, transition: ContainedViewLayoutTransition) {
+        node.update(context: self.context, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer, size: size, isInlineMode: false, presentationData: self.presentationData, transition: .immediate)
+        transition.updateFrameAdditive(node: node, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: size))
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

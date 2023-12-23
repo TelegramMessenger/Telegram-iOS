@@ -718,7 +718,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
     let readCounters: Signal<Bool, NoError>
     if case let .replyThread(threadMessage) = chatPresentationInterfaceState.chatLocation, threadMessage.isForumPost {
-        readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThreadData(id: threadMessage.messageId.peerId, threadId: Int64(threadMessage.messageId.id)))
+        readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThreadData(id: threadMessage.peerId, threadId: threadMessage.threadId))
         |> map { threadData -> Bool in
             guard let threadData else {
                 return false
@@ -1248,7 +1248,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 } else {
                     for attribute in messages[0].attributes {
                         if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
-                            threadId = makeMessageThreadId(messages[0].id)
+                            threadId = Int64(messages[0].id.id)
                             threadMessageCount = Int(attribute.count)
                         }
                     }
@@ -1256,7 +1256,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             } else {
                 for attribute in messages[0].attributes {
                     if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
-                        threadId = makeMessageThreadId(messages[0].id)
+                        threadId = Int64(messages[0].id.id)
                         threadMessageCount = Int(attribute.count)
                     }
                 }
@@ -1404,7 +1404,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }, action: { _, f in
                 var threadMessageId: MessageId?
                 if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
-                    threadMessageId = replyThreadMessage.messageId
+                    threadMessageId = replyThreadMessage.effectiveMessageId
                 }
                 let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
                 |> map { result -> String? in

@@ -72,10 +72,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode)))
                         }
                     case let .replyThreadMessage(replyThreadMessage, messageId):
-                        if let navigationController = controller.navigationController as? NavigationController {
+                        if let navigationController = controller.navigationController as? NavigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
                             let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { [weak controller] c, a in
                                 controller?.present(c, in: .window(.root), with: a)
-                            }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
+                            }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
                         }
                     case let .replyThread(messageId):
                         if let navigationController = controller.navigationController as? NavigationController {

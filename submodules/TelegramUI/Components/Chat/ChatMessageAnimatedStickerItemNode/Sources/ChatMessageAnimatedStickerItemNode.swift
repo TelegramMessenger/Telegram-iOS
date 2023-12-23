@@ -313,7 +313,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     return false
                 }
                 
-                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.peerId != item.content.firstMessage.id.peerId {
                     return false
                 }
                 
@@ -826,8 +826,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     hasAvatar = true
                 }
             case let .replyThread(replyThreadMessage):
-                if replyThreadMessage.messageId.peerId != item.context.account.peerId {
-                    if replyThreadMessage.messageId.peerId.isGroupOrChannel && item.message.author != nil {
+                if replyThreadMessage.peerId != item.context.account.peerId {
+                    if replyThreadMessage.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                             isBroadcastChannel = true
@@ -1102,7 +1102,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute {
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyAttribute.messageId.id {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }

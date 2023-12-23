@@ -335,16 +335,29 @@ enum FetchMessageHistoryHoleThreadInput: CustomStringConvertible {
         }
     }
     
-    var requestThreadId: MessageId? {
+    func requestThreadId(accountPeerId: PeerId) -> Int64? {
         switch self {
         case let .direct(peerId, threadId):
-            if let threadId = threadId {
-                return makeThreadIdMessageId(peerId: peerId, threadId: threadId)
+            if let threadId = threadId, peerId != accountPeerId {
+                return threadId
             } else {
                 return nil
             }
         case let .threadFromChannel(channelMessageId):
-            return channelMessageId
+            return Int64(channelMessageId.id)
+        }
+    }
+    
+    func requestSubPeerId(accountPeerId: PeerId) -> PeerId? {
+        switch self {
+        case let .direct(peerId, threadId):
+            if let threadId = threadId, peerId == accountPeerId {
+                return PeerId(threadId)
+            } else {
+                return nil
+            }
+        case .threadFromChannel:
+            return nil
         }
     }
 }
@@ -360,10 +373,6 @@ struct FetchMessageHistoryHoleResult: Equatable {
 func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
     let count = min(100, rawCount)
     
-    if peerInput.requestThreadId != nil, case .everywhere = space, case .aroundId = direction {
-        assert(true)
-    }
-    
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
         if let state = view.state as? AuthorizedAccountState {
@@ -374,15 +383,15 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
     }
     |> take(1)
     |> mapToSignal { _ -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-        return postbox.transaction { transaction -> (Peer?, Int64) in
+        return postbox.transaction { transaction -> (Peer?, Int64, Peer?) in
             switch peerInput {
             case let .direct(peerId, _):
-                return (transaction.getPeer(peerId), 0)
+                return (transaction.getPeer(peerId), 0, peerInput.requestSubPeerId(accountPeerId: accountPeerId).flatMap(transaction.getPeer))
             case let .threadFromChannel(channelMessageId):
-                return (transaction.getPeer(channelMessageId.peerId), 0)
+                return (transaction.getPeer(channelMessageId.peerId), 0, nil)
             }
         }
-        |> mapToSignal { (peer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
+        |> mapToSignal { (peer, hash, subPeer) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
             guard let peer = peer else {
                 return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
             }
@@ -397,284 +406,345 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
             let minMaxRange: ClosedRange<MessageId.Id>
             
             switch space {
-                case .everywhere:
-                    if let requestThreadId = peerInput.requestThreadId {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = count
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case let .range(start, end):
-                                if start.id <= end.id {
-                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                    addOffset = Int32(-selectedLimit)
-                                    maxId = end.id
-                                    minId = start.id - 1
-                                    
-                                    let rangeStartId = start.id
-                                    let rangeEndId = min(end.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                } else {
-                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    addOffset = 0
-                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    minId = end.id
-                                    
-                                    let rangeStartId = end.id
-                                    let rangeEndId = min(start.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                }
-                            case let .aroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
+            case .everywhere:
+                if let requestThreadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
                             
-                                minMaxRange = 1 ... (Int32.max - 1)
-                        }
-                        
-                        request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: requestThreadId.id, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
-                    } else {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = count
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case let .range(start, end):
-                                if start.id <= end.id {
-                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                    addOffset = Int32(-selectedLimit)
-                                    maxId = end.id
-                                    minId = start.id - 1
-                                    
-                                    let rangeStartId = start.id
-                                    let rangeEndId = min(end.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                } else {
-                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    addOffset = 0
-                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    minId = end.id == 1 ? 0 : end.id
-                                    
-                                    let rangeStartId = end.id
-                                    let rangeEndId = min(start.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                }
-                            case let .aroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                                minMaxRange = 1 ... Int32.max - 1
-                        }
-                        
-                        request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
-                    }
-                case let .tag(tag):
-                    assert(tag.containsSingleElement)
-                    if tag == .unseenPersonalMessage {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = count
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case let .range(start, end):
-                                if start.id <= end.id {
-                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                    addOffset = Int32(-selectedLimit)
-                                    maxId = end.id
-                                    minId = start.id - 1
-                                    
-                                    let rangeStartId = start.id
-                                    let rangeEndId = min(end.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                } else {
-                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    addOffset = 0
-                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    minId = end.id
-                                    
-                                    let rangeStartId = end.id
-                                    let rangeEndId = min(start.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                }
-                            case let .aroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id
                             
-                                minMaxRange = 1 ... Int32.max - 1
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
                         }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
                         
-                        var flags: Int32 = 0
-                        var topMsgId: Int32?
-                        if let threadId = peerInput.requestThreadId {
-                            flags |= (1 << 1)
-                            topMsgId = threadId.id
-                        }
-                        
-                        request = source.request(Api.functions.messages.getUnreadMentions(flags: flags, peer: inputPeer, topMsgId: topMsgId, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
-                    } else if tag == .unseenReaction {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = count
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case let .range(start, end):
-                                if start.id <= end.id {
-                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                    addOffset = Int32(-selectedLimit)
-                                    maxId = end.id
-                                    minId = start.id - 1
-                                    
-                                    let rangeStartId = start.id
-                                    let rangeEndId = min(end.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                } else {
-                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    addOffset = 0
-                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    minId = end.id
-                                    
-                                    let rangeStartId = end.id
-                                    let rangeEndId = min(start.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                }
-                            case let .aroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                            
-                                minMaxRange = 1 ... Int32.max - 1
-                        }
-                        
-                        var flags: Int32 = 0
-                        var topMsgId: Int32?
-                        if let threadId = peerInput.requestThreadId {
-                            flags |= (1 << 0)
-                            topMsgId = threadId.id
-                        }
-                        
-                        request = source.request(Api.functions.messages.getUnreadReactions(flags: flags, peer: inputPeer, topMsgId: topMsgId, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
-                    } else if tag == .liveLocation {
-                        let selectedLimit = count
-                        
-                        switch direction {
-                            case .aroundId, .range:
-                                implicitelyFillHole = true
-                        }
                         minMaxRange = 1 ... (Int32.max - 1)
-                        request = source.request(Api.functions.messages.getRecentLocations(peer: inputPeer, limit: Int32(selectedLimit), hash: 0))
-                    } else if let filter = messageFilterForTagMask(tag) {
-                        let offsetId: Int32
-                        let addOffset: Int32
-                        let selectedLimit = count
-                        let maxId: Int32
-                        let minId: Int32
-                        
-                        switch direction {
-                            case let .range(start, end):
-                                if start.id <= end.id {
-                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                    addOffset = Int32(-selectedLimit)
-                                    maxId = end.id
-                                    minId = start.id - 1
-                                    
-                                    let rangeStartId = start.id
-                                    let rangeEndId = min(end.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                } else {
-                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    addOffset = 0
-                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                    minId = end.id
-                                    
-                                    let rangeStartId = end.id
-                                    let rangeEndId = min(start.id, Int32.max - 1)
-                                    if rangeStartId <= rangeEndId {
-                                        minMaxRange = rangeStartId ... rangeEndId
-                                    } else {
-                                        minMaxRange = rangeStartId ... rangeStartId
-                                        assertionFailure()
-                                    }
-                                }
-                            case let .aroundId(id):
-                                offsetId = id.id
-                                addOffset = Int32(-selectedLimit / 2)
-                                maxId = Int32.max
-                                minId = 1
-                            
-                                minMaxRange = 1 ... (Int32.max - 1)
-                        }
-                        
-                        var flags: Int32 = 0
-                        var topMsgId: Int32?
-                        if let threadId = peerInput.requestThreadId {
-                            flags |= (1 << 1)
-                            topMsgId = threadId.id
-                        }
-                        
-                        request = source.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, topMsgId: topMsgId, filter: filter, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
-                    } else {
-                        assertionFailure()
-                        minMaxRange = 1 ... 1
-                        request = .never()
                     }
+                    
+                    request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: requestThreadId), offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
+                } else if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId) {
+                    guard let subPeer, subPeer.id == subPeerId, let inputSubPeer = apiInputPeer(subPeer) else {
+                        Logger.shared.log("fetchMessageHistoryHole", "subPeer not available")
+                        return .never()
+                    }
+                    
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
+                            
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id
+                            
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                        
+                        minMaxRange = 1 ... (Int32.max - 1)
+                    }
+                    
+                    request = source.request(Api.functions.messages.getSavedHistory(peer: inputSubPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
+                } else {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
+                            
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id == 1 ? 0 : end.id
+                            
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                        minMaxRange = 1 ... Int32.max - 1
+                    }
+                    
+                    request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                }
+            case let .tag(tag):
+                assert(tag.containsSingleElement)
+                if tag == .unseenPersonalMessage {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
+                            
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id
+                            
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                        
+                        minMaxRange = 1 ... Int32.max - 1
+                    }
+                    
+                    var flags: Int32 = 0
+                    var topMsgId: Int32?
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                        flags |= (1 << 1)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
+                    request = source.request(Api.functions.messages.getUnreadMentions(flags: flags, peer: inputPeer, topMsgId: topMsgId, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                } else if tag == .unseenReaction {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
+                            
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id
+                            
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                        
+                        minMaxRange = 1 ... Int32.max - 1
+                    }
+                    
+                    var flags: Int32 = 0
+                    var topMsgId: Int32?
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                        flags |= (1 << 0)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
+                    request = source.request(Api.functions.messages.getUnreadReactions(flags: flags, peer: inputPeer, topMsgId: topMsgId, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                } else if tag == .liveLocation {
+                    let selectedLimit = count
+                    
+                    switch direction {
+                    case .aroundId, .range:
+                        implicitelyFillHole = true
+                    }
+                    minMaxRange = 1 ... (Int32.max - 1)
+                    request = source.request(Api.functions.messages.getRecentLocations(peer: inputPeer, limit: Int32(selectedLimit), hash: 0))
+                } else if let filter = messageFilterForTagMask(tag) {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
+                            
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id
+                            
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                        
+                        minMaxRange = 1 ... (Int32.max - 1)
+                    }
+                    
+                    var flags: Int32 = 0
+                    var topMsgId: Int32?
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                        flags |= (1 << 1)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
+                    var savedPeerId: Api.InputPeer?
+                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId), let subPeer = subPeer, subPeer.id == subPeerId {
+                        if let inputPeer = apiInputPeer(subPeer) {
+                            flags |= 1 << 2
+                            savedPeerId = inputPeer
+                        }
+                    }
+                    
+                    request = source.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, savedPeerId: savedPeerId, topMsgId: topMsgId, filter: filter, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                } else {
+                    assertionFailure()
+                    minMaxRange = 1 ... 1
+                    request = .never()
+                }
             }
             
             return request
@@ -784,7 +854,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                         
                         print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
-                        if peerInput.requestThreadId != nil, case .everywhere = space, case .aroundId = direction {
+                        if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil, case .everywhere = space, case .aroundId = direction {
                             assert(true)
                         }
                         
@@ -797,7 +867,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                 case let .aroundId(aroundId):
                                     filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
                                     strictFilledIndices = IndexSet(integersIn: Int(min(aroundId.id, messageRange.lowerBound)) ... Int(max(aroundId.id, messageRange.upperBound)))
-                                    if peerInput.requestThreadId != nil {
+                                    if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil {
                                         if ids.count <= count / 2 - 1 {
                                             filledRange = minMaxRange
                                         }
@@ -973,7 +1043,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
     offset = single((holeIndex.timestamp, min(holeIndex.id.id, Int32.max - 1) + 1, Api.InputPeer.inputPeerEmpty), NoError.self)
     return offset
     |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
-        let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, topMsgId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0, hash: 0))
+        let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, savedPeerId: nil, topMsgId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0, hash: 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<Void, NoError> in
             let messages: [Api.Message]

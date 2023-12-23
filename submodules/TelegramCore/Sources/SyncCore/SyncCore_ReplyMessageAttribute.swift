@@ -138,12 +138,3 @@ public class ReplyStoryAttribute: MessageAttribute {
         encoder.encode(self.storyId, forKey: "i")
     }
 }
-
-public extension Message {
-    var effectiveReplyThreadMessageId: MessageId? {
-        if let threadId = self.threadId {
-            return makeThreadIdMessageId(peerId: self.id.peerId, threadId: threadId)
-        }
-        return nil
-    }
-}
