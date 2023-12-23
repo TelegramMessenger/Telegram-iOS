@@ -595,9 +595,9 @@ final class StoryItemSetViewListComponent: Component {
                                     component.openPeer(peer)
                                 }
                             },
-                            contextAction: item.peer.id != component.context.account.peerId ? { peer, view, gesture in
+                            contextAction: component.peerId.isGroupOrChannel || item.peer.id == component.context.account.peerId ? nil : { peer, view, gesture in
                                 component.peerContextAction(peer, view, gesture)
-                            } : nil,
+                            },
                             openStories: { [weak self] peer, avatarNode in
                                 guard let self, let component = self.component else {
                                     return

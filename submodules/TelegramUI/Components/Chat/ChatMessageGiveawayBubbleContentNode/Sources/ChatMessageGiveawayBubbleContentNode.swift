@@ -298,7 +298,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 var trimSubscriptionCount = false
                 if let prizeDescription {
                     additionalPrizeSeparatorString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_With, font: textFont, textColor: secondaryTextColor)
-                    additionalPrizeTextString = parseMarkdownIntoAttributedString("**\(giveaway.quantity)** \(prizeDescription)", attributes: MarkdownAttributes(
+                    let quantityString = item.presentationData.strings.Chat_Giveaway_Message_CustomPrizeQuantity(giveaway.quantity)
+                    additionalPrizeTextString = parseMarkdownIntoAttributedString("**\(quantityString)** \(prizeDescription)", attributes: MarkdownAttributes(
                         body: MarkdownAttributeSet(font: textFont, textColor: textColor),
                         bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
                         link: MarkdownAttributeSet(font: textFont, textColor: textColor),
@@ -311,6 +312,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                 
                 var subscriptionsString = item.presentationData.strings.Chat_Giveaway_Message_Subscriptions(giveaway.quantity)
                 if trimSubscriptionCount {
+                    subscriptionsString = item.presentationData.strings.Chat_Giveaway_Message_WithSubscriptions(giveaway.quantity)
                     subscriptionsString = subscriptionsString.replacingOccurrences(of: "**\(giveaway.quantity)** ", with: "")
                 }
                 

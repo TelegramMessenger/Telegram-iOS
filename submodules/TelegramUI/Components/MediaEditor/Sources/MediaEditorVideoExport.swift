@@ -797,6 +797,7 @@ public final class MediaEditorVideoExport {
                 composer.process(
                     main: mainInput!,
                     additional: additionalInput,
+                    timestamp: timestamp,
                     pool: writer.pixelBufferPool,
                     completion: { pixelBuffer in
                         if let pixelBuffer {
@@ -805,10 +806,6 @@ public final class MediaEditorVideoExport {
                                 appendFailed = true
                             }
                         } else {
-//                            if !writer.appendVideoBuffer(sampleBuffer) {
-//                                writer.markVideoAsFinished()
-//                                appendFailed = true
-//                            }
                             appendFailed = true
                         }
                         self.semaphore.signal()
@@ -882,9 +879,6 @@ public final class MediaEditorVideoExport {
         
         self.internalStatus = .exporting
         
-        if let timeRange = self.reader?.timeRange {
-            print("reader timerange: \(timeRange)")
-        }
         writer.startSession(atSourceTime: self.reader?.timeRange.start ?? .zero)
         
         var videoCompleted = false

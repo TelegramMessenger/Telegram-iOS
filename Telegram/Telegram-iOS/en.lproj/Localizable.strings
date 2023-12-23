@@ -10379,6 +10379,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.PrizeText" = "%1$@ for %2$@.";
 "Chat.Giveaway.Message.Subscriptions_1" = "**%@** Telegram Premium Subscription";
 "Chat.Giveaway.Message.Subscriptions_any" = "**%@** Telegram Premium Subscriptions";
+"Chat.Giveaway.Message.WithSubscriptions_1" = "**%@** Telegram Premium Subscription";
+"Chat.Giveaway.Message.WithSubscriptions_any" = "**%@** Telegram Premium Subscriptions";
 "Chat.Giveaway.Message.Months_1" = "**%@** month";
 "Chat.Giveaway.Message.Months_any" = "**%@** months";
 "Chat.Giveaway.Message.ParticipantsTitle" = "Participants";
@@ -10392,6 +10394,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.DateTitle" = "Winners Selection Date";
 "Chat.Giveaway.Message.LearnMore" = "LEARN MORE";
 "Chat.Giveaway.Message.With" = "with";
+"Chat.Giveaway.Message.CustomPrizeQuantity_1" = "%@";
+"Chat.Giveaway.Message.CustomPrizeQuantity_any" = "%@";
 
 "GiftLink.Title" = "Gift Link";
 "GiftLink.UsedTitle" = "Used Gift Link";

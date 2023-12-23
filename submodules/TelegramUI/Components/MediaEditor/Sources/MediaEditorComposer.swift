@@ -126,7 +126,7 @@ final class MediaEditorComposer {
     }
         
     var previousAdditionalInput: Input?
-    func process(main: Input, additional: Input?, pool: CVPixelBufferPool?, completion: @escaping (CVPixelBuffer?) -> Void) {
+    func process(main: Input, additional: Input?, timestamp: CMTime, pool: CVPixelBufferPool?, completion: @escaping (CVPixelBuffer?) -> Void) {
         guard let pool, let ciContext = self.ciContext else {
             completion(nil)
             return
@@ -147,10 +147,8 @@ final class MediaEditorComposer {
             var pixelBuffer: CVPixelBuffer?
             CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &pixelBuffer)
             
-            if let pixelBuffer {
-                let time = main.timestamp
-                
-                makeEditorImageFrameComposition(context: ciContext, inputImage: ciImage, drawingImage: self.drawingImage, dimensions: self.dimensions, outputDimensions: self.outputDimensions, values: self.values, entities: self.entities, time: time, completion: { compositedImage in
+            if let pixelBuffer {                
+                makeEditorImageFrameComposition(context: ciContext, inputImage: ciImage, drawingImage: self.drawingImage, dimensions: self.dimensions, outputDimensions: self.outputDimensions, values: self.values, entities: self.entities, time: timestamp, completion: { compositedImage in
                     if var compositedImage {
                         let scale = self.outputDimensions.width / compositedImage.extent.width
                         compositedImage = compositedImage.samplingLinear().transformed(by: CGAffineTransform(scaleX: scale, y: scale))
