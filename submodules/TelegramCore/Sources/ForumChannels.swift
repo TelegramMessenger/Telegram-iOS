@@ -570,11 +570,11 @@ enum LoadMessageHistoryThreadsError {
     case generic
 }
 
-func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+public func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     enum PassResult {
         case restart
     }
-    return (postbox.transaction { transaction -> Range<Int>? in
+    let fillSignal = (postbox.transaction { transaction -> Range<Int>? in
         let holes = transaction.getHoles(peerId: accountPeerId, namespace: Namespaces.Message.Cloud)
         return holes.rangeView.last
     }
@@ -602,72 +602,71 @@ func _internal_fillSavedMessageHistory(accountPeerId: PeerId, postbox: Postbox, 
         }
     })
     |> restartIfError
+    
+    let applySignal = postbox.transaction { transaction -> Void in
+        var topMessages: [Int64: Message] = [:]
+        transaction.scanTopMessages(peerId: accountPeerId, namespace: Namespaces.Message.Cloud, limit: 100000, { message in
+            if let threadId = message.threadId {
+                if let current = topMessages[threadId] {
+                    if current.id < message.id {
+                        topMessages[threadId] = message
+                    }
+                } else {
+                    topMessages[threadId] = message
+                }
+            }
+            
+            return true
+        })
+        
+        
+        var items: [LoadMessageHistoryThreadsResult.Item] = []
+        for message in topMessages.values.sorted(by: { $0.id > $1.id }) {
+            guard let threadId = message.threadId else {
+                continue
+            }
+            items.append(LoadMessageHistoryThreadsResult.Item(
+                threadId: threadId,
+                data: MessageHistoryThreadData(
+                    creationDate: 0,
+                    isOwnedByMe: true,
+                    author: accountPeerId,
+                    info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0),
+                    incomingUnreadCount: 0,
+                    maxIncomingReadId: 0,
+                    maxKnownMessageId: 0,
+                    maxOutgoingReadId: 0,
+                    isClosed: false,
+                    isHidden: false,
+                    notificationSettings: TelegramPeerNotificationSettings.defaultSettings
+                ),
+                topMessage: message.id.id,
+                unreadMentionsCount: 0,
+                unreadReactionsCount: 0,
+                index: StoredPeerThreadCombinedState.Index(timestamp: message.timestamp, threadId: threadId, messageId: message.id.id)
+            ))
+        }
+        
+        let result = LoadMessageHistoryThreadsResult(
+            peerId: accountPeerId,
+            items: items,
+            messages: [],
+            pinnedThreadIds: nil,
+            combinedState: PeerThreadCombinedState(validIndexBoundary: StoredPeerThreadCombinedState.Index(timestamp: 0, threadId: 0, messageId: 1)),
+            users: [],
+            chats: []
+        )
+        
+        applyLoadMessageHistoryThreadsResults(accountPeerId: accountPeerId, transaction: transaction, results: [result])
+    }
+    |> ignoreValues
+    
+    return fillSignal
+    |> then(applySignal)
 }
 
 func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, query: String?, offsetIndex: StoredPeerThreadCombinedState.Index?, limit: Int) -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> {
     if peerId == accountPeerId {
-        if !"".isEmpty {
-            return _internal_fillSavedMessageHistory(accountPeerId: accountPeerId, postbox: postbox, network: network)
-            |> castError(LoadMessageHistoryThreadsError.self)
-            |> map { _ -> LoadMessageHistoryThreadsResult in
-            }
-            |> then(postbox.transaction { transaction -> LoadMessageHistoryThreadsResult in
-                var topMessages: [Int64: Message] = [:]
-                transaction.scanTopMessages(peerId: accountPeerId, namespace: Namespaces.Message.Cloud, limit: 100000, { message in
-                    if let threadId = message.threadId {
-                        if let current = topMessages[threadId] {
-                            if current.id < message.id {
-                                topMessages[threadId] = message
-                            }
-                        } else {
-                            topMessages[threadId] = message
-                        }
-                    }
-                    
-                    return true
-                })
-                
-                
-                var items: [LoadMessageHistoryThreadsResult.Item] = []
-                for message in topMessages.values.sorted(by: { $0.id > $1.id }) {
-                    guard let threadId = message.threadId else {
-                        continue
-                    }
-                    items.append(LoadMessageHistoryThreadsResult.Item(
-                        threadId: threadId,
-                        data: MessageHistoryThreadData(
-                            creationDate: 0,
-                            isOwnedByMe: true,
-                            author: accountPeerId,
-                            info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0),
-                            incomingUnreadCount: 0,
-                            maxIncomingReadId: 0,
-                            maxKnownMessageId: 0,
-                            maxOutgoingReadId: 0,
-                            isClosed: false,
-                            isHidden: false,
-                            notificationSettings: TelegramPeerNotificationSettings.defaultSettings
-                        ),
-                        topMessage: message.id.id,
-                        unreadMentionsCount: 0,
-                        unreadReactionsCount: 0,
-                        index: StoredPeerThreadCombinedState.Index(timestamp: message.timestamp, threadId: threadId, messageId: message.id.id)
-                    ))
-                }
-                
-                return LoadMessageHistoryThreadsResult(
-                    peerId: accountPeerId,
-                    items: items,
-                    messages: [],
-                    pinnedThreadIds: nil,
-                    combinedState: PeerThreadCombinedState(validIndexBoundary: StoredPeerThreadCombinedState.Index(timestamp: 0, threadId: 0, messageId: 1)),
-                    users: [],
-                    chats: []
-                )
-            }
-            |> castError(LoadMessageHistoryThreadsError.self))
-        }
-        
         var flags: Int32 = 0
         flags = 0
         
