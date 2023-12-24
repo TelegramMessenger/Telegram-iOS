@@ -119,13 +119,15 @@ class MessageHistoryThreadIndexTable: Table {
     }
     
     private let reverseIndexTable: MessageHistoryThreadReverseIndexTable
+    private let seedConfiguration: SeedConfiguration
     
     private let sharedKey = ValueBoxKey(length: 8 + 4 + 8 + 4 + 4)
     
     private var updatedInfoItems: [MessageHistoryThreadsTable.ItemId: UpdatedEntry] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, reverseIndexTable: MessageHistoryThreadReverseIndexTable, useCaches: Bool) {
+    init(valueBox: ValueBox, table: ValueBoxTable, reverseIndexTable: MessageHistoryThreadReverseIndexTable, seedConfiguration: SeedConfiguration, useCaches: Bool) {
         self.reverseIndexTable = reverseIndexTable
+        self.seedConfiguration = seedConfiguration
         
         super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
@@ -217,6 +219,13 @@ class MessageHistoryThreadIndexTable: Table {
                         info = encoder.makeReadBufferAndReset()
                     } else {
                         info = nil
+                    }
+                }
+                if info == nil {
+                    if let value = self.seedConfiguration.automaticThreadIndexInfo(itemId.peerId, itemId.threadId) {
+                        let encoder = PostboxEncoder()
+                        value.encode(encoder)
+                        info = encoder.makeReadBufferAndReset()
                     }
                 }
                 

@@ -363,7 +363,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
-                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
+                        if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyAttribute.messageId.id {
                         } else {
                             replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                         }
@@ -376,7 +376,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
                 
                 if replyMessage != nil || replyForward != nil || replyStory != nil {
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyMessage?.id {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyMessage?.id.id {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                             presentationData: item.presentationData,

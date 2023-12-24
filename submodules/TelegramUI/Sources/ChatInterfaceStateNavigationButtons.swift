@@ -71,7 +71,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         }
     }
     
-    if case let .replyThread(message) = presentationInterfaceState.chatLocation, message.messageId.peerId == context.account.peerId {
+    if case let .replyThread(message) = presentationInterfaceState.chatLocation, message.peerId == context.account.peerId {
         return chatInfoNavigationButton
     }
     

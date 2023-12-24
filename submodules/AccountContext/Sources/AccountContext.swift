@@ -423,7 +423,7 @@ public final class NavigateToChatControllerParams {
             case let .peer(peer):
                 return peer.id
             case let .replyThread(message):
-                return message.messageId.peerId
+                return message.peerId
             }
         }
         
@@ -432,7 +432,7 @@ public final class NavigateToChatControllerParams {
             case .peer:
                 return nil
             case let .replyThread(message):
-                return Int64(message.messageId.id)
+                return message.threadId
             }
         }
         

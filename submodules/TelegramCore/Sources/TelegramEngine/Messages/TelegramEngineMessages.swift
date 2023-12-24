@@ -415,10 +415,16 @@ public extension TelegramEngine {
 
         public func refreshMessageTagStats(peerId: EnginePeer.Id, threadId: Int64?, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {
             let account = self.account
-            return self.account.postbox.transaction { transaction -> Api.InputPeer? in
-                return transaction.getPeer(peerId).flatMap(apiInputPeer)
+            return self.account.postbox.transaction { transaction -> (Api.InputPeer?, Api.InputPeer?) in
+                var inputSavedPeer: Api.InputPeer?
+                if let threadId = threadId {
+                    if peerId == account.peerId {
+                        inputSavedPeer = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer)
+                    }
+                }
+                return (transaction.getPeer(peerId).flatMap(apiInputPeer), inputSavedPeer)
             }
-            |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+            |> mapToSignal { inputPeer, inputSavedPeer -> Signal<Never, NoError> in
                 guard let inputPeer = inputPeer else {
                     return .complete()
                 }
@@ -432,11 +438,17 @@ public extension TelegramEngine {
                     var flags: Int32 = 0
                     var topMsgId: Int32?
                     if let threadId = threadId {
-                        flags |= (1 << 1)
-                        topMsgId = Int32(clamping: threadId)
+                        if peerId == account.peerId {
+                            if inputSavedPeer != nil {
+                                flags |= (1 << 2)
+                            }
+                        } else {
+                            flags |= (1 << 1)
+                            topMsgId = Int32(clamping: threadId)
+                        }
                     }
                     
-                    signals.append(self.account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, topMsgId: topMsgId, filter: filter, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+                    signals.append(self.account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, savedPeerId: inputSavedPeer, topMsgId: topMsgId, filter: filter, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
                     |> map { result -> (count: Int32?, topId: Int32?) in
                         switch result {
                         case let .messagesSlice(_, count, _, _, messages, _, _):

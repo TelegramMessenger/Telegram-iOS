@@ -453,6 +453,10 @@ final class ViewTracker {
                     if let hole = view.topHole() {
                         firstHoles.insert(hole)
                     }
+                } else if case .savedMessagesIndex = key, let view = view as? MutableMessageHistorySavedMessagesIndexView {
+                    if let hole = view.topHole() {
+                        firstHoles.insert(hole)
+                    }
                 }
             }
         }

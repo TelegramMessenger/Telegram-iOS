@@ -78,6 +78,7 @@ public final class SeedConfiguration {
     public let decodeAutoremoveTimeout: (CachedPeerData) -> Int32?
     public let decodeDisplayPeerAsRegularChat: (CachedPeerData) -> Bool
     public let isPeerUpgradeMessage: (Message) -> Bool
+    public let automaticThreadIndexInfo: (PeerId, Int64) -> StoredMessageHistoryThreadInfo?
     
     public init(
         globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>,
@@ -105,7 +106,8 @@ public final class SeedConfiguration {
         decodeMessageThreadInfo: @escaping (CodableEntry) -> Message.AssociatedThreadInfo?,
         decodeAutoremoveTimeout: @escaping (CachedPeerData) -> Int32?,
         decodeDisplayPeerAsRegularChat: @escaping (CachedPeerData) -> Bool,
-        isPeerUpgradeMessage: @escaping (Message) -> Bool
+        isPeerUpgradeMessage: @escaping (Message) -> Bool,
+        automaticThreadIndexInfo: @escaping (PeerId, Int64) -> StoredMessageHistoryThreadInfo?
     ) {
         self.globalMessageIdsPeerIdNamespaces = globalMessageIdsPeerIdNamespaces
         self.initializeChatListWithHole = initializeChatListWithHole
@@ -129,5 +131,6 @@ public final class SeedConfiguration {
         self.decodeAutoremoveTimeout = decodeAutoremoveTimeout
         self.decodeDisplayPeerAsRegularChat = decodeDisplayPeerAsRegularChat
         self.isPeerUpgradeMessage = isPeerUpgradeMessage
+        self.automaticThreadIndexInfo = automaticThreadIndexInfo
     }
 }

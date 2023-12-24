@@ -18,9 +18,9 @@ extension ChatControllerImpl {
         params: NavigateToMessageParams
     ) {
         var id = id
-        if case let .replyThread(message) = self.chatLocation {
+        if case let .replyThread(message) = self.chatLocation, let effectiveMessageId = message.effectiveMessageId {
             if let channelMessageId = message.channelMessageId, id == channelMessageId {
-                id = message.messageId
+                id = effectiveMessageId
             }
         }
         
@@ -130,7 +130,7 @@ extension ChatControllerImpl {
                 
                 let navigateToLocation: NavigateToChatControllerParams.Location
                 if let message = messages.first, let threadId = message.threadId, let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
-                    navigateToLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                    navigateToLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                 } else {
                     navigateToLocation = .peer(peer)
                 }
@@ -148,7 +148,7 @@ extension ChatControllerImpl {
                 if let navigationController = self.effectiveNavigationController {
                     var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
                     if case let .channel(channel) = peer, channel.flags.contains(.isForum), let message = message, let threadId = message.threadId {
-                        chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                        chatLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                     }
                     
                     var quote: ChatControllerSubject.MessageHighlight.Quote?
@@ -221,7 +221,7 @@ extension ChatControllerImpl {
                     let searchLocation: ChatHistoryInitialSearchLocation
                     switch messageLocation {
                     case let .id(id, _):
-                        if case let .replyThread(message) = self.chatLocation, id == message.messageId {
+                        if case let .replyThread(message) = self.chatLocation, id == message.effectiveMessageId {
                             searchLocation = .index(.absoluteLowerBound())
                         } else {
                             searchLocation = .id(id)

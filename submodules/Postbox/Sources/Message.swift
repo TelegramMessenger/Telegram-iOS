@@ -869,14 +869,14 @@ public enum StoreMessageId {
     }
 }
 
-public func makeMessageThreadId(_ messageId: MessageId) -> Int64 {
-    return (Int64(messageId.namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: messageId.id)))
-}
-
-public func makeThreadIdMessageId(peerId: PeerId, threadId: Int64) -> MessageId {
-    let namespace = Int32((threadId >> 32) & 0x7fffffff)
-    let id = Int32(bitPattern: UInt32(threadId & 0xffffffff))
-    return MessageId(peerId: peerId, namespace: namespace, id: id)
+public struct MessageThreadKey: Hashable {
+    public var peerId: PeerId
+    public var threadId: Int64
+    
+    public init(peerId: PeerId, threadId: Int64) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
 }
 
 public final class StoreMessage {

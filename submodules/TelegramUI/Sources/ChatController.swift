@@ -608,13 +608,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             locationBroadcastPanelSource = .none
             groupCallPanelSource = .none
             let promise = Promise<Message?>()
-            promise.set(context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: replyThreadMessage.messageId))
-            |> map { message -> Message? in
-                guard let message = message else {
-                    return nil
-                }
-                return message._asMessage()
-            })
+            if let effectiveMessageId = replyThreadMessage.effectiveMessageId {
+                promise.set(context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: effectiveMessageId))
+                            |> map { message -> Message? in
+                    guard let message = message else {
+                        return nil
+                    }
+                    return message._asMessage()
+                })
+            } else {
+                promise.set(.single(nil))
+            }
             self.chatLocationInfoData = .replyThread(promise)
         case .feed:
             locationBroadcastPanelSource = .none
@@ -1038,11 +1042,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let openChatLocation = strongSelf.chatLocation
-            /*if case let .replyThread(replyThreadMessage) = openChatLocation {
-                if message.threadId != makeMessageThreadId(replyThreadMessage.messageId) {
-                    openChatLocation = .peer(id: message.id.peerId)
-                }
-            }*/
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
@@ -2804,12 +2803,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 if isCopyLink, let channel = channel as? TelegramChannel {
-                                    var threadMessageId: MessageId?
+                                    var threadId: Int64?
                                    
                                     if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
-                                        threadMessageId = replyThreadMessage.messageId
+                                        threadId = replyThreadMessage.threadId
                                     }
-                                    let _ = (context.engine.messages.exportMessageLink(peerId: messageId.peerId, messageId: messageId, isThread: threadMessageId != nil)
+                                    let _ = (context.engine.messages.exportMessageLink(peerId: messageId.peerId, messageId: messageId, isThread: threadId != nil)
                                     |> map { result -> String? in
                                         return result
                                     }
@@ -2995,7 +2994,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             if let strongSelf = self {
-                if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.messageId == message.id {
+                if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.effectiveMessageId == message.id {
                     return .none
                 }
                 if case .peer = strongSelf.chatLocation, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
@@ -3027,7 +3026,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
                 }
             case let .replyThread(replyThreadMessage):
-                let peerId = replyThreadMessage.messageId.peerId
+                let peerId = replyThreadMessage.peerId
                 strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, forceInCurrentChat: true, animated: true, completion: nil)
             case .feed:
                 break
@@ -5705,7 +5704,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case .peer:
                     replyThreadType = .replies
                 case let .replyThread(replyThreadMessage):
-                    if replyThreadMessage.messageId.peerId == context.account.peerId {
+                    if replyThreadMessage.peerId == context.account.peerId {
                         replyThreadId = replyThreadMessage.threadId
                         replyThreadType = .replies
                     } else {
@@ -5751,8 +5750,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let savedMessagesPeerId: PeerId?
-                if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.messageId.peerId == context.account.peerId {
-                    savedMessagesPeerId = PeerId(makeMessageThreadId(replyThreadMessage.messageId))
+                if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.peerId == context.account.peerId {
+                    savedMessagesPeerId = PeerId(replyThreadMessage.threadId)
                 } else {
                     savedMessagesPeerId = nil
                 }
@@ -6302,7 +6301,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case let .peer(peerId):
             activitySpace = PeerActivitySpace(peerId: peerId, category: .global)
         case let .replyThread(replyThreadMessage):
-            activitySpace = PeerActivitySpace(peerId: replyThreadMessage.messageId.peerId, category: .thread(makeMessageThreadId(replyThreadMessage.messageId)))
+            activitySpace = PeerActivitySpace(peerId: replyThreadMessage.peerId, category: .thread(replyThreadMessage.threadId))
         case .feed:
             activitySpace = nil
         }
@@ -6868,7 +6867,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let chatLocation: ChatLocation
                 if let threadId {
-                    chatLocation = .replyThread(message: ChatReplyThreadMessage(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                    chatLocation = .replyThread(message: ChatReplyThreadMessage(peerId: peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                 } else {
                     chatLocation = .peer(id: peerId)
                 }
@@ -7176,7 +7175,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var closeOnEmpty = false
         if case .pinnedMessages = self.presentationInterfaceState.subject {
             closeOnEmpty = true
-        } else if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId.peerId == self.context.account.peerId {
+        } else if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
             closeOnEmpty = true
         }
         
@@ -10999,7 +10998,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case let .peer(peerId):
                     activitySpace = PeerActivitySpace(peerId: peerId, category: .global)
                 case let .replyThread(replyThreadMessage):
-                    activitySpace = PeerActivitySpace(peerId: replyThreadMessage.messageId.peerId, category: .thread(makeMessageThreadId(replyThreadMessage.messageId)))
+                    activitySpace = PeerActivitySpace(peerId: replyThreadMessage.peerId, category: .thread(replyThreadMessage.threadId))
                 case .feed:
                     activitySpace = nil
                 }
@@ -11315,7 +11314,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if case let .replyThread(message) = self.chatLocation, message.isForumPost {
             if self.keepMessageCountersSyncrhonizedDisposable == nil {
-                self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: message.messageId.peerId, threadId: Int64(message.messageId.id)).startStrict()
+                self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: message.peerId, threadId: message.threadId).startStrict()
             }
         }
         
@@ -11851,8 +11850,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case let .peer(peerIdValue):
             peerId = peerIdValue
         case let .replyThread(replyThreadMessage):
-            peerId = replyThreadMessage.messageId.peerId
-            threadId = makeMessageThreadId(replyThreadMessage.messageId)
+            peerId = replyThreadMessage.peerId
+            threadId = replyThreadMessage.threadId
         case .feed:
             return
         }
@@ -12392,7 +12391,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }))
                 case .replyThread:
-                    if let peer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId.peerId == self.context.account.peerId {
+                    if let peer = self.presentationInterfaceState.renderedPeer?.peer, case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
                         if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: peer, mode: .forumTopic(thread: replyThreadMessage), avatarInitiallyExpanded: false, fromChat: true, requestsContext: nil) {
                             self.effectiveNavigationController?.pushViewController(infoController)
                         }
@@ -14948,7 +14947,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .peer:
             break
         case let .replyThread(replyThreadMessage):
-            defaultReplyMessageSubject = EngineMessageReplySubject(messageId: replyThreadMessage.messageId, quote: nil)
+            if let effectiveMessageId = replyThreadMessage.effectiveMessageId {
+                defaultReplyMessageSubject = EngineMessageReplySubject(messageId: effectiveMessageId, quote: nil)
+            }
         case .feed:
             break
         }
@@ -15651,22 +15652,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return nil
             }
-            var searchTopMsgId: MessageId?
+            var threadId: Int64?
             switch self.chatLocation {
             case .peer:
                 break
             case let .replyThread(replyThreadMessage):
-                searchTopMsgId = replyThreadMessage.messageId
+                threadId = replyThreadMessage.threadId
             case .feed:
                 break
             }
             switch search.domain {
                 case .everything:
-                    derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, topMsgId: searchTopMsgId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                    derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
                 case .members:
                     derivedSearchState = nil
                 case let .member(peer):
-                    derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, topMsgId: searchTopMsgId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                    derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             }
         }
         
@@ -15972,8 +15973,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     peerId = peerIdValue
                     threadId = nil
                 case let .replyThread(replyThreadMessage):
-                    peerId = replyThreadMessage.messageId.peerId
-                    threadId = makeMessageThreadId(replyThreadMessage.messageId)
+                    peerId = replyThreadMessage.peerId
+                    threadId = replyThreadMessage.threadId
                 case .feed:
                     return
                 }
@@ -16009,8 +16010,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         peerId = peerIdValue
                         threadId = nil
                     case let .replyThread(replyThreadMessage):
-                        peerId = replyThreadMessage.messageId.peerId
-                        threadId = makeMessageThreadId(replyThreadMessage.messageId)
+                        peerId = replyThreadMessage.peerId
+                        threadId = replyThreadMessage.threadId
                     case .feed:
                         return
                     }
