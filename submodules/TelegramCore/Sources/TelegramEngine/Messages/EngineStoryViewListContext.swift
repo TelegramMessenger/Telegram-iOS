@@ -19,47 +19,182 @@ public final class EngineStoryViewListContext {
         case recentFirst
     }
     
-    public final class Item: Equatable {
-        public let peer: EnginePeer
-        public let timestamp: Int32
-        public let storyStats: PeerStoryStats?
-        public let reaction: MessageReaction.Reaction?
-        public let reactionFile: TelegramMediaFile?
-        
-        public init(
-            peer: EnginePeer,
-            timestamp: Int32,
-            storyStats: PeerStoryStats?,
-            reaction: MessageReaction.Reaction?,
-            reactionFile: TelegramMediaFile?
-        ) {
-            self.peer = peer
-            self.timestamp = timestamp
-            self.storyStats = storyStats
-            self.reaction = reaction
-            self.reactionFile = reactionFile
+    
+    public enum Item: Equatable {
+        public final class View: Equatable {
+            public let peer: EnginePeer
+            public let timestamp: Int32
+            public let storyStats: PeerStoryStats?
+            public let reaction: MessageReaction.Reaction?
+            public let reactionFile: TelegramMediaFile?
+            
+            public init(
+                peer: EnginePeer,
+                timestamp: Int32,
+                storyStats: PeerStoryStats?,
+                reaction: MessageReaction.Reaction?,
+                reactionFile: TelegramMediaFile?
+            ) {
+                self.peer = peer
+                self.timestamp = timestamp
+                self.storyStats = storyStats
+                self.reaction = reaction
+                self.reactionFile = reactionFile
+            }
+            
+            public static func ==(lhs: View, rhs: View) -> Bool {
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                if lhs.timestamp != rhs.timestamp {
+                    return false
+                }
+                if lhs.storyStats != rhs.storyStats {
+                    return false
+                }
+                if lhs.reaction != rhs.reaction {
+                    return false
+                }
+                if lhs.reactionFile?.fileId != rhs.reactionFile?.fileId {
+                    return false
+                }
+                return true
+            }
         }
         
-        public static func ==(lhs: Item, rhs: Item) -> Bool {
-            if lhs.peer != rhs.peer {
-                return false
+        public final class Repost: Equatable {
+            public let peer: EnginePeer
+            public let story: EngineStoryItem
+            public let storyStats: PeerStoryStats?
+            
+            init(peer: EnginePeer, story: EngineStoryItem, storyStats: PeerStoryStats?) {
+                self.peer = peer
+                self.story = story
+                self.storyStats = storyStats
             }
-            if lhs.timestamp != rhs.timestamp {
-                return false
+            
+            public static func ==(lhs: Repost, rhs: Repost) -> Bool {
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                if lhs.story != rhs.story {
+                    return false
+                }
+                if lhs.storyStats != rhs.storyStats {
+                    return false
+                }
+                return true
             }
-            if lhs.storyStats != rhs.storyStats {
-                return false
+        }
+        
+        public final class Forward: Equatable {
+            public let message: EngineMessage
+            public let storyStats: PeerStoryStats?
+            
+            init(message: EngineMessage, storyStats: PeerStoryStats?) {
+                self.message = message
+                self.storyStats = storyStats
             }
-            if lhs.reaction != rhs.reaction {
-                return false
+            
+            public static func ==(lhs: Forward, rhs: Forward) -> Bool {
+                if lhs.message != rhs.message {
+                    return false
+                }
+                if lhs.storyStats != rhs.storyStats {
+                    return false
+                }
+                return true
             }
-            if lhs.reactionFile?.fileId != rhs.reactionFile?.fileId {
-                return false
+        }
+        
+        case view(View)
+        case repost(Repost)
+        case forward(Forward)
+        
+        public var peer: EnginePeer {
+            switch self {
+            case let .view(view):
+                return view.peer
+            case let .repost(repost):
+                return repost.peer
+            case let .forward(forward):
+                return EnginePeer(forward.message.peers[forward.message.id.peerId]!)
             }
-            return true
+        }
+        
+        public var timestamp: Int32 {
+            switch self {
+            case let .view(view):
+                return view.timestamp
+            case let .repost(repost):
+                return repost.story.timestamp
+            case let .forward(forward):
+                return forward.message.timestamp
+            }
+        }
+        
+        public var reaction: MessageReaction.Reaction? {
+            switch self {
+            case let .view(view):
+                return view.reaction
+            case .repost:
+                return nil
+            case .forward:
+                return nil
+            }
+        }
+        
+        public var story: EngineStoryItem? {
+            switch self {
+            case .view:
+                return nil
+            case let .repost(repost):
+                return repost.story
+            case .forward:
+                return nil
+            }
+        }
+
+        public var message: EngineMessage? {
+            switch self {
+            case .view:
+                return nil
+            case .repost:
+                return nil
+            case let .forward(forward):
+                return forward.message
+            }
+        }
+        
+        public var storyStats: PeerStoryStats? {
+            switch self {
+            case let .view(view):
+                return view.storyStats
+            case let .repost(repost):
+                return repost.storyStats
+            case let .forward(forward):
+                return forward.storyStats
+            }
+        }
+        
+        public struct ItemHash: Hashable {
+            public var peerId: EnginePeer.Id
+            public var storyId: Int32?
+            public var messageId: EngineMessage.Id?
+        }
+        
+        public var uniqueId: ItemHash {
+            switch self {
+            case let .view(view):
+                return ItemHash(peerId: view.peer.id, storyId: nil, messageId: nil)
+            case let .repost(repost):
+                return ItemHash(peerId: repost.peer.id, storyId: repost.story.id, messageId: nil)
+            case let .forward(forward):
+                return ItemHash(peerId: forward.message.id.peerId, storyId: nil, messageId: forward.message.id)
+            }
         }
     }
-    
+        
     public struct State: Equatable {
         public var totalCount: Int
         public var totalReactedCount: Int
@@ -86,6 +221,8 @@ public final class EngineStoryViewListContext {
         
         struct InternalState: Equatable {
             var totalCount: Int
+            var totalViewsCount: Int
+            var totalForwardsCount: Int
             var totalReactedCount: Int
             var items: [Item]
             var canLoadMore: Bool
@@ -179,8 +316,11 @@ public final class EngineStoryViewListContext {
                             switch sortMode {
                             case .repostsFirst:
                                 items.sort(by: { lhs, rhs in
-                                    if (lhs.reaction == nil) != (rhs.reaction == nil) {
-                                        return lhs.reaction != nil
+                                    if (lhs.story == nil) != (rhs.story == nil) {
+                                        return lhs.story != nil
+                                    }
+                                    if (lhs.message == nil) != (rhs.message == nil) {
+                                        return lhs.message != nil
                                     }
                                     if lhs.timestamp != rhs.timestamp {
                                         return lhs.timestamp > rhs.timestamp
@@ -189,6 +329,12 @@ public final class EngineStoryViewListContext {
                                 })
                             case .reactionsFirst:
                                 items.sort(by: { lhs, rhs in
+                                    if (lhs.story == nil) != (rhs.story == nil) {
+                                        return lhs.story == nil
+                                    }
+                                    if (lhs.message == nil) != (rhs.message == nil) {
+                                        return lhs.message == nil
+                                    }
                                     if (lhs.reaction == nil) != (rhs.reaction == nil) {
                                         return lhs.reaction != nil
                                     }
@@ -221,6 +367,8 @@ public final class EngineStoryViewListContext {
                             
                             return InternalState(
                                 totalCount: totalCount,
+                                totalViewsCount: 0,
+                                totalForwardsCount: 0,
                                 totalReactedCount: totalReactedCount,
                                 items: items,
                                 canLoadMore: state.canLoadMore
@@ -236,7 +384,7 @@ public final class EngineStoryViewListContext {
                 }))
             } else {
                 let initialState = State(totalCount: listMode == .everyone ? views.seenCount : 100, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
-                let state = InternalState(totalCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
+                let state = InternalState(totalCount: initialState.totalCount, totalViewsCount: initialState.totalCount, totalForwardsCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
                 self.state = state
                 self.statePromise.set(.single(state))
                 
@@ -279,167 +427,339 @@ public final class EngineStoryViewListContext {
             let sortMode = self.sortMode
             let searchQuery = self.searchQuery
             let currentOffset = state.nextOffset
-            let limit = state.items.isEmpty ? 50 : 100
-            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
-                return transaction.getPeer(peerId).flatMap(apiInputPeer)
-            }
-            |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
-                guard let inputPeer = inputPeer else {
-                    return .complete()
+            let limit = 50
+           
+            let signal: Signal<InternalState, NoError> 
+            
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                signal = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }
-                
-                var flags: Int32 = 0
-                switch listMode {
-                case .everyone:
-                    break
-                case .contacts:
-                    flags |= (1 << 0)
-                }
-                switch sortMode {
-                case .reactionsFirst:
-                    flags |= (1 << 2)
-                case .recentFirst, .repostsFirst:
-                    break
-                }
-                if searchQuery != nil {
-                    flags |= (1 << 1)
-                }
-                
-                return account.network.request(Api.functions.stories.getStoryViewsList(flags: flags, peer: inputPeer, q: searchQuery, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { result -> Signal<InternalState, NoError> in
-                    return account.postbox.transaction { transaction -> InternalState in
-                        switch result {
-                        case let .storyViewsList(_, count, reactionsCount, views, users, nextOffset):
-                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
-                            
-                            var items: [Item] = []
-                            for view in views {
-                                switch view {
-                                case let .storyView(flags, userId, date, reaction):
-                                    let isBlocked = (flags & (1 << 0)) != 0
-                                    let isBlockedFromStories = (flags & (1 << 1)) != 0
-                                                                        
-                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
-                                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
-                                        let previousData: CachedUserData
-                                        if let current = cachedData as? CachedUserData {
-                                            previousData = current
-                                        } else {
-                                            previousData = CachedUserData()
-                                        }
-                                        var updatedFlags = previousData.flags
-                                        if isBlockedFromStories {
-                                            updatedFlags.insert(.isBlockedFromStories)
-                                        } else {
-                                            updatedFlags.remove(.isBlockedFromStories)
-                                        }
-                                        return previousData.withUpdatedIsBlocked(isBlocked).withUpdatedFlags(updatedFlags)
-                                    })
-                                    if let peer = transaction.getPeer(peerId) {
-                                        let parsedReaction = reaction.flatMap(MessageReaction.Reaction.init(apiReaction:))
-                                        items.append(Item(
-                                            peer: EnginePeer(peer),
-                                            timestamp: date,
-                                            storyStats: transaction.getPeerStoryStats(peerId: peerId),
-                                            reaction: parsedReaction,
-                                            reactionFile: parsedReaction.flatMap { reaction -> TelegramMediaFile? in
-                                                switch reaction {
-                                                case .builtin:
-                                                    return nil
-                                                case let .custom(fileId):
-                                                    return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
-                                                }
+                |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
+                    guard let inputPeer = inputPeer else {
+                        return .complete()
+                    }
+                    
+                    var flags: Int32 = 0
+                    switch listMode {
+                    case .everyone:
+                        break
+                    case .contacts:
+                        flags |= (1 << 0)
+                    }
+                    switch sortMode {
+                    case .reactionsFirst:
+                        flags |= (1 << 2)
+                    case .recentFirst, .repostsFirst:
+                        break
+                    }
+                    if searchQuery != nil {
+                        flags |= (1 << 1)
+                    }
+                    
+                    return account.network.request(Api.functions.stories.getStoryViewsList(flags: flags, peer: inputPeer, q: searchQuery, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { result -> Signal<InternalState, NoError> in
+                        return account.postbox.transaction { transaction -> InternalState in
+                            switch result {
+                            case let .storyViewsList(_, count, viewsCount, forwardsCount, reactionsCount, views, chats, users, nextOffset):
+                                let peers = AccumulatedPeers(chats: chats, users: users)
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
+                                
+                                var items: [Item] = []
+                                for view in views {
+                                    switch view {
+                                    case let .storyView(flags, userId, date, reaction):
+                                        let isBlocked = (flags & (1 << 0)) != 0
+                                        let isBlockedFromStories = (flags & (1 << 1)) != 0
+                                        
+                                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
+                                            let previousData: CachedUserData
+                                            if let current = cachedData as? CachedUserData {
+                                                previousData = current
+                                            } else {
+                                                previousData = CachedUserData()
                                             }
-                                        ))
-                                    }
-                                }
-                            }
-                            
-                            if listMode == .everyone, searchQuery == nil {
-                                if let storedItem = transaction.getStory(id: StoryId(peerId: account.peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(item) = storedItem, let currentViews = item.views {
-                                    let updatedItem: Stories.StoredItem = .item(Stories.Item(
-                                        id: item.id,
-                                        timestamp: item.timestamp,
-                                        expirationTimestamp: item.expirationTimestamp,
-                                        media: item.media,
-                                        mediaAreas: item.mediaAreas,
-                                        text: item.text,
-                                        entities: item.entities,
-                                        views: Stories.Item.Views(
-                                            seenCount: Int(count),
-                                            reactedCount: Int(reactionsCount),
-                                            forwardCount: currentViews.forwardCount,
-                                            seenPeerIds: currentViews.seenPeerIds,
-                                            reactions: currentViews.reactions,
-                                            hasList: currentViews.hasList
-                                        ),
-                                        privacy: item.privacy,
-                                        isPinned: item.isPinned,
-                                        isExpired: item.isExpired,
-                                        isPublic: item.isPublic,
-                                        isCloseFriends: item.isCloseFriends,
-                                        isContacts: item.isContacts,
-                                        isSelectedContacts: item.isSelectedContacts,
-                                        isForwardingDisabled: item.isForwardingDisabled,
-                                        isEdited: item.isEdited,
-                                        isMy: item.isMy,
-                                        myReaction: item.myReaction,
-                                        forwardInfo: item.forwardInfo
-                                    ))
-                                    if let entry = CodableEntry(updatedItem) {
-                                        transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
+                                            var updatedFlags = previousData.flags
+                                            if isBlockedFromStories {
+                                                updatedFlags.insert(.isBlockedFromStories)
+                                            } else {
+                                                updatedFlags.remove(.isBlockedFromStories)
+                                            }
+                                            return previousData.withUpdatedIsBlocked(isBlocked).withUpdatedFlags(updatedFlags)
+                                        })
+                                        if let peer = transaction.getPeer(peerId) {
+                                            let parsedReaction = reaction.flatMap(MessageReaction.Reaction.init(apiReaction:))
+                                            items.append(.view(Item.View(
+                                                peer: EnginePeer(peer),
+                                                timestamp: date,
+                                                storyStats: transaction.getPeerStoryStats(peerId: peerId),
+                                                reaction: parsedReaction,
+                                                reactionFile: parsedReaction.flatMap { reaction -> TelegramMediaFile? in
+                                                    switch reaction {
+                                                    case .builtin:
+                                                        return nil
+                                                    case let .custom(fileId):
+                                                        return transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                    }
+                                                }
+                                            )))
+                                        }
+                                    case let .storyViewPublicForward(flags, message):
+                                        let _ = flags
+                                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
+                                            items.append(.forward(Item.Forward(
+                                                message: EngineMessage(message),
+                                                storyStats: transaction.getPeerStoryStats(peerId: message.id.peerId)
+                                            )))
+                                        }
+                                    case let .storyViewPublicRepost(flags, peerId, story):
+                                        let _ = flags
+                                        if let peer = transaction.getPeer(peerId.peerId) {
+                                            if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peer.id, transaction: transaction), case let .item(item) = storedItem, let media = item.media {
+                                                items.append(.repost(Item.Repost(
+                                                    peer: EnginePeer(peer),
+                                                    story: EngineStoryItem(
+                                                        id: item.id,
+                                                        timestamp: item.timestamp,
+                                                        expirationTimestamp: item.expirationTimestamp,
+                                                        media: EngineMedia(media),
+                                                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                        mediaAreas: item.mediaAreas,
+                                                        text: item.text,
+                                                        entities: item.entities,
+                                                        views: item.views.flatMap { views in
+                                                            return EngineStoryItem.Views(
+                                                                seenCount: views.seenCount,
+                                                                reactedCount: views.reactedCount,
+                                                                forwardCount: views.forwardCount,
+                                                                seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                    return transaction.getPeer(id).flatMap(EnginePeer.init)
+                                                                },
+                                                                reactions: views.reactions,
+                                                                hasList: views.hasList
+                                                            )
+                                                        },
+                                                        privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                        isPinned: item.isPinned,
+                                                        isExpired: item.isExpired,
+                                                        isPublic: item.isPublic,
+                                                        isPending: false,
+                                                        isCloseFriends: item.isCloseFriends,
+                                                        isContacts: item.isContacts,
+                                                        isSelectedContacts: item.isSelectedContacts,
+                                                        isForwardingDisabled: item.isForwardingDisabled,
+                                                        isEdited: item.isEdited,
+                                                        isMy: item.isMy,
+                                                        myReaction: item.myReaction,
+                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                                    ),
+                                                    storyStats: transaction.getPeerStoryStats(peerId: peer.id)
+                                                )))
+                                            }
+                                        }
                                     }
                                 }
                                 
-                                var currentItems = transaction.getStoryItems(peerId: account.peerId)
-                                for i in 0 ..< currentItems.count {
-                                    if currentItems[i].id == storyId {
-                                        if case let .item(item) = currentItems[i].value.get(Stories.StoredItem.self), let currentViews = item.views {
-                                            let updatedItem: Stories.StoredItem = .item(Stories.Item(
-                                                id: item.id,
-                                                timestamp: item.timestamp,
-                                                expirationTimestamp: item.expirationTimestamp,
-                                                media: item.media,
-                                                mediaAreas: item.mediaAreas,
-                                                text: item.text,
-                                                entities: item.entities,
-                                                views: Stories.Item.Views(
-                                                    seenCount: Int(count),
-                                                    reactedCount: Int(reactionsCount),
-                                                    forwardCount: currentViews.forwardCount,
-                                                    seenPeerIds: currentViews.seenPeerIds,
-                                                    reactions: currentViews.reactions,
-                                                    hasList: currentViews.hasList
-                                                ),
-                                                privacy: item.privacy,
-                                                isPinned: item.isPinned,
-                                                isExpired: item.isExpired,
-                                                isPublic: item.isPublic,
-                                                isCloseFriends: item.isCloseFriends,
-                                                isContacts: item.isContacts,
-                                                isSelectedContacts: item.isSelectedContacts,
-                                                isForwardingDisabled: item.isForwardingDisabled,
-                                                isEdited: item.isEdited,
-                                                isMy: item.isMy,
-                                                myReaction: item.myReaction,
-                                                forwardInfo: item.forwardInfo
-                                            ))
-                                            if let entry = CodableEntry(updatedItem) {
-                                                currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
+                                if listMode == .everyone, searchQuery == nil {
+                                    if let storedItem = transaction.getStory(id: StoryId(peerId: account.peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(item) = storedItem, let currentViews = item.views {
+                                        let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                                            id: item.id,
+                                            timestamp: item.timestamp,
+                                            expirationTimestamp: item.expirationTimestamp,
+                                            media: item.media,
+                                            alternativeMedia: item.alternativeMedia,
+                                            mediaAreas: item.mediaAreas,
+                                            text: item.text,
+                                            entities: item.entities,
+                                            views: Stories.Item.Views(
+                                                seenCount: Int(count),
+                                                reactedCount: Int(reactionsCount),
+                                                forwardCount: Int(forwardsCount),
+                                                seenPeerIds: currentViews.seenPeerIds,
+                                                reactions: currentViews.reactions,
+                                                hasList: currentViews.hasList
+                                            ),
+                                            privacy: item.privacy,
+                                            isPinned: item.isPinned,
+                                            isExpired: item.isExpired,
+                                            isPublic: item.isPublic,
+                                            isCloseFriends: item.isCloseFriends,
+                                            isContacts: item.isContacts,
+                                            isSelectedContacts: item.isSelectedContacts,
+                                            isForwardingDisabled: item.isForwardingDisabled,
+                                            isEdited: item.isEdited,
+                                            isMy: item.isMy,
+                                            myReaction: item.myReaction,
+                                            forwardInfo: item.forwardInfo
+                                        ))
+                                        if let entry = CodableEntry(updatedItem) {
+                                            transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
+                                        }
+                                    }
+                                    
+                                    var currentItems = transaction.getStoryItems(peerId: account.peerId)
+                                    for i in 0 ..< currentItems.count {
+                                        if currentItems[i].id == storyId {
+                                            if case let .item(item) = currentItems[i].value.get(Stories.StoredItem.self), let currentViews = item.views {
+                                                let updatedItem: Stories.StoredItem = .item(Stories.Item(
+                                                    id: item.id,
+                                                    timestamp: item.timestamp,
+                                                    expirationTimestamp: item.expirationTimestamp,
+                                                    media: item.media,
+                                                    alternativeMedia: item.alternativeMedia,
+                                                    mediaAreas: item.mediaAreas,
+                                                    text: item.text,
+                                                    entities: item.entities,
+                                                    views: Stories.Item.Views(
+                                                        seenCount: Int(count),
+                                                        reactedCount: Int(reactionsCount),
+                                                        forwardCount: Int(forwardsCount),
+                                                        seenPeerIds: currentViews.seenPeerIds,
+                                                        reactions: currentViews.reactions,
+                                                        hasList: currentViews.hasList
+                                                    ),
+                                                    privacy: item.privacy,
+                                                    isPinned: item.isPinned,
+                                                    isExpired: item.isExpired,
+                                                    isPublic: item.isPublic,
+                                                    isCloseFriends: item.isCloseFriends,
+                                                    isContacts: item.isContacts,
+                                                    isSelectedContacts: item.isSelectedContacts,
+                                                    isForwardingDisabled: item.isForwardingDisabled,
+                                                    isEdited: item.isEdited,
+                                                    isMy: item.isMy,
+                                                    myReaction: item.myReaction,
+                                                    forwardInfo: item.forwardInfo
+                                                ))
+                                                if let entry = CodableEntry(updatedItem) {
+                                                    currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    transaction.setStoryItems(peerId: account.peerId, items: currentItems)
+                                }
+                                
+                                return InternalState(totalCount: Int(count), totalViewsCount: Int(viewsCount), totalForwardsCount: Int(forwardsCount), totalReactedCount: Int(reactionsCount), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
+                            case .none:
+                                return InternalState(totalCount: 0, totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                            }
+                        }
+                    }
+                }
+            } else {
+                signal = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                    return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                }
+                |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
+                    guard let inputPeer = inputPeer else {
+                        return .complete()
+                    }
+                    
+                    var flags: Int32 = 0
+                    if let _ = currentOffset {
+                        flags |= (1 << 1)
+                    }
+                    if case .repostsFirst = sortMode {
+                        flags |= (1 << 2)
+                    }
+                    
+                    return account.network.request(Api.functions.stories.getStoryReactionsList(flags: flags, peer: inputPeer, id: storyId, reaction: nil, offset: currentOffset?.value, limit: Int32(limit)))
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<Api.stories.StoryReactionsList?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { result -> Signal<InternalState, NoError> in
+                        return account.postbox.transaction { transaction -> InternalState in
+                            switch result {
+                            case let .storyReactionsList(_, count, reactions, chats, users, nextOffset):
+                                let peers = AccumulatedPeers(chats: chats, users: users)
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: peers)
+                                
+                                var items: [Item] = []
+                                for reaction in reactions {
+                                    switch reaction {
+                                    case let .storyReaction(peerId, date, reaction):
+                                        if let peer = transaction.getPeer(peerId.peerId) {
+                                            if let parsedReaction = MessageReaction.Reaction(apiReaction: reaction) {
+                                                let reactionFile: TelegramMediaFile?
+                                                switch parsedReaction {
+                                                case .builtin:
+                                                    reactionFile = nil
+                                                case let .custom(fileId):
+                                                    reactionFile = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile
+                                                }
+                                                items.append(.view(Item.View(
+                                                    peer: EnginePeer(peer),
+                                                    timestamp: date,
+                                                    storyStats: transaction.getPeerStoryStats(peerId: peer.id),
+                                                    reaction: parsedReaction,
+                                                    reactionFile: reactionFile
+                                                )))
+                                            }
+                                        }
+                                    case let .storyReactionPublicForward(message):
+                                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: false), let message = locallyRenderedMessage(message: storeMessage, peers: peers.peers) {
+                                            items.append(.forward(Item.Forward(
+                                                message: EngineMessage(message),
+                                                storyStats: transaction.getPeerStoryStats(peerId: message.id.peerId)
+                                            )))
+                                        }
+                                    case let .storyReactionPublicRepost(peerId, story):
+                                        if let peer = transaction.getPeer(peerId.peerId) {
+                                            if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peer.id, transaction: transaction), case let .item(item) = storedItem, let media = item.media {
+                                                items.append(.repost(Item.Repost(
+                                                    peer: EnginePeer(peer),
+                                                    story: EngineStoryItem(
+                                                        id: item.id,
+                                                        timestamp: item.timestamp,
+                                                        expirationTimestamp: item.expirationTimestamp,
+                                                        media: EngineMedia(media),
+                                                        alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
+                                                        mediaAreas: item.mediaAreas,
+                                                        text: item.text,
+                                                        entities: item.entities,
+                                                        views: item.views.flatMap { views in
+                                                            return EngineStoryItem.Views(
+                                                                seenCount: views.seenCount,
+                                                                reactedCount: views.reactedCount,
+                                                                forwardCount: views.forwardCount,
+                                                                seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
+                                                                    return transaction.getPeer(id).flatMap(EnginePeer.init)
+                                                                },
+                                                                reactions: views.reactions,
+                                                                hasList: views.hasList
+                                                            )
+                                                        },
+                                                        privacy: item.privacy.flatMap(EngineStoryPrivacy.init),
+                                                        isPinned: item.isPinned,
+                                                        isExpired: item.isExpired,
+                                                        isPublic: item.isPublic,
+                                                        isPending: false,
+                                                        isCloseFriends: item.isCloseFriends,
+                                                        isContacts: item.isContacts,
+                                                        isSelectedContacts: item.isSelectedContacts,
+                                                        isForwardingDisabled: item.isForwardingDisabled,
+                                                        isEdited: item.isEdited,
+                                                        isMy: item.isMy,
+                                                        myReaction: item.myReaction,
+                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                                    ),
+                                                    storyStats: transaction.getPeerStoryStats(peerId: peer.id)
+                                                )))
                                             }
                                         }
                                     }
                                 }
-                                transaction.setStoryItems(peerId: account.peerId, items: currentItems)
+                                return InternalState(totalCount: Int(count), totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
+                            case .none:
+                                return InternalState(totalCount: 0, totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
                             }
-                            
-                            return InternalState(totalCount: Int(count), totalReactedCount: Int(reactionsCount), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset.flatMap { NextOffset(value: $0) })
-                        case .none:
-                            return InternalState(totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
                         }
                     }
                 }
@@ -455,23 +775,19 @@ public final class EngineStoryViewListContext {
         
         private func updateInternalState(state: InternalState) {
             var currentState = self.state ?? InternalState(
-                totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
-            
-            struct ItemHash: Hashable {
-                var peerId: EnginePeer.Id
-            }
+                totalCount: 0, totalViewsCount: 0, totalForwardsCount: 0, totalReactedCount: 0, items: [], canLoadMore: false, nextOffset: nil)
             
             if self.parentSource != nil {
                 currentState.items.removeAll()
             }
             
-            var existingItems = Set<ItemHash>()
+            var existingItems = Set<Item.ItemHash>()
             for item in currentState.items {
-                existingItems.insert(ItemHash(peerId: item.peer.id))
+                existingItems.insert(item.uniqueId)
             }
             
             for item in state.items {
-                let itemHash = ItemHash(peerId: item.peer.id)
+                let itemHash = item.uniqueId
                 if existingItems.contains(itemHash) {
                     continue
                 }
@@ -481,7 +797,7 @@ public final class EngineStoryViewListContext {
             
             var allReactedCount = 0
             for item in currentState.items {
-                if item.reaction != nil {
+                if case let .view(view) = item, view.reaction != nil {
                     allReactedCount += 1
                 } else {
                     break
@@ -516,15 +832,15 @@ public final class EngineStoryViewListContext {
                 for i in 0 ..< state.items.count {
                     let item = items[i]
                     let value = view.storyStats[item.peer.id]
-                    if item.storyStats != value {
+                    if case let .view(view) = item, view.storyStats != value {
                         updated = true
-                        items[i] = Item(
-                            peer: item.peer,
-                            timestamp: item.timestamp,
+                        items[i] = .view(Item.View(
+                            peer: view.peer,
+                            timestamp: view.timestamp,
                             storyStats: value,
-                            reaction: item.reaction,
-                            reactionFile: item.reactionFile
-                        )
+                            reaction: view.reaction,
+                            reactionFile: view.reactionFile
+                        ))
                     }
                 }
                 if updated {
@@ -574,4 +890,3 @@ public final class EngineStoryViewListContext {
         }
     }
 }
-

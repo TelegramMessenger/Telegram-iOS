@@ -3,7 +3,11 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-
+import LinkPresentation
+#if os(iOS)
+import UIKit
+#endif
+import CoreServices
 
 public enum WebpagePreviewResult: Equatable {
     public struct Result: Equatable {
@@ -14,9 +18,13 @@ public enum WebpagePreviewResult: Equatable {
     case progress
     case result(Result?)
 }
+#if os(macOS)
+private typealias UIImage = NSImage
+#endif
 
-public func webpagePreview(account: Account, urls: [String], webpageId: MediaId? = nil) -> Signal<WebpagePreviewResult, NoError> {
-    return webpagePreviewWithProgress(account: account, urls: urls)
+
+public func webpagePreview(account: Account, urls: [String], webpageId: MediaId? = nil, forPeerId: PeerId? = nil) -> Signal<WebpagePreviewResult, NoError> {
+    return webpagePreviewWithProgress(account: account, urls: urls, webpageId: webpageId, forPeerId: forPeerId)
     |> mapToSignal { next -> Signal<WebpagePreviewResult, NoError> in
         if case let .result(result) = next {
             return .single(.result(result))
@@ -35,7 +43,7 @@ public func normalizedWebpagePreviewUrl(url: String) -> String {
     return url
 }
 
-public func webpagePreviewWithProgress(account: Account, urls: [String], webpageId: MediaId? = nil) -> Signal<WebpagePreviewWithProgressResult, NoError> {
+public func webpagePreviewWithProgress(account: Account, urls: [String], webpageId: MediaId? = nil, forPeerId: PeerId? = nil) -> Signal<WebpagePreviewWithProgressResult, NoError> {
     return account.postbox.transaction { transaction -> Signal<WebpagePreviewWithProgressResult, NoError> in
         if let webpageId = webpageId, let webpage = transaction.getMedia(webpageId) as? TelegramMediaWebpage, let url = webpage.content.url {
             var sourceUrl = url
@@ -44,6 +52,108 @@ public func webpagePreviewWithProgress(account: Account, urls: [String], webpage
             }
             return .single(.result(WebpagePreviewResult.Result(webpage: webpage, sourceUrl: sourceUrl)))
         } else {
+            if #available(iOS 13.0, macOS 10.15, *) {
+                if let forPeerId, forPeerId.namespace == Namespaces.Peer.SecretChat, let sourceUrl = urls.first, let url = URL(string: sourceUrl) {
+                    let localHosts: [String] = [
+                        "twitter.com",
+                        "www.twitter.com",
+                        "instagram.com",
+                        "www.instagram.com",
+                        "tiktok.com",
+                        "www.tiktok.com"
+                    ]
+                    if let host = url.host?.lowercased(), localHosts.contains(host) {
+                        return Signal { subscriber in
+                            subscriber.putNext(.progress(0.0))
+                            
+                            let metadataProvider = LPMetadataProvider()
+                            metadataProvider.shouldFetchSubresources = true
+                            metadataProvider.startFetchingMetadata(for: url, completionHandler: { metadata, _ in
+                                if let metadata = metadata {
+                                    let completeWithImage: (Data?) -> Void = { imageData in
+                                        var image: TelegramMediaImage?
+                                        if let imageData, let parsedImage = UIImage(data: imageData) {
+                                            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                                            account.postbox.mediaBox.storeResourceData(resource.id, data: imageData)
+                                            image = TelegramMediaImage(
+                                                imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)),
+                                                representations: [
+                                                    TelegramMediaImageRepresentation(
+                                                        dimensions: PixelDimensions(width: Int32(parsedImage.size.width), height: Int32(parsedImage.size.height)),
+                                                        resource: resource,
+                                                        progressiveSizes: [],
+                                                        immediateThumbnailData: nil,
+                                                        hasVideo: false,
+                                                        isPersonal: false
+                                                    )
+                                                ],
+                                                immediateThumbnailData: nil,
+                                                reference: nil,
+                                                partialReference: nil,
+                                                flags: []
+                                            )
+                                        }
+                                        
+                                        var webpageType: String?
+                                        if image != nil {
+                                            webpageType = "photo"
+                                        }
+                                        
+                                        let webpage = TelegramMediaWebpage(
+                                            webpageId: MediaId(namespace: Namespaces.Media.LocalWebpage, id: Int64.random(in: Int64.min ... Int64.max)),
+                                            content: .Loaded(TelegramMediaWebpageLoadedContent(
+                                                url: sourceUrl,
+                                                displayUrl: metadata.url?.absoluteString ?? sourceUrl,
+                                                hash: 0,
+                                                type: webpageType,
+                                                websiteName: nil,
+                                                title: metadata.title,
+                                                text: metadata.value(forKey: "_summary") as? String,
+                                                embedUrl: nil,
+                                                embedType: nil,
+                                                embedSize: nil,
+                                                duration: nil,
+                                                author: nil,
+                                                isMediaLargeByDefault: true,
+                                                image: image,
+                                                file: nil,
+                                                story: nil,
+                                                attributes: [],
+                                                instantPage: nil
+                                            ))
+                                        )
+                                        subscriber.putNext(.result(WebpagePreviewResult.Result(
+                                            webpage: webpage,
+                                            sourceUrl: sourceUrl
+                                        )))
+                                        subscriber.putCompletion()
+                                    }
+                                    
+                                    if let imageProvider = metadata.imageProvider {
+                                        imageProvider.loadFileRepresentation(forTypeIdentifier: kUTTypeImage as String, completionHandler: { imageUrl, _ in
+                                            guard let imageUrl, let imageData = try? Data(contentsOf: imageUrl) else {
+                                                completeWithImage(nil)
+                                                return
+                                            }
+                                            completeWithImage(imageData)
+                                        })
+                                    } else {
+                                        completeWithImage(nil)
+                                    }
+                                } else {
+                                    subscriber.putNext(.result(nil))
+                                    subscriber.putCompletion()
+                                }
+                            })
+                            
+                            return ActionDisposable {
+                                metadataProvider.cancel()
+                            }
+                        }
+                    }
+                }
+            }
+            
             return account.network.requestWithAdditionalInfo(Api.functions.messages.getWebPagePreview(flags: 0, message: urls.joined(separator: " "), entities: nil), info: .progress)
             |> `catch` { _ -> Signal<NetworkRequestResult<Api.MessageMedia>, NoError> in
                 return .single(.result(.messageMediaEmpty))

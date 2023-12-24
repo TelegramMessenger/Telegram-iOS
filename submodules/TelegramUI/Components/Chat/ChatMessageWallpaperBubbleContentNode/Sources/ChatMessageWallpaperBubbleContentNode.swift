@@ -265,6 +265,7 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                 }
                 
                 let fromYou = item.message.author?.id == item.context.account.peerId
+                let isChannel = item.message.id.peerId.isGroupOrChannel
                 
                 let peerName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
                 let text: String
@@ -281,7 +282,14 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                         }
                     }
                 } else {
-                    text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string
+                    if item.associatedData.isRecentActions {
+                        let authorName = item.message.author.flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
+                        text = item.presentationData.strings.Channel_AdminLog_ChannelChangedWallpaper(authorName).string
+                    } else if item.message.id.peerId.isGroupOrChannel {
+                        text = item.presentationData.strings.Notification_ChannelChangedWallpaper
+                    } else {
+                        text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string
+                    }
                 }
                 
                 let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor)
@@ -311,15 +319,15 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                 if displayTrailingAnimatedDots {
                     textHeight += subtitleLayout.size.height
                 }
-                let backgroundSize = CGSize(width: width, height: textHeight + 140.0 + (fromYou ? 0.0 : 42.0))
+                let backgroundSize = CGSize(width: width, height: textHeight + 140.0 + (fromYou || isChannel ? 0.0 : 42.0))
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            strongSelf.buttonNode.isHidden = fromYou
-                            strongSelf.buttonTitleNode.isHidden = fromYou
+                            strongSelf.buttonNode.isHidden = fromYou || isChannel
+                            strongSelf.buttonTitleNode.isHidden = fromYou || isChannel
                             
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
                             if let media, mediaUpdated {     
@@ -327,7 +335,22 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                                 var imageSize = boundingSize
                                 let updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                                 var patternArguments: PatternWallpaperArguments?
-                                switch media.content {
+                                
+                                var mediaContent = media.content
+                                if case let .emoticon(emoticon) = mediaContent, let theme = item.associatedData.chatThemes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }) {
+                                    let themeSettings: TelegramThemeSettings?
+                                    if let matching = theme.settings?.first(where: { $0.baseTheme == item.presentationData.theme.theme.referenceTheme.baseTheme }) {
+                                        themeSettings = matching
+                                    } else {
+                                        themeSettings = theme.settings?.first
+                                    }
+                                    
+                                    if let themeWallpaper = themeSettings?.wallpaper, let themeWallpaperContent = WallpaperPreviewMedia(wallpaper: themeWallpaper)?.content {
+                                        mediaContent = themeWallpaperContent
+                                    }
+                                }
+                                
+                                switch mediaContent {
                                 case let .file(file, patternColors, rotation, intensity, _, _):
                                     var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(item.message), media: file).resourceReference($0.resource)) })
                                     if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
@@ -380,6 +403,8 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                                 case let .gradient(colors, rotation):
                                     updateImageSignal = gradientImage(colors.map(UIColor.init(rgb:)), rotation: rotation ?? 0)
                                 case .themeSettings:
+                                    updateImageSignal = .complete()
+                                case .emoticon:
                                     updateImageSignal = .complete()
                                 }
                                 

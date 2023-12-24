@@ -18,6 +18,7 @@ public final class StoryPreloadInfo {
     public let peer: PeerReference
     public let storyId: Int32
     public let media: EngineMedia
+    public let alternativeMedia: EngineMedia?
     public let reactions: [MessageReaction.Reaction]
     public let priority: Priority
     
@@ -25,12 +26,14 @@ public final class StoryPreloadInfo {
         peer: PeerReference,
         storyId: Int32,
         media: EngineMedia,
+        alternativeMedia: EngineMedia?,
         reactions: [MessageReaction.Reaction],
         priority: Priority
     ) {
         self.peer = peer
         self.storyId = storyId
         self.media = media
+        self.alternativeMedia = alternativeMedia
         self.reactions = reactions
         self.priority = priority
     }
@@ -77,7 +80,7 @@ public extension TelegramEngine {
         }
 
         public func downloadMessage(messageId: MessageId) -> Signal<Message?, NoError> {
-            return _internal_downloadMessage(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
+            return _internal_downloadMessage(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, messageId: messageId)
         }
 
         public func searchMessageIdByTimestamp(peerId: PeerId, threadId: Int64?, timestamp: Int32) -> Signal<MessageId?, NoError> {
@@ -159,7 +162,7 @@ public extension TelegramEngine {
             return _internal_markAllChatsAsRead(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager)
         }
 
-        public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], strategy: GetMessagesStrategy = .cloud(skipLocal: false)) -> Signal<GetMessagesResult, NoError> {
+        public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], strategy: GetMessagesStrategy = .cloud(skipLocal: false)) -> Signal<GetMessagesResult, GetMessagesError> {
             return _internal_getMessagesLoadIfNecessary(messageIds, postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, strategy: strategy)
         }
 
@@ -635,6 +638,10 @@ public extension TelegramEngine {
                 }
             }
             |> ignoreValues
+        }
+        
+        public func searchForumTopics(peerId: EnginePeer.Id, query: String) -> Signal<[EngineChatList.Item], NoError> {
+            return _internal_searchForumTopics(account: self.account, peerId: peerId, query: query)
         }
         
         public func debugAddHoles() -> Signal<Never, NoError> {
@@ -1132,6 +1139,7 @@ public extension TelegramEngine {
                             peer: peerReference,
                             storyId: itemAndPeer.item.id,
                             media: EngineMedia(media),
+                            alternativeMedia: itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init),
                             reactions: reactions,
                             priority: .top(position: nextPriority)
                         )
@@ -1164,6 +1172,7 @@ public extension TelegramEngine {
                                     timestamp: item.timestamp,
                                     expirationTimestamp: item.expirationTimestamp,
                                     media: item.media,
+                                    alternativeMedia: item.alternativeMedia,
                                     mediaAreas: item.mediaAreas,
                                     text: item.text,
                                     entities: item.entities,

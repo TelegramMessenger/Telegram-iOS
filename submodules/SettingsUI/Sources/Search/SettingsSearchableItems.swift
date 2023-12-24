@@ -22,6 +22,7 @@ import QrCodeUI
 import PremiumUI
 import StorageUsageScreen
 import PeerInfoStoryGridScreen
+import WallpaperGridScreen
 
 enum SettingsSearchableItemIcon {
     case profile

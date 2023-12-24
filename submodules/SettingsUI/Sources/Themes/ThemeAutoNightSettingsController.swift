@@ -14,6 +14,7 @@ import DeviceLocationManager
 import Geocoding
 import WallpaperResources
 import Sunrise
+import ThemeSettingsThemeItem
 
 private enum TriggerMode {
     case system

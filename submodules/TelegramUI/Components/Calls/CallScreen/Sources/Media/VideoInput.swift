@@ -16,18 +16,67 @@ public final class VideoSourceOutput {
         public static let vertical = MirrorDirection(rawValue: 1 << 1)
     }
     
+    open class DataBuffer {
+        open var pixelBuffer: CVPixelBuffer? {
+            return nil
+        }
+        
+        public init() {
+        }
+    }
+    
+    public final class BiPlanarTextureLayout {
+        public let y: MTLTexture
+        public let uv: MTLTexture
+        
+        public init(y: MTLTexture, uv: MTLTexture) {
+            self.y = y
+            self.uv = uv
+        }
+    }
+    
+    public final class TriPlanarTextureLayout {
+        public let y: MTLTexture
+        public let u: MTLTexture
+        public let v: MTLTexture
+        
+        public init(y: MTLTexture, u: MTLTexture, v: MTLTexture) {
+            self.y = y
+            self.u = u
+            self.v = v
+        }
+    }
+    
+    public enum TextureLayout {
+        case biPlanar(BiPlanarTextureLayout)
+        case triPlanar(TriPlanarTextureLayout)
+    }
+    
+    public final class NativeDataBuffer: DataBuffer {
+        private let pixelBufferValue: CVPixelBuffer
+        override public var pixelBuffer: CVPixelBuffer? {
+            return self.pixelBufferValue
+        }
+        
+        public init(pixelBuffer: CVPixelBuffer) {
+            self.pixelBufferValue = pixelBuffer
+        }
+    }
+    
     public let resolution: CGSize
-    public let y: MTLTexture
-    public let uv: MTLTexture
+    public let textureLayout: TextureLayout
+    public let dataBuffer: DataBuffer
     public let rotationAngle: Float
+    public let followsDeviceOrientation: Bool
     public let mirrorDirection: MirrorDirection
     public let sourceId: Int
     
-    public init(resolution: CGSize, y: MTLTexture, uv: MTLTexture, rotationAngle: Float, mirrorDirection: MirrorDirection, sourceId: Int) {
+    public init(resolution: CGSize, textureLayout: TextureLayout, dataBuffer: DataBuffer, rotationAngle: Float, followsDeviceOrientation: Bool, mirrorDirection: MirrorDirection, sourceId: Int) {
         self.resolution = resolution
-        self.y = y
-        self.uv = uv
+        self.textureLayout = textureLayout
+        self.dataBuffer = dataBuffer
         self.rotationAngle = rotationAngle
+        self.followsDeviceOrientation = followsDeviceOrientation
         self.mirrorDirection = mirrorDirection
         self.sourceId = sourceId
     }
@@ -161,7 +210,18 @@ public final class FileVideoSource: VideoSource {
         resolution.width = floor(resolution.width * self.sizeMultiplicator.x)
         resolution.height = floor(resolution.height * self.sizeMultiplicator.y)
         
-        self.currentOutput = Output(resolution: resolution, y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, mirrorDirection: [], sourceId: self.sourceId)
+        self.currentOutput = Output(
+            resolution: resolution,
+            textureLayout: .biPlanar(Output.BiPlanarTextureLayout(
+                y: yTexture,
+                uv: uvTexture
+            )),
+            dataBuffer: Output.NativeDataBuffer(pixelBuffer: buffer),
+            rotationAngle: rotationAngle,
+            followsDeviceOrientation: false,
+            mirrorDirection: [],
+            sourceId: self.sourceId
+        )
         return true
     }
 }

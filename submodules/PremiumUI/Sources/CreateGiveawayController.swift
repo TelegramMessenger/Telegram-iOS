@@ -30,10 +30,11 @@ private final class CreateGiveawayControllerArguments {
     let openCountriesSelection: () -> Void
     let openPremiumIntro: () -> Void
     let scrollToDate: () -> Void
+    let scrollToDescription: () -> Void
     let setItemIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
     let removeChannel: (EnginePeer.Id) -> Void
     
-    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openCountriesSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void, scrollToDate: @escaping () -> Void, setItemIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeChannel: @escaping (EnginePeer.Id) -> Void) {
+    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openCountriesSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void, scrollToDate: @escaping () -> Void, scrollToDescription: @escaping () -> Void, setItemIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeChannel: @escaping (EnginePeer.Id) -> Void) {
         self.context = context
         self.updateState = updateState
         self.dismissInput = dismissInput
@@ -42,6 +43,7 @@ private final class CreateGiveawayControllerArguments {
         self.openCountriesSelection = openCountriesSelection
         self.openPremiumIntro = openPremiumIntro
         self.scrollToDate = scrollToDate
+        self.scrollToDescription = scrollToDescription
         self.setItemIdWithRevealedOptions = setItemIdWithRevealedOptions
         self.removeChannel = removeChannel
     }
@@ -53,11 +55,14 @@ private enum CreateGiveawaySection: Int32 {
     case subscriptions
     case channels
     case users
+    case winners
+    case prizeDescription
     case time
     case duration
 }
 
 private enum CreateGiveawayEntryTag: ItemListItemTag {
+    case description
     case date
 
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -92,14 +97,21 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case usersNew(PresentationTheme, String, String, Bool)
     case usersInfo(PresentationTheme, String)
     
+    case durationHeader(PresentationTheme, String)
+    case duration(Int32, PresentationTheme, Int32, String, String, String, String?, Bool)
+    case durationInfo(PresentationTheme, String)
+    
+    case prizeDescription(PresentationTheme, String, Bool)
+    case prizeDescriptionText(PresentationTheme, String, String, Int32)
+    case prizeDescriptionInfo(PresentationTheme, String)
+    
     case timeHeader(PresentationTheme, String)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
     case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Int32?, Int32?, Bool, Bool)
     case timeInfo(PresentationTheme, String)
     
-    case durationHeader(PresentationTheme, String)
-    case duration(Int32, PresentationTheme, Int32, String, String, String, String?, Bool)
-    case durationInfo(PresentationTheme, String)
+    case winners(PresentationTheme, String, Bool)
+    case winnersInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -113,61 +125,75 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return CreateGiveawaySection.channels.rawValue
         case .usersHeader, .usersAll, .usersNew, .usersInfo:
             return CreateGiveawaySection.users.rawValue
-        case .timeHeader, .timeExpiryDate, .timeCustomPicker, .timeInfo:
-            return CreateGiveawaySection.time.rawValue
         case .durationHeader, .duration, .durationInfo:
             return CreateGiveawaySection.duration.rawValue
+        case .prizeDescription, .prizeDescriptionText, .prizeDescriptionInfo:
+            return CreateGiveawaySection.prizeDescription.rawValue
+        case .timeHeader, .timeExpiryDate, .timeCustomPicker, .timeInfo:
+            return CreateGiveawaySection.time.rawValue
+        case .winners, .winnersInfo:
+            return CreateGiveawaySection.winners.rawValue
         }
     }
     
     var stableId: Int32 {
         switch self {
-            case .header:
-                return -1
-            case .createGiveaway:
-                return 0
-            case .awardUsers:
-                return 1
-            case .prepaidHeader:
-                return 2
-            case .prepaid:
-                return 3
-            case .subscriptionsHeader:
-                return 4
-            case .subscriptions:
-                return 5
-            case .subscriptionsInfo:
-                return 6
-            case .channelsHeader:
-                return 7
-            case let .channel(index, _, _, _, _):
-                return 8 + index
-            case .channelAdd:
-                return 100
-            case .channelsInfo:
-                return 101
-            case .usersHeader:
-                return 102
-            case .usersAll:
-                return 103
-            case .usersNew:
-                return 104
-            case .usersInfo:
-                return 105
-            case .timeHeader:
-                return 106
-            case .timeExpiryDate:
-                return 107
-            case .timeCustomPicker:
-                return 108
-            case .timeInfo:
-                return 109
-            case .durationHeader:
-                return 110
-            case let .duration(index, _, _, _, _, _, _, _):
-                return 111 + index
-            case .durationInfo:
-                return 120
+        case .header:
+            return -1
+        case .createGiveaway:
+            return 0
+        case .awardUsers:
+            return 1
+        case .prepaidHeader:
+            return 2
+        case .prepaid:
+            return 3
+        case .subscriptionsHeader:
+            return 4
+        case .subscriptions:
+            return 5
+        case .subscriptionsInfo:
+            return 6
+        case .channelsHeader:
+            return 7
+        case let .channel(index, _, _, _, _):
+            return 8 + index
+        case .channelAdd:
+            return 100
+        case .channelsInfo:
+            return 101
+        case .usersHeader:
+            return 102
+        case .usersAll:
+            return 103
+        case .usersNew:
+            return 104
+        case .usersInfo:
+            return 105
+        case .durationHeader:
+            return 106
+        case let .duration(index, _, _, _, _, _, _, _):
+            return 107 + index
+        case .durationInfo:
+            return 200
+        case .prizeDescription:
+            return 201
+        case .prizeDescriptionText:
+            return 202
+        case .prizeDescriptionInfo:
+            return 203
+        case .winners:
+            return 204
+        case .winnersInfo:
+            return 205
+        case .timeHeader:
+            return 206
+        case .timeExpiryDate:
+            return 207
+        case .timeCustomPicker:
+            return 208
+        case .timeInfo:
+            return 209
         }
     }
     
@@ -269,7 +295,42 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-            
+        case let .durationHeader(lhsTheme, lhsText):
+            if case let .durationHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .duration(lhsIndex, lhsTheme, lhsMonths, lhsTitle, lhsSubtitle, lhsLabel, lhsBadge, lhsIsSelected):
+            if case let .duration(rhsIndex, rhsTheme, rhsMonths, rhsTitle, rhsSubtitle, rhsLabel, rhsBadge, rhsIsSelected) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsMonths == rhsMonths, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel, lhsBadge == rhsBadge, lhsIsSelected == rhsIsSelected {
+                return true
+            } else {
+                return false
+            }
+        case let .durationInfo(lhsTheme, lhsText):
+            if case let .durationInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .prizeDescription(lhsTheme, lhsText, lhsValue):
+            if case let .prizeDescription(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .prizeDescriptionText(lhsTheme, lhsPlaceholder, lhsValue, lhsCount):
+            if case let .prizeDescriptionText(rhsTheme, rhsPlaceholder, rhsValue, rhsCount) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue, lhsCount == rhsCount {
+                return true
+            } else {
+                return false
+            }
+        case let .prizeDescriptionInfo(lhsTheme, lhsText):
+            if case let .prizeDescriptionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         case let .timeHeader(lhsTheme, lhsText):
             if case let .timeHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
@@ -294,20 +355,14 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .durationHeader(lhsTheme, lhsText):
-            if case let .durationHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .winners(lhsTheme, lhsText, lhsValue):
+            if case let .winners(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                 return true
             } else {
                 return false
             }
-        case let .duration(lhsIndex, lhsTheme, lhsMonths, lhsTitle, lhsSubtitle, lhsLabel, lhsBadge, lhsIsSelected):
-            if case let .duration(rhsIndex, rhsTheme, rhsMonths, rhsTitle, rhsSubtitle, rhsLabel, rhsBadge, rhsIsSelected) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsMonths == rhsMonths, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel, lhsBadge == rhsBadge, lhsIsSelected == rhsIsSelected {
-                return true
-            } else {
-                return false
-            }
-        case let .durationInfo(lhsTheme, lhsText):
-            if case let .durationInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .winnersInfo(lhsTheme, lhsText):
+            if case let .winnersInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
             } else {
                 return false
@@ -423,6 +478,46 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             })
         case let .usersInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .durationHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .duration(_, _, months, title, subtitle, label, badge, isSelected):
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleFont: .small, label: .generic(label), badge: badge, isSelected: isSelected, sectionId: self.section, action: {
+                arguments.updateState { state in
+                    var updatedState = state
+                    updatedState.selectedMonths = months
+                    return updatedState
+                }
+            })
+        case let .durationInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                arguments.openPremiumIntro()
+            })
+        case let .prizeDescription(_, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateState { state in
+                    var updatedState = state
+                    updatedState.showPrizeDescription = value
+                    return updatedState
+                }
+            })
+        case let .prizeDescriptionText(_, placeholder, value, count):
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "\(count)"), text: value, placeholder: placeholder, returnKeyType: .done, spacing: 24.0, maxLength: 128, tag: CreateGiveawayEntryTag.description, sectionId: self.section, textUpdated: { value in
+                arguments.updateState { state in
+                    var updatedState = state
+                    updatedState.prizeDescription = value
+                    return updatedState
+                }
+            }, updatedFocus: { focused in
+                if focused {
+                    Queue.mainQueue().after(0.05) {
+                        arguments.scrollToDescription()
+                    }
+                }
+            }, action: {
+                arguments.dismissInput()
+            })
+        case let .prizeDescriptionInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .timeHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .timeExpiryDate(theme, dateTimeFormat, value, active):
@@ -492,20 +587,16 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             }, tag: CreateGiveawayEntryTag.date)
         case let .timeInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .durationHeader(_, text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .duration(_, _, months, title, subtitle, label, badge, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleFont: .small, label: .generic(label), badge: badge, isSelected: isSelected, sectionId: self.section, action: {
+        case let .winners(_, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateState { state in
                     var updatedState = state
-                    updatedState.selectedMonths = months
+                    updatedState.showWinners = value
                     return updatedState
                 }
             })
-        case let .durationInfo(_, text):
-            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
-                arguments.openPremiumIntro()
-            })
+        case let .winnersInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -573,56 +664,7 @@ private func createGiveawayControllerEntries(
         entries.append(.prepaid(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity), presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(prepaidGiveaway.months)").string, prepaidGiveaway))
     }
     
-    if case .giveaway = state.mode {
-        if case .generic = subject {
-            entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_QuantityTitle.uppercased(), presentationData.strings.BoostGift_QuantityBoosts(state.subscriptions * 4)))
-            entries.append(.subscriptions(presentationData.theme, state.subscriptions))
-            entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_QuantityInfo))
-        }
-        
-        entries.append(.channelsHeader(presentationData.theme, presentationData.strings.BoostGift_ChannelsTitle.uppercased()))
-        var index: Int32 = 0
-        let channels = [peerId] + state.channels
-        for channelId in channels {
-            if let channel = peers[channelId] {
-                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions * 4 : nil, false))
-            }
-            index += 1
-        }
-        entries.append(.channelAdd(presentationData.theme, presentationData.strings.BoostGift_AddChannel))
-        entries.append(.channelsInfo(presentationData.theme, presentationData.strings.BoostGift_ChannelsInfo))
-        
-        entries.append(.usersHeader(presentationData.theme, presentationData.strings.BoostGift_UsersTitle.uppercased()))
-        
-        let countriesText: String
-        if state.countries.count > 2 {
-            countriesText = presentationData.strings.BoostGift_FromCountries(Int32(state.countries.count))
-        } else if !state.countries.isEmpty {
-            if state.countries.count == 2 {
-                let firstCountryCode = state.countries.first ?? ""
-                let secondCountryCode = state.countries.last ?? ""
-                let firstCountryName = locale.localizedString(forRegionCode: firstCountryCode) ?? firstCountryCode
-                let secondCountryName = locale.localizedString(forRegionCode: secondCountryCode) ?? secondCountryCode
-                countriesText = presentationData.strings.BoostGift_FromTwoCountries(firstCountryName, secondCountryName).string
-            } else {
-                let countryCode = state.countries.first ?? ""
-                let countryName = locale.localizedString(forRegionCode: countryCode) ?? countryCode
-                countriesText = presentationData.strings.BoostGift_FromOneCountry(countryName).string
-            }
-        } else {
-            countriesText = presentationData.strings.BoostGift_FromAllCountries
-        }
-        
-        entries.append(.usersAll(presentationData.theme, presentationData.strings.BoostGift_AllSubscribers, countriesText, !state.onlyNewEligible))
-        entries.append(.usersNew(presentationData.theme, presentationData.strings.BoostGift_OnlyNewSubscribers, countriesText, state.onlyNewEligible))
-        entries.append(.usersInfo(presentationData.theme, presentationData.strings.BoostGift_LimitSubscribersInfo))
-        
-        entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
-        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate, state.pickingExpiryDate, state.pickingExpiryTime))
-        entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
-    }
-    
-    if case .generic = subject {
+    let appendDurationEntries = {
         entries.append(.durationHeader(presentationData.theme, presentationData.strings.BoostGift_DurationTitle.uppercased()))
         
         let recipientCount: Int
@@ -669,6 +711,82 @@ private func createGiveawayControllerEntries(
         entries.append(.durationInfo(presentationData.theme, presentationData.strings.BoostGift_PremiumInfo))
     }
     
+    switch state.mode {
+    case .giveaway:
+        if case .generic = subject {
+            entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_QuantityTitle.uppercased(), presentationData.strings.BoostGift_QuantityBoosts(state.subscriptions * 4)))
+            entries.append(.subscriptions(presentationData.theme, state.subscriptions))
+            entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_QuantityInfo))
+        }
+        
+        entries.append(.channelsHeader(presentationData.theme, presentationData.strings.BoostGift_ChannelsTitle.uppercased()))
+        var index: Int32 = 0
+        let channels = [peerId] + state.channels
+        for channelId in channels {
+            if let channel = peers[channelId] {
+                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions * 4 : nil, false))
+            }
+            index += 1
+        }
+        entries.append(.channelAdd(presentationData.theme, presentationData.strings.BoostGift_AddChannel))
+        entries.append(.channelsInfo(presentationData.theme, presentationData.strings.BoostGift_ChannelsInfo))
+        
+        entries.append(.usersHeader(presentationData.theme, presentationData.strings.BoostGift_UsersTitle.uppercased()))
+        
+        let countriesText: String
+        if state.countries.count > 2 {
+            countriesText = presentationData.strings.BoostGift_FromCountries(Int32(state.countries.count))
+        } else if !state.countries.isEmpty {
+            if state.countries.count == 2 {
+                let firstCountryCode = state.countries.first ?? ""
+                let secondCountryCode = state.countries.last ?? ""
+                let firstCountryName = locale.localizedString(forRegionCode: firstCountryCode) ?? firstCountryCode
+                let secondCountryName = locale.localizedString(forRegionCode: secondCountryCode) ?? secondCountryCode
+                countriesText = presentationData.strings.BoostGift_FromTwoCountries(firstCountryName, secondCountryName).string
+            } else {
+                let countryCode = state.countries.first ?? ""
+                let countryName = locale.localizedString(forRegionCode: countryCode) ?? countryCode
+                countriesText = presentationData.strings.BoostGift_FromOneCountry(countryName).string
+            }
+        } else {
+            countriesText = presentationData.strings.BoostGift_FromAllCountries
+        }
+        
+        entries.append(.usersAll(presentationData.theme, presentationData.strings.BoostGift_AllSubscribers, countriesText, !state.onlyNewEligible))
+        entries.append(.usersNew(presentationData.theme, presentationData.strings.BoostGift_OnlyNewSubscribers, countriesText, state.onlyNewEligible))
+        entries.append(.usersInfo(presentationData.theme, presentationData.strings.BoostGift_LimitSubscribersInfo))
+        
+        if case .generic = subject {
+            appendDurationEntries()
+        }
+        
+        entries.append(.prizeDescription(presentationData.theme, presentationData.strings.BoostGift_AdditionalPrizes, state.showPrizeDescription))
+        var prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOff
+        if state.showPrizeDescription {
+            entries.append(.prizeDescriptionText(presentationData.theme, presentationData.strings.BoostGift_AdditionalPrizesPlaceholder, state.prizeDescription, state.subscriptions))
+           
+            let monthsString = presentationData.strings.BoostGift_AdditionalPrizesInfoForMonths(state.selectedMonths ?? 3)
+            if state.prizeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
+                prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", subscriptionsString, monthsString).string
+            } else {
+                let subscriptionsString = presentationData.strings.BoostGift_AdditionalPrizesInfoWithSubscriptions(state.subscriptions).replacingOccurrences(of: "\(state.subscriptions) ", with: "")
+                let description = "\(state.prizeDescription) \(subscriptionsString)"
+                prizeDescriptionInfoText = presentationData.strings.BoostGift_AdditionalPrizesInfoOn("\(state.subscriptions)", description, monthsString).string
+            }
+        }
+        entries.append(.prizeDescriptionInfo(presentationData.theme, prizeDescriptionInfoText))
+        
+        entries.append(.winners(presentationData.theme, presentationData.strings.BoostGift_Winners, state.showWinners))
+        entries.append(.winnersInfo(presentationData.theme, presentationData.strings.BoostGift_WinnersInfo))
+        
+        entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate, state.pickingExpiryDate, state.pickingExpiryTime))
+        entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
+    case .gift:
+        appendDurationEntries()
+    }
+    
     return entries
 }
 
@@ -680,11 +798,14 @@ private struct CreateGiveawayControllerState: Equatable {
     
     var mode: Mode
     var subscriptions: Int32
-    var channels: [EnginePeer.Id]
-    var peers: [EnginePeer.Id]
+    var channels: [EnginePeer.Id] = []
+    var peers: [EnginePeer.Id] = []
     var selectedMonths: Int32?
-    var countries: [String]
-    var onlyNewEligible: Bool
+    var countries: [String] = []
+    var onlyNewEligible: Bool = false
+    var showWinners: Bool = true
+    var showPrizeDescription: Bool = false
+    var prizeDescription: String = ""
     var time: Int32
     var pickingExpiryTime = false
     var pickingExpiryDate = false
@@ -722,7 +843,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let minDate = currentTime + 60 * 30
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], countries: [], onlyNewEligible: false, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -739,6 +860,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     var openPremiumIntroImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var scrollToDescriptionImpl: (() -> Void)?
     var scrollToDateImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
@@ -757,6 +879,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         openPremiumIntroImpl?()
     }, scrollToDate: {
         scrollToDateImpl?()
+    }, scrollToDescription: {
+        scrollToDescriptionImpl?()
     }, setItemIdWithRevealedOptions: { itemId, fromItemId in
         updateState { state in
             var updatedState = state
@@ -865,6 +989,9 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             if previousState.channels.count > state.channels.count {
                 animateChanges = true
             }
+            if previousState.showPrizeDescription != state.showPrizeDescription {
+                animateChanges = true
+            }
         }
         
         var peers: [EnginePeer.Id: EnginePeer] = [:]
@@ -886,7 +1013,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let controller = ItemListController(context: context, state: signal)
     controller.navigationPresentation = .modal
     controller.beganInteractiveDragging = {
-        dismissInputImpl?()
+//        dismissInputImpl?()
     }
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
@@ -948,7 +1075,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             let quantity: Int32
             switch state.mode {
             case .giveaway:
-                purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
+                purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
                 quantity = selectedProduct.giftOption.storeQuantity
             case .gift:
                 purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
@@ -1040,7 +1167,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 return updatedState
             }
             
-            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
+            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, showWinners: state.showWinners, prizeDescription: state.prizeDescription.isEmpty ? nil : state.prizeDescription, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
             |> deliverOnMainQueue).startStandalone(completed: {
                 if let controller, let navigationController = controller.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers
@@ -1163,6 +1290,28 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     openPremiumIntroImpl = {
         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
         pushControllerImpl?(controller)
+    }
+    
+    scrollToDescriptionImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ listItemNode in
+                if let itemNode = listItemNode as? ItemListItemNode {
+                    if let tag = itemNode.tag as? CreateGiveawayEntryTag, tag == .description {
+                        resultItemNode = listItemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode, overflow: 120.0, atTop: false)
+            }
+        })
     }
     
     scrollToDateImpl = { [weak controller] in

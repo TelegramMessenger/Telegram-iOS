@@ -95,7 +95,7 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
 final class ShareControllerPeerGridItem: GridItem {
     enum ShareItem: Equatable {
         case peer(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, topicId: Int64?, threadData: MessageHistoryThreadData?)
-        case story
+        case story(isMessage: Bool)
         
         var peerId: EnginePeer.Id? {
             if case let .peer(peer, _, _, _) = self {
@@ -246,14 +246,15 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                     self.placeholderNode = nil
                     shimmerNode.removeFromSupernode()
                 }
-            } else if let item, case .story = item {
+            } else if let item, case let .story(isMessage) = item {
                 self.peerNode.setupStoryRepost(
                     accountPeerId: context.accountPeerId,
                     postbox: context.stateManager.postbox,
                     network: context.stateManager.network,
                     theme: theme,
                     strings: strings,
-                    synchronousLoad: synchronousLoad
+                    synchronousLoad: synchronousLoad,
+                    isMessage: isMessage
                 )
             } else {
                 let shimmerNode: ShimmerEffectNode

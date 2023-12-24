@@ -1624,7 +1624,10 @@ public class StickerPickerScreen: ViewController {
                 modalProgress = 0.0
             }
             self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
-                        
+            if self.isDismissing {
+                return
+            }
+            
             let clipFrame: CGRect
             let contentFrame: CGRect
             if layout.metrics.widthClass == .compact {

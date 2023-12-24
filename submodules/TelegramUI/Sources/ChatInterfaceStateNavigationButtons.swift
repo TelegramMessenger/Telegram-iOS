@@ -57,7 +57,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
     return nil
 }
 
-func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+func rightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
         if case .messageOptions = presentationInterfaceState.subject {
             return nil
@@ -69,6 +69,10 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
             buttonItem.accessibilityLabel = strings.Common_Cancel
             return ChatNavigationButton(action: .cancelMessageSelection, buttonItem: buttonItem)
         }
+    }
+    
+    if case let .replyThread(message) = presentationInterfaceState.chatLocation, message.messageId.peerId == context.account.peerId {
+        return chatInfoNavigationButton
     }
     
     if let channel = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), let moreInfoNavigationButton = moreInfoNavigationButton {

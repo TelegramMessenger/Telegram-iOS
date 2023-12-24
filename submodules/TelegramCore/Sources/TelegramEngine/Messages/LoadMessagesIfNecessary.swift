@@ -14,7 +14,11 @@ public enum GetMessagesStrategy  {
     case cloud(skipLocal: Bool)
 }
 
-func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postbox, network: Network, accountPeerId: PeerId, strategy: GetMessagesStrategy = .cloud(skipLocal: false)) -> Signal<GetMessagesResult, NoError> {
+public enum GetMessagesError {
+    case privateChannel
+}
+
+func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postbox, network: Network, accountPeerId: PeerId, strategy: GetMessagesStrategy = .cloud(skipLocal: false)) -> Signal<GetMessagesResult, GetMessagesError> {
     let postboxSignal = postbox.transaction { transaction -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
         var ids = messageIds
         
@@ -50,8 +54,9 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
     
     if case .cloud = strategy {
         return postboxSignal
+        |> castError(GetMessagesError.self)
         |> mapToSignal { (existMessages, missingMessageIds, supportPeers) in
-            var signals: [Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>] = []
+            var signals: [Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), GetMessagesError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingMessageIds) {
                 if let peer = supportPeers[peerId] {
                     var signal: Signal<Api.messages.Messages, MTRpcError>?
@@ -75,21 +80,27 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
                                 case .messagesNotModified:
                                     return (peer, [], [], [])
                             }
-                            } |> `catch` { _ in
-                                return Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>.single((peer, [], [], []))
+                            } |> `catch` { error in
+                                if error.errorDescription == "CHANNEL_PRIVATE" {
+                                    return .fail(.privateChannel)
+                                } else {
+                                    return Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), GetMessagesError>.single((peer, [], [], []))
+                                }
                             })
                     }
                 }
             }
             
-            return .single(.progress) |> then(combineLatest(signals) |> mapToSignal { results -> Signal<GetMessagesResult, NoError> in
+            return .single(.progress) 
+            |> castError(GetMessagesError.self)
+            |> then(combineLatest(signals) |> mapToSignal { results -> Signal<GetMessagesResult, GetMessagesError> in
                 return postbox.transaction { transaction -> GetMessagesResult in
                     for (peer, messages, chats, users) in results {
                         if !messages.isEmpty {
                             var storeMessages: [StoreMessage] = []
                             
                             for message in messages {
-                                if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
+                                if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum) {
                                     storeMessages.append(message)
                                 }
                             }
@@ -108,10 +119,12 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
                     
                     return .result(existMessages + loadedMessages)
                 }
+                |> castError(GetMessagesError.self)
             })
         }
     } else {
         return postboxSignal
+        |> castError(GetMessagesError.self)
         |> map {
             return .result($0.0)
         }

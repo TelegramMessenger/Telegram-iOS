@@ -435,6 +435,7 @@ public final class StoryItemSetContainerComponent: Component {
         var preparingToDisplayViewList: Bool = false
         
         var viewListDisplayState: ViewListDisplayState = .hidden
+        
         private var targetViewListDisplayStateIsFull: Bool = false
         private var viewListMetrics: (minHeight: CGFloat, maxHeight: CGFloat, currentHeight: CGFloat)?
         
@@ -978,7 +979,7 @@ public final class StoryItemSetContainerComponent: Component {
                             return abs(rotatedX) <= area.coordinates.width / 100.0 * referenceSize.width / 2.0 * 1.1 && abs(rotatedY) <= area.coordinates.height / 100.0 * referenceSize.height / 2.0 * 1.1
                         }
                         
-                        for area in component.slice.item.storyItem.mediaAreas {
+                        for area in component.slice.item.storyItem.mediaAreas.reversed() {
                             if case .reaction = area {
                                 continue
                             }
@@ -1230,6 +1231,8 @@ public final class StoryItemSetContainerComponent: Component {
                         } else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
                             var displayViewLists = false
                             if component.slice.peer.id == component.context.account.peerId {
+                                displayViewLists = true
+                            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || component.slice.additionalPeerData.canViewStats {
                                 displayViewLists = true
                             }
                             
@@ -1704,6 +1707,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     context: component.context,
                                     theme: component.theme,
                                     strings: component.strings,
+                                    peer: component.slice.peer,
                                     storyItem: item.storyItem,
                                     myReaction: item.storyItem.myReaction.flatMap { value -> StoryFooterPanelComponent.MyReaction? in
                                         var centerAnimation: TelegramMediaFile?
@@ -1730,6 +1734,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         return StoryFooterPanelComponent.MyReaction(reaction: value, file: centerAnimation, animationFileId: animationFileId)
                                     },
                                     isChannel: isChannel,
+                                    canViewChannelStats: component.slice.additionalPeerData.canViewStats,
                                     canShare: canShare,
                                     externalViews: nil,
                                     expandFraction: footerExpandFraction,
@@ -1911,6 +1916,8 @@ public final class StoryItemSetContainerComponent: Component {
             
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
+                displayViewLists = true
+            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || component.slice.additionalPeerData.canViewStats {
                 displayViewLists = true
             }
             
@@ -3123,6 +3130,8 @@ public final class StoryItemSetContainerComponent: Component {
             var displayViewLists = false
             if component.slice.peer.id == component.context.account.peerId {
                 displayViewLists = true
+            } else if case let .channel(channel) = component.slice.peer, channel.flags.contains(.isCreator) || component.slice.additionalPeerData.canViewStats {
+                displayViewLists = true
             }
             
             if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
@@ -3153,7 +3162,13 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 for (id, views) in preloadViewListIds {
                     if component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] == nil {
-                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.peer.id, id: id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                        let defaultSortMode: EngineStoryViewListContext.SortMode
+                        if component.slice.peer.id.isGroupOrChannel {
+                            defaultSortMode = .repostsFirst
+                        } else {
+                            defaultSortMode = .reactionsFirst
+                        }
+                        let viewList = component.context.engine.messages.storyViewList(peerId: component.slice.peer.id, id: id, views: views, listMode: .everyone, sortMode: defaultSortMode)
                         component.sharedViewListsContext.viewLists[StoryId(peerId: component.slice.peer.id, id: id)] = viewList
                     }
                 }
@@ -3319,6 +3334,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.navigateToPeer(peer: peer, chat: false)
+                            },
+                            openMessage: { [weak self] peer, messageId in
+                                guard let self else {
+                                    return
+                                }
+                                self.navigateToPeer(peer: peer, chat: true, subject: .message(id: .id(messageId), highlight: nil, timecode: nil))
                             },
                             peerContextAction: { [weak self] peer, sourceView, gesture in
                                 guard let self, let component = self.component else {
@@ -3496,6 +3517,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     return
                                 }
                                 self.openPeerStories(peer: peer, avatarNode: avatarNode)
+                            },
+                            openReposts: { [weak self] peer, id, sourceView in
+                                guard let self else {
+                                    return
+                                }
+                                self.openReposts(peer: peer, id: id, sourceView: sourceView)
                             },
                             openPremiumIntro: { [weak self] in
                                 guard let self else {
@@ -4225,46 +4252,55 @@ public final class StoryItemSetContainerComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            let context = component.context
-                            let peerId = component.slice.peer.id
-                            let currentResult: ResolvedUrl = .story(peerId: peerId, id: component.slice.item.storyItem.id)
-                            
-                            self.sendMessageContext.openResolved(view: self, result: .story(peerId: peer.id, id: story.id), completion: { [weak self] in
-                                guard let self, let controller = self.component?.controller() as? StoryContainerScreen else {
-                                    return
-                                }
-                                if let nextController = controller.navigationController?.viewControllers.last as? StoryContainerScreen {
-                                    nextController.customBackAction = { [weak nextController] in
-                                        context.sharedContext.openResolvedUrl(
-                                            currentResult,
-                                            context: context,
-                                            urlContext: .generic,
-                                            navigationController: nextController?.navigationController as? NavigationController,
-                                            forceExternal: false,
-                                            openPeer: { _, _ in
-                                            },
-                                            sendFile: nil,
-                                            sendSticker: nil,
-                                            requestMessageActionUrlAuth: nil,
-                                            joinVoiceChat: nil,
-                                            present: { _, _ in
-                                            },
-                                            dismissInput: {
-                                            },
-                                            contentContext: nil,
-                                            progress: nil,
-                                            completion: { [weak nextController] in
-                                                Queue.mainQueue().after(0.5) {
-                                                    nextController?.dismissWithoutTransitionOut()
+                            if let story {
+                                let context = component.context
+                                let peerId = component.slice.peer.id
+                                let currentResult: ResolvedUrl = .story(peerId: peerId, id: component.slice.item.storyItem.id)
+                                
+                                self.sendMessageContext.openResolved(view: self, result: .story(peerId: peer.id, id: story.id), completion: { [weak self] in
+                                    guard let self, let controller = self.component?.controller() as? StoryContainerScreen else {
+                                        return
+                                    }
+                                    if let nextController = controller.navigationController?.viewControllers.last as? StoryContainerScreen {
+                                        nextController.customBackAction = { [weak nextController] in
+                                            context.sharedContext.openResolvedUrl(
+                                                currentResult,
+                                                context: context,
+                                                urlContext: .generic,
+                                                navigationController: nextController?.navigationController as? NavigationController,
+                                                forceExternal: false,
+                                                openPeer: { _, _ in
+                                                },
+                                                sendFile: nil,
+                                                sendSticker: nil,
+                                                requestMessageActionUrlAuth: nil,
+                                                joinVoiceChat: nil,
+                                                present: { _, _ in
+                                                },
+                                                dismissInput: {
+                                                },
+                                                contentContext: nil,
+                                                progress: nil,
+                                                completion: { [weak nextController] in
+                                                    Queue.mainQueue().after(0.5) {
+                                                        nextController?.dismissWithoutTransitionOut()
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
+                                    }
+                                    Queue.mainQueue().after(0.5) {
+                                        controller.dismissWithoutTransitionOut()
+                                    }
+                                })
+                            } else {
+                                for mediaArea in component.slice.item.storyItem.mediaAreas {
+                                    if case .channelMessage = mediaArea {
+                                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: mediaArea, immediate: true)
+                                        break
                                     }
                                 }
-                                Queue.mainQueue().after(0.5) {
-                                    controller.dismissWithoutTransitionOut()
-                                }
-                            })
+                            }
                         }
                     )),
                     environment: {},
@@ -5151,7 +5187,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        func openPeerStories(peer: EnginePeer, avatarNode: AvatarNode) {
+        func openPeerStories(peer: EnginePeer, avatarNode: AvatarNode?) {
             guard let component = self.component else {
                 return
             }
@@ -5160,6 +5196,85 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             StoryContainerScreen.openPeerStories(context: component.context, peerId: peer.id, parentController: controller, avatarNode: avatarNode)
+        }
+        
+        func openReposts(peer: EnginePeer, id: Int32, sourceView: UIView) {
+            guard let component = self.component else {
+                return
+            }
+            guard let controller = component.controller() else {
+                return
+            }
+            
+            guard let viewList = self.viewLists[component.slice.item.storyItem.id], let viewListView = viewList.view.view as? StoryItemSetViewListComponent.View, let viewListContext = viewListView.currentViewList else {
+                return
+            }
+            
+            let context = component.context
+            let storyContent = RepostStoriesContentContextImpl(context: context, originalPeerId: component.slice.peer.id, originalStory: component.slice.item.storyItem, focusedStoryId: StoryId(peerId: peer.id, id: id), viewListContext: viewListContext, readGlobally: false)
+            let _ = (storyContent.state
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak viewListView, weak sourceView] _ in
+                guard let controller, let sourceView else {
+                    return
+                }
+                let transitionIn = StoryContainerScreen.TransitionIn(
+                    sourceView: sourceView,
+                    sourceRect: sourceView.bounds,
+                    sourceCornerRadius: sourceView.bounds.width * 0.5,
+                    sourceIsAvatar: false
+                )
+            
+                let storyContainerScreen = StoryContainerScreen(
+                    context: context,
+                    content: storyContent,
+                    transitionIn: transitionIn,
+                    transitionOut: { [weak sourceView, weak viewListView] peerId, storyIdValue in
+                        var destinationView: UIView?
+                        if let view = viewListView?.sourceView(storyId: StoryId(peerId: peerId, id: storyIdValue as? Int32 ?? 0)) {
+                            destinationView = view
+                        } else {
+                            destinationView = sourceView
+                        }
+                        if let destinationView {
+                            return StoryContainerScreen.TransitionOut(
+                                destinationView: destinationView,
+                                transitionView: StoryContainerScreen.TransitionView(
+                                    makeView: { [weak destinationView] in
+                                        let parentView = UIView()
+                                        if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                            parentView.addSubview(copyView)
+                                        }
+                                        return parentView
+                                    },
+                                    updateView: { copyView, state, transition in
+                                        guard let view = copyView.subviews.first else {
+                                            return
+                                        }
+                                        let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                        transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                        transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                    },
+                                    insertCloneTransitionView: nil
+                                ),
+                                destinationRect: destinationView.bounds,
+                                destinationCornerRadius: destinationView.bounds.width * 0.5,
+                                destinationIsAvatar: false,
+                                completed: { [weak sourceView] in
+                                    guard let sourceView else {
+                                        return
+                                    }
+                                    sourceView.isHidden = false
+                                }
+                            )
+                        } else {
+                            return nil
+                        }
+                    }
+                )
+                viewListView?.setPreviewedItem(signal: storyContainerScreen.focusedItem)
+                controller.push(storyContainerScreen)
+            })
         }
         
         private let updateDisposable = MetaDisposable()

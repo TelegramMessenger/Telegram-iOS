@@ -115,7 +115,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     UIImageView *_innerIconView;
     
     UIView *_lockPanelWrapperView;
-    UIImageView *_lockPanelView;
+    UIView *_lockPanelView;
     UIImageView *_lockArrowView;
     TGModernConversationInputLockView *_lockView;
     UIImage *_previousIcon;
@@ -265,7 +265,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     if (!update)
         return;
     
-    _lockPanelView.image = [self panelBackgroundImage];
+    if ([_lockPanelView isKindOfClass:[UIImageView class]]) {
+        ((UIImageView *)_lockPanelView).image = [self panelBackgroundImage];
+    }
     _lockArrowView.image = TGTintedImage(TGComponentsImageNamed(@"VideoRecordArrow"), self.pallete != nil ? self.pallete.lockColor : UIColorRGB(0x9597a0));
     _lockView.color = self.pallete.lockColor;
     
@@ -341,6 +343,13 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     return stopButtonImage;
 }
 
+- (UIView *)createLockPanelView {
+    UIImageView *view = [[UIImageView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 72.0f)];
+    view.userInteractionEnabled = true;
+    view.image = [self panelBackgroundImage];
+    return view;
+}
+
 - (void)animateIn {
     if (!_locked) {
         _lockView.lockness = 0.0f;
@@ -373,9 +382,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _lockPanelWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 72.0f)];
         [[_presentation view] addSubview:_lockPanelWrapperView];
         
-        _lockPanelView = [[UIImageView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 72.0f)];
-        _lockPanelView.userInteractionEnabled = true;
-        _lockPanelView.image = [self panelBackgroundImage];
+        _lockPanelView = [self createLockPanelView];
         
         [_lockPanelWrapperView addSubview:_lockPanelView];
         

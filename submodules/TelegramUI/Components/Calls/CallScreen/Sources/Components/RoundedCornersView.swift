@@ -5,17 +5,16 @@ import ComponentFlow
 
 final class RoundedCornersView: UIImageView {
     private let color: UIColor
+    private let smoothCorners: Bool
+    
     private var currentCornerRadius: CGFloat?
     private var cornerImage: UIImage?
     
-    init(color: UIColor) {
+    init(color: UIColor, smoothCorners: Bool = false) {
         self.color = color
+        self.smoothCorners = smoothCorners
         
         super.init(image: nil)
-        
-        if #available(iOS 13.0, *) {
-            self.layer.cornerCurve = .circular
-        }
     }
     
     required init?(coder: NSCoder) {
@@ -26,10 +25,33 @@ final class RoundedCornersView: UIImageView {
         guard let cornerRadius = self.currentCornerRadius else {
             return
         }
-        if let cornerImage = self.cornerImage, cornerImage.size.height == cornerRadius * 2.0 {
+        if cornerRadius == 0.0 {
+            if let cornerImage = self.cornerImage, cornerImage.size.width == 1.0 {
+            } else {
+                self.cornerImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
+                    context.setFillColor(self.color.cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: size))
+                })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 5, topCapHeight: Int(cornerRadius) + 5)
+            }
         } else {
-            let size = CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0)
-            self.cornerImage = generateStretchableFilledCircleImage(diameter: size.width, color: self.color)
+            if self.smoothCorners {
+                let size = CGSize(width: cornerRadius * 2.0 + 10.0, height: cornerRadius * 2.0 + 10.0)
+                if let cornerImage = self.cornerImage, cornerImage.size == size {
+                } else {
+                    self.cornerImage = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius).cgPath)
+                        context.setFillColor(self.color.cgColor)
+                        context.fillPath()
+                    })?.stretchableImage(withLeftCapWidth: Int(cornerRadius) + 5, topCapHeight: Int(cornerRadius) + 5)
+                }
+            } else {
+                let size = CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0)
+                if let cornerImage = self.cornerImage, cornerImage.size == size {
+                } else {
+                    self.cornerImage = generateStretchableFilledCircleImage(diameter: size.width, color: self.color)
+                }
+            }
         }
         self.image = self.cornerImage
         self.clipsToBounds = false
@@ -51,6 +73,14 @@ final class RoundedCornersView: UIImageView {
             self.backgroundColor = self.color
             if let previousCornerRadius, self.layer.animation(forKey: "cornerRadius") == nil {
                 self.layer.cornerRadius = previousCornerRadius
+            }
+            if #available(iOS 13.0, *) {
+                if self.smoothCorners {
+                    self.layer.cornerCurve = .continuous
+                } else {
+                    self.layer.cornerCurve = .circular
+                }
+                    
             }
             transition.setCornerRadius(layer: self.layer, cornerRadius: cornerRadius, completion: { [weak self] completed in
                 guard let self, completed else {

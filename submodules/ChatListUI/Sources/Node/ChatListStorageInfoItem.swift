@@ -7,6 +7,9 @@ import TelegramPresentationData
 import ListSectionHeaderNode
 import AppBundle
 import ItemListUI
+import Markdown
+import AccountContext
+import TelegramCore
 
 class ChatListStorageInfoItem: ListViewItem {
     enum Action {
@@ -15,6 +18,7 @@ class ChatListStorageInfoItem: ListViewItem {
         case buttonChoice(isPositive: Bool)
     }
     
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let notice: ChatListNotice
@@ -22,7 +26,8 @@ class ChatListStorageInfoItem: ListViewItem {
     
     let selectable: Bool = true
     
-    init(theme: PresentationTheme, strings: PresentationStrings, notice: ChatListNotice, action: @escaping (Action) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, notice: ChatListNotice, action: @escaping (Action) -> Void) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.notice = notice
@@ -85,6 +90,8 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
     
+    private var closeButton: HighlightableButtonNode?
+    
     private var okButtonText: TextNode?
     private var cancelButtonText: TextNode?
     private var okButton: HighlightableButtonNode?
@@ -124,6 +131,13 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     
     override func didLoad() {
         super.didLoad()
+    }
+    
+    @objc private func closePressed() {
+        guard let item = self.item else {
+            return
+        }
+        item.action(.hide)
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -203,6 +217,9 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case .xmasPremiumGift:
+                titleString = parseMarkdownIntoAttributedString(item.strings.ChatList_PremiumXmasGiftTitle, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.accentTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor), linkAttribute: { _ in return nil }))
+                textString = NSAttributedString(string: item.strings.ChatList_PremiumXmasGiftText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case let .reviewLogin(newSessionReview, totalCount):
                 spacing = 2.0
                 alignment = .center
@@ -259,7 +276,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     if let image = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - image.size.width + 8.0, y: floor((layout.size.height - image.size.height) / 2.0)), size: image.size)
                     }
-                    
+                                        
                     if let okButtonLayout, let cancelButtonLayout {
                         strongSelf.arrowNode.isHidden = true
                         
@@ -328,6 +345,31 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.cancelButtonText = nil
                             cancelButtonText.removeFromSupernode()
                         }
+                    }
+                    
+                    let arrowIsHidden = strongSelf.arrowNode.isHidden
+                    if case .xmasPremiumGift = item.notice {
+                        strongSelf.arrowNode.isHidden = true
+                        
+                        let closeButton: HighlightableButtonNode
+                        if let current = strongSelf.closeButton {
+                            closeButton = current
+                        } else {
+                            closeButton = HighlightableButtonNode()
+                            closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
+                            closeButton.addTarget(self, action: #selector(strongSelf.closePressed), forControlEvents: [.touchUpInside])
+                            strongSelf.contentContainer.addSubnode(closeButton)
+                            strongSelf.closeButton = closeButton
+                        }
+                        
+                        if themeUpdated {
+                            closeButton.setImage(PresentationResourcesItemList.itemListCloseIconImage(item.theme), for: .normal)
+                        }
+                        
+                        let closeButtonSize = closeButton.measure(CGSize(width: 100.0, height: 100.0))
+                        closeButton.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - closeButtonSize.width, y: floor((layout.size.height - closeButtonSize.height) / 2.0)), size: closeButtonSize)
+                    } else {
+                        strongSelf.arrowNode.isHidden = arrowIsHidden
                     }
                     
                     strongSelf.contentSize = layout.contentSize

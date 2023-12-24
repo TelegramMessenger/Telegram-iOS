@@ -230,7 +230,7 @@ final class ContextResultPanelComponent: Component {
                             presence: nil,
                             selectionState: .none,
                             hasNext: index != peers.count - 1,
-                            action: { [weak self] peer in
+                            action: { [weak self] peer, _, _ in
                                 guard let self, let component = self.component else {
                                     return
                                 }
@@ -299,7 +299,7 @@ final class ContextResultPanelComponent: Component {
                     presence: nil,
                     selectionState: .none,
                     hasNext: true,
-                    action: { _ in
+                    action: { _, _, _ in
                     }
                 )),
                 environment: {},

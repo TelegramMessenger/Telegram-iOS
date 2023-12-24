@@ -1066,7 +1066,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 rightAccessory: accessory,
                                 selectionState: .none,
                                 hasNext: i < peers.count - 1,
-                                action: { [weak self] peer in
+                                action: { [weak self] peer, _, _ in
                                     guard let self, let component = self.component else {
                                         return
                                     }
@@ -1414,7 +1414,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 presence: stateValue.presences[peer.id],
                                 selectionState: .editing(isSelected: isSelected, isTinted: false),
                                 hasNext: true,
-                                action: { [weak self] peer in
+                                action: { [weak self] peer, _, _ in
                                     guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
@@ -2143,7 +2143,7 @@ final class ShareWithPeersScreenComponent: Component {
                     presence: nil,
                     selectionState: .editing(isSelected: false, isTinted: false),
                     hasNext: true,
-                    action: { _ in
+                    action: { _, _, _ in
                     }
                 )),
                 environment: {},
@@ -2578,119 +2578,123 @@ final class ShareWithPeersScreenComponent: Component {
                                 }
                             }
                             
-                            let presentAlert: ([String]) -> Void = { usernames in
-                                let usernamesString = String(usernames.map { "@\($0)" }.joined(separator: ", "))
-                                let alertController = textAlertController(
-                                    context: component.context,
-                                    forceTheme: defaultDarkColorPresentationTheme,
-                                    title: environment.strings.Story_Privacy_MentionRestrictedTitle,
-                                    text: environment.strings.Story_Privacy_MentionRestrictedText(usernamesString).string,
-                                    actions: [
-                                        TextAlertAction(type: .defaultAction, title: environment.strings.Story_Privacy_MentionRestrictedProceed, action: {
-                                            proceed()
-                                        }),
-                                        TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {})
-                                    ],
-                                    actionLayout: .vertical
-                                )
-                                controller.present(alertController, in: .window(.root))
-                            }
-                            
-                            func matchingUsername(user: TelegramUser, usernames: Set<String>) -> String? {
-                                for username in user.usernames {
-                                    if usernames.contains(username.username) {
-                                        return username.username
-                                    }
+                            if let sendAsPeerId = self.sendAsPeerId, sendAsPeerId.isGroupOrChannel {
+                                proceed()
+                            } else {
+                                let presentAlert: ([String]) -> Void = { usernames in
+                                    let usernamesString = String(usernames.map { "@\($0)" }.joined(separator: ", "))
+                                    let alertController = textAlertController(
+                                        context: component.context,
+                                        forceTheme: defaultDarkColorPresentationTheme,
+                                        title: environment.strings.Story_Privacy_MentionRestrictedTitle,
+                                        text: environment.strings.Story_Privacy_MentionRestrictedText(usernamesString).string,
+                                        actions: [
+                                            TextAlertAction(type: .defaultAction, title: environment.strings.Story_Privacy_MentionRestrictedProceed, action: {
+                                                proceed()
+                                            }),
+                                            TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {})
+                                        ],
+                                        actionLayout: .vertical
+                                    )
+                                    controller.present(alertController, in: .window(.root))
                                 }
-                                if let username = user.username {
-                                    if usernames.contains(username) {
-                                        return username
+                                
+                                func matchingUsername(user: TelegramUser, usernames: Set<String>) -> String? {
+                                    for username in user.usernames {
+                                        if usernames.contains(username.username) {
+                                            return username.username
+                                        }
                                     }
+                                    if let username = user.username {
+                                        if usernames.contains(username) {
+                                            return username
+                                        }
+                                    }
+                                    return nil
                                 }
-                                return nil
-                            }
-                            
-                            let context = component.context
-                            let selectedPeerIds = self.selectedPeers
-                            
-                            if case .stories = component.stateContext.subject {
-                                if component.mentions.isEmpty {
-                                    proceed()
-                                } else if case .nobody = base {
-                                    if selectedPeerIds.isEmpty {
-                                        presentAlert(component.mentions)
-                                    } else {
-                                        let _ = (context.account.postbox.transaction { transaction in
-                                            var filteredMentions = Set(component.mentions)
-                                            for peerId in selectedPeerIds {
-                                                if let peer = transaction.getPeer(peerId) {
-                                                    if let user = peer as? TelegramUser {
-                                                        if let username = matchingUsername(user: user, usernames: filteredMentions) {
-                                                            filteredMentions.remove(username)
-                                                        }
-                                                    } else {
-                                                        if let username = peer.addressName {
-                                                            filteredMentions.remove(username)
+                                
+                                let context = component.context
+                                let selectedPeerIds = self.selectedPeers
+                                
+                                if case .stories = component.stateContext.subject {
+                                    if component.mentions.isEmpty {
+                                        proceed()
+                                    } else if case .nobody = base {
+                                        if selectedPeerIds.isEmpty {
+                                            presentAlert(component.mentions)
+                                        } else {
+                                            let _ = (context.account.postbox.transaction { transaction in
+                                                var filteredMentions = Set(component.mentions)
+                                                for peerId in selectedPeerIds {
+                                                    if let peer = transaction.getPeer(peerId) {
+                                                        if let user = peer as? TelegramUser {
+                                                            if let username = matchingUsername(user: user, usernames: filteredMentions) {
+                                                                filteredMentions.remove(username)
+                                                            }
+                                                        } else {
+                                                            if let username = peer.addressName {
+                                                                filteredMentions.remove(username)
+                                                            }
                                                         }
                                                     }
+                                                }
+                                                return Array(filteredMentions)
+                                            }
+                                            |> deliverOnMainQueue).start(next: { mentions in
+                                                if mentions.isEmpty {
+                                                    proceed()
+                                                } else {
+                                                    presentAlert(mentions)
+                                                }
+                                            })
+                                        }
+                                    } else if case .contacts = base {
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                        |> map { contacts -> [String] in
+                                            var filteredMentions = Set(component.mentions)
+                                            let peers = contacts.peers
+                                            for peer in peers {
+                                                if selectedPeerIds.contains(peer.id) {
+                                                    continue
+                                                }
+                                                if case let .user(user) = peer, let username = matchingUsername(user: user, usernames: filteredMentions) {
+                                                    filteredMentions.remove(username)
                                                 }
                                             }
                                             return Array(filteredMentions)
                                         }
-                                        |> deliverOnMainQueue).start(next: { mentions in
+                                                 |> deliverOnMainQueue).start(next: { mentions in
                                             if mentions.isEmpty {
                                                 proceed()
                                             } else {
                                                 presentAlert(mentions)
                                             }
                                         })
-                                    }
-                                } else if case .contacts = base {
-                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
-                                    |> map { contacts -> [String] in
-                                        var filteredMentions = Set(component.mentions)
-                                        let peers = contacts.peers
-                                        for peer in peers {
-                                            if selectedPeerIds.contains(peer.id) {
-                                                continue
+                                    } else if case .closeFriends = base {
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                                 |> map { contacts -> [String] in
+                                            var filteredMentions = Set(component.mentions)
+                                            let peers = contacts.peers
+                                            for peer in peers {
+                                                if case let .user(user) = peer, user.flags.contains(.isCloseFriend), let username = matchingUsername(user: user, usernames: filteredMentions) {
+                                                    filteredMentions.remove(username)
+                                                }
                                             }
-                                            if case let .user(user) = peer, let username = matchingUsername(user: user, usernames: filteredMentions) {
-                                                filteredMentions.remove(username)
+                                            return Array(filteredMentions)
+                                        }
+                                                 |> deliverOnMainQueue).start(next: { mentions in
+                                            if mentions.isEmpty {
+                                                proceed()
+                                            } else {
+                                                presentAlert(mentions)
                                             }
-                                        }
-                                        return Array(filteredMentions)
+                                        })
+                                    } else {
+                                        proceed()
                                     }
-                                    |> deliverOnMainQueue).start(next: { mentions in
-                                        if mentions.isEmpty {
-                                            proceed()
-                                        } else {
-                                            presentAlert(mentions)
-                                        }
-                                    })
-                                } else if case .closeFriends = base {
-                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
-                                    |> map { contacts -> [String] in
-                                        var filteredMentions = Set(component.mentions)
-                                        let peers = contacts.peers
-                                        for peer in peers {
-                                            if case let .user(user) = peer, user.flags.contains(.isCloseFriend), let username = matchingUsername(user: user, usernames: filteredMentions) {
-                                                filteredMentions.remove(username)
-                                            }
-                                        }
-                                        return Array(filteredMentions)
-                                    }
-                                    |> deliverOnMainQueue).start(next: { mentions in
-                                        if mentions.isEmpty {
-                                            proceed()
-                                        } else {
-                                            presentAlert(mentions)
-                                        }
-                                    })
                                 } else {
                                     proceed()
                                 }
-                            } else {
-                                proceed()
                             }
                         }
                     )),

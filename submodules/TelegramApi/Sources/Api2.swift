@@ -724,16 +724,18 @@ public extension Api {
     indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAvailableReactions(prevValue: Api.ChatReactions, newValue: Api.ChatReactions)
-        case channelAdminLogEventActionChangeBackgroundEmoji(prevValue: Int64, newValue: Int64)
-        case channelAdminLogEventActionChangeColor(prevValue: Int32, newValue: Int32)
+        case channelAdminLogEventActionChangeEmojiStatus(prevValue: Api.EmojiStatus, newValue: Api.EmojiStatus)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionChangeLinkedChat(prevValue: Int64, newValue: Int64)
         case channelAdminLogEventActionChangeLocation(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation)
+        case channelAdminLogEventActionChangePeerColor(prevValue: Api.PeerColor, newValue: Api.PeerColor)
         case channelAdminLogEventActionChangePhoto(prevPhoto: Api.Photo, newPhoto: Api.Photo)
+        case channelAdminLogEventActionChangeProfilePeerColor(prevValue: Api.PeerColor, newValue: Api.PeerColor)
         case channelAdminLogEventActionChangeStickerSet(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet)
         case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsernames(prevValue: [String], newValue: [String])
+        case channelAdminLogEventActionChangeWallpaper(prevValue: Api.WallPaper, newValue: Api.WallPaper)
         case channelAdminLogEventActionCreateTopic(topic: Api.ForumTopic)
         case channelAdminLogEventActionDefaultBannedRights(prevBannedRights: Api.ChatBannedRights, newBannedRights: Api.ChatBannedRights)
         case channelAdminLogEventActionDeleteMessage(message: Api.Message)
@@ -784,19 +786,12 @@ public extension Api {
                     prevValue.serialize(buffer, true)
                     newValue.serialize(buffer, true)
                     break
-                case .channelAdminLogEventActionChangeBackgroundEmoji(let prevValue, let newValue):
+                case .channelAdminLogEventActionChangeEmojiStatus(let prevValue, let newValue):
                     if boxed {
-                        buffer.appendInt32(1147126836)
+                        buffer.appendInt32(1051328177)
                     }
-                    serializeInt64(prevValue, buffer: buffer, boxed: false)
-                    serializeInt64(newValue, buffer: buffer, boxed: false)
-                    break
-                case .channelAdminLogEventActionChangeColor(let prevValue, let newValue):
-                    if boxed {
-                        buffer.appendInt32(1009460347)
-                    }
-                    serializeInt32(prevValue, buffer: buffer, boxed: false)
-                    serializeInt32(newValue, buffer: buffer, boxed: false)
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                     if boxed {
@@ -819,12 +814,26 @@ public extension Api {
                     prevValue.serialize(buffer, true)
                     newValue.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionChangePeerColor(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1469507456)
+                    }
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
                     if boxed {
                         buffer.appendInt32(1129042607)
                     }
                     prevPhoto.serialize(buffer, true)
                     newPhoto.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionChangeProfilePeerColor(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1581742885)
+                    }
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionChangeStickerSet(let prevStickerset, let newStickerset):
                     if boxed {
@@ -861,6 +870,13 @@ public extension Api {
                     for item in newValue {
                         serializeString(item, buffer: buffer, boxed: false)
                     }
+                    break
+                case .channelAdminLogEventActionChangeWallpaper(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(834362706)
+                    }
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionCreateTopic(let topic):
                     if boxed {
@@ -1080,18 +1096,20 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeAbout", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
-                case .channelAdminLogEventActionChangeBackgroundEmoji(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeBackgroundEmoji", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
-                case .channelAdminLogEventActionChangeColor(let prevValue, let newValue):
-                return ("channelAdminLogEventActionChangeColor", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
+                case .channelAdminLogEventActionChangeEmojiStatus(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeEmojiStatus", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeLinkedChat(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeLinkedChat", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeLocation(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeLocation", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
+                case .channelAdminLogEventActionChangePeerColor(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangePeerColor", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangePhoto(let prevPhoto, let newPhoto):
                 return ("channelAdminLogEventActionChangePhoto", [("prevPhoto", prevPhoto as Any), ("newPhoto", newPhoto as Any)])
+                case .channelAdminLogEventActionChangeProfilePeerColor(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeProfilePeerColor", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeStickerSet(let prevStickerset, let newStickerset):
                 return ("channelAdminLogEventActionChangeStickerSet", [("prevStickerset", prevStickerset as Any), ("newStickerset", newStickerset as Any)])
                 case .channelAdminLogEventActionChangeTitle(let prevValue, let newValue):
@@ -1100,6 +1118,8 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeUsername", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeUsernames(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeUsernames", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
+                case .channelAdminLogEventActionChangeWallpaper(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeWallpaper", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionCreateTopic(let topic):
                 return ("channelAdminLogEventActionCreateTopic", [("topic", topic as Any)])
                 case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
@@ -1201,29 +1221,19 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_channelAdminLogEventActionChangeBackgroundEmoji(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
+        public static func parse_channelAdminLogEventActionChangeEmojiStatus(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.EmojiStatus?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.EmojiStatus
+            }
+            var _2: Api.EmojiStatus?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.EmojiStatus
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeBackgroundEmoji(prevValue: _1!, newValue: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_channelAdminLogEventActionChangeColor(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeColor(prevValue: _1!, newValue: _2!)
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeEmojiStatus(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil
@@ -1275,6 +1285,24 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_channelAdminLogEventActionChangePeerColor(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.PeerColor?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            }
+            var _2: Api.PeerColor?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePeerColor(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_channelAdminLogEventActionChangePhoto(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Photo?
             if let signature = reader.readInt32() {
@@ -1288,6 +1316,24 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangePhoto(prevPhoto: _1!, newPhoto: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeProfilePeerColor(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.PeerColor?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            }
+            var _2: Api.PeerColor?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeProfilePeerColor(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil
@@ -1352,6 +1398,24 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsernames(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeWallpaper(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.WallPaper?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.WallPaper
+            }
+            var _2: Api.WallPaper?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.WallPaper
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeWallpaper(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil

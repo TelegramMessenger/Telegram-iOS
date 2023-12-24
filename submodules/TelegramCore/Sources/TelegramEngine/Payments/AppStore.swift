@@ -16,7 +16,7 @@ public enum AppStoreTransactionPurpose {
     case restore
     case gift(peerId: EnginePeer.Id, currency: String, amount: Int64)
     case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, currency: String, amount: Int64)
-    case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
+    case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
 }
 
 private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTransactionPurpose) -> Signal<Api.InputStorePaymentPurpose, NoError> {
@@ -59,7 +59,7 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
    
             return .inputStorePaymentPremiumGiftCode(flags: flags, users: apiInputUsers, boostPeer: apiBoostPeer, currency: currency, amount: amount)
         }
-    case let .giveaway(boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, randomId, untilDate, currency, amount):
+    case let .giveaway(boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, showWinners, prizeDescription, randomId, untilDate, currency, amount):
         return account.postbox.transaction { transaction -> Signal<Api.InputStorePaymentPurpose, NoError> in
             guard let peer = transaction.getPeer(boostPeerId), let apiBoostPeer = apiInputPeer(peer) else {
                 return .complete()
@@ -67,6 +67,9 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
             var flags: Int32 = 0
             if onlyNewSubscribers {
                 flags |= (1 << 0)
+            }
+            if showWinners {
+                flags |= (1 << 3)
             }
             var additionalPeers: [Api.InputPeer] = []
             if !additionalPeerIds.isEmpty {
@@ -80,7 +83,10 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
             if !countries.isEmpty {
                 flags |= (1 << 2)
             }
-            return .single(.inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
+            if let _ = prizeDescription {
+                flags |= (1 << 4)
+            }
+            return .single(.inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
         }
         |> switchToLatest
     }

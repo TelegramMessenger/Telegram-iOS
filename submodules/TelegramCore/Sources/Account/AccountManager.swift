@@ -202,6 +202,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SynchronizePeerStoriesOperation.self, f: { SynchronizePeerStoriesOperation(decoder: $0) })
     declareEncodable(MapVenue.self, f: { MapVenue(decoder: $0) })
     declareEncodable(TelegramMediaGiveaway.self, f: { TelegramMediaGiveaway(decoder: $0) })
+    declareEncodable(TelegramMediaGiveawayResults.self, f: { TelegramMediaGiveawayResults(decoder: $0) })
     declareEncodable(WebpagePreviewMessageAttribute.self, f: { WebpagePreviewMessageAttribute(decoder: $0) })
     declareEncodable(DerivedDataMessageAttribute.self, f: { DerivedDataMessageAttribute(decoder: $0) })
     return

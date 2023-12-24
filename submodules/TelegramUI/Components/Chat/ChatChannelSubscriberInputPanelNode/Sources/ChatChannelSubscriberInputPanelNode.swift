@@ -12,6 +12,7 @@ import PeerInfoUI
 import UndoUI
 import ChatPresentationInterfaceState
 import ChatInputPanelNode
+import AccountContext
 
 private enum SubscriberAction: Equatable {
     case join
@@ -22,6 +23,9 @@ private enum SubscriberAction: Equatable {
     case unmuteNotifications
     case unpinMessages(Int)
     case hidePinnedMessages
+    case openChannel
+    case openGroup
+    case openChat
 }
 
 private func titleAndColorForAction(_ action: SubscriberAction, theme: PresentationTheme, strings: PresentationStrings) -> (String, UIColor) {
@@ -42,11 +46,30 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
             return (strings.Chat_PanelUnpinAllMessages, theme.chat.inputPanel.panelControlAccentColor)
         case .hidePinnedMessages:
             return (strings.Chat_PanelHidePinnedMessages, theme.chat.inputPanel.panelControlAccentColor)
+        case .openChannel:
+            return (strings.SavedMessages_OpenChannel, theme.chat.inputPanel.panelControlAccentColor)
+        case .openGroup:
+            return (strings.SavedMessages_OpenGroup, theme.chat.inputPanel.panelControlAccentColor)
+        case .openChat:
+            return (strings.SavedMessages_OpenChat, theme.chat.inputPanel.panelControlAccentColor)
     }
 }
 
-private func actionForPeer(peer: Peer, interfaceState: ChatPresentationInterfaceState, isJoining: Bool, isMuted: Bool) -> SubscriberAction? {
-    if case .pinnedMessages = interfaceState.subject {
+private func actionForPeer(context: AccountContext, peer: Peer, interfaceState: ChatPresentationInterfaceState, isJoining: Bool, isMuted: Bool) -> SubscriberAction? {
+    if case let .replyThread(message) = interfaceState.chatLocation, message.messageId.peerId == context.account.peerId {
+        if let peer = interfaceState.savedMessagesTopicPeer {
+            if case let .channel(channel) = peer {
+                if case .broadcast = channel.info {
+                    return .openChannel
+                } else {
+                    return .openGroup
+                }
+            } else if case .legacyGroup = peer {
+                return .openGroup
+            }
+        }
+        return .openChat
+    } else if case .pinnedMessages = interfaceState.subject {
         var canManagePin = false
         if let channel = peer as? TelegramChannel {
             canManagePin = channel.hasPermission(.pinMessages)
@@ -261,6 +284,10 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             }
         case .hidePinnedMessages, .unpinMessages:
             self.interfaceInteraction?.unpinAllMessages()
+        case .openChannel, .openGroup, .openChat:
+            if let presentationInterfaceState = self.presentationInterfaceState, let savedMessagesTopicPeer = presentationInterfaceState.savedMessagesTopicPeer {
+                self.interfaceInteraction?.navigateToChat(savedMessagesTopicPeer.id)
+            }
         }
     }
     
@@ -286,9 +313,9 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 self.helpButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/Help"), color: interfaceState.theme.chat.inputPanel.panelControlAccentColor), for: .normal)
             }
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.pinnedMessage != interfaceState.pinnedMessage || force {
+            if let context = self.context, let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.pinnedMessage != interfaceState.pinnedMessage || force {
                 
-                if let action = actionForPeer(peer: peer, interfaceState: interfaceState, isJoining: self.isJoining, isMuted: interfaceState.peerIsMuted) {
+                if let action = actionForPeer(context: context, peer: peer, interfaceState: interfaceState, isJoining: self.isJoining, isMuted: interfaceState.peerIsMuted) {
                     let previousAction = self.action
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)

@@ -11,10 +11,11 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import WallpaperBackgroundNode
+import ListItemComponentAdaptor
 
-final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem {
+final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     struct MessageItem: Equatable {
-        static func == (lhs: MessageItem, rhs: MessageItem) -> Bool {
+        static func ==(lhs: MessageItem, rhs: MessageItem) -> Bool {
             if lhs.outgoing != rhs.outgoing {
                 return false
             }
@@ -117,6 +118,44 @@ final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem {
                 }
             }
         }
+    }
+    
+    public func item() -> ListViewItem {
+        return self
+    }
+    
+    public static func ==(lhs: PeerNameColorChatPreviewItem, rhs: PeerNameColorChatPreviewItem) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.componentTheme !== rhs.componentTheme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.fontSize != rhs.fontSize {
+            return false
+        }
+        if lhs.chatBubbleCorners != rhs.chatBubbleCorners {
+            return false
+        }
+        if lhs.wallpaper != rhs.wallpaper {
+            return false
+        }
+        if lhs.dateTimeFormat != rhs.dateTimeFormat {
+            return false
+        }
+        if lhs.nameDisplayOrder != rhs.nameDisplayOrder {
+            return false
+        }
+        if lhs.messageItems != rhs.messageItems {
+            return false
+        }
+        return true
     }
 }
 
@@ -260,7 +299,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     
-                    if let currentItem, currentItem.messageItems.first?.nameColor != item.messageItems.first?.nameColor || currentItem.messageItems.first?.backgroundEmojiId != item.messageItems.first?.backgroundEmojiId {
+                    if let currentItem, currentItem.messageItems.first?.nameColor != item.messageItems.first?.nameColor || currentItem.messageItems.first?.backgroundEmojiId != item.messageItems.first?.backgroundEmojiId || currentItem.theme !== item.theme || currentItem.wallpaper != item.wallpaper {
                         if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
                             snapshot.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: snapshot.frame.size)
                             strongSelf.view.addSubview(snapshot)
@@ -329,31 +368,42 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
-                    var hasTopCorners = false
-                    var hasBottomCorners = false
-                    switch neighbors.top {
+                    if params.isStandalone {
+                        strongSelf.topStripeNode.isHidden = true
+                        strongSelf.bottomStripeNode.isHidden = true
+                        strongSelf.maskNode.isHidden = true
+                    } else {
+                        let hasCorners = itemListHasRoundedBlockLayout(params)
+                        
+                        var hasTopCorners = false
+                        var hasBottomCorners = false
+                        
+                        switch neighbors.top {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
                             hasTopCorners = true
                             strongSelf.topStripeNode.isHidden = hasCorners
+                        }
+                        let bottomStripeInset: CGFloat
+                        let bottomStripeOffset: CGFloat
+                        switch neighbors.bottom {
+                            case .sameSection(false):
+                                bottomStripeInset = 0.0
+                                bottomStripeOffset = -separatorHeight
+                                strongSelf.bottomStripeNode.isHidden = false
+                            default:
+                                bottomStripeInset = 0.0
+                                bottomStripeOffset = 0.0
+                                hasBottomCorners = true
+                                strongSelf.bottomStripeNode.isHidden = hasCorners
+                        }
+                        
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        
+                        strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
-                    let bottomStripeInset: CGFloat
-                    let bottomStripeOffset: CGFloat
-                    switch neighbors.bottom {
-                        case .sameSection(false):
-                            bottomStripeInset = 0.0
-                            bottomStripeOffset = -separatorHeight
-                            strongSelf.bottomStripeNode.isHidden = false
-                        default:
-                            bottomStripeInset = 0.0
-                            bottomStripeOffset = 0.0
-                            hasBottomCorners = true
-                            strongSelf.bottomStripeNode.isHidden = hasCorners
-                    }
-                    
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     
@@ -377,8 +427,6 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
-                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                 }
             })
         }

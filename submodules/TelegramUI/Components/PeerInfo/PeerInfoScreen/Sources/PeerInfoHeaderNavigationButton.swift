@@ -97,12 +97,14 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     let contextSourceNode: ContextReferenceContentNode
     private let textNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private let backIconLayer: SimpleShapeLayer
     private var animationNode: MoreIconNode?
     private let backgroundNode: NavigationBackgroundNode
     
     private var key: PeerInfoHeaderNavigationButtonKey?
     
     private var contentsColor: UIColor = .white
+    private var canBeExpanded: Bool = false
     
     var action: ((ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -117,6 +119,15 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
+        self.backIconLayer = SimpleShapeLayer()
+        self.backIconLayer.lineWidth = 3.0
+        self.backIconLayer.lineCap = .round
+        self.backIconLayer.lineJoin = .round
+        self.backIconLayer.strokeColor = UIColor.white.cgColor
+        self.backIconLayer.fillColor = nil
+        self.backIconLayer.isHidden = true
+        self.backIconLayer.path = try? convertSvgPath("M10.5,2 L1.5,11 L10.5,20 ")
+        
         self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: true)
         
         super.init(pointerStyle: .insetRectangle(-8.0, 2.0))
@@ -128,6 +139,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.contextSourceNode.addSubnode(self.backgroundNode)
         self.contextSourceNode.addSubnode(self.textNode)
         self.contextSourceNode.addSubnode(self.iconNode)
+        self.contextSourceNode.layer.addSublayer(self.backIconLayer)
 
         self.addSubnode(self.containerNode)
         
@@ -146,13 +158,44 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.action?(self.contextSourceNode, nil)
     }
     
-    func updateContentsColor(backgroundColor: UIColor, contentsColor: UIColor, transition: ContainedViewLayoutTransition) {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        var boundingRect = self.bounds
+        if self.textNode.alpha != 0.0 {
+            boundingRect = boundingRect.union(self.textNode.frame)
+        }
+        boundingRect = boundingRect.insetBy(dx: -8.0, dy: -4.0)
+        if boundingRect.contains(point) {
+            return super.hitTest(self.bounds.center, with: event)
+        } else {
+            return nil
+        }
+    }
+    
+    func updateContentsColor(backgroundColor: UIColor, contentsColor: UIColor, canBeExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.contentsColor = contentsColor
+        self.canBeExpanded = canBeExpanded
         
         self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         
         transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
         transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
+        transition.updateStrokeColor(layer: self.backIconLayer, strokeColor: self.contentsColor)
+        
+        switch self.key {
+        case .back:
+            transition.updateAlpha(layer: self.textNode.layer, alpha: canBeExpanded ? 1.0 : 0.0)
+            transition.updateTransformScale(node: self.textNode, scale: canBeExpanded ? 1.0 : 0.001)
+            
+            var iconTransform = CATransform3DIdentity
+            iconTransform = CATransform3DScale(iconTransform, canBeExpanded ? 1.0 : 0.8, canBeExpanded ? 1.0 : 0.8, 1.0)
+            iconTransform = CATransform3DTranslate(iconTransform, canBeExpanded ? -7.0 : 0.0, 0.0, 0.0)
+            transition.updateTransform(node: self.iconNode, transform: CATransform3DGetAffineTransform(iconTransform))
+            
+            transition.updateTransform(layer: self.backIconLayer, transform: CATransform3DGetAffineTransform(iconTransform))
+            transition.updateLineWidth(layer: self.backIconLayer, lineWidth: canBeExpanded ? 3.0 : 2.075)
+        default:
+            break
+        }
         
         if let animationNode = self.animationNode {
             transition.updateTintColor(layer: animationNode.imageNode.layer, color: self.contentsColor)
@@ -184,9 +227,9 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             var animationState: MoreIconNodeState = .more
             switch key {
             case .back:
-                text = ""
+                text = presentationData.strings.Common_Back
                 accessibilityText = presentationData.strings.Common_Back
-                icon = NavigationBar.thinBackArrowImage
+                icon = NavigationBar.backArrowImage(color: .white)
             case .edit:
                 text = presentationData.strings.Common_Edit
                 accessibilityText = text
@@ -270,11 +313,19 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         }
         
         let inset: CGFloat = 0.0
+        var textInset: CGFloat = 0.0
+        switch key {
+        case .back:
+            textInset += 11.0
+        default:
+            break
+        }
         
         let resultSize: CGSize
         
-        let textFrame = CGRect(origin: CGPoint(x: inset, y: floor((height - textSize.height) / 2.0)), size: textSize)
-        self.textNode.frame = textFrame
+        let textFrame = CGRect(origin: CGPoint(x: inset + textInset, y: floor((height - textSize.height) / 2.0)), size: textSize)
+        self.textNode.position = textFrame.center
+        self.textNode.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
         
         if let animationNode = self.animationNode {
             let animationSize = CGSize(width: 30.0, height: 30.0)
@@ -286,7 +337,20 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
             resultSize = size
         } else if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
+            let iconFrame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
+            self.iconNode.position = iconFrame.center
+            self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+            
+            if case .back = key {
+                self.backIconLayer.position = iconFrame.center
+                self.backIconLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+                
+                self.iconNode.isHidden = true
+                self.backIconLayer.isHidden = false
+            } else {
+                self.iconNode.isHidden = false
+                self.backIconLayer.isHidden = true
+            }
             
             let size = CGSize(width: image.size.width + inset * 2.0, height: height)
             self.containerNode.frame = CGRect(origin: CGPoint(), size: size)

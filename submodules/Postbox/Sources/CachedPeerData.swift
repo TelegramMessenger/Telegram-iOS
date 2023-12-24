@@ -1,5 +1,5 @@
 
-public protocol CachedPeerData: PostboxCoding {
+public protocol CachedPeerData: AnyObject, PostboxCoding {
     var peerIds: Set<PeerId> { get }
     var messageIds: Set<MessageId> { get }
     

@@ -3,6 +3,7 @@ import UIKit
 import Display
 import CoreLocation
 import Photos
+import Postbox
 import TelegramCore
 import AccountContext
 import MediaEditor
@@ -20,22 +21,38 @@ extension MediaEditorScreen {
         let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
         mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
         
-        let caption = self.getCaption()
+        let filteredEntities = self.node.entitiesView.entities.filter { entity in
+            if entity is DrawingMediaEntity {
+                return false
+            } else if let entity = entity as? DrawingStickerEntity, case .message = entity.content {
+                return false
+            }
+            return true
+        }
         
-        if let subject = self.node.subject, case .asset = subject, self.node.mediaEditor?.values.hasChanges == false && caption.string.isEmpty {
-            return false
+        let values = mediaEditor.values
+        let filteredValues = values.withUpdatedEntities([])
+        
+        let caption = self.getCaption()
+        if let subject = self.node.subject {
+            if case .asset = subject, !values.hasChanges && caption.string.isEmpty {
+                return false
+            } else if case .message = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
+                return false
+            }
         }
         return true
     }
     
     func saveDraft(id: Int64?) {
-        guard let subject = self.node.subject, let mediaEditor = self.node.mediaEditor else {
+        guard let subject = self.node.subject, let actualSubject = self.node.actualSubject, let mediaEditor = self.node.mediaEditor else {
             return
         }
         try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
         
         let values = mediaEditor.values
         let privacy = self.state.privacy
+        let forwardSource = self.forwardSource
         let caption = self.getCaption()
         let duration = mediaEditor.duration ?? 0.0
         
@@ -43,7 +60,7 @@ extension MediaEditorScreen {
         var timestamp: Int32
         var location: CLLocationCoordinate2D?
         let expiresOn: Int32
-        if case let .draft(draft, _) = subject {
+        if case let .draft(draft, _) = actualSubject {
             timestamp = draft.timestamp
             location = draft.location
             if let _ = id {
@@ -69,29 +86,74 @@ extension MediaEditorScreen {
                 guard let resultImage else {
                     return
                 }
-                let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
-                
-                let context = self.context
-                let saveImageDraft: (UIImage, PixelDimensions) -> Void = { image, dimensions in
-                    if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
-                        let path = "\(Int64.random(in: .min ... .max)).jpg"
-                        if let data = image.jpegData(compressionQuality: 0.87) {
-                            let draft = MediaEditorDraft(path: path, isVideo: false, thumbnail: thumbnailImage, dimensions: dimensions, duration: nil, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location, expiresOn: expiresOn)
-                            try? data.write(to: URL(fileURLWithPath: draft.fullPath(engine: context.engine)))
-                            if let id {
-                                saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
-                            } else {
-                                addStoryDraft(engine: context.engine, item: draft)
-                            }
+                enum MediaInput {
+                    case image(image: UIImage, dimensions: PixelDimensions)
+                    case video(path: String, dimensions: PixelDimensions, duration: Double)
+                    
+                    var isVideo: Bool {
+                        switch self {
+                        case .video:
+                            return true
+                        case .image:
+                            return false
+                        }
+                    }
+                    
+                    var dimensions: PixelDimensions {
+                        switch self {
+                        case let .image(_, dimensions):
+                            return dimensions
+                        case let .video(_, dimensions, _):
+                            return dimensions
+                        }
+                    }
+                    
+                    var duration: Double? {
+                        switch self {
+                        case .image:
+                            return nil
+                        case let .video(_, _, duration):
+                            return duration
+                        }
+                    }
+                    
+                    var fileExtension: String {
+                        switch self {
+                        case .image:
+                            return "jpg"
+                        case .video:
+                            return "mp4"
                         }
                     }
                 }
                 
-                let saveVideoDraft: (String, PixelDimensions, Double) -> Void = { videoPath, dimensions, duration in
+                let context = self.context
+                func innerSaveDraft(media: MediaInput) {
+                    let fittedSize = resultImage.size.aspectFitted(CGSize(width: 128.0, height: 128.0))
                     if let thumbnailImage = generateScaledImage(image: resultImage, size: fittedSize) {
-                        let path = "\(Int64.random(in: .min ... .max)).mp4"
-                        let draft = MediaEditorDraft(path: path, isVideo: true, thumbnail: thumbnailImage, dimensions: dimensions, duration: duration, values: values, caption: caption, privacy: privacy, timestamp: timestamp, location: location, expiresOn: expiresOn)
-                        try? FileManager.default.copyItem(atPath: videoPath, toPath: draft.fullPath(engine: context.engine))
+                        let path = "\(Int64.random(in: .min ... .max)).\(media.fileExtension)"
+                        let draft = MediaEditorDraft(
+                            path: path,
+                            isVideo: media.isVideo,
+                            thumbnail: thumbnailImage,
+                            dimensions: media.dimensions,
+                            duration: media.duration,
+                            values: values,
+                            caption: caption,
+                            privacy: privacy,
+                            forwardInfo: forwardSource.flatMap { StoryId(peerId: $0.0.id, id: $0.1.id) },
+                            timestamp: timestamp,
+                            location: location,
+                            expiresOn: expiresOn
+                        )
+                        switch media {
+                        case let .image(image, _):
+                            if let data = image.jpegData(compressionQuality: 0.87) {
+                                try? data.write(to: URL(fileURLWithPath: draft.fullPath(engine: context.engine)))
+                            }
+                        case let .video(path, _, _):
+                            try? FileManager.default.copyItem(atPath: path, toPath: draft.fullPath(engine: context.engine))
+                        }
                         if let id {
                             saveStorySource(engine: context.engine, item: draft, peerId: context.account.peerId, id: id)
                         } else {
@@ -102,14 +164,14 @@ extension MediaEditorScreen {
                 
                 switch subject {
                 case let .image(image, dimensions, _, _):
-                    saveImageDraft(image, dimensions)
+                    innerSaveDraft(media: .image(image: image, dimensions: dimensions))
                 case let .video(path, _, _, _, _, dimensions, _, _, _):
-                    saveVideoDraft(path, dimensions, duration)
+                    innerSaveDraft(media: .video(path: path, dimensions: dimensions, duration: duration))
                 case let .asset(asset):
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
                             if let urlAsset = avAsset as? AVURLAsset {
-                                saveVideoDraft(urlAsset.url.relativePath, PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration)
+                                innerSaveDraft(media: .video(path: urlAsset.url.relativePath, dimensions: PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight)), duration: duration))
                             }
                         }
                     } else {
@@ -117,16 +179,23 @@ extension MediaEditorScreen {
                         options.deliveryMode = .highQualityFormat
                         PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
                             if let image {
-                                saveImageDraft(image, PixelDimensions(image.size))
+                                innerSaveDraft(media: .image(image: image, dimensions: PixelDimensions(image.size)))
                             }
                         }
                     }
                 case let .draft(draft, _):
                     if draft.isVideo {
-                        saveVideoDraft(draft.fullPath(engine: context.engine), draft.dimensions, draft.duration ?? 0.0)
+                        innerSaveDraft(media: .video(path: draft.fullPath(engine: context.engine), dimensions: draft.dimensions, duration: draft.duration ?? 0.0))
                     } else if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
-                        saveImageDraft(image, draft.dimensions)
+                        innerSaveDraft(media: .image(image: image, dimensions: draft.dimensions))
                     }
+                case .message:
+                    if let pixel = generateSingleColorImage(size: CGSize(width: 1, height: 1), color: .black) {
+                        innerSaveDraft(media: .image(image: pixel, dimensions: PixelDimensions(width: 1080, height: 1920)))
+                    }
+                }
+                
+                if case let .draft(draft, _) = actualSubject {
                     removeStoryDraft(engine: self.context.engine, path: draft.path, delete: false)
                 }
             })

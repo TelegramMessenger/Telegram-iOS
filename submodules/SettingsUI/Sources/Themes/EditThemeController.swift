@@ -14,6 +14,8 @@ import LegacyMediaPickerUI
 import WallpaperResources
 import AccountContext
 import MediaResources
+import ThemeAccentColorScreen
+import GenerateThemeName
 
 private final class EditThemeControllerArguments {
     let context: AccountContext

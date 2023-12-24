@@ -426,11 +426,12 @@ public func generateScaledImage(image: UIImage?, size: CGSize, opaque: Bool = tr
     }, opaque: opaque, scale: scale)
 }
 
-public func generateSingleColorImage(size: CGSize, color: UIColor) -> UIImage? {
+public func generateSingleColorImage(size: CGSize, color: UIColor, scale: CGFloat = 0.0) -> UIImage? {
     return generateImage(size, contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
-    })
+    }, scale: scale)
 }
 
 public enum DrawingContextBltMode {
@@ -924,4 +925,69 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             throw ParsingError.Generic
         }
     }
+}
+
+public func convertSvgPath(_ path: StaticString) throws -> CGPath {
+    var index: UnsafePointer<UInt8> = path.utf8Start
+    let end = path.utf8Start.advanced(by: path.utf8CodeUnitCount)
+    var currentPoint = CGPoint()
+    
+    let result = CGMutablePath()
+    
+    while index < end {
+        let c = index.pointee
+        index = index.successor()
+        
+        if c == 77 { // M
+            let x = try readCGFloat(&index, end: end, separator: 44)
+            let y = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: x, y: y)
+            result.move(to: currentPoint)
+        } else if c == 76 { // L
+            let x = try readCGFloat(&index, end: end, separator: 44)
+            let y = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Line to \(x), \(y)")
+            currentPoint = CGPoint(x: x, y: y)
+            result.addLine(to: currentPoint)
+        } else if c == 72 { // H
+            let x = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: x, y: currentPoint.y)
+            result.addLine(to: currentPoint)
+        } else if c == 86 { // V
+            let y = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: currentPoint.x, y: y)
+            result.addLine(to: currentPoint)
+        } else if c == 67 { // C
+            let x1 = try readCGFloat(&index, end: end, separator: 44)
+            let y1 = try readCGFloat(&index, end: end, separator: 32)
+            let x2 = try readCGFloat(&index, end: end, separator: 44)
+            let y2 = try readCGFloat(&index, end: end, separator: 32)
+            let x = try readCGFloat(&index, end: end, separator: 44)
+            let y = try readCGFloat(&index, end: end, separator: 32)
+            
+            currentPoint = CGPoint(x: x, y: y)
+            result.addCurve(to: currentPoint, control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
+        } else if c == 90 { // Z
+            if index != end && index.pointee != 32 {
+                throw ParsingError.Generic
+            }
+        } else if c == 83 { // S
+            if index != end && index.pointee != 32 {
+                throw ParsingError.Generic
+            }
+        } else if c == 32 { // space
+            continue
+        } else {
+            throw ParsingError.Generic
+        }
+    }
+    
+    return result
 }

@@ -429,7 +429,7 @@ public extension Api {
         case keyboardButtonCallback(flags: Int32, text: String, data: Buffer)
         case keyboardButtonGame(text: String)
         case keyboardButtonRequestGeoLocation(text: String)
-        case keyboardButtonRequestPeer(text: String, buttonId: Int32, peerType: Api.RequestPeerType)
+        case keyboardButtonRequestPeer(text: String, buttonId: Int32, peerType: Api.RequestPeerType, maxQuantity: Int32)
         case keyboardButtonRequestPhone(text: String)
         case keyboardButtonRequestPoll(flags: Int32, quiz: Api.Bool?, text: String)
         case keyboardButtonSimpleWebView(text: String, url: String)
@@ -490,13 +490,14 @@ public extension Api {
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     break
-                case .keyboardButtonRequestPeer(let text, let buttonId, let peerType):
+                case .keyboardButtonRequestPeer(let text, let buttonId, let peerType, let maxQuantity):
                     if boxed {
-                        buffer.appendInt32(218842764)
+                        buffer.appendInt32(1406648280)
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeInt32(buttonId, buffer: buffer, boxed: false)
                     peerType.serialize(buffer, true)
+                    serializeInt32(maxQuantity, buffer: buffer, boxed: false)
                     break
                 case .keyboardButtonRequestPhone(let text):
                     if boxed {
@@ -582,8 +583,8 @@ public extension Api {
                 return ("keyboardButtonGame", [("text", text as Any)])
                 case .keyboardButtonRequestGeoLocation(let text):
                 return ("keyboardButtonRequestGeoLocation", [("text", text as Any)])
-                case .keyboardButtonRequestPeer(let text, let buttonId, let peerType):
-                return ("keyboardButtonRequestPeer", [("text", text as Any), ("buttonId", buttonId as Any), ("peerType", peerType as Any)])
+                case .keyboardButtonRequestPeer(let text, let buttonId, let peerType, let maxQuantity):
+                return ("keyboardButtonRequestPeer", [("text", text as Any), ("buttonId", buttonId as Any), ("peerType", peerType as Any), ("maxQuantity", maxQuantity as Any)])
                 case .keyboardButtonRequestPhone(let text):
                 return ("keyboardButtonRequestPhone", [("text", text as Any)])
                 case .keyboardButtonRequestPoll(let flags, let quiz, let text):
@@ -714,11 +715,14 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.RequestPeerType
             }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.KeyboardButton.keyboardButtonRequestPeer(text: _1!, buttonId: _2!, peerType: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.KeyboardButton.keyboardButtonRequestPeer(text: _1!, buttonId: _2!, peerType: _3!, maxQuantity: _4!)
             }
             else {
                 return nil

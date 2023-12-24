@@ -7,7 +7,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
     return network.request(Api.functions.updates.getState())
     |> retryRequest
     |> mapToSignal { state -> Signal<Never, NoError> in
-        let chatList = fetchChatList(postbox: postbox, network: network, location: .general, upperBound: .absoluteUpperBound(), hash: 0, limit: 100)
+        let chatList = fetchChatList(accountPeerId: accountPeerId, postbox: postbox, network: network, location: .general, upperBound: .absoluteUpperBound(), hash: 0, limit: 100)
         
         return chatList
         |> mapToSignal { fetchedChats -> Signal<Never, NoError> in

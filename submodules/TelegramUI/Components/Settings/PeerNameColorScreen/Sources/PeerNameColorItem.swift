@@ -10,6 +10,7 @@ import MergeLists
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import ListItemComponentAdaptor
 
 private enum PeerNameColorEntryId: Hashable {
     case color(Int32)
@@ -313,7 +314,7 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
     }
 }
 
-final class PeerNameColorItem: ListViewItem, ItemListItem {
+final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     var sectionId: ItemListSectionId
     
     let theme: PresentationTheme
@@ -365,6 +366,27 @@ final class PeerNameColorItem: ListViewItem, ItemListItem {
             }
         }
     }
+    
+    public func item() -> ListViewItem {
+        return self
+    }
+    
+    public static func ==(lhs: PeerNameColorItem, rhs: PeerNameColorItem) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.colors != rhs.colors {
+            return false
+        }
+        if lhs.isProfile != rhs.isProfile {
+            return false
+        }
+        if lhs.currentColor != rhs.currentColor {
+            return false
+        }
+        
+        return true
+    }
 }
 
 private struct PeerNameColorItemNodeTransition {
@@ -394,7 +416,7 @@ private func ensureColorVisible(listNode: ListView, color: PeerNameColor, animat
         }
     }
     if let resultNode = resultNode {
-        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 24.0)
+        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 76.0)
         return true
     } else {
         return false
@@ -528,24 +550,30 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.containerNode.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
-                    var hasTopCorners = false
-                    var hasBottomCorners = false
-                    if item.currentColor != nil {
-                        switch neighbors.top {
-                        case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
-                        default:
-                            hasTopCorners = true
-                            strongSelf.topStripeNode.isHidden = hasCorners
-                        }
-                    } else {
+                    if params.isStandalone {
+                        strongSelf.backgroundNode.isHidden = true
                         strongSelf.topStripeNode.isHidden = true
-                        hasTopCorners = true
-                    }
-                    let bottomStripeInset: CGFloat
-                    let bottomStripeOffset: CGFloat
-                    switch neighbors.bottom {
+                        strongSelf.bottomStripeNode.isHidden = true
+                        strongSelf.maskNode.isHidden = true
+                    } else {
+                        let hasCorners = itemListHasRoundedBlockLayout(params)
+                        var hasTopCorners = false
+                        var hasBottomCorners = false
+                        if item.currentColor != nil {
+                            switch neighbors.top {
+                            case .sameSection(false):
+                                strongSelf.topStripeNode.isHidden = true
+                            default:
+                                hasTopCorners = true
+                                strongSelf.topStripeNode.isHidden = hasCorners
+                            }
+                        } else {
+                            strongSelf.topStripeNode.isHidden = true
+                            hasTopCorners = true
+                        }
+                        let bottomStripeInset: CGFloat
+                        let bottomStripeOffset: CGFloat
+                        switch neighbors.bottom {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
@@ -555,15 +583,17 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                             bottomStripeOffset = 0.0
                             hasBottomCorners = true
                             strongSelf.bottomStripeNode.isHidden = hasCorners
+                        }
+                        strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
                     
                     strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
                     var listInsets = UIEdgeInsets()
                     listInsets.top += params.leftInset + 8.0

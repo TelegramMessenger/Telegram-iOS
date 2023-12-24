@@ -308,6 +308,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.maximumNumberOfLines = 1
+        self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: theme.placeholderTextColor)
         
         self.textFieldScrollNode = ASScrollNode()

@@ -256,6 +256,9 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let context: AccountContext
     private let presentationTheme: PresentationTheme
     
+    private let placeholder: String
+    private let shortPlaceholder: String?
+    
     private let theme: EditableTokenListNodeTheme
     private let backgroundNode: NavigationBackgroundNode
     private let scrollNode: ASScrollNode
@@ -271,10 +274,13 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     public var deleteToken: ((AnyHashable) -> Void)?
     public var textReturned: (() -> Void)?
     
-    public init(context: AccountContext, presentationTheme: PresentationTheme, theme: EditableTokenListNodeTheme, placeholder: String) {
+    public init(context: AccountContext, presentationTheme: PresentationTheme, theme: EditableTokenListNodeTheme, placeholder: String, shortPlaceholder: String? = nil) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.theme = theme
+        
+        self.placeholder = placeholder
+        self.shortPlaceholder = shortPlaceholder
 
         self.backgroundNode = NavigationBackgroundNode(color: theme.backgroundColor)
         
@@ -335,6 +341,18 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     
     public func updateLayout(tokens: [EditableTokenListToken], width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let validTokens = Set<AnyHashable>(tokens.map { $0.id })
+        
+        var placeholderSnapshot: UIView?
+        if let shortPlaceholder = self.shortPlaceholder {
+            let previousPlaceholder = self.placeholderNode.attributedText?.string ?? ""
+            let placeholder = validTokens.count > 0 ? shortPlaceholder : self.placeholder
+            
+            if !previousPlaceholder.isEmpty && placeholder != previousPlaceholder {
+                placeholderSnapshot = self.placeholderNode.layer.snapshotContentTreeAsView()
+                placeholderSnapshot?.frame = self.placeholderNode.frame
+            }
+            self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(15.0), textColor: self.theme.placeholderTextColor)
+        }
         
         for i in (0 ..< self.tokenNodes.count).reversed() {
             let tokenNode = tokenNodes[i]
@@ -430,7 +448,22 @@ public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
             currentOffset.y += 28.0
             currentOffset.x = sideInset
         }
-        transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + floor((28.0 - placeholderSize.height) / 2.0)), size: placeholderSize))
+        
+        let previousPlaceholderWidth = self.placeholderNode.bounds.width
+        let placeholderFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + floor((28.0 - placeholderSize.height) / 2.0)), size: placeholderSize)
+        self.placeholderNode.bounds = CGRect(origin: .zero, size: placeholderSize)
+        transition.updatePosition(node: self.placeholderNode, position: placeholderFrame.center)
+        
+        if let placeholderSnapshot {
+            self.placeholderNode.view.superview?.insertSubview(placeholderSnapshot, belowSubview: self.placeholderNode.view)
+            self.placeholderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            placeholderSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                placeholderSnapshot.removeFromSuperview()
+            })
+            let delta = (placeholderSize.width - previousPlaceholderWidth) / 2.0
+            transition.updatePosition(layer: placeholderSnapshot.layer, position: CGPoint(x: placeholderFrame.center.x - delta, y: placeholderFrame.center.y))
+            transition.animatePositionAdditive(node: self.placeholderNode, offset: CGPoint(x: delta, y: 0.0))
+        }
         
         let textNodeFrame = CGRect(origin: CGPoint(x: currentOffset.x + 4.0, y: currentOffset.y + UIScreenPixel), size: CGSize(width: width - currentOffset.x - sideInset - 8.0, height: 28.0))
         let caretNodeFrame = CGRect(origin: CGPoint(x: textNodeFrame.minX, y: textNodeFrame.minY + 4.0 - UIScreenPixel), size: CGSize(width: 2.0, height: 19.0 + UIScreenPixel))

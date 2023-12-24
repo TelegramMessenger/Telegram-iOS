@@ -9,6 +9,7 @@ public final class TelegramMediaGiveaway: Media, Equatable {
         }
         
         public static let onlyNewSubscribers = Flags(rawValue: 1 << 0)
+        public static let showWinners = Flags(rawValue: 1 << 1)
     }
     
     public var id: MediaId? {
@@ -24,14 +25,16 @@ public final class TelegramMediaGiveaway: Media, Equatable {
     public let quantity: Int32
     public let months: Int32
     public let untilDate: Int32
-
-    public init(flags: Flags, channelPeerIds: [PeerId], countries: [String], quantity: Int32, months: Int32, untilDate: Int32) {
+    public let prizeDescription: String?
+    
+    public init(flags: Flags, channelPeerIds: [PeerId], countries: [String], quantity: Int32, months: Int32, untilDate: Int32, prizeDescription: String?) {
         self.flags = flags
         self.channelPeerIds = channelPeerIds
         self.countries = countries
         self.quantity = quantity
         self.months = months
         self.untilDate = untilDate
+        self.prizeDescription = prizeDescription
     }
     
     public init(decoder: PostboxDecoder) {
@@ -41,6 +44,7 @@ public final class TelegramMediaGiveaway: Media, Equatable {
         self.quantity = decoder.decodeInt32ForKey("qty", orElse: 0)
         self.months = decoder.decodeInt32ForKey("mts", orElse: 0)
         self.untilDate = decoder.decodeInt32ForKey("unt", orElse: 0)
+        self.prizeDescription = decoder.decodeOptionalStringForKey("des")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -50,6 +54,11 @@ public final class TelegramMediaGiveaway: Media, Equatable {
         encoder.encodeInt32(self.quantity, forKey: "qty")
         encoder.encodeInt32(self.months, forKey: "mts")
         encoder.encodeInt32(self.untilDate, forKey: "unt")
+        if let prizeDescription = self.prizeDescription {
+            encoder.encodeString(prizeDescription, forKey: "des")
+        } else {
+            encoder.encodeNil(forKey: "des")
+        }
     }
     
     public func isLikelyToBeUpdated() -> Bool {
@@ -76,6 +85,9 @@ public final class TelegramMediaGiveaway: Media, Equatable {
             return false
         }
         if self.untilDate != other.untilDate {
+            return false
+        }
+        if self.prizeDescription != other.prizeDescription {
             return false
         }
         return true

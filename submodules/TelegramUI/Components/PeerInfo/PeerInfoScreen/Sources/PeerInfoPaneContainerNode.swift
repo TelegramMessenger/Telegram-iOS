@@ -10,6 +10,8 @@ import AccountContext
 import ContextUI
 import ChatControllerInteraction
 import PeerInfoVisualMediaPaneNode
+import PeerInfoPaneNode
+import PeerInfoChatListPaneNode
 
 final class PeerInfoPaneWrapper {
     let key: PeerInfoPaneKey
@@ -418,6 +420,8 @@ private final class PeerInfoPendingPane {
             }
         case .recommended:
             paneNode = PeerInfoRecommendedChannelsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction)
+        case .savedMessagesChats:
+            paneNode = PeerInfoChatListPaneNode(context: context, navigationController: chatControllerInteraction.navigationController)
         }
         paneNode.parentController = parentController
         self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
@@ -996,6 +1000,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_PaneMembers
             case .recommended:
                 title = presentationData.strings.PeerInfo_PaneRecommended
+            case .savedMessagesChats:
+                title = presentationData.strings.DialogList_TabTitle
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
         }, selectedPane: self.currentPaneKey, transitionFraction: self.transitionFraction, transition: transition)

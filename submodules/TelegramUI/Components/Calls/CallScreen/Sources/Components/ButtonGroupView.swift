@@ -38,28 +38,34 @@ final class ButtonGroupView: OverlayMaskContainerView {
         }
         
         let content: Content
+        let isEnabled: Bool
         let action: () -> Void
         
-        init(content: Content, action: @escaping () -> Void) {
+        init(content: Content, isEnabled: Bool, action: @escaping () -> Void) {
             self.content = content
+            self.isEnabled = isEnabled
             self.action = action
         }
     }
     
     final class Notice {
         let id: AnyHashable
+        let icon: String
         let text: String
         
-        init(id: AnyHashable, text: String) {
+        init(id: AnyHashable, icon: String, text: String) {
             self.id = id
+            self.icon = icon
             self.text = text
         }
     }
     
     private var buttons: [Button]?
     private var buttonViews: [Button.Content.Key: ContentOverlayButton] = [:]
-    
     private var noticeViews: [AnyHashable: NoticeView] = [:]
+    private var closeButtonView: CloseButtonView?
+    
+    var closePressed: (() -> Void)?
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -79,7 +85,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
         return result
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, controlsHidden: Bool, buttons: [Button], notices: [Notice], transition: Transition) -> CGFloat {
+    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, buttons: [Button], notices: [Notice], transition: Transition) -> CGFloat {
         self.buttons = buttons
         
         let buttonSize: CGFloat = 56.0
@@ -122,7 +128,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     noticesHeight += buttonNoticeSpacing
                 }
             }
-            let noticeSize = noticeView.update(text: notice.text, constrainedWidth: size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
+            let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
             let noticeFrame = CGRect(origin: CGPoint(x: floor((size.width - noticeSize.width) * 0.5), y: nextNoticeY - noticeSize.height), size: noticeSize)
             noticesHeight += noticeSize.height
             nextNoticeY -= noticeSize.height + noticeSpacing
@@ -162,6 +168,46 @@ final class ButtonGroupView: OverlayMaskContainerView {
             resultHeight = size.height - buttonY + noticesHeight
         }
         var buttonX: CGFloat = floor((size.width - buttonSize * CGFloat(buttons.count) - buttonSpacing * CGFloat(buttons.count - 1)) * 0.5)
+        
+        if displayClose {
+            let closeButtonView: CloseButtonView
+            var closeButtonTransition = transition
+            var animateIn = false
+            if let current = self.closeButtonView {
+                closeButtonView = current
+            } else {
+                closeButtonTransition = closeButtonTransition.withAnimation(.none)
+                animateIn = true
+                
+                closeButtonView = CloseButtonView()
+                self.closeButtonView = closeButtonView
+                self.addSubview(closeButtonView)
+                closeButtonView.pressAction = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.closePressed?()
+                }
+            }
+            let closeButtonSize = CGSize(width: minWidth, height: buttonSize)
+            closeButtonView.update(text: "Close", size: closeButtonSize, transition: closeButtonTransition)
+            closeButtonTransition.setFrame(view: closeButtonView, frame: CGRect(origin: CGPoint(x: floor((size.width - closeButtonSize.width) * 0.5), y: buttonY), size: closeButtonSize))
+            
+            if animateIn && !transition.animation.isImmediate {
+                closeButtonView.animateIn()
+            }
+        } else {
+            if let closeButtonView = self.closeButtonView {
+                self.closeButtonView = nil
+                if !transition.animation.isImmediate {
+                    closeButtonView.animateOut(completion: { [weak closeButtonView] in
+                        closeButtonView?.removeFromSuperview()
+                    })
+                } else {
+                    closeButtonView.removeFromSuperview()
+                }
+            }
+        }
         
         for button in buttons {
             let title: String
@@ -213,11 +259,12 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 Transition.immediate.setScale(view: buttonView, scale: 0.001)
                 buttonView.alpha = 0.0
                 transition.setScale(view: buttonView, scale: 1.0)
-                transition.setAlpha(view: buttonView, alpha: 1.0)
             }
             
+            transition.setAlpha(view: buttonView, alpha: displayClose ? 0.0 : 1.0)
+            
             buttonTransition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize)))
-            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: buttonTransition)
+            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, isEnabled: button.isEnabled, title: title, transition: buttonTransition)
             buttonX += buttonSize + buttonSpacing
         }
         

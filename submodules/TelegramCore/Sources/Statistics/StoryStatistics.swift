@@ -201,8 +201,7 @@ public final class StoryStatsContext {
 private final class StoryStatsPublicForwardsContextImpl {
     private let queue: Queue
     private let account: Account
-    private let peerId: EnginePeer.Id
-    private let storyId: Int32
+    private let subject: StoryStatsPublicForwardsContext.Subject
     private let disposable = MetaDisposable()
     private var isLoadingMore: Bool = false
     private var hasLoadedOnce: Bool = false
@@ -213,11 +212,10 @@ private final class StoryStatsPublicForwardsContextImpl {
     
     let state = Promise<StoryStatsPublicForwardsContext.State>()
     
-    init(queue: Queue, account: Account, peerId: EnginePeer.Id, storyId: Int32) {
+    init(queue: Queue, account: Account, subject: StoryStatsPublicForwardsContext.Subject) {
         self.queue = queue
         self.account = account
-        self.peerId = peerId
-        self.storyId = storyId
+        self.subject = subject
                 
         self.count = 0
             
@@ -239,22 +237,41 @@ private final class StoryStatsPublicForwardsContextImpl {
         self.isLoadingMore = true
         let account = self.account
         let accountPeerId = account.peerId
-        let peerId = self.peerId
-        let storyId = self.storyId
+        let subject = self.subject
         let lastOffset = self.lastOffset
         
-        self.disposable.set((self.account.postbox.transaction { transaction -> (Api.InputPeer, Int32?)? in
+        self.disposable.set((self.account.postbox.transaction { transaction -> (Peer, Int32?)? in
+            let peerId: PeerId
+            switch subject {
+            case let .story(peerIdValue, _):
+                peerId = peerIdValue
+            case let .message(messageId):
+                peerId = messageId.peerId
+            }
             let statsDatacenterId = (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.statsDatacenterId
-            guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) else {
+            guard let peer = transaction.getPeer(peerId) else {
                 return nil
             }
-            return (inputPeer, statsDatacenterId)
+            return (peer, statsDatacenterId)
         }
         |> mapToSignal { data -> Signal<([StoryStatsPublicForwardsContext.State.Forward], Int32, String?), NoError> in
-            if let (inputPeer, statsDatacenterId) = data {
+            if let (peer, statsDatacenterId) = data {
                 let offset = lastOffset ?? ""
                 
-                let request = Api.functions.stats.getStoryPublicForwards(peer: inputPeer, id: storyId, offset: offset, limit: 50)
+                let request: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.PublicForwards>)
+                switch subject {
+                case let .story(_, id):
+                    guard let inputPeer = apiInputPeer(peer) else {
+                        return .complete()
+                    }
+                    request = Api.functions.stats.getStoryPublicForwards(peer: inputPeer, id: id, offset: offset, limit: 50)
+                case let .message(messageId):
+                    guard let inputChannel = apiInputChannel(peer) else {
+                        return .complete()
+                    }
+                    request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offset: offset, limit: 50)
+                }
+
                 let signal: Signal<Api.stats.PublicForwards, MTRpcError>
                 if let statsDatacenterId = statsDatacenterId, account.network.datacenterId != statsDatacenterId {
                     signal = account.network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
@@ -294,17 +311,17 @@ private final class StoryStatsPublicForwardsContextImpl {
                             for forward in forwards {
                                 switch forward {
                                 case let .publicForwardMessage(apiMessage):
-                                    if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: false), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: false), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                                         resultForwards.append(.message(EngineMessage(renderedMessage)))
                                     }
                                 case let .publicForwardStory(apiPeer, apiStory):
-                                   
                                     if let storedItem = Stories.StoredItem(apiStoryItem: apiStory, peerId: apiPeer.peerId, transaction: transaction), case let .item(item) = storedItem, let media = item.media, let peer = peers[apiPeer.peerId] {
                                         let mappedItem = EngineStoryItem(
                                             id: item.id,
                                             timestamp: item.timestamp,
                                             expirationTimestamp: item.expirationTimestamp,
                                             media: EngineMedia(media),
+                                            alternativeMedia: item.alternativeMedia.flatMap(EngineMedia.init),
                                             mediaAreas: item.mediaAreas,
                                             text: item.text,
                                             entities: item.entities,
@@ -404,10 +421,15 @@ public final class StoryStatsPublicForwardsContext {
         }
     }
     
-    public init(account: Account, peerId: EnginePeer.Id, storyId: Int32) {
+    public enum Subject {
+        case story(peerId: EnginePeer.Id, id: Int32)
+        case message(messageId: EngineMessage.Id)
+    }
+    
+    public init(account: Account, subject: Subject) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return StoryStatsPublicForwardsContextImpl(queue: queue, account: account, peerId: peerId, storyId: storyId)
+            return StoryStatsPublicForwardsContextImpl(queue: queue, account: account, subject: subject)
         })
     }
     

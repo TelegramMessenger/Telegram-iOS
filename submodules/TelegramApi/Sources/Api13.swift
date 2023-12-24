@@ -697,7 +697,8 @@ public extension Api {
         case messageMediaGame(game: Api.Game)
         case messageMediaGeo(geo: Api.GeoPoint)
         case messageMediaGeoLive(flags: Int32, geo: Api.GeoPoint, heading: Int32?, period: Int32, proximityNotificationRadius: Int32?)
-        case messageMediaGiveaway(flags: Int32, channels: [Int64], countriesIso2: [String]?, quantity: Int32, months: Int32, untilDate: Int32)
+        case messageMediaGiveaway(flags: Int32, channels: [Int64], countriesIso2: [String]?, prizeDescription: String?, quantity: Int32, months: Int32, untilDate: Int32)
+        case messageMediaGiveawayResults(flags: Int32, channelId: Int64, additionalPeersCount: Int32?, launchMsgId: Int32, winnersCount: Int32, unclaimedCount: Int32, winners: [Int64], months: Int32, prizeDescription: String?, untilDate: Int32)
         case messageMediaInvoice(flags: Int32, title: String, description: String, photo: Api.WebDocument?, receiptMsgId: Int32?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: Api.MessageExtendedMedia?)
         case messageMediaPhoto(flags: Int32, photo: Api.Photo?, ttlSeconds: Int32?)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
@@ -762,9 +763,9 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(proximityNotificationRadius!, buffer: buffer, boxed: false)}
                     break
-                case .messageMediaGiveaway(let flags, let channels, let countriesIso2, let quantity, let months, let untilDate):
+                case .messageMediaGiveaway(let flags, let channels, let countriesIso2, let prizeDescription, let quantity, let months, let untilDate):
                     if boxed {
-                        buffer.appendInt32(1478887012)
+                        buffer.appendInt32(-626162256)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -777,8 +778,28 @@ public extension Api {
                     for item in countriesIso2! {
                         serializeString(item, buffer: buffer, boxed: false)
                     }}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(prizeDescription!, buffer: buffer, boxed: false)}
                     serializeInt32(quantity, buffer: buffer, boxed: false)
                     serializeInt32(months, buffer: buffer, boxed: false)
+                    serializeInt32(untilDate, buffer: buffer, boxed: false)
+                    break
+                case .messageMediaGiveawayResults(let flags, let channelId, let additionalPeersCount, let launchMsgId, let winnersCount, let unclaimedCount, let winners, let months, let prizeDescription, let untilDate):
+                    if boxed {
+                        buffer.appendInt32(-963047320)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(additionalPeersCount!, buffer: buffer, boxed: false)}
+                    serializeInt32(launchMsgId, buffer: buffer, boxed: false)
+                    serializeInt32(winnersCount, buffer: buffer, boxed: false)
+                    serializeInt32(unclaimedCount, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(winners.count))
+                    for item in winners {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(months, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(prizeDescription!, buffer: buffer, boxed: false)}
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     break
                 case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
@@ -862,8 +883,10 @@ public extension Api {
                 return ("messageMediaGeo", [("geo", geo as Any)])
                 case .messageMediaGeoLive(let flags, let geo, let heading, let period, let proximityNotificationRadius):
                 return ("messageMediaGeoLive", [("flags", flags as Any), ("geo", geo as Any), ("heading", heading as Any), ("period", period as Any), ("proximityNotificationRadius", proximityNotificationRadius as Any)])
-                case .messageMediaGiveaway(let flags, let channels, let countriesIso2, let quantity, let months, let untilDate):
-                return ("messageMediaGiveaway", [("flags", flags as Any), ("channels", channels as Any), ("countriesIso2", countriesIso2 as Any), ("quantity", quantity as Any), ("months", months as Any), ("untilDate", untilDate as Any)])
+                case .messageMediaGiveaway(let flags, let channels, let countriesIso2, let prizeDescription, let quantity, let months, let untilDate):
+                return ("messageMediaGiveaway", [("flags", flags as Any), ("channels", channels as Any), ("countriesIso2", countriesIso2 as Any), ("prizeDescription", prizeDescription as Any), ("quantity", quantity as Any), ("months", months as Any), ("untilDate", untilDate as Any)])
+                case .messageMediaGiveawayResults(let flags, let channelId, let additionalPeersCount, let launchMsgId, let winnersCount, let unclaimedCount, let winners, let months, let prizeDescription, let untilDate):
+                return ("messageMediaGiveawayResults", [("flags", flags as Any), ("channelId", channelId as Any), ("additionalPeersCount", additionalPeersCount as Any), ("launchMsgId", launchMsgId as Any), ("winnersCount", winnersCount as Any), ("unclaimedCount", unclaimedCount as Any), ("winners", winners as Any), ("months", months as Any), ("prizeDescription", prizeDescription as Any), ("untilDate", untilDate as Any)])
                 case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
                 return ("messageMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("receiptMsgId", receiptMsgId as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("startParam", startParam as Any), ("extendedMedia", extendedMedia as Any)])
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
@@ -1007,20 +1030,63 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
             } }
+            var _4: String?
+            if Int(_1!) & Int(1 << 3) != 0 {_4 = parseString(reader) }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MessageMedia.messageMediaGiveaway(flags: _1!, channels: _2!, countriesIso2: _3, prizeDescription: _4, quantity: _5!, months: _6!, untilDate: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageMediaGiveawayResults(_ reader: BufferReader) -> MessageMedia? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_3 = reader.readInt32() }
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
             _5 = reader.readInt32()
             var _6: Int32?
             _6 = reader.readInt32()
+            var _7: [Int64]?
+            if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            }
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_9 = parseString(reader) }
+            var _10: Int32?
+            _10 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageMedia.messageMediaGiveaway(flags: _1!, channels: _2!, countriesIso2: _3, quantity: _4!, months: _5!, untilDate: _6!)
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.MessageMedia.messageMediaGiveawayResults(flags: _1!, channelId: _2!, additionalPeersCount: _3, launchMsgId: _4!, winnersCount: _5!, unclaimedCount: _6!, winners: _7!, months: _8!, prizeDescription: _9, untilDate: _10!)
             }
             else {
                 return nil

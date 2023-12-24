@@ -368,6 +368,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
+        setLayerDisableScreenshots(self.titleAccessoryPanelContainer.layer, chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
+        
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.inputContextOverTextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
@@ -1012,7 +1014,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let historyNodeContainer = self.historyNodeContainer as? HistoryNodeContainer {
-            historyNodeContainer.isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
+            let isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
+            if historyNodeContainer.isSecret != isSecret {
+                historyNodeContainer.isSecret = isSecret
+                setLayerDisableScreenshots(self.titleAccessoryPanelContainer.layer, isSecret)
+            }
         }
 
         var previousListBottomInset: CGFloat?
@@ -3484,7 +3490,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
                         var replyThreadId: Int64?
                         if case let .replyThread(replyThreadMessage) = self.chatPresentationInterfaceState.chatLocation {
-                            replyThreadId = Int64(replyThreadMessage.messageId.id)
+                            replyThreadId = replyThreadMessage.threadId
                         }
                         
                         for id in forwardMessageIds.sorted() {

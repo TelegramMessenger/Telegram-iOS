@@ -224,7 +224,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
             for update in result.allUpdates {
                 switch update {
                 case let .updateNewChannelMessage(message, _, _):
-                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
+                    if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: peer.isForum) {
                         if case let .Id(id) = message.id {
                             topicId = Int64(id.id)
                         }
@@ -570,7 +570,7 @@ enum LoadMessageHistoryThreadsError {
     case generic
 }
 
-func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, offsetIndex: StoredPeerThreadCombinedState.Index?, limit: Int) -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> {
+func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, query: String?, offsetIndex: StoredPeerThreadCombinedState.Index?, limit: Int) -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> {
     let signal: Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> = postbox.transaction { transaction -> Api.InputChannel? in
         guard let channel = transaction.getPeer(peerId) as? TelegramChannel else {
             return nil
@@ -585,7 +585,12 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
         guard let inputChannel = inputChannel else {
             return .fail(.generic)
         }
-        let flags: Int32 = 0
+        var flags: Int32 = 0
+        
+        if query != nil {
+            flags |= 1 << 0
+        }
+        
         var offsetDate: Int32 = 0
         var offsetId: Int32 = 0
         var offsetTopic: Int32 = 0
@@ -597,7 +602,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
         let signal: Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> = network.request(Api.functions.channels.getForumTopics(
             flags: flags,
             channel: inputChannel,
-            q: nil,
+            q: query,
             offsetDate: offsetDate,
             offsetId: offsetId,
             offsetTopic: offsetTopic,
@@ -613,7 +618,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                 var pinnedIds: [Int64] = []
                 
                 let addedMessages = messages.compactMap { message -> StoreMessage? in
-                    return StoreMessage(apiMessage: message, peerIsForum: true)
+                    return StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: true)
                 }
                 
                 let _ = pts
@@ -839,6 +844,59 @@ func _internal_forumChannelTopicNotificationExceptions(account: Account, id: Eng
     }
 }
 
+public func _internal_searchForumTopics(account: Account, peerId: EnginePeer.Id, query: String) -> Signal<[EngineChatList.Item], NoError> {
+    return _internal_requestMessageHistoryThreads(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peerId: peerId, query: query, offsetIndex: nil, limit: 100)
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<LoadMessageHistoryThreadsResult?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<[EngineChatList.Item], NoError> in
+        guard let result else {
+            return .single([])
+        }
+        return account.postbox.transaction { transcation -> [EngineChatList.Item] in
+            guard let peer = transcation.getPeer(peerId) else {
+                return []
+            }
+            
+            var items: [EngineChatList.Item] = []
+            for item in result.items {
+                guard let index = item.index else {
+                    continue
+                }
+                items.append(EngineChatList.Item(
+                    id: .forum(item.threadId),
+                    index: .forum(pinnedIndex: .none, timestamp: index.timestamp, threadId: index.threadId, namespace: Namespaces.Message.Cloud, id: index.messageId),
+                    messages: [],
+                    readCounters: nil,
+                    isMuted: false,
+                    draft: nil,
+                    threadData: item.data,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    forumTopicData: EngineChatList.ForumTopicData(
+                        id: item.threadId,
+                        title: item.data.info.title,
+                        iconFileId: item.data.info.icon,
+                        iconColor: item.data.info.iconColor,
+                        maxOutgoingReadMessageId: EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: item.data.maxOutgoingReadId),
+                        isUnread: false
+                    ),
+                    topForumTopicItems: [],
+                    hasFailed: false,
+                    isContact: false,
+                    autoremoveTimeout: nil,
+                    storyStats: nil
+                ))
+            }
+            
+            return items
+        }
+    }
+}
+
 public final class ForumChannelTopics {
     private final class Impl {
         private let queue: Queue
@@ -858,8 +916,6 @@ public final class ForumChannelTopics {
             self.queue = queue
             self.account = account
             self.peerId = peerId
-            
-            //let _ = _internal_loadMessageHistoryThreads(account: self.account, peerId: peerId, offsetIndex: nil, limit: 100).start()
             
             self.updateDisposable.set(account.viewTracker.polledChannel(peerId: peerId).start())
         }

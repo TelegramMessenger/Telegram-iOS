@@ -464,7 +464,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     nil
                 )
                 
-                let hasMessages = stats.viewsPerPost.current > 0
+                let hasMessages = stats.viewsPerPost.current > 0 || viewsPerPostDelta.hasValue
                 let hasStories = stats.viewsPerStory.current > 0 || viewsPerStoryDelta.hasValue
                 
                 var items: [Int: (String, String, (String, ValueItemNode.DeltaColor)?)] = [:]
@@ -483,7 +483,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         (sharesPerPostDelta.text, sharesPerPostDelta.positive ? .positive : .negative)
                     )
                 }
-                if stats.reactionsPerPost.current > 0 || reactionsPerStoryDelta.hasValue {
+                if stats.reactionsPerPost.current > 0 || reactionsPerPostDelta.hasValue {
                     let index = hasStories ? 4 : 2
                     items[index] = (
                         compactNumericCountString(Int(stats.reactionsPerPost.current)),
@@ -492,17 +492,20 @@ class StatsOverviewItemNode: ListViewItemNode {
                     )
                 }
                 if hasStories {
-                    items[1] = (
+                    let index = items[0] == nil ? 0 : 1
+                    items[index] = (
                         compactNumericCountString(Int(stats.viewsPerStory.current)),
                         item.presentationData.strings.Stats_ViewsPerStory,
                         (viewsPerStoryDelta.text, viewsPerStoryDelta.positive ? .positive : .negative)
                     )
-                    items[3] = (
+                    let sharesIndex = items[1] == nil ? 1 : 3
+                    items[sharesIndex] = (
                         compactNumericCountString(Int(stats.sharesPerStory.current)),
                         item.presentationData.strings.Stats_SharesPerStory,
                         (sharesPerStoryDelta.text, sharesPerStoryDelta.positive ? .positive : .negative)
                     )
-                    items[5] = (
+                    let reactionsIndex = items[3] == nil ? 2 : 5
+                    items[reactionsIndex] = (
                         compactNumericCountString(Int(stats.reactionsPerStory.current)),
                         item.presentationData.strings.Stats_ReactionsPerStory,
                         (reactionsPerStoryDelta.text, reactionsPerStoryDelta.positive ? .positive : .negative)

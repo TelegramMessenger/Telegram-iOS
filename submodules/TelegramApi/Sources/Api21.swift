@@ -1191,8 +1191,108 @@ public extension Api {
     }
 }
 public extension Api {
-    enum StoryView: TypeConstructorDescription {
+    indirect enum StoryReaction: TypeConstructorDescription {
+        case storyReaction(peerId: Api.Peer, date: Int32, reaction: Api.Reaction)
+        case storyReactionPublicForward(message: Api.Message)
+        case storyReactionPublicRepost(peerId: Api.Peer, story: Api.StoryItem)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyReaction(let peerId, let date, let reaction):
+                    if boxed {
+                        buffer.appendInt32(1620104917)
+                    }
+                    peerId.serialize(buffer, true)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    reaction.serialize(buffer, true)
+                    break
+                case .storyReactionPublicForward(let message):
+                    if boxed {
+                        buffer.appendInt32(-1146411453)
+                    }
+                    message.serialize(buffer, true)
+                    break
+                case .storyReactionPublicRepost(let peerId, let story):
+                    if boxed {
+                        buffer.appendInt32(-808644845)
+                    }
+                    peerId.serialize(buffer, true)
+                    story.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyReaction(let peerId, let date, let reaction):
+                return ("storyReaction", [("peerId", peerId as Any), ("date", date as Any), ("reaction", reaction as Any)])
+                case .storyReactionPublicForward(let message):
+                return ("storyReactionPublicForward", [("message", message as Any)])
+                case .storyReactionPublicRepost(let peerId, let story):
+                return ("storyReactionPublicRepost", [("peerId", peerId as Any), ("story", story as Any)])
+    }
+    }
+    
+        public static func parse_storyReaction(_ reader: BufferReader) -> StoryReaction? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.Reaction?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.StoryReaction.storyReaction(peerId: _1!, date: _2!, reaction: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_storyReactionPublicForward(_ reader: BufferReader) -> StoryReaction? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.StoryReaction.storyReactionPublicForward(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_storyReactionPublicRepost(_ reader: BufferReader) -> StoryReaction? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Api.StoryItem?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StoryReaction.storyReactionPublicRepost(peerId: _1!, story: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    indirect enum StoryView: TypeConstructorDescription {
         case storyView(flags: Int32, userId: Int64, date: Int32, reaction: Api.Reaction?)
+        case storyViewPublicForward(flags: Int32, message: Api.Message)
+        case storyViewPublicRepost(flags: Int32, peerId: Api.Peer, story: Api.StoryItem)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1205,6 +1305,21 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {reaction!.serialize(buffer, true)}
                     break
+                case .storyViewPublicForward(let flags, let message):
+                    if boxed {
+                        buffer.appendInt32(-1870436597)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    message.serialize(buffer, true)
+                    break
+                case .storyViewPublicRepost(let flags, let peerId, let story):
+                    if boxed {
+                        buffer.appendInt32(-1116418231)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peerId.serialize(buffer, true)
+                    story.serialize(buffer, true)
+                    break
     }
     }
     
@@ -1212,6 +1327,10 @@ public extension Api {
         switch self {
                 case .storyView(let flags, let userId, let date, let reaction):
                 return ("storyView", [("flags", flags as Any), ("userId", userId as Any), ("date", date as Any), ("reaction", reaction as Any)])
+                case .storyViewPublicForward(let flags, let message):
+                return ("storyViewPublicForward", [("flags", flags as Any), ("message", message as Any)])
+                case .storyViewPublicRepost(let flags, let peerId, let story):
+                return ("storyViewPublicRepost", [("flags", flags as Any), ("peerId", peerId as Any), ("story", story as Any)])
     }
     }
     
@@ -1237,299 +1356,38 @@ public extension Api {
                 return nil
             }
         }
-    
-    }
-}
-public extension Api {
-    enum StoryViews: TypeConstructorDescription {
-        case storyViews(flags: Int32, viewsCount: Int32, forwardsCount: Int32?, reactions: [Api.ReactionCount]?, reactionsCount: Int32?, recentViewers: [Int64]?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .storyViews(let flags, let viewsCount, let forwardsCount, let reactions, let reactionsCount, let recentViewers):
-                    if boxed {
-                        buffer.appendInt32(-1923523370)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(viewsCount, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(forwardsCount!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(reactions!.count))
-                    for item in reactions! {
-                        item.serialize(buffer, true)
-                    }}
-                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(reactionsCount!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(recentViewers!.count))
-                    for item in recentViewers! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .storyViews(let flags, let viewsCount, let forwardsCount, let reactions, let reactionsCount, let recentViewers):
-                return ("storyViews", [("flags", flags as Any), ("viewsCount", viewsCount as Any), ("forwardsCount", forwardsCount as Any), ("reactions", reactions as Any), ("reactionsCount", reactionsCount as Any), ("recentViewers", recentViewers as Any)])
-    }
-    }
-    
-        public static func parse_storyViews(_ reader: BufferReader) -> StoryViews? {
+        public static func parse_storyViewPublicForward(_ reader: BufferReader) -> StoryView? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
-            var _4: [Api.ReactionCount]?
-            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ReactionCount.self)
-            } }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
-            var _6: [Int64]?
-            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.StoryViews.storyViews(flags: _1!, viewsCount: _2!, forwardsCount: _3, reactions: _4, reactionsCount: _5, recentViewers: _6)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum TextWithEntities: TypeConstructorDescription {
-        case textWithEntities(text: String, entities: [Api.MessageEntity])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .textWithEntities(let text, let entities):
-                    if boxed {
-                        buffer.appendInt32(1964978502)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities.count))
-                    for item in entities {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .textWithEntities(let text, let entities):
-                return ("textWithEntities", [("text", text as Any), ("entities", entities as Any)])
-    }
-    }
-    
-        public static func parse_textWithEntities(_ reader: BufferReader) -> TextWithEntities? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Api.MessageEntity]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            var _2: Api.Message?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Message
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.TextWithEntities.textWithEntities(text: _1!, entities: _2!)
+                return Api.StoryView.storyViewPublicForward(flags: _1!, message: _2!)
             }
             else {
                 return nil
             }
         }
-    
-    }
-}
-public extension Api {
-    enum Theme: TypeConstructorDescription {
-        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: [Api.ThemeSettings]?, emoticon: String?, installsCount: Int32?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let emoticon, let installsCount):
-                    if boxed {
-                        buffer.appendInt32(-1609668650)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeString(slug, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(settings!.count))
-                    for item in settings! {
-                        item.serialize(buffer, true)
-                    }}
-                    if Int(flags) & Int(1 << 6) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(installsCount!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let emoticon, let installsCount):
-                return ("theme", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("slug", slug as Any), ("title", title as Any), ("document", document as Any), ("settings", settings as Any), ("emoticon", emoticon as Any), ("installsCount", installsCount as Any)])
-    }
-    }
-    
-        public static func parse_theme(_ reader: BufferReader) -> Theme? {
+        public static func parse_storyViewPublicRepost(_ reader: BufferReader) -> StoryView? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: Api.Document?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.Document
-            } }
-            var _7: [Api.ThemeSettings]?
-            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ThemeSettings.self)
-            } }
-            var _8: String?
-            if Int(_1!) & Int(1 << 6) != 0 {_8 = parseString(reader) }
-            var _9: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_9 = reader.readInt32() }
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Api.StoryItem?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.StoryItem
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, settings: _7, emoticon: _8, installsCount: _9)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum ThemeSettings: TypeConstructorDescription {
-        case themeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, outboxAccentColor: Int32?, messageColors: [Int32]?, wallpaper: Api.WallPaper?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .themeSettings(let flags, let baseTheme, let accentColor, let outboxAccentColor, let messageColors, let wallpaper):
-                    if boxed {
-                        buffer.appendInt32(-94849324)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    baseTheme.serialize(buffer, true)
-                    serializeInt32(accentColor, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(outboxAccentColor!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messageColors!.count))
-                    for item in messageColors! {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }}
-                    if Int(flags) & Int(1 << 1) != 0 {wallpaper!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .themeSettings(let flags, let baseTheme, let accentColor, let outboxAccentColor, let messageColors, let wallpaper):
-                return ("themeSettings", [("flags", flags as Any), ("baseTheme", baseTheme as Any), ("accentColor", accentColor as Any), ("outboxAccentColor", outboxAccentColor as Any), ("messageColors", messageColors as Any), ("wallpaper", wallpaper as Any)])
-    }
-    }
-    
-        public static func parse_themeSettings(_ reader: BufferReader) -> ThemeSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.BaseTheme?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.BaseTheme
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_4 = reader.readInt32() }
-            var _5: [Int32]?
-            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-            } }
-            var _6: Api.WallPaper?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.WallPaper
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.ThemeSettings.themeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, outboxAccentColor: _4, messageColors: _5, wallpaper: _6)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum TopPeer: TypeConstructorDescription {
-        case topPeer(peer: Api.Peer, rating: Double)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .topPeer(let peer, let rating):
-                    if boxed {
-                        buffer.appendInt32(-305282981)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeDouble(rating, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .topPeer(let peer, let rating):
-                return ("topPeer", [("peer", peer as Any), ("rating", rating as Any)])
-    }
-    }
-    
-        public static func parse_topPeer(_ reader: BufferReader) -> TopPeer? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: Double?
-            _2 = reader.readDouble()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.TopPeer.topPeer(peer: _1!, rating: _2!)
+            if _c1 && _c2 && _c3 {
+                return Api.StoryView.storyViewPublicRepost(flags: _1!, peerId: _2!, story: _3!)
             }
             else {
                 return nil

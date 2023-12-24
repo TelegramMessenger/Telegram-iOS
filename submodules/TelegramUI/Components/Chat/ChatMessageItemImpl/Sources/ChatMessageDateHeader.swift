@@ -374,10 +374,10 @@ public final class ChatMessageAvatarHeader: ListViewItemHeader {
     public let effectiveTimestamp: Int32
     public let presentationData: ChatPresentationData
     public let context: AccountContext
-    public let controllerInteraction: ChatControllerInteraction
+    public let controllerInteraction: ChatControllerInteraction?
     public let storyStats: PeerStoryStats?
 
-    public init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?) {
+    public init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction?, storyStats: PeerStoryStats?) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -439,7 +439,7 @@ private let maxVideoLoopCount = 3
 public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, ChatMessageAvatarHeaderNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
-    private let controllerInteraction: ChatControllerInteraction
+    private let controllerInteraction: ChatControllerInteraction?
     private var storyStats: PeerStoryStats?
     
     private let peerId: PeerId
@@ -469,7 +469,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         }
     }
     
-    public init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
+    public init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction?, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -482,6 +482,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.containerNode = ContextControllerSourceNode()
 
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode.contentNode.displaysAsynchronously = !presentationData.isPreview
 
         super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
 
@@ -506,7 +507,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
             if let messageReference = messageReference, case let .message(_, _, id, _, _, _) = messageReference.content {
                 messageId = id
             }
-            strongSelf.controllerInteraction.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+            strongSelf.controllerInteraction?.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
         }
 
         self.updateSelectionState(animated: false)
@@ -703,7 +704,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     }
 
     public func updateSelectionState(animated: Bool) {
-        let offset: CGFloat = self.controllerInteraction.selectionState != nil ? 42.0 : 0.0
+        let offset: CGFloat = self.controllerInteraction?.selectionState != nil ? 42.0 : 0.0
 
         let previousSubnodeTransform = self.subnodeTransform
         self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
@@ -727,15 +728,15 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
     @objc private func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
             if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _) = self.messageReference?.content {
-                self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
+                self.controllerInteraction?.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else if let peer = self.peer {
                 if let adMessageId = self.adMessageId {
-                    self.controllerInteraction.activateAdAction(adMessageId)
+                    self.controllerInteraction?.activateAdAction(adMessageId)
                 } else {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
+                        self.controllerInteraction?.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
                     } else {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), self.messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: self))
+                        self.controllerInteraction?.openPeer(EnginePeer(peer), .info(nil), self.messageReference, .groupParticipant(storyStats: nil, avatarHeaderNode: self))
                     }
                 }
             }

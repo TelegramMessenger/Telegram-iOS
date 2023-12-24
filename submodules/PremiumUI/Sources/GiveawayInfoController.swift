@@ -31,19 +31,70 @@ public func presentGiveawayInfoController(
         guard let message else {
             return
         }
-        guard let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
-            return
+        
+        let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway
+        let giveawayResults = message.media.first(where: { $0 is TelegramMediaGiveawayResults }) as? TelegramMediaGiveawayResults
+        
+        var channelPeerId: EnginePeer.Id?
+        if let giveaway {
+            if let peerId = giveaway.channelPeerIds.first {
+                channelPeerId = peerId
+            }
+        } else if let _ = giveawayResults {
+            channelPeerId = message.author?.id
+        }
+        
+        var quantity: Int32 = 0
+        if let giveaway {
+            quantity = giveaway.quantity
+        } else if let giveawayResults {
+            quantity = giveawayResults.winnersCount + giveawayResults.unclaimedCount
+        }
+        
+        var months: Int32 = 0
+        if let giveaway {
+            months = giveaway.months
+        } else if let giveawayResults {
+            months = giveawayResults.months
+        }
+        
+        var prizeDescription: String?
+        if let giveaway {
+            prizeDescription = giveaway.prizeDescription
+        } else if let giveawayResults {
+            prizeDescription = giveawayResults.prizeDescription
+        }
+        
+        var untilDateValue: Int32 = 0
+        if let giveaway {
+            untilDateValue = giveaway.untilDate
+        } else if let giveawayResults {
+            untilDateValue = giveawayResults.untilDate
+        }
+        
+        var onlyNewSubscribers = false
+        if let giveaway, giveaway.flags.contains(.onlyNewSubscribers) {
+            onlyNewSubscribers = true
+        } else if let giveawayResults, giveawayResults.flags.contains(.onlyNewSubscribers) {
+            onlyNewSubscribers = true
+        }
+        
+        var channelsCount: Int32 = 1
+        if let giveaway {
+            channelsCount = Int32(giveaway.channelPeerIds.count)
+        } else if let giveawayResults {
+            channelsCount = 1 + giveawayResults.additionalChannelsCount
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var peerName = ""
-        if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
+        if let peerId = channelPeerId, let peer = message.peers[peerId] {
             peerName = EnginePeer(peer).compactDisplayTitle
         }
         
         let timeZone = TimeZone.current
-        let untilDate = stringForDate(timestamp: giveaway.untilDate, timeZone: timeZone, strings: presentationData.strings)
+        let untilDate = stringForDate(timestamp: untilDateValue, timeZone: timeZone, strings: presentationData.strings)
         
         let title: String
         let text: String
@@ -54,6 +105,11 @@ public func presentGiveawayInfoController(
         var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
             dismissImpl?()
         })]
+        
+        var additionalPrizes = ""
+        if let prizeDescription, !prizeDescription.isEmpty {
+            additionalPrizes = "\n\n" + presentationData.strings.Chat_Giveaway_Info_AdditionalPrizes(peerName, "\(quantity) \(prizeDescription)").string
+        }
         
         switch giveawayInfo {
         case let .ongoing(start, status):
@@ -66,23 +122,23 @@ public func presentGiveawayInfoController(
             
             let intro: String
             if case .almostOver = status {
-                intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
+                intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
             } else {
-                intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
+                intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
             }
             
             let ending: String
-            if giveaway.flags.contains(.onlyNewSubscribers) {
-                let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
-                if giveaway.channelPeerIds.count > 1 {
-                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingNewMany(untilDate, randomUsers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), startDate).string
+            if onlyNewSubscribers {
+                let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(quantity)
+                if channelsCount > 1 {
+                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingNewMany(untilDate, randomUsers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(channelsCount - 1)), startDate).string
                 } else {
                     ending = presentationData.strings.Chat_Giveaway_Info_OngoingNew(untilDate, randomUsers, peerName, startDate).string
                 }
             } else {
-                let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
-                if giveaway.channelPeerIds.count > 1 {
-                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingMany(untilDate, randomSubscribers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
+                let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(quantity)
+                if channelsCount > 1 {
+                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingMany(untilDate, randomSubscribers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(channelsCount - 1))).string
                 } else {
                     ending = presentationData.strings.Chat_Giveaway_Info_Ongoing(untilDate, randomSubscribers, peerName).string
                 }
@@ -91,8 +147,8 @@ public func presentGiveawayInfoController(
             var participation: String
             switch status {
             case .notQualified:
-                if giveaway.channelPeerIds.count > 1 {
-                    participation = presentationData.strings.Chat_Giveaway_Info_NotQualifiedMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), untilDate).string
+                if channelsCount > 1 {
+                    participation = presentationData.strings.Chat_Giveaway_Info_NotQualifiedMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(channelsCount - 1)), untilDate).string
                 } else {
                     participation = presentationData.strings.Chat_Giveaway_Info_NotQualified(peerName, untilDate).string
                 }
@@ -111,8 +167,8 @@ public func presentGiveawayInfoController(
                     participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedCountry
                 }
             case .participating:
-                if giveaway.channelPeerIds.count > 1 {
-                    participation = presentationData.strings.Chat_Giveaway_Info_ParticipatingMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
+                if channelsCount > 1 {
+                    participation = presentationData.strings.Chat_Giveaway_Info_ParticipatingMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(channelsCount - 1))).string
                 } else {
                     participation = presentationData.strings.Chat_Giveaway_Info_Participating(peerName).string
                 }
@@ -124,7 +180,7 @@ public func presentGiveawayInfoController(
                 participation = "\n\n\(participation)"
             }
             
-            text = "\(intro)\n\n\(ending)\(participation)"
+            text = "\(intro)\(additionalPrizes)\n\n\(ending)\(participation)"
         case let .finished(status, start, finish, _, activatedCount):
             let startDate = presentationData.strings.Chat_Giveaway_Info_FullDate(
                 stringForMessageTimestamp(timestamp: start, dateTimeFormat: presentationData.dateTimeFormat),
@@ -134,19 +190,19 @@ public func presentGiveawayInfoController(
             let finishDate = stringForDate(timestamp: finish, timeZone: timeZone, strings: presentationData.strings)
             title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
             
-            let intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
+            let intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(quantity), presentationData.strings.Chat_Giveaway_Info_Months(months)).string
             
             var ending: String
-            if giveaway.flags.contains(.onlyNewSubscribers) {
-                let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
-                if giveaway.channelPeerIds.count > 1 {
+            if onlyNewSubscribers {
+                let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(quantity)
+                if channelsCount > 1 {
                     ending = presentationData.strings.Chat_Giveaway_Info_EndedNewMany(finishDate, randomUsers, peerName, startDate).string
                 } else {
                     ending = presentationData.strings.Chat_Giveaway_Info_EndedNew(finishDate, randomUsers, peerName, startDate).string
                 }
             } else {
-                let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
-                if giveaway.channelPeerIds.count > 1 {
+                let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(quantity)
+                if channelsCount > 1 {
                     ending = presentationData.strings.Chat_Giveaway_Info_EndedMany(finishDate, randomSubscribers, peerName).string
                 } else {
                     ending = presentationData.strings.Chat_Giveaway_Info_Ended(finishDate, randomSubscribers, peerName).string
@@ -156,7 +212,7 @@ public func presentGiveawayInfoController(
             if activatedCount > 0 {
                 ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
             }
-            
+                        
             var result: String
             switch status {
             case .refunded:
@@ -166,9 +222,9 @@ public func presentGiveawayInfoController(
                     dismissImpl?()
                 })]
             case .notWon:
-                result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_DidntWin
+                result = "**\(presentationData.strings.Chat_Giveaway_Info_DidntWin)**\n\n"
             case let .won(slug):
-                result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_Won("🏆").string
+                result = "**\(presentationData.strings.Chat_Giveaway_Info_Won("").string)**\n\n"
                 actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
                     dismissImpl?()
                     openLink(slug)
@@ -177,7 +233,7 @@ public func presentGiveawayInfoController(
                 })]
             }
             
-            text = "\(intro)\n\n\(ending)\(result)"
+            text = "\(result)\(intro)\(additionalPrizes)\n\n\(ending)"
         }
         
         let alertController = giveawayInfoAlertController(

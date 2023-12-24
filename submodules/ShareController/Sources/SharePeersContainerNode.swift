@@ -145,7 +145,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     private let tick = ValuePromise<Int>(0)
     
-    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?, fromPublicChannel: Bool) {
         self.environment = environment
         self.context = context
         self.theme = theme
@@ -170,7 +170,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index: Int32 = 0
             
             if canShareStory {
-                entries.append(SharePeerEntry(index: index, item: .story, theme: theme, strings: strings))
+                entries.append(SharePeerEntry(index: index, item: .story(isMessage: fromPublicChannel), theme: theme, strings: strings))
                 index += 1
             }
             

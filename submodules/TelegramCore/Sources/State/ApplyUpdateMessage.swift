@@ -151,7 +151,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             var attributes: [MessageAttribute]
             let text: String
             let forwardInfo: StoreMessageForwardInfo?
-            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false) {
+            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false) {
                 media = updatedMessage.media
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
@@ -358,7 +358,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 }
             }
             
-            if let resultMessage = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum, namespace: namespace), case let .Id(id) = resultMessage.id {
+            if let resultMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: stateManager.accountPeerId, peerIsForum: peerIsForum, namespace: namespace), case let .Id(id) = resultMessage.id {
                 resultMessages[id] = resultMessage
             }
         }

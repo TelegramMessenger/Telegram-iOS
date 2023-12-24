@@ -18,6 +18,7 @@ import ChatPresentationInterfaceState
 import ChatControllerInteraction
 import PeerInfoVisualMediaPaneNode
 import ChatMessageItemView
+import PeerInfoPaneNode
 
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext

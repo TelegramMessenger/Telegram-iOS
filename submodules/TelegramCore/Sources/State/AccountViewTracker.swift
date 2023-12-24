@@ -109,7 +109,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+                        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
                             var webpage: TelegramMediaWebpage?
                             for media in storeMessage.media {
                                 if let media = media as? TelegramMediaWebpage {
@@ -261,6 +261,7 @@ private struct ViewCountContextState {
 
 public final class AccountViewTracker {
     weak var account: Account?
+    private let accountPeerId: PeerId
     private let queue = Queue()
     private var nextViewId: Int32 = 0
     
@@ -332,6 +333,7 @@ public final class AccountViewTracker {
     
     init(account: Account) {
         self.account = account
+        self.accountPeerId = account.peerId
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
         
@@ -1071,7 +1073,7 @@ public final class AccountViewTracker {
                                     updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                     
                                     for message in messages {
-                                        guard let storeMessage = StoreMessage(apiMessage: message, peerIsForum: topPeer.isForum) else {
+                                        guard let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: topPeer.isForum) else {
                                             continue
                                         }
                                         guard case let .Id(id) = storeMessage.id else {

@@ -13,6 +13,7 @@ import MediaEditor
 import UniversalMediaPlayer
 import TelegramPresentationData
 import TelegramUniversalVideoContent
+import DustEffect
 
 private class BlurView: UIVisualEffectView {
     private func setup() {
@@ -65,6 +66,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     let imageNode: TransformImageNode
     var animationNode: DefaultAnimatedStickerNodeImpl?
     var videoNode: UniversalVideoNode?
+    var animatedImageView: UIImageView?
     var cameraPreviewView: UIView?
     
     let progressDisposable = MetaDisposable()
@@ -118,15 +120,18 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
     
     func getRenderImage() -> UIImage? {
-        guard case let .file(_, type) = self.stickerEntity.content, case .reaction = type else {
+        if case let .file(_, type) = self.stickerEntity.content, case .reaction = type {
+            let rect = self.bounds
+            UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
+            self.drawHierarchy(in: rect, afterScreenUpdates: true)
+            let image = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            return image
+        } else if case .message = self.stickerEntity.content {
+            return self.animatedImageView?.image
+        } else {
             return nil
         }
-        let rect = self.bounds
-        UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
-        self.drawHierarchy(in: rect, afterScreenUpdates: true)
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return image
     }
     
     private var video: TelegramMediaFile? {
@@ -143,10 +148,14 @@ public class DrawingStickerEntityView: DrawingEntityView {
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .image(image, _):
             return image.size
+        case let .animatedImage(_, thumbnailImage):
+            return thumbnailImage.size
         case let .video(file):
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             return CGSize(width: 512.0, height: 512.0)
+        case let .message(_, _, size):
+            return size
         }
     }
     
@@ -258,46 +267,77 @@ public class DrawingStickerEntityView: DrawingEntityView {
             }), attemptSynchronously: synchronous)
             self.setNeedsLayout()
         } else if case let .video(file) = self.stickerEntity.content {
-            let videoNode = UniversalVideoNode(
-                postbox: self.context.account.postbox,
-                audioSession: self.context.sharedContext.mediaManager.audioSession,
-                manager: self.context.sharedContext.mediaManager.universalVideoManager,
-                decoration: StickerVideoDecoration(),
-                content: NativeVideoContent(
-                    id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
-                    userLocation: .other,
-                    fileReference: .standalone(media: file),
-                    imageReference: nil,
-                    streamVideo: .story,
-                    loopVideo: true,
-                    enableSound: false,
-                    soundMuted: true,
-                    beginWithAmbientSound: false,
-                    mixWithOthers: true,
-                    useLargeThumbnail: false,
-                    autoFetchFullSizeThumbnail: false,
-                    tempFilePath: nil,
-                    captureProtected: false,
-                    hintDimensions: file.dimensions?.cgSize,
-                    storeAfterDownload: nil,
-                    displayImage: false,
-                    hasSentFramesToDisplay: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.videoNode?.isHidden = false
-                    }
-                ),
-                priority: .gallery
-            )
-            videoNode.canAttachContent = true
-            videoNode.isUserInteractionEnabled = false
-            videoNode.clipsToBounds = true
-            self.addSubnode(videoNode)
-            self.videoNode = videoNode
+            self.setupWithVideo(file)
+        } else if case let .animatedImage(data, thumbnailImage) = self.stickerEntity.content {
+            let imageView = UIImageView()
+            imageView.contentMode = .scaleAspectFit
+            imageView.image = thumbnailImage
+            imageView.setDrawingAnimatedImage(data: data)
+            self.animatedImageView = imageView
+            self.addSubview(imageView)
             self.setNeedsLayout()
-            videoNode.play()
+        } else if case .message = self.stickerEntity.content {
+            if let image = self.stickerEntity.renderImage {
+                self.setupWithImage(image)
+            }
         }
+    }
+    
+    private func setupWithImage(_ image: UIImage) {
+        let imageView: UIImageView
+        if let current = self.animatedImageView {
+            imageView = current
+        } else {
+            imageView = UIImageView()
+            imageView.contentMode = .scaleAspectFit
+            self.addSubview(imageView)
+            self.animatedImageView = imageView
+        }
+        imageView.image = image
+        self.currentSize = nil
+        self.setNeedsLayout()
+    }
+    
+    private func setupWithVideo(_ file: TelegramMediaFile) {
+        let videoNode = UniversalVideoNode(
+            postbox: self.context.account.postbox,
+            audioSession: self.context.sharedContext.mediaManager.audioSession,
+            manager: self.context.sharedContext.mediaManager.universalVideoManager,
+            decoration: StickerVideoDecoration(),
+            content: NativeVideoContent(
+                id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
+                userLocation: .other,
+                fileReference: .standalone(media: file),
+                imageReference: nil,
+                streamVideo: .story,
+                loopVideo: true,
+                enableSound: false,
+                soundMuted: true,
+                beginWithAmbientSound: false,
+                mixWithOthers: true,
+                useLargeThumbnail: false,
+                autoFetchFullSizeThumbnail: false,
+                tempFilePath: nil,
+                captureProtected: false,
+                hintDimensions: file.dimensions?.cgSize,
+                storeAfterDownload: nil,
+                displayImage: false,
+                hasSentFramesToDisplay: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.videoNode?.isHidden = false
+                }
+            ),
+            priority: .gallery
+        )
+        videoNode.canAttachContent = true
+        videoNode.isUserInteractionEnabled = false
+        videoNode.clipsToBounds = true
+        self.addSubnode(videoNode)
+        self.videoNode = videoNode
+        self.setNeedsLayout()
+        videoNode.play()
     }
     
     public override func play() {
@@ -331,6 +371,12 @@ public class DrawingStickerEntityView: DrawingEntityView {
     override func updateVisibility(_ visibility: Bool) {
         self.isVisible = visibility
         self.applyVisibility()
+    }
+    
+    public var isNightTheme = false {
+        didSet {
+            self.animatedImageView?.image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+        }
     }
     
     func applyVisibility() {
@@ -460,6 +506,48 @@ public class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    public func playDissolveAnimation(completion: @escaping () -> Void = {}) {
+        guard let containerView = self.containerView, case let .image(image, _) = self.stickerEntity.content else {
+            return
+        }
+            
+        let scaledSize = image.size.aspectFitted(CGSize(width: 180.0, height: 180.0))
+        guard let scaledImage = generateScaledImage(image: image, size: scaledSize) else {
+            self.isHidden = true
+            completion()
+            return
+        }
+        
+        let dustEffectLayer = DustEffectLayer()
+        dustEffectLayer.position = self.center
+        dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: containerView.bounds.size)
+        containerView.layer.insertSublayer(dustEffectLayer, below: self.layer)
+        
+        dustEffectLayer.animationSpeed = 2.2
+        dustEffectLayer.becameEmpty = { [weak dustEffectLayer] in
+            dustEffectLayer?.removeFromSuperlayer()
+            completion()
+        }
+
+        let maxSize = CGSize(width: 512.0, height: 512.0)
+        let itemSize = CGSize(width: self.bounds.width * self.entity.scale, height: self.bounds.height * self.entity.scale)
+        let fittedSize = itemSize.aspectFittedOrSmaller(maxSize)
+        let scale = itemSize.width / fittedSize.width
+        
+        dustEffectLayer.transform = CATransform3DScale(CATransform3DMakeRotation(self.stickerEntity.rotation, 0.0, 0.0, 1.0), scale, scale, 1.0)
+        
+        let itemFrame = CGRect(origin: CGPoint(x: (containerView.bounds.width - fittedSize.width) / 2.0, y: (containerView.bounds.height - fittedSize.height) / 2.0), size: fittedSize)
+        dustEffectLayer.addItem(frame: itemFrame, image: scaledImage)
+        
+        self.isHidden = true
+    }
+    
+    public func playCutoutAnimation() {
+        let values = [self.entity.scale, self.entity.scale * 1.1, self.entity.scale]
+        let keyTimes = [0.0, 0.67, 1.0]
+        self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.35, keyPath: "transform.scale")
+    }
+        
     private var didApplyVisibility = false
     public override func layoutSubviews() {
         super.layoutSubviews()
@@ -491,9 +579,20 @@ public class DrawingStickerEntityView: DrawingEntityView {
             }
             
             if let videoNode = self.videoNode {
-                videoNode.cornerRadius = floor(imageSize.width * 0.03)
+                var imageSize = imageSize
+                if case let .message(_, file, _) = self.stickerEntity.content, let dimensions = file?.dimensions {
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(boundingSize)
+                    imageSize = fittedDimensions
+                    videoNode.cornerRadius = 0.0
+                } else {
+                    videoNode.cornerRadius = floor(imageSize.width * 0.03)
+                }
                 videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
                 videoNode.updateLayout(size: imageSize, transition: .immediate)
+            }
+            
+            if let animatedImageView = self.animatedImageView {
+                animatedImageView.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
             }
             
             if let cameraPreviewView = self.cameraPreviewView {
@@ -531,6 +630,13 @@ public class DrawingStickerEntityView: DrawingEntityView {
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
         self.updateAnimationColor()
+
+        if case .message = self.stickerEntity.content, self.animatedImageView == nil {
+            let image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+            if let image {
+                self.setupWithImage(image)
+            }
+        }
         
         self.updateMirroring(animated: animated)
         
@@ -557,15 +663,18 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.imageNode.transform = animationSourceTransform
             self.animationNode?.transform = animationSourceTransform
             self.videoNode?.transform = animationSourceTransform
+            self.animatedImageView?.layer.transform = animationSourceTransform
             
             UIView.animate(withDuration: 0.25, animations: {
                 self.imageNode.transform = animationTargetTransform
                 self.animationNode?.transform = animationTargetTransform
                 self.videoNode?.transform = animationTargetTransform
+                self.animatedImageView?.layer.transform = animationTargetTransform
             }, completion: { finished in
                 self.imageNode.transform = staticTransform
                 self.animationNode?.transform = staticTransform
                 self.videoNode?.transform = staticTransform
+                self.animatedImageView?.layer.transform = staticTransform
             })
         } else {
             CATransaction.begin()
@@ -573,6 +682,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.imageNode.transform = staticTransform
             self.animationNode?.transform = staticTransform
             self.videoNode?.transform = staticTransform
+            self.animatedImageView?.layer.transform = staticTransform
             CATransaction.commit()
         }
     }
@@ -604,6 +714,15 @@ public class DrawingStickerEntityView: DrawingEntityView {
         let selectionView = DrawingStickerEntititySelectionView()
         selectionView.entityView = self
         return selectionView
+    }
+    
+    func getRenderSubEntities() -> [DrawingEntity] {
+        guard case let .message(_, file, _) = self.stickerEntity.content else {
+            return []
+        }
+        
+        let _ = file
+        return []
     }
 }
 
@@ -882,9 +1001,17 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             
             actualInset = floorToScreenPixels((self.bounds.width - width) / 2.0)
             
-            let cornerRadius: CGFloat = 12.0 - self.scale
+            var cornerRadius: CGFloat = 12.0 - self.scale
+            var count = 12
+            if case .message = entity.content {
+                cornerRadius *= 2.1
+                count = 24
+            } else if case .image = entity.content {
+                count = 24
+            }
+            
             let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
-            let count = 12
+
             let dashLength = perimeter / CGFloat(count)
             self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
             
@@ -899,17 +1026,11 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
         }
         
-        let handles = [
-            self.leftHandle,
-            self.rightHandle
-        ]
-        
-        for handle in handles {
+        for handle in [self.leftHandle, self.rightHandle] {
             handle.path = handlePath
             handle.bounds = bounds
             handle.lineWidth = lineWidth
         }
-        
         
         self.leftHandle.position = CGPoint(x: actualInset, y: self.bounds.midY)
         self.rightHandle.position = CGPoint(x: self.bounds.maxX - actualInset, y: self.bounds.midY)
@@ -1029,3 +1150,156 @@ private final class StickerVideoDecoration: UniversalVideoDecoration {
     public func tap() {
     }
 }
+
+private extension UIBezierPath {
+    static func smoothCurve(
+        through points: [CGPoint],
+        length: CGFloat
+    ) -> UIBezierPath {
+        let angle = (CGFloat.pi * 2) / CGFloat(points.count)
+        let smoothness: CGFloat = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+        
+        var smoothPoints = [SmoothPoint]()
+        for index in (0 ..< points.count) {
+            let prevIndex = index - 1
+            let prev = points[prevIndex >= 0 ? prevIndex : points.count + prevIndex]
+            let curr = points[index]
+            let next = points[(index + 1) % points.count]
+            
+            let angle: CGFloat = {
+                let dx = next.x - prev.x
+                let dy = -next.y + prev.y
+                let angle = atan2(dy, dx)
+                if angle < 0 {
+                    return abs(angle)
+                } else {
+                    return 2 * .pi - angle
+                }
+            }()
+            
+            smoothPoints.append(
+                SmoothPoint(
+                    point: curr,
+                    inAngle: angle + .pi,
+                    inLength: smoothness * distance(from: curr, to: prev),
+                    outAngle: angle,
+                    outLength: smoothness * distance(from: curr, to: next)
+                )
+            )
+        }
+        
+        let resultPath = UIBezierPath()
+        resultPath.move(to: smoothPoints[0].point)
+        for index in (0 ..< smoothPoints.count) {
+            let curr = smoothPoints[index]
+            let next = smoothPoints[(index + 1) % points.count]
+            let currSmoothOut = curr.smoothOut()
+            let nextSmoothIn = next.smoothIn()
+            resultPath.addCurve(to: next.point, controlPoint1: currSmoothOut, controlPoint2: nextSmoothIn)
+        }
+        resultPath.close()
+        return resultPath
+    }
+    
+    static private func distance(from fromPoint: CGPoint, to toPoint: CGPoint) -> CGFloat {
+        return sqrt((fromPoint.x - toPoint.x) * (fromPoint.x - toPoint.x) + (fromPoint.y - toPoint.y) * (fromPoint.y - toPoint.y))
+    }
+    
+    struct SmoothPoint {
+        let point: CGPoint
+        
+        let inAngle: CGFloat
+        let inLength: CGFloat
+        
+        let outAngle: CGFloat
+        let outLength: CGFloat
+        
+        func smoothIn() -> CGPoint {
+            return smooth(angle: inAngle, length: inLength)
+        }
+        
+        func smoothOut() -> CGPoint {
+            return smooth(angle: outAngle, length: outLength)
+        }
+        
+        private func smooth(angle: CGFloat, length: CGFloat) -> CGPoint {
+            return CGPoint(
+                x: point.x + length * cos(angle),
+                y: point.y + length * sin(angle)
+            )
+        }
+    }
+}
+
+
+
+extension UIImageView {
+    func setDrawingAnimatedImage(data: Data) {
+        DispatchQueue.global().async {
+            if let animatedImage = UIImage.animatedImageFromData(data: data) {
+                DispatchQueue.main.async {
+                    self.setImage(with: animatedImage)
+                    self.startAnimating()
+                }
+            }
+        }
+    }
+
+    private func setImage(with animatedImage: DrawingAnimatedImage) {
+        if let snapshotView = self.snapshotView(afterScreenUpdates: false) {
+            self.addSubview(snapshotView)
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                snapshotView.removeFromSuperview()
+            })
+        }
+        self.image = nil
+        self.animationImages = animatedImage.images
+        self.animationDuration = animatedImage.duration
+        self.animationRepeatCount = 0
+    }
+}
+
+//private func prerenderEntityTransformations(entity: DrawingEntity, image: UIImage, colorSpace: CGColorSpace) -> UIImage {
+//    let imageSize = image.size
+//    
+//    let angle: CGFloat
+//    var scale: CGFloat
+//    let position: CGPoint
+//    
+//    if let entity = entity as? DrawingStickerEntity {
+//        angle = -entity.rotation
+//        scale = entity.scale
+//        position = entity.position
+//    } else {
+//        fatalError()
+//    }
+//
+//    let rotatedSize = CGSize(
+//        width: abs(imageSize.width * cos(angle)) + abs(imageSize.height * sin(angle)),
+//        height: abs(imageSize.width * sin(angle)) + abs(imageSize.height * cos(angle))
+//    )
+//    let newSize = CGSize(width: rotatedSize.width * scale, height: rotatedSize.height * scale)
+//
+//    let newImage = generateImage(newSize, contextGenerator: { size, context in
+//        context.setAllowsAntialiasing(true)
+//        context.setShouldAntialias(true)
+//        context.interpolationQuality = .high
+//        context.clear(CGRect(origin: .zero, size: size))
+//        context.translateBy(x: newSize.width * 0.5, y: newSize.height * 0.5)
+//        context.rotate(by: angle)
+//        context.scaleBy(x: scale, y: scale)
+//        let drawRect = CGRect(
+//            x: -imageSize.width * 0.5,
+//            y: -imageSize.height * 0.5,
+//            width: imageSize.width,
+//            height: imageSize.height
+//        )
+//        if let cgImage = image.cgImage {
+//            context.draw(cgImage, in: drawRect)
+//        }
+//    }, scale: 1.0)!
+//    
+//    let _ = position
+//    
+//    return newImage
+//}

@@ -124,6 +124,7 @@ public enum MediaArea: Codable, Equatable {
     
     case venue(coordinates: Coordinates, venue: Venue)
     case reaction(coordinates: Coordinates, reaction: MessageReaction.Reaction, flags: ReactionFlags)
+    case channelMessage(coordinates: Coordinates, messageId: EngineMessage.Id)
     
     public struct ReactionFlags: OptionSet {
         public var rawValue: Int32
@@ -144,6 +145,7 @@ public enum MediaArea: Codable, Equatable {
     private enum MediaAreaType: Int32 {
         case venue
         case reaction
+        case channelMessage
     }
     
     public enum DecodingError: Error {
@@ -166,6 +168,10 @@ public enum MediaArea: Codable, Equatable {
             let reaction = try container.decode(MessageReaction.Reaction.self, forKey: .value)
             let flags = ReactionFlags(rawValue: try container.decodeIfPresent(Int32.self, forKey: .flags) ?? 0)
             self = .reaction(coordinates: coordinates, reaction: reaction, flags: flags)
+        case .channelMessage:
+            let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
+            let messageId = try container.decode(MessageId.self, forKey: .value)
+            self = .channelMessage(coordinates: coordinates, messageId: messageId)
         }
     }
     
@@ -182,6 +188,10 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(coordinates, forKey: .coordinates)
             try container.encode(reaction, forKey: .value)
             try container.encode(flags.rawValue, forKey: .flags)
+        case let .channelMessage(coordinates, messageId):
+            try container.encode(MediaAreaType.channelMessage.rawValue, forKey: .type)
+            try container.encode(coordinates, forKey: .coordinates)
+            try container.encode(messageId, forKey: .value)
         }
     }
 }
@@ -192,6 +202,8 @@ public extension MediaArea {
         case let .venue(coordinates, _):
             return coordinates
         case let .reaction(coordinates, _, _):
+            return coordinates
+        case let .channelMessage(coordinates, _):
             return coordinates
         }
     }

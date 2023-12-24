@@ -62,20 +62,31 @@ public enum CodableDrawingEntity: Equatable {
     private var coordinates: MediaArea.Coordinates? {
         var position: CGPoint?
         var size: CGSize?
-        var scale: CGFloat?
         var rotation: CGFloat?
+        var scale: CGFloat?
         
         switch self {
         case let .location(entity):
             position = entity.position
             size = entity.renderImage?.size
-            scale = entity.scale
             rotation = entity.rotation
+            scale = entity.scale
         case let .sticker(entity):
-            position = entity.position
-            size = entity.baseSize
-            scale = entity.scale
-            rotation = entity.rotation
+            var entityPosition = entity.position
+            var entitySize = entity.baseSize
+            let entityRotation = entity.rotation
+            let entityScale = entity.scale
+            
+            if case .message = entity.content {
+                let offset: CGFloat = 16.18 * entityScale //54.0 * entityScale / 3.337
+                entitySize = CGSize(width: entitySize.width - 38.0, height: entitySize.height - 4.0)
+                entityPosition = CGPoint(x: entityPosition.x + offset * cos(entityRotation), y: entityPosition.y + offset * sin(entityRotation))
+            }
+            
+            position = entityPosition
+            size = entitySize
+            rotation = entityRotation
+            scale = entityScale
         default:
             return nil
         }
@@ -123,6 +134,8 @@ public enum CodableDrawingEntity: Equatable {
                     reaction: reaction,
                     flags: flags
                 )
+            } else if case let .message(messageIds, _, _) = entity.content, let messageId = messageIds.first {
+                return .channelMessage(coordinates: coordinates, messageId: messageId)
             } else {
                 return nil
             }

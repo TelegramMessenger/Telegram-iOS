@@ -47,6 +47,7 @@ swift_library(
         "//submodules/TemporaryCachedPeerDataManager",
         "//submodules/UndoUI",
         "//submodules/WallpaperBackgroundNode",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",

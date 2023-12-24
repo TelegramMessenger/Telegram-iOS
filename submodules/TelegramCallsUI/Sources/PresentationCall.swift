@@ -342,6 +342,32 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     private func updateSessionState(sessionState: CallSession, callContextState: OngoingCallContextState?, reception: Int32?, audioSessionControl: ManagedAudioSessionControl?) {
+        self.reception = reception
+        
+        if let ongoingContext = self.ongoingContext {
+            if self.receptionDisposable == nil, case .active = sessionState.state {
+                self.reception = 4
+                
+                var canUpdate = false
+                self.receptionDisposable = (ongoingContext.reception
+                |> delay(1.0, queue: .mainQueue())
+                |> deliverOnMainQueue).start(next: { [weak self] reception in
+                    if let strongSelf = self {
+                        if let sessionState = strongSelf.sessionState {
+                            if canUpdate {
+                                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: reception, audioSessionControl: strongSelf.audioSessionControl)
+                            } else {
+                                strongSelf.reception = reception
+                            }
+                        } else {
+                            strongSelf.reception = reception
+                        }
+                    }
+                })
+                canUpdate = true
+            }
+        }
+        
         if case .video = sessionState.type {
             self.isVideo = true
         }
@@ -349,8 +375,9 @@ public final class PresentationCallImpl: PresentationCall {
         let previousControl = self.audioSessionControl
         self.sessionState = sessionState
         self.callContextState = callContextState
-        self.reception = reception
         self.audioSessionControl = audioSessionControl
+        
+        let reception = self.reception
         
         if previousControl != nil && audioSessionControl == nil {
             print("updateSessionState \(sessionState.state) \(audioSessionControl != nil)")
@@ -555,17 +582,6 @@ public final class PresentationCallImpl: PresentationCall {
                                 strongSelf.updateSessionState(sessionState: sessionState, callContextState: contextState, reception: strongSelf.reception, audioSessionControl: strongSelf.audioSessionControl)
                             } else {
                                 strongSelf.callContextState = contextState
-                            }
-                        }
-                    })
-                    
-                    self.receptionDisposable = (ongoingContext.reception
-                    |> deliverOnMainQueue).start(next: { [weak self] reception in
-                        if let strongSelf = self {
-                            if let sessionState = strongSelf.sessionState {
-                                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: reception, audioSessionControl: strongSelf.audioSessionControl)
-                            } else {
-                                strongSelf.reception = reception
                             }
                         }
                     })

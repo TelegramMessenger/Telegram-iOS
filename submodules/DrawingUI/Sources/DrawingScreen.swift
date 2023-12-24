@@ -2925,7 +2925,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
     public func adapterContainerLayoutUpdatedSize(_ size: CGSize, intrinsicInsets: UIEdgeInsets, safeInsets: UIEdgeInsets, statusBarHeight: CGFloat, inputHeight: CGFloat, orientation: UIInterfaceOrientation, isRegular: Bool, animated: Bool) {
         let layout = ContainerViewLayout(
             size: size,
-            metrics: LayoutMetrics(widthClass: isRegular ? .regular : .compact, heightClass: isRegular ? .regular : .compact),
+            metrics: LayoutMetrics(widthClass: isRegular ? .regular : .compact, heightClass: isRegular ? .regular : .compact, orientation: nil),
             deviceMetrics: DeviceMetrics(screenSize: size, scale: UIScreen.main.scale, statusBarHeight: statusBarHeight, onScreenNavigationHeight: nil),
             intrinsicInsets: intrinsicInsets,
             safeInsets: safeInsets,
@@ -3085,28 +3085,33 @@ public final class DrawingToolsInteraction {
             var isRectangleImage = false
             var isVideo = false
             var isAdditional = false
+            var isMessage = false
             if let entity = entityView.entity as? DrawingStickerEntity {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
                     isAdditional = isAdditionalValue
                 } else if case let .image(_, type) = entity.content, case .rectangle = type {
                     isRectangleImage = true
+                } else if case .message = entity.content {
+                    isMessage = true
                 }
             }
             
-            guard !isVideo || isAdditional else {
+            guard (!isVideo || isAdditional) && (!isMessage || !isTopmost) else {
                 return
             }
             
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
             var actions: [ContextMenuAction] = []
-            actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in
-                if let self, let entityView {
-                    if self.shouldDeleteEntity(entityView.entity) {
-                        self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
+            if !isMessage {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Delete, accessibilityLabel: presentationData.strings.Paint_Delete), action: { [weak self, weak entityView] in
+                    if let self, let entityView {
+                        if self.shouldDeleteEntity(entityView.entity) {
+                            self.entitiesView.remove(uuid: entityView.entity.uuid, animated: true)
+                        }
                     }
-                }
-            }))
+                }))
+            }
             if let entityView = entityView as? DrawingLocationEntityView {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Edit, accessibilityLabel: presentationData.strings.Paint_Edit), action: { [weak self, weak entityView] in
                     if let self, let entityView {
@@ -3121,7 +3126,7 @@ public final class DrawingToolsInteraction {
                         self.entitiesView.selectEntity(entityView.entity)
                     }
                 }))
-            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo {
+            } else if (entityView is DrawingStickerEntityView || entityView is DrawingBubbleEntityView) && !isVideo && !isMessage {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Flip, accessibilityLabel: presentationData.strings.Paint_Flip), action: { [weak self] in
                     if let self {
                         self.flipSelectedEntity()
@@ -3135,7 +3140,7 @@ public final class DrawingToolsInteraction {
                     }
                 }))
             }
-            if !isVideo {
+            if !isVideo && !isMessage {
                 if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
                     
                 } else {
@@ -3147,21 +3152,39 @@ public final class DrawingToolsInteraction {
                     }))
                 }
             }
-            #if DEBUG
-            if isRectangleImage {
-                actions.append(ContextMenuAction(content: .text(title: "Cut Out", accessibilityLabel: "Cut Out"), action: { [weak self, weak entityView] in
+            
+            
+            if #available(iOS 17.0, *), isRectangleImage {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_CutOut, accessibilityLabel: presentationData.strings.Paint_CutOut), action: { [weak self, weak entityView] in
                     if let self, let entityView, let entity = entityView.entity as? DrawingStickerEntity, case let .image(image, _) = entity.content {
                         let _ = (cutoutStickerImage(from: image)
-                        |> deliverOnMainQueue).start(next: { result in
-                            if let result {
+                        |> deliverOnMainQueue).start(next: { [weak entity] result in
+                            if let result, let entity {
                                 let newEntity = DrawingStickerEntity(content: .image(result, .sticker))
-                                self.insertEntity(newEntity)
+                                newEntity.referenceDrawingSize = entity.referenceDrawingSize
+                                newEntity.scale = entity.scale
+                                newEntity.position = entity.position
+                                newEntity.rotation = entity.rotation
+                                newEntity.mirrored = entity.mirrored
+                                let newEntityView = self.entitiesView.add(newEntity)
+                                
+                                entityView.selectionView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                                if let newEntityView = newEntityView as? DrawingStickerEntityView {
+                                    newEntityView.playCutoutAnimation()
+                                }
+                                self.entitiesView.selectEntity(newEntity, animate: false)
+                                newEntityView.selectionView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                
+                                if let entityView = entityView as? DrawingStickerEntityView {
+                                    entityView.playDissolveAnimation()
+                                    self.entitiesView.remove(uuid: entity.uuid, animated: false)
+                                }
                             }
                         })
                     }
                 }))
             }
-            #endif
+            
             let entityFrame = entityView.convert(entityView.selectionBounds, to: node.view).offsetBy(dx: 0.0, dy: -6.0)
             let controller = makeContextMenuController(actions: actions)
             let bounds = node.bounds.insetBy(dx: 0.0, dy: 160.0)
@@ -3196,6 +3219,11 @@ public final class DrawingToolsInteraction {
                 textEntityView.replaceWithImage = { [weak self] image, isSticker in
                     if let self {
                         self.insertEntity(DrawingStickerEntity(content: .image(image, isSticker ? .sticker : .rectangle)), scale: 2.5)
+                    }
+                }
+                textEntityView.replaceWithAnimatedImage = { [weak self] data, thumbnailImage in
+                    if let self {
+                        self.insertEntity(DrawingStickerEntity(content: .animatedImage(data, thumbnailImage)), scale: 2.5)
                     }
                 }
             } else {

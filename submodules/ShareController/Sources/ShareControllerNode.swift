@@ -1074,7 +1074,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             self?.switchToAnotherAccount?()
         }, debugAction: { [weak self] in
             self?.debugAction?()
-        }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
+        }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues, fromPublicChannel: self.fromPublicChannel)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             let _ = (_internal_recentlySearchedPeers(postbox: context.stateManager.postbox)

@@ -47,7 +47,7 @@ private func extractDialogsData(peerDialogs: Api.messages.PeerDialogs) -> (apiDi
     }
 }
 
-private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], apiChats: [Api.Chat], apiUsers: [Api.User], apiIsAtLowestBoundary: Bool) -> ParsedDialogs {
+private func parseDialogs(accountPeerId: PeerId, apiDialogs: [Api.Dialog], apiMessages: [Api.Message], apiChats: [Api.Chat], apiUsers: [Api.User], apiIsAtLowestBoundary: Bool) -> ParsedDialogs {
     var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
     var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
     var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
@@ -148,7 +148,7 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
         if let peerId = message.peerId, let peer = peers.get(peerId), peer.isForum {
             peerIsForum = true
         }
-        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
+        if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
             var updatedStoreMessage = storeMessage
             if case let .Id(id) = storeMessage.id {
                 if let channelPts = channelStates[id.peerId] {
@@ -207,7 +207,7 @@ struct FetchedChatList {
     var threadInfos: [MessageId: StoreMessageHistoryThreadData]
 }
 
-func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex, hash: Int64, limit: Int32) -> Signal<FetchedChatList?, NoError> {
+func fetchChatList(accountPeerId: PeerId, postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex, hash: Int64, limit: Int32) -> Signal<FetchedChatList?, NoError> {
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
         if let state = view.state as? AuthorizedAccountState {
@@ -266,11 +266,11 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     return .single(nil)
                 }
                 let extractedRemoteDialogs = extractDialogsData(dialogs: remoteChats)
-                let parsedRemoteChats = parseDialogs(apiDialogs: extractedRemoteDialogs.apiDialogs, apiMessages: extractedRemoteDialogs.apiMessages, apiChats: extractedRemoteDialogs.apiChats, apiUsers: extractedRemoteDialogs.apiUsers, apiIsAtLowestBoundary: extractedRemoteDialogs.apiIsAtLowestBoundary)
+                let parsedRemoteChats = parseDialogs(accountPeerId: accountPeerId, apiDialogs: extractedRemoteDialogs.apiDialogs, apiMessages: extractedRemoteDialogs.apiMessages, apiChats: extractedRemoteDialogs.apiChats, apiUsers: extractedRemoteDialogs.apiUsers, apiIsAtLowestBoundary: extractedRemoteDialogs.apiIsAtLowestBoundary)
                 var parsedPinnedChats: ParsedDialogs?
                 if let pinnedChats = pinnedChats {
                     let extractedPinnedChats = extractDialogsData(peerDialogs: pinnedChats)
-                    parsedPinnedChats = parseDialogs(apiDialogs: extractedPinnedChats.apiDialogs, apiMessages: extractedPinnedChats.apiMessages, apiChats: extractedPinnedChats.apiChats, apiUsers: extractedPinnedChats.apiUsers, apiIsAtLowestBoundary: extractedPinnedChats.apiIsAtLowestBoundary)
+                    parsedPinnedChats = parseDialogs(accountPeerId: accountPeerId, apiDialogs: extractedPinnedChats.apiDialogs, apiMessages: extractedPinnedChats.apiMessages, apiChats: extractedPinnedChats.apiChats, apiUsers: extractedPinnedChats.apiUsers, apiIsAtLowestBoundary: extractedPinnedChats.apiIsAtLowestBoundary)
                 }
                 
                 var combinedReferencedFolders = Set<PeerGroupId>()
@@ -287,7 +287,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         |> retryRequest
                         |> map { result -> (PeerGroupId, ParsedDialogs) in
                             let extractedData = extractDialogsData(dialogs: result)
-                            let parsedChats = parseDialogs(apiDialogs: extractedData.apiDialogs, apiMessages: extractedData.apiMessages, apiChats: extractedData.apiChats, apiUsers: extractedData.apiUsers, apiIsAtLowestBoundary: extractedData.apiIsAtLowestBoundary)
+                            let parsedChats = parseDialogs(accountPeerId: accountPeerId, apiDialogs: extractedData.apiDialogs, apiMessages: extractedData.apiMessages, apiChats: extractedData.apiChats, apiUsers: extractedData.apiUsers, apiIsAtLowestBoundary: extractedData.apiIsAtLowestBoundary)
                             return (groupId, parsedChats)
                         }
                         folderSignals.append(requestFeed)
@@ -399,7 +399,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                     return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: storeMessages, reactions: [], result: result)
                     |> mapToSignal { result in
                         if let result = result {
-                            return resolveForumThreads(postbox: postbox, network: network, fetchedChatList: result)
+                            return resolveForumThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, fetchedChatList: result)
                             |> map(Optional.init)
                         } else {
                             return .single(result)

@@ -166,7 +166,8 @@ final class StatusView: UIView {
     enum WaitingState {
         case requesting
         case ringing
-        case generatingKeys
+        case connecting
+        case reconnecting
     }
     
     struct ActiveState: Equatable {
@@ -299,8 +300,10 @@ final class StatusView: UIView {
                 textString = "Requesting"
             case .ringing:
                 textString = "Ringing"
-            case .generatingKeys:
-                textString = "Exchanging encryption keys"
+            case .connecting:
+                textString = "Connecting"
+            case .reconnecting:
+                textString = "Reconnecting"
             }
         case let .active(activeState):
             monospacedDigits = true
@@ -310,7 +313,11 @@ final class StatusView: UIView {
             textString = stringForDuration(Int(duration))
             signalStrength = activeState.signalStrength
         case let .terminated(terminatedState):
-            textString = stringForDuration(Int(terminatedState.duration))
+            if Int(terminatedState.duration) == 0 {
+                textString = " "
+            } else {
+                textString = stringForDuration(Int(terminatedState.duration))
+            }
         }
         
         var contentSize = CGSize()

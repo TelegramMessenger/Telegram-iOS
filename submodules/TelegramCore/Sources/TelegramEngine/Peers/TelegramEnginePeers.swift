@@ -409,9 +409,8 @@ public extension TelegramEngine {
             return _internal_reportAntiSpamFalsePositive(account: self.account, peerId: peerId, messageId: messageId)
         }
 
-        
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
-            return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+            return _internal_requestPeerPhotos(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
 
         public func updateGroupSpecificStickerset(peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificStickersetError> {
@@ -505,8 +504,8 @@ public extension TelegramEngine {
             return _internal_addChannelMember(account: self.account, peerId: peerId, memberId: memberId)
         }
         
-        public func sendBotRequestedPeer(messageId: MessageId, buttonId: Int32, requestedPeerId: PeerId) -> Signal<Void, SendBotRequestedPeerError> {
-            return _internal_sendBotRequestedPeer(account: self.account, peerId: messageId.peerId, messageId: messageId, buttonId: buttonId, requestedPeerId: requestedPeerId)
+        public func sendBotRequestedPeer(messageId: MessageId, buttonId: Int32, requestedPeerIds: [PeerId]) -> Signal<Void, SendBotRequestedPeerError> {
+            return _internal_sendBotRequestedPeer(account: self.account, peerId: messageId.peerId, messageId: messageId, buttonId: buttonId, requestedPeerIds: requestedPeerIds)
         }
 
         public func addChannelMembers(peerId: PeerId, memberIds: [PeerId]) -> Signal<Void, AddChannelMemberError> {
@@ -717,6 +716,18 @@ public extension TelegramEngine {
         
         public func updatePeerNameColorAndEmoji(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
             return _internal_updatePeerNameColorAndEmoji(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
+        }
+        
+        public func updatePeerNameColor(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+            return _internal_updatePeerNameColor(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId)
+        }
+        
+        public func updatePeerProfileColor(peerId: EnginePeer.Id, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+            return _internal_updatePeerProfileColor(account: self.account, peerId: peerId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
+        }
+        
+        public func updatePeerEmojiStatus(peerId: EnginePeer.Id, fileId: Int64?, expirationDate: Int32?) -> Signal<Never, UpdatePeerEmojiStatusError> {
+            return _internal_updatePeerEmojiStatus(account: self.account, peerId: peerId, fileId: fileId, expirationDate: expirationDate)
         }
         
         public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {

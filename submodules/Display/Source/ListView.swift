@@ -4739,7 +4739,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if self.experimentalSnapScrollToItem {
                     self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.visible, animated: animated, curve: ListViewAnimationCurve.Default(duration: nil), directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 } else {
-                    if node.frame.minY < self.insets.top {
+                    if node.frame.minY < self.insets.top + overflow {
                         if !allowIntersection || node.frame.maxY < self.insets.top {
                             let position: ListViewScrollPosition
                             if allowIntersection {
@@ -4749,7 +4749,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             }
                             self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                         }
-                    } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
+                    } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom - overflow {
                         if !allowIntersection || node.frame.minY > self.visibleSize.height - self.insets.bottom {
                             let position: ListViewScrollPosition
                             if allowIntersection {

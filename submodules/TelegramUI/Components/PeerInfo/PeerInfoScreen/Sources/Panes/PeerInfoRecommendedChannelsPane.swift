@@ -18,6 +18,7 @@ import ChatControllerInteraction
 import MultilineTextComponent
 import Markdown
 import SolidRoundedButtonNode
+import PeerInfoPaneNode
 
 private struct RecommendedChannelsListTransaction {
     let deletions: [ListViewDeleteItem]

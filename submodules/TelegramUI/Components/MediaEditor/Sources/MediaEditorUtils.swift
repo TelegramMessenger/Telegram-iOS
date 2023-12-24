@@ -2,6 +2,10 @@ import Foundation
 import UIKit
 import AVFoundation
 import SwiftSignalKit
+import TelegramCore
+import AccountContext
+import TelegramUIPreferences
+import TelegramPresentationData
 
 extension AVPlayer {
     func fadeVolume(from: Float, to: Float, duration: Float, completion: (() -> Void)? = nil) -> SwiftSignalKit.Timer? {
@@ -128,4 +132,112 @@ func getTextureImage(device: MTLDevice, texture: MTLTexture, mirror: Bool = fals
         return nil
     }
     return UIImage(cgImage: cgImage)
+}
+
+public func getChatWallpaperImage(context: AccountContext, messageId: EngineMessage.Id) -> Signal<(CGSize, UIImage?, UIImage?), NoError> {
+    let themeSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+    |> map { sharedData -> PresentationThemeSettings in
+        let themeSettings: PresentationThemeSettings
+        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+            themeSettings = current
+        } else {
+            themeSettings = PresentationThemeSettings.defaultSettings
+        }
+        return themeSettings
+    }
+    
+    let peerWallpaper = context.account.postbox.transaction { transaction -> TelegramWallpaper? in
+        return (transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData)?.wallpaper
+    }
+    
+    return combineLatest(themeSettings, peerWallpaper)
+    |> mapToSignal { themeSettings, peerWallpaper -> Signal<(TelegramWallpaper?, TelegramWallpaper?), NoError> in
+        var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+        if let colors = currentColors, colors.baseColor == .theme {
+            currentColors = nil
+        }
+        
+        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+        
+        let dayWallpaper: TelegramWallpaper
+        if let themeSpecificWallpaper = themeSpecificWallpaper {
+            dayWallpaper = themeSpecificWallpaper
+        } else {
+            let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, preview: true) ?? defaultPresentationTheme
+            dayWallpaper = theme.chat.defaultWallpaper
+        }
+        
+        var nightWallpaper: TelegramWallpaper?
+        
+        let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
+        let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+        let nightThemeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+        
+        var preferredBaseTheme: TelegramBaseTheme?
+        if let baseTheme = themeSettings.themePreferredBaseTheme[automaticTheme.index], [.night, .tinted].contains(baseTheme) {
+            preferredBaseTheme = baseTheme
+        } else {
+            preferredBaseTheme = .night
+        }
+        
+        let darkTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: automaticTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+        
+        if let nightThemeSpecificWallpaper = nightThemeSpecificWallpaper {
+            nightWallpaper = nightThemeSpecificWallpaper
+        } else {
+            switch dayWallpaper {
+            case .builtin, .color, .gradient:
+                nightWallpaper = darkTheme.chat.defaultWallpaper
+            case .file:
+                if dayWallpaper.isPattern {
+                    nightWallpaper = darkTheme.chat.defaultWallpaper
+                } else {
+                    nightWallpaper = nil
+                }
+            default:
+                nightWallpaper = nil
+            }
+        }
+        
+        if let peerWallpaper {
+            if case let .emoticon(emoticon) = peerWallpaper {
+                return context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager)
+                |> map { themes -> (TelegramWallpaper?, TelegramWallpaper?) in
+                    if let theme = themes.first(where: { $0.emoticon?.strippedEmoji == emoticon.strippedEmoji }) {
+                        if let dayMatch = theme.settings?.first(where: { $0.baseTheme == .classic || $0.baseTheme == .day }) {
+                            if let peerDayWallpaper = dayMatch.wallpaper {
+                                var peerNightWallpaper: TelegramWallpaper?
+                                if let nightMatch = theme.settings?.first(where: { $0.baseTheme == .night || $0.baseTheme == .tinted }) {
+                                    peerNightWallpaper = nightMatch.wallpaper
+                                }
+                                return (peerDayWallpaper, peerNightWallpaper)
+                            } else {
+                                return (dayWallpaper, nightWallpaper)
+                            }
+                        } else {
+                            return (dayWallpaper, nightWallpaper)
+                        }
+                    } else {
+                        return (dayWallpaper, nightWallpaper)
+                    }
+                }
+            } else {
+                return .single((peerWallpaper, nil))
+            }
+        } else {
+            return .single((dayWallpaper, nightWallpaper))
+        }
+    }
+    |> mapToSignal { dayWallpaper, nightWallpaper -> Signal<(CGSize, UIImage?, UIImage?), NoError> in
+        return Signal { subscriber in
+            Queue.mainQueue().async {
+                let wallpaperRenderer = DrawingWallpaperRenderer(context: context, dayWallpaper: dayWallpaper, nightWallpaper: nightWallpaper)
+                wallpaperRenderer.render { size, image, darkImage, mediaRect in
+                    subscriber.putNext((size, image, darkImage))
+                    subscriber.putCompletion()
+                }
+            }
+            return EmptyDisposable
+        }
+    }
 }

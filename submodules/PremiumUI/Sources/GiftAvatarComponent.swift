@@ -10,24 +10,29 @@ import LegacyComponents
 import AvatarNode
 import AccountContext
 import TelegramCore
+import MergedAvatarsNode
+import MultilineTextComponent
+import TelegramPresentationData
 
 private let sceneVersion: Int = 3
 
 class GiftAvatarComponent: Component {
     let context: AccountContext
-    let peer: EnginePeer?
+    let theme: PresentationTheme
+    let peers: [EnginePeer]
     let isVisible: Bool
     let hasIdleAnimations: Bool
         
-    init(context: AccountContext, peer: EnginePeer?, isVisible: Bool, hasIdleAnimations: Bool) {
+    init(context: AccountContext, theme: PresentationTheme, peers: [EnginePeer], isVisible: Bool, hasIdleAnimations: Bool) {
         self.context = context
-        self.peer = peer
+        self.theme = theme
+        self.peers = peers
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
     }
     
     static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
-        return lhs.peer == rhs.peer && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+        return lhs.peers == rhs.peers && lhs.theme === rhs.theme && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -52,6 +57,10 @@ class GiftAvatarComponent: Component {
         
         private let sceneView: SCNView
         private let avatarNode: ImageNode
+        private var mergedAvatarsNode: MergedAvatarsNode?
+        
+        private let badgeBackground = ComponentView<Empty>()
+        private let badge = ComponentView<Empty>()
         
         private var previousInteractionTimestamp: Double = 0.0
         private var timer: SwiftSignalKit.Timer?
@@ -242,11 +251,75 @@ class GiftAvatarComponent: Component {
             }
             
             self.hasIdleAnimations = component.hasIdleAnimations
-            let avatarSize = CGSize(width: 100.0, height: 100.0)
-            if let peer = component.peer {
-                self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
+            
+            if component.peers.count > 1 {
+                let avatarSize = CGSize(width: 60.0, height: 60.0)
+                
+                let mergedAvatarsNode: MergedAvatarsNode
+                if let current = self.mergedAvatarsNode {
+                    mergedAvatarsNode = current
+                } else {
+                    mergedAvatarsNode = MergedAvatarsNode()
+                    mergedAvatarsNode.isUserInteractionEnabled = false
+                    self.addSubview(mergedAvatarsNode.view)
+                    self.mergedAvatarsNode = mergedAvatarsNode
+                }
+                
+                mergedAvatarsNode.update(context: component.context, peers: Array(component.peers.map { $0._asPeer() }.prefix(3)), synchronousLoad: false, imageSize: avatarSize.width, imageSpacing: 30.0, borderWidth: 2.0, avatarFontSize: 26.0)
+                let avatarsSize = CGSize(width: avatarSize.width + 30.0 * CGFloat(min(3, component.peers.count) - 1), height: avatarSize.height)
+                mergedAvatarsNode.updateLayout(size: avatarsSize)
+                mergedAvatarsNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarsSize.width) / 2.0), y: 113.0 - avatarSize.height / 2.0), size: avatarsSize)
+                self.avatarNode.isHidden = true
+            } else {
+                self.mergedAvatarsNode?.view.removeFromSuperview()
+                self.mergedAvatarsNode = nil
+                self.avatarNode.isHidden = false
+                
+                let avatarSize = CGSize(width: 100.0, height: 100.0)
+                if let peer = component.peers.first {
+                    self.avatarNode.setSignal(peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize, font: avatarPlaceholderFont(size: 43.0), fullSize: true))
+                }
+                self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0), y: 113.0 - avatarSize.height / 2.0), size: avatarSize)
             }
-            self.avatarNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - avatarSize.width) / 2.0), y: 63.0), size: avatarSize)
+            
+            if component.peers.count > 3 {
+                let badgeTextSize = self.badge.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "+\(component.peers.count - 3)", font: Font.with(size: 10.0, design: .round, weight: .semibold), textColor: component.theme.list.itemCheckColors.foregroundColor))
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                
+                let lineWidth = 1.0 + UIScreenPixel
+                let badgeSize = CGSize(width: max(17.0, badgeTextSize.width + 7.0) + lineWidth * 2.0, height: 17.0 + lineWidth * 2.0)
+                let _ = self.badgeBackground.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        RoundedRectangle(color: component.theme.list.itemCheckColors.fillColor, cornerRadius: badgeSize.height / 2.0, stroke: lineWidth, strokeColor: component.theme.list.blocksBackgroundColor)
+                    ),
+                    environment: {},
+                    containerSize: badgeSize
+                )
+                
+                if let badgeTextView = self.badge.view, let badgeBackgroundView = self.badgeBackground.view {
+                    if badgeBackgroundView.superview == nil {
+                        self.addSubview(badgeBackgroundView)
+                        self.addSubview(badgeTextView)
+                    }
+                    
+                    let avatarsSize = CGSize(width: 120.0, height: 60.0)
+                    let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width + avatarsSize.width) / 2.0) - 19.0 - lineWidth, y: 113.0 + avatarsSize.height / 2.0 - 15.0 - lineWidth), size: badgeSize)
+                    badgeBackgroundView.frame = backgroundFrame
+                    badgeTextView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeTextSize.width / 2.0), y: floorToScreenPixels(backgroundFrame.midY - badgeTextSize.height / 2.0) - UIScreenPixel), size: badgeTextSize)
+                }
+            } else {
+                self.badge.view?.removeFromSuperview()
+                self.badgeBackground.view?.removeFromSuperview()
+            }
             
             return availableSize
         }

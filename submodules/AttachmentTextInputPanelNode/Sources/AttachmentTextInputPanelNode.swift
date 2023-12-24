@@ -507,7 +507,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         guard let presentationInterfaceState = self.presentationInterfaceState else {
             return 0.0
         }
-        return self.updateLayout(width: size.width, leftInset: sideInset, rightInset: sideInset, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: size.height, isSecondary: false, transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, interfaceState: presentationInterfaceState, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), isMediaInputExpanded: false)
+        return self.updateLayout(width: size.width, leftInset: sideInset, rightInset: sideInset, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: size.height, isSecondary: false, transition: animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, interfaceState: presentationInterfaceState, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), isMediaInputExpanded: false)
     }
     
     public func setCaption(_ caption: NSAttributedString?) {
@@ -634,14 +634,17 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let fieldMaxHeight = textFieldMaxHeight(maxHeight, metrics: metrics)
         
         var textFieldMinHeight: CGFloat = 35.0
+        var textFieldRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
             textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
+            textFieldRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
         }
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
             let maxTextWidth = width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right
-            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth, rightInset: 0.0)
+            
+            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth, rightInset: textFieldRealInsets.right)
             let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight))
             
             let maxNumberOfLines = min(12, (Int(fieldMaxHeight - 11.0) - 33) / 22)

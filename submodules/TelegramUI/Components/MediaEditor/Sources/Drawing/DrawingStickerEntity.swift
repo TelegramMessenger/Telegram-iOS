@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
+import Postbox
 import TelegramCore
 
 private func entitiesPath() -> String {
@@ -29,8 +30,10 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         }
         case file(TelegramMediaFile, FileType)
         case image(UIImage, ImageType)
+        case animatedImage(Data, UIImage)
         case video(TelegramMediaFile)
         case dualVideoReference(Bool)
+        case message([MessageId], TelegramMediaFile?, CGSize)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -46,6 +49,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
+            case let .animatedImage(lhsData, lhsThumbnailImage):
+                if case let .animatedImage(rhsData, rhsThumbnailImage) = lhs {
+                    return lhsData == rhsData && lhsThumbnailImage === rhsThumbnailImage
+                } else {
+                    return false
+                }
             case let .video(lhsFile):
                 if case let .video(rhsFile) = rhs {
                     return lhsFile.fileId == rhsFile.fileId
@@ -54,6 +63,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 }
             case let .dualVideoReference(isAdditional):
                 if case .dualVideoReference(isAdditional) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .message(messageIds, innerFile, size):
+                if case .message(messageIds, innerFile, size) = rhs {
                     return true
                 } else {
                     return false
@@ -67,11 +82,14 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case reaction
         case reactionStyle
         case imagePath
+        case animatedImagePath
         case videoFile
         case isRectangle
         case isDualPhoto
         case dualVideo
         case isAdditionalVideo
+        case messageIds
+        case explicitSize
         case referenceDrawingSize
         case position
         case scale
@@ -90,6 +108,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         didSet {
             if case let .file(_, type) = self.content, case .reaction = type {
                 self.scale = max(0.59, min(1.77, self.scale))
+            } else if case .message = self.content {
+                self.scale = max(2.5, self.scale)
             }
         }
     }
@@ -100,6 +120,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         
     public var color: DrawingColor = DrawingColor.clear
     public var lineWidth: CGFloat = 0.0
+    
+    public var secondaryRenderImage: UIImage?
     
     public var center: CGPoint {
         return self.position
@@ -112,6 +134,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         switch self.content {
         case let .image(image, _):
             dimensions = image.size
+        case let .animatedImage(_, thumbnailImage):
+            dimensions = thumbnailImage.size
         case let .file(file, type):
             if case .reaction = type {
                 dimensions = CGSize(width: 512.0, height: 512.0)
@@ -122,6 +146,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             dimensions = CGSize(width: 512.0, height: 512.0)
+        case let .message(_, _, size):
+            dimensions = size
         }
         
         let boundingSize = CGSize(width: size, height: size)
@@ -143,10 +169,14 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             }
         case .image:
             return false
+        case .animatedImage:
+            return true
         case .video:
             return true
         case .dualVideoReference:
             return true
+        case .message:
+            return !(self.renderSubEntities ?? []).isEmpty
         }
     }
     
@@ -155,6 +185,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .image(_, imageType):
             return imageType == .rectangle
         case .video:
+            return true
+        case .message:
             return true
         default:
             return false
@@ -184,7 +216,10 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
+        if let messageIds = try container.decodeIfPresent([MessageId].self, forKey: .messageIds) {
+            let size = try container.decodeIfPresent(CGSize.self, forKey: .explicitSize) ?? .zero
+            self.content = .message(messageIds, nil, size)
+        } else if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
             let isAdditional = try container.decodeIfPresent(Bool.self, forKey: .isAdditionalVideo) ?? false
             self.content = .dualVideoReference(isAdditional)
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
@@ -211,6 +246,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 imageType = .sticker
             }
             self.content = .image(image, imageType)
+        } else if let dataPath = try container.decodeIfPresent(String.self, forKey: .animatedImagePath), let data = try? Data(contentsOf: URL(fileURLWithPath: fullEntityMediaPath(dataPath))), let imagePath = try container.decodeIfPresent(String.self, forKey: .imagePath), let thumbnailImage = UIImage(contentsOfFile: fullEntityMediaPath(imagePath)) {
+            self.content = .animatedImage(data, thumbnailImage)
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .videoFile) {
             self.content = .video(file)
         } else {
@@ -257,11 +294,29 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             default:
                 break
             }
+        case let .animatedImage(data, thumbnailImage):
+            let dataPath = "\(self.uuid).heics"
+            let fullDataPath = fullEntityMediaPath(dataPath)
+            try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+            try? data.write(to: URL(fileURLWithPath: fullDataPath))
+            try container.encodeIfPresent(dataPath, forKey: .animatedImagePath)
+            
+            let imagePath = "\(self.uuid).png"
+            let fullImagePath = fullEntityMediaPath(imagePath)
+            if let imageData = thumbnailImage.pngData() {
+                try? FileManager.default.createDirectory(atPath: entitiesPath(), withIntermediateDirectories: true)
+                try? imageData.write(to: URL(fileURLWithPath: fullImagePath))
+                try container.encodeIfPresent(imagePath, forKey: .imagePath)
+            }
         case let .video(file):
             try container.encode(file, forKey: .videoFile)
         case let .dualVideoReference(isAdditional):
             try container.encode(true, forKey: .dualVideo)
             try container.encode(isAdditional, forKey: .isAdditionalVideo)
+        case let .message(messageIds, innerFile, size):
+            try container.encode(messageIds, forKey: .messageIds)
+            let _ = innerFile
+            try container.encode(size, forKey: .explicitSize)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)

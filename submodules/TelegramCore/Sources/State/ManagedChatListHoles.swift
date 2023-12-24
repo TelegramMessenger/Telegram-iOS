@@ -143,7 +143,7 @@ func managedForumTopicListHoles(network: Network, postbox: Postbox, accountPeerI
             }
             
             for (entry, disposable) in added {
-                disposable.set((_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: entry.peerId, offsetIndex: entry.index, limit: 100)
+                disposable.set((_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: entry.peerId, query: nil, offsetIndex: entry.index, limit: 100)
                 |> mapToSignal { result -> Signal<Never, LoadMessageHistoryThreadsError> in
                     return postbox.transaction { transaction in
                         return applyLoadMessageHistoryThreadsResults(accountPeerId: accountPeerId, transaction: transaction, results: [result])

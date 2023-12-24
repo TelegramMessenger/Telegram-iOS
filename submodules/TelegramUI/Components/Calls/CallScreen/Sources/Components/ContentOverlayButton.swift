@@ -9,12 +9,14 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
         var image: UIImage?
         var isSelected: Bool
         var isDestructive: Bool
+        var isEnabled: Bool
         
-        init(size: CGSize, image: UIImage?, isSelected: Bool, isDestructive: Bool) {
+        init(size: CGSize, image: UIImage?, isSelected: Bool, isDestructive: Bool, isEnabled: Bool) {
             self.size = size
             self.image = image
             self.isSelected = isSelected
             self.isDestructive = isDestructive
+            self.isEnabled = isEnabled
         }
     }
     
@@ -63,8 +65,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
                 let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
                 
                 if highlighted {
-                    self.layer.removeAnimation(forKey: "opacity")
-                    self.layer.removeAnimation(forKey: "transform")
+                    self.layer.removeAnimation(forKey: "sublayerTransform")
                     let transition = Transition(animation: .curve(duration: 0.15, curve: .easeInOut))
                     transition.setScale(layer: self.layer, scale: topScale)
                 } else {
@@ -94,12 +95,14 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
         self.action?()
     }
     
-    func update(size: CGSize, image: UIImage?, isSelected: Bool, isDestructive: Bool, title: String, transition: Transition) {
-        let contentParams = ContentParams(size: size, image: image, isSelected: isSelected, isDestructive: isDestructive)
+    func update(size: CGSize, image: UIImage?, isSelected: Bool, isDestructive: Bool, isEnabled: Bool, title: String, transition: Transition) {
+        let contentParams = ContentParams(size: size, image: image, isSelected: isSelected, isDestructive: isDestructive, isEnabled: isEnabled)
         if self.contentParams != contentParams {
             self.contentParams = contentParams
             self.updateContent(contentParams: contentParams, transition: transition)
         }
+        
+        self.isUserInteractionEnabled = isEnabled
         
         transition.setFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
         
@@ -129,7 +132,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
                 
                 context.clip(to: imageFrame, mask: cgImage)
                 context.setBlendMode(contentParams.isSelected ? .copy : .normal)
-                context.setFillColor(contentParams.isSelected ? UIColor.clear.cgColor : UIColor(white: 1.0, alpha: 1.0).cgColor)
+                context.setFillColor(contentParams.isSelected ? UIColor(white: 1.0, alpha: contentParams.isEnabled ? 0.0 : 0.5).cgColor : UIColor(white: 1.0, alpha: contentParams.isEnabled ? 1.0 : 0.5).cgColor)
                 context.fill(imageFrame)
                 
                 context.resetClip()
@@ -137,12 +140,8 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
             }
         })
         
-        if !transition.animation.isImmediate, let currentContentViewIsSelected = self.currentContentViewIsSelected, currentContentViewIsSelected != contentParams.isSelected, let previousImage = self.contentView.image, let image {
+        if !transition.animation.isImmediate, let currentContentViewIsSelected = self.currentContentViewIsSelected, currentContentViewIsSelected != contentParams.isSelected, let previousImage = self.contentView.image {
             self.contentView.layer.mask = nil
-            let _ = previousImage
-            let _ = image
-            let _ = currentContentViewIsSelected
-            
             let previousContentView = UIImageView(image: previousImage)
             previousContentView.frame = self.contentView.frame
             self.addSubview(previousContentView)

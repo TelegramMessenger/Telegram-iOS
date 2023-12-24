@@ -36,6 +36,7 @@ swift_library(
         "//submodules/ChatMessageBackground",
         "//submodules/ContextUI",
         "//submodules/UndoUI",
+        "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
     ],
     visibility = [
         "//visibility:public",

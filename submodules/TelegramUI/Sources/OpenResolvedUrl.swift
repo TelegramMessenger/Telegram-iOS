@@ -31,6 +31,7 @@ import PremiumUI
 import AuthorizationUI
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
+import WallpaperGalleryScreen
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -66,7 +67,7 @@ func openResolvedUrlImpl(
     completion: (() -> Void)?
 ) {
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    if case let .chat(_, maybeUpdatedPresentationData) = urlContext {
+    if case let .chat(_, _, maybeUpdatedPresentationData) = urlContext {
         updatedPresentationData = maybeUpdatedPresentationData
     } else {
         updatedPresentationData = nil
@@ -674,7 +675,7 @@ func openResolvedUrlImpl(
                             navigationController.pushViewController(controller)
                         }
                     } else {
-                        if case let .chat(chatPeerId, _) = urlContext {
+                        if case let .chat(chatPeerId, _, _) = urlContext {
                             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId))
                             |> deliverOnMainQueue).start(next: { chatPeer in
                                 guard let navigationController = navigationController, let chatPeer else {
@@ -725,7 +726,7 @@ func openResolvedUrlImpl(
                                         navigationController.pushViewController(controller)
                                     }
                                 } else {
-                                    if case let .chat(chatPeerId, _) = urlContext {
+                                    if case let .chat(chatPeerId, _, _) = urlContext {
                                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId))
                                         |> deliverOnMainQueue).start(next: { chatPeer in
                                             guard let navigationController = navigationController, let chatPeer else {
@@ -860,7 +861,7 @@ func openResolvedUrlImpl(
             })
         case let .boost(peerId, status, myBoostStatus):
             var isCurrent = false
-            if case let .chat(chatPeerId, _) = urlContext, chatPeerId == peerId {
+            if case let .chat(chatPeerId, _, _) = urlContext, chatPeerId == peerId {
                 isCurrent = true
             }
             var forceDark = false
@@ -935,70 +936,81 @@ func openResolvedUrlImpl(
             let _ = (signal
             |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] giftCode in
                 if let giftCode {
-                    var dismissImpl: (() -> Void)?
-                    let controller = PremiumGiftCodeScreen(
-                        context: context,
-                        subject: .giftCode(giftCode),
-                        forceDark: forceDark,
-                        action: { [weak navigationController] in
-                            let _ = (context.engine.payments.applyPremiumGiftCode(slug: slug)
-                            |> deliverOnMainQueue).startStandalone(completed: {
-                                dismissImpl?()
-                                
-                                let controller = PremiumIntroScreen(context: context, source: .settings, forceDark: forceDark, forceHasPremium: true)
-                                navigationController?.pushViewController(controller)
-                                Queue.mainQueue().after(0.3, {
-                                    controller.animateSuccess()
-                                })
-                            })
-                        },
-                        openPeer: { peer in
-                            if peer.id != context.account.peerId {
-                                openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
-                                if case let .chat(peerId, _) = urlContext, peerId == peer.id {
-                                    dismissImpl?()
-                                }
-                            }
-                        },
-                        openMessage: { messageId in
-                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
-                            |> deliverOnMainQueue).startStandalone(next: { peer in
-                                guard let peer else {
-                                    return
-                                }
-                                openPeer(peer, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), peekData: nil))
-                                if case let .chat(peerId, _) = urlContext, peerId == messageId.peerId {
-                                    dismissImpl?()
-                                }
-                            })
-                        },
-                        shareLink: { link in
-                            let messages: [EnqueueMessage] = [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
-                            
-                            let peerSelectionController = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: false, selectForumThreads: true))
-                            peerSelectionController.peerSelected = { [weak peerSelectionController] peer, threadId in
-                                if let _ = peerSelectionController {
-                                    Queue.mainQueue().after(0.88) {
-                                        HapticFeedback().success()
-                                    }
-
-                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                    (navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: peer.id == context.account.peerId ? presentationData.strings.GiftLink_LinkSharedToSavedMessages : presentationData.strings.GiftLink_LinkSharedToChat(peer.compactDisplayTitle).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
-                                    
-                                    let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: messages)
-                                    |> deliverOnMainQueue).startStandalone()
-                                    if let peerSelectionController = peerSelectionController {
-                                        peerSelectionController.dismiss()
-                                    }
-                                }
-                            }
-                            navigationController?.pushViewController(peerSelectionController)
+                    if giftCode.fromPeerId == nil, let toPeerId = giftCode.toPeerId {
+                        let fromPeerId: PeerId
+                        if case let .chat(peerId, message, _) = urlContext {
+                            fromPeerId = message?.author?.id ?? peerId
+                        } else {
+                            fromPeerId = context.account.peerId
                         }
-                    )
-                    dismissImpl = { [weak controller] in
-                        controller?.dismissAnimated()
+                        let controller = PremiumIntroScreen(context: context, source: .gift(from: fromPeerId, to: toPeerId, duration: giftCode.months, giftCode: giftCode))
+                        navigationController?.pushViewController(controller)
+                    } else {
+                        var dismissImpl: (() -> Void)?
+                        let controller = PremiumGiftCodeScreen(
+                            context: context,
+                            subject: .giftCode(giftCode),
+                            forceDark: forceDark,
+                            action: { [weak navigationController] in
+                                let _ = (context.engine.payments.applyPremiumGiftCode(slug: slug)
+                                |> deliverOnMainQueue).startStandalone(completed: {
+                                    dismissImpl?()
+                                    
+                                    let controller = PremiumIntroScreen(context: context, source: .settings, forceDark: forceDark, forceHasPremium: true)
+                                    navigationController?.pushViewController(controller)
+                                    Queue.mainQueue().after(0.3, {
+                                        controller.animateSuccess()
+                                    })
+                                })
+                            },
+                            openPeer: { peer in
+                                if peer.id != context.account.peerId {
+                                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                    if case let .chat(peerId, _, _) = urlContext, peerId == peer.id {
+                                        dismissImpl?()
+                                    }
+                                }
+                            },
+                            openMessage: { messageId in
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+                                         |> deliverOnMainQueue).startStandalone(next: { peer in
+                                    guard let peer else {
+                                        return
+                                    }
+                                    openPeer(peer, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), peekData: nil))
+                                    if case let .chat(peerId, _, _) = urlContext, peerId == messageId.peerId {
+                                        dismissImpl?()
+                                    }
+                                })
+                            },
+                            shareLink: { link in
+                                let messages: [EnqueueMessage] = [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+                                
+                                let peerSelectionController = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: false, selectForumThreads: true))
+                                peerSelectionController.peerSelected = { [weak peerSelectionController] peer, threadId in
+                                    if let _ = peerSelectionController {
+                                        Queue.mainQueue().after(0.88) {
+                                            HapticFeedback().success()
+                                        }
+                                        
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        (navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: peer.id == context.account.peerId ? presentationData.strings.GiftLink_LinkSharedToSavedMessages : presentationData.strings.GiftLink_LinkSharedToChat(peer.compactDisplayTitle).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                                        
+                                        let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: messages)
+                                                 |> deliverOnMainQueue).startStandalone()
+                                        if let peerSelectionController = peerSelectionController {
+                                            peerSelectionController.dismiss()
+                                        }
+                                    }
+                                }
+                                navigationController?.pushViewController(peerSelectionController)
+                            }
+                        )
+                        dismissImpl = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        navigationController?.pushViewController(controller)
                     }
-                    navigationController?.pushViewController(controller)
                 } else {
                     present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }

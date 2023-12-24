@@ -36,18 +36,22 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
     
     private var backgroundContentColor: UIColor = .clear
     private var contentsColor: UIColor = .white
+    private var canBeExpanded: Bool = false
     
     var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?, ContextGesture?) -> Void)?
     
-    func updateContentsColor(backgroundContentColor: UIColor, contentsColor: UIColor, transition: ContainedViewLayoutTransition) {
+    func updateContentsColor(backgroundContentColor: UIColor, contentsColor: UIColor, canBeExpanded: Bool, transition: ContainedViewLayoutTransition) {
         self.backgroundContentColor = backgroundContentColor
         self.contentsColor = contentsColor
+        self.canBeExpanded = canBeExpanded
         
         for (_, button) in self.leftButtonNodes {
-            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: transition)
+            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
+            transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: canBeExpanded ? -8.0 : 0.0, y: 0.0))
         }
         for (_, button) in self.rightButtonNodes {
-            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: transition)
+            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
+            transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: canBeExpanded ? 8.0 : 0.0, y: 0.0))
         }
     }
     
@@ -106,7 +110,9 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: .immediate)
+                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: self.canBeExpanded, transition: .immediate)
+                    
+                    transition.updateSublayerTransformOffset(layer: buttonNode.layer, offset: CGPoint(x: canBeExpanded ? -8.0 : 0.0, y: 0.0))
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
@@ -202,7 +208,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
                 let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 if wasAdded {
-                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: .immediate)
+                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: self.canBeExpanded, transition: .immediate)
                     
                     if key == .moreToSearch {
                         buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
@@ -211,6 +217,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    
+                    transition.updateSublayerTransformOffset(layer: buttonNode.layer, offset: CGPoint(x: canBeExpanded ? 8.0 : 0.0, y: 0.0))
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)

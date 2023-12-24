@@ -686,7 +686,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             candidateTitleString = NSAttributedString(string: title ?? (arguments.file.fileName ?? "Unknown Track"), font: titleFont, textColor: arguments.customTintColor ?? messageTheme.fileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
-                                descriptionText = performer
+                                descriptionText = performer.trimmingTrailingSpaces()
                             } else if let size = arguments.file.size, size > 0 && size != .max {
                                 descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: arguments.presentationData))
                             } else {
@@ -747,7 +747,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
                 var displayTranscribe = false
-                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat && !arguments.presentationData.isPreview {
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
                     if arguments.associatedData.isPremium {
                         displayTranscribe = true
@@ -876,7 +876,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     var viewCount: Int?
                     var dateReplies = 0
                     var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: arguments.associatedData.accountPeer, message: arguments.topMessage)
-                    if arguments.topMessage.isRestricted(platform: "ios", contentSettings: arguments.context.currentContentSettings.with { $0 }) {
+                    if arguments.topMessage.isRestricted(platform: "ios", contentSettings: arguments.context.currentContentSettings.with { $0 }) || arguments.presentationData.isPreview {
                         dateReactionsAndPeers = ([], [])
                     }
                     for attribute in arguments.message.attributes {
@@ -894,7 +894,13 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         edited = true
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings, associatedData: arguments.associatedData)
+                    let dateFormat: MessageTimestampStatusFormat
+                    if arguments.presentationData.isPreview {
+                        dateFormat = .full
+                    } else {
+                        dateFormat = .regular
+                    }
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings, format: dateFormat, associatedData: arguments.associatedData)
                     
                     let displayReactionsInline = shouldDisplayInlineDateReactions(message: arguments.message, isPremium: arguments.associatedData.isPremium, forceInline: arguments.associatedData.forceInlineReactions)
                     var reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings?
@@ -913,8 +919,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: arguments.context,
                         presentationData: arguments.presentationData,
-                        edited: edited,
-                        impressionCount: viewCount,
+                        edited: edited && !arguments.presentationData.isPreview,
+                        impressionCount: !arguments.presentationData.isPreview ? viewCount : nil,
                         dateText: dateText,
                         type: statusType,
                         layoutInput: statusLayoutInput,
@@ -948,7 +954,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
                 }
                 
+                var statusHeightAddition: CGFloat = 0.0
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    if statusSuggestedWidthAndContinue.0 > minLayoutWidth {
+                        statusHeightAddition = 6.0
+                    }
                     minLayoutWidth = max(minLayoutWidth, statusSuggestedWidthAndContinue.0)
                 }
                 
@@ -1014,6 +1024,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 statusOffset = -10.0
                                 fittedLayoutSize.height += statusOffset
                             }
+                            fittedLayoutSize.height += statusHeightAddition
                         }
                     }
                     
@@ -1217,7 +1228,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 if textString != nil {
                                     statusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width - 6.0 - statusSizeAndApply.0.width, y: textFrame.maxY + 4.0), size: statusSizeAndApply.0)
                                 } else {
-                                    statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
+                                    statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset + statusHeightAddition), size: statusSizeAndApply.0)
                                 }
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.dateAndStatusNode.frame = statusFrame
@@ -1694,7 +1705,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     image = playerAlbumArt(postbox: context.account.postbox, engine: context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
                 }
             }
-            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
+            let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor: presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
+            if presentationData.isPreview {
+                statusNode.displaysAsynchronously = false
+            }
             self.statusNode = statusNode
 
             self.statusContainerNode.contentNode.insertSubnode(statusNode, at: 0)
@@ -1781,7 +1795,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             cutoutFrame.origin.y += 6.0
         }
         
-        if streamingState == .none && self.selectionNode == nil {
+        if (streamingState == .none && self.selectionNode == nil) || presentationData.isPreview {
             self.statusNode?.setCutout(nil, animated: animated)
         } else if let statusNode = self.statusNode, (self.iconNode?.isHidden ?? true) {
             statusNode.setCutout(cutoutFrame, animated: true)

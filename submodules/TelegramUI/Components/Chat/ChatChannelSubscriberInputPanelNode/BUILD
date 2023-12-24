@@ -22,6 +22,7 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
+        "//submodules/AccountContext",
     ],
     visibility = [
         "//visibility:public",

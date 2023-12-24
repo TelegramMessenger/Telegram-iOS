@@ -1130,6 +1130,8 @@ public final class SolidRoundedButtonView: UIView {
                     strongSelf.iconNode.alpha = 0.55
                     strongSelf.animationNode?.layer.removeAnimation(forKey: "opacity")
                     strongSelf.animationNode?.alpha = 0.55
+                    strongSelf.badgeNode?.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.badgeNode?.alpha = 0.55
                 } else {
                     if strongSelf.buttonBackgroundNode.alpha > 0.0 {
                         strongSelf.buttonBackgroundNode.alpha = 1.0
@@ -1142,6 +1144,8 @@ public final class SolidRoundedButtonView: UIView {
                         strongSelf.iconNode.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                         strongSelf.animationNode?.alpha = 1.0
                         strongSelf.animationNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
+                        strongSelf.badgeNode?.alpha = 1.0
+                        strongSelf.badgeNode?.layer.animateAlpha(from: 0.55, to: 1.0, duration: 0.2)
                     }
                 }
             }
@@ -1461,11 +1465,33 @@ public final class SolidRoundedButtonView: UIView {
         let spacingOffset: CGFloat = 9.0
         let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
         let iconSpacing: CGFloat = self.iconSpacing
+        let badgeSpacing: CGFloat = 6.0
         
         var contentWidth: CGFloat = titleSize.width
         if !iconSize.width.isZero {
             contentWidth += iconSize.width + iconSpacing
         }
+        
+        var badgeSize: CGSize = .zero
+        if let badge = self.badge {
+            let badgeNode: BadgeNode
+            if let current = self.badgeNode {
+                badgeNode = current
+            } else {
+                badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
+                badgeNode.alpha = self.titleNode.alpha == 0.0 ? 0.0 : 1.0
+                self.badgeNode = badgeNode
+                self.addSubnode(badgeNode)
+            }
+            badgeNode.text = badge
+            badgeSize = badgeNode.update(CGSize(width: 100.0, height: 100.0))
+            
+            contentWidth += badgeSize.width + badgeSpacing
+        } else if let badgeNode = self.badgeNode {
+            self.badgeNode = nil
+            badgeNode.removeFromSupernode()
+        }
+        
         var nextContentOrigin = floor((buttonFrame.width - contentWidth) / 2.0)
       
         let iconFrame: CGRect
@@ -1484,6 +1510,7 @@ public final class SolidRoundedButtonView: UIView {
                 }
                 iconFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
         }
+        let badgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + badgeSpacing, y: titleFrame.minY + floor((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize)
         
         transition.updateFrame(view: self.iconNode, frame: iconFrame)
         if let animationNode = self.animationNode {
@@ -1491,22 +1518,8 @@ public final class SolidRoundedButtonView: UIView {
         }
         transition.updateFrame(view: self.titleNode, frame: titleFrame)
         
-        if let badge = self.badge {
-            let badgeNode: BadgeNode
-            if let current = self.badgeNode {
-                badgeNode = current
-            } else {
-                badgeNode = BadgeNode(fillColor: self.theme.foregroundColor, strokeColor: .clear, textColor: self.theme.backgroundColor)
-                badgeNode.alpha = self.titleNode.alpha == 0.0 ? 0.0 : 1.0
-                self.badgeNode = badgeNode
-                self.addSubnode(badgeNode)
-            }
-            badgeNode.text = badge
-            let badgeSize = badgeNode.update(CGSize(width: 100.0, height: 100.0))
-            transition.updateFrame(node: badgeNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + floor((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize))
-        } else if let badgeNode = self.badgeNode {
-            self.badgeNode = nil
-            badgeNode.removeFromSupernode()
+        if let badgeNode = self.badgeNode {
+            transition.updateFrame(node: badgeNode, frame: badgeFrame)
         }
         
         if self.subtitle != self.subtitleNode.attributedText?.string {

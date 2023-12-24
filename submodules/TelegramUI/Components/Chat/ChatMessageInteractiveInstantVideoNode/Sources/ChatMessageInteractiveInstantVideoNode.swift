@@ -268,6 +268,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     instantVideoBackgroundImage = nil
                     ignoreHeaders = true
             }
+            if item.presentationData.isPreview {
+                ignoreHeaders = true
+            }
             
             if item.presentationData.theme != currentItem?.presentationData.theme {
                 updatedInstantVideoBackgroundImage = instantVideoBackgroundImage
@@ -523,13 +526,23 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, associatedData: item.associatedData)
+            let dateFormat: MessageTimestampStatusFormat
+            if item.presentationData.isPreview {
+                dateFormat = .full
+            } else {
+                dateFormat = .regular
+            }
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData, ignoreAuthor: item.presentationData.isPreview)
             
             let maxDateAndStatusWidth: CGFloat
             if case .bubble = statusDisplayType {
                 maxDateAndStatusWidth = width
             } else {
-                maxDateAndStatusWidth = width - videoFrame.midX - 85.0
+                if item.presentationData.isPreview {
+                    maxDateAndStatusWidth = width - videoFrame.midX - 65.0
+                } else {
+                    maxDateAndStatusWidth = width - videoFrame.midX - 85.0
+                }
             }
             
             var isReplyThread = false
@@ -540,8 +553,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let statusSuggestedWidthAndContinue = makeDateAndStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                 context: item.context,
                 presentationData: item.presentationData,
-                edited: edited && !sentViaBot,
-                impressionCount: viewCount,
+                edited: edited && !sentViaBot && !item.presentationData.isPreview,
+                impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                 dateText: dateText,
                 type: statusType,
                 layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
@@ -570,6 +583,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 contentSize.height += dateAndStatusSize.height + 2.0
                 contentSize.width = max(contentSize.width, dateAndStatusSize.width)
                 dateAndStatusOverflow = true
+            } else if item.presentationData.isPreview {
+                contentSize.width += 44.0
             }
             
             let result = ChatMessageInstantVideoItemLayoutResult(contentSize: contentSize, overflowLeft: 0.0, overflowRight: dateAndStatusOverflow ? 0.0 : (max(0.0, floorToScreenPixels(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width)))
@@ -667,7 +682,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     let durationTextColor: UIColor
                     switch statusDisplayType {
                         case .free:
-                             let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                            let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
                             durationTextColor = serviceColor.primaryText
                             durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
                         case .bubble:
@@ -686,9 +701,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             previousVideoNode = strongSelf.videoNode
                             if let durationBlurColor = durationBlurColor {
                                 if let durationBackgroundNode = strongSelf.durationBackgroundNode {
-                                    durationBackgroundNode.updateColor(color: durationBlurColor.0, enableBlur: durationBlurColor.1, transition: .immediate)
+                                    durationBackgroundNode.updateColor(color: durationBlurColor.0, enableBlur: durationBlurColor.1 && !item.presentationData.isPreview, transition: .immediate)
                                 } else {
-                                    let durationBackgroundNode = NavigationBackgroundNode(color: durationBlurColor.0, enableBlur: durationBlurColor.1)
+                                    let durationBackgroundNode = NavigationBackgroundNode(color: durationBlurColor.0, enableBlur: durationBlurColor.1 && !item.presentationData.isPreview)
                                     strongSelf.durationBackgroundNode = durationBackgroundNode
                                     strongSelf.addSubnode(durationBackgroundNode)
                                 }
@@ -750,6 +765,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     strongSelf.insertSubnode(strongSelf.secretVideoPlaceholderBackground, belowSubnode: videoNode)
                                     strongSelf.insertSubnode(strongSelf.secretVideoPlaceholder, belowSubnode: videoNode)
                                 }
+                            } else if item.presentationData.isPreview {
+                                let updatedSecretPlaceholderSignal = chatMessageVideo(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), videoReference: .message(message: MessageReference(item.message), media: telegramFile), synchronousLoad: true)
+                                strongSelf.secretVideoPlaceholder.displaysAsynchronously = false
+                                strongSelf.secretVideoPlaceholder.setSignal(updatedSecretPlaceholderSignal, attemptSynchronously: true)
+                                if strongSelf.secretVideoPlaceholder.supernode == nil {
+                                    strongSelf.insertSubnode(strongSelf.secretVideoPlaceholder, aboveSubnode: videoNode)
+                                }
                             }
                             
                             updatedPlayerStatusSignal = videoNode.status
@@ -785,7 +807,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                                         
                     var displayTranscribe = false
-                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
+                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free && !item.presentationData.isPreview {
                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
                         if item.associatedData.isPremium {
                             displayTranscribe = true
@@ -861,8 +883,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let durationNode = strongSelf.durationNode {
                         var durationFrame = CGRect(origin: CGPoint(x: displayVideoFrame.midX - 56.0 - 25.0 * scaleProgress, y: displayVideoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
+                        if item.presentationData.isPreview {
+                            durationFrame.origin.x -= 9.0
+                        }
                         
-                        durationNode.isSeen = !notConsumed
+                        durationNode.isSeen = !notConsumed || item.presentationData.isPreview
                         let size = durationNode.size
                         if let durationBackgroundNode = strongSelf.durationBackgroundNode, size.width > 1.0 {
                             durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
@@ -892,8 +917,12 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize), completion: nil)
                     case let .constrained(_, right):
                         var dateAndStatusFrame = CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
-                        if incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, displayTranscribe {
-                            dateAndStatusFrame.origin.x = audioTranscriptionButton.frame.maxX + 7.0
+                        if incoming {
+                            if let audioTranscriptionButton = strongSelf.audioTranscriptionButton, displayTranscribe {
+                                dateAndStatusFrame.origin.x = audioTranscriptionButton.frame.maxX + 7.0
+                            } else if item.presentationData.isPreview {
+                                dateAndStatusFrame.origin.x = displayVideoFrame.midX + 64.0
+                            }
                         }
                         animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     }
@@ -1140,7 +1169,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return
         }
         
-        let displayMute: Bool
+        var displayMute: Bool
         switch status.mediaStatus {
             case let .fetchStatus(fetchStatus):
                 switch fetchStatus {
@@ -1151,6 +1180,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             case .playbackStatus:
                 displayMute = false
+        }
+        if item.presentationData.isPreview {
+            displayMute = false
         }
         if displayMute != (!self.infoBackgroundNode.alpha.isZero) {
             if displayMute {
@@ -1187,10 +1219,14 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         } else if isBuffering ?? false {
             progressRequired = true
         }
+        if item.presentationData.isPreview {
+            progressRequired = true
+        }
         
         if progressRequired {
             if self.statusNode == nil {
-                let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor)
+                let statusNode = RadialStatusNode(backgroundNodeColor: item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor, isPreview: item.presentationData.isPreview)
+                statusNode.displaysAsynchronously = !item.presentationData.isPreview
                 self.isUserInteractionEnabled = false
                 self.statusNode = statusNode
                 self.addSubnode(statusNode)
@@ -1264,6 +1300,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     state = .none
                 }
         }
+        if item.presentationData.isPreview {
+            state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+        }
         if let statusNode = self.statusNode {
             if state == .none {
                 self.statusNode = nil
@@ -1317,7 +1356,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             self.durationNode?.status = .single(nil)
             self.videoNode?.isHidden = isSecretMedia
             self.secretVideoPlaceholderBackground.isHidden = !isSecretMedia
-            self.secretVideoPlaceholder.isHidden = !isSecretMedia
+            self.secretVideoPlaceholder.isHidden = !isSecretMedia && !item.presentationData.isPreview
         }
     }
     

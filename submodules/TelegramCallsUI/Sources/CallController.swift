@@ -50,6 +50,9 @@ public final class CallController: ViewController {
         return self._ready
     }
     
+    private let isDataReady = Promise<Bool>(false)
+    private let isContentsReady = Promise<Bool>(false)
+    
     private let sharedContext: SharedAccountContext
     private let account: Account
     public let call: PresentationCall
@@ -73,6 +76,8 @@ public final class CallController: ViewController {
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
+    public var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
+    
     public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
         self.account = account
@@ -82,6 +87,14 @@ public final class CallController: ViewController {
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self._ready.set(combineLatest(queue: .mainQueue(), self.isDataReady.get(), self.isContentsReady.get())
+        |> map { a, b -> Bool in
+            return a && b
+        }
+        |> filter { $0 }
+        |> take(1)
+        |> timeout(2.0, queue: .mainQueue(), alternate: .single(true)))
         
         self.isOpaqueWhenInOverlay = true
         
@@ -135,10 +148,26 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        if self.sharedContext.immediateExperimentalUISettings.callUIV2 {
-            self.displayNode = CallControllerNodeV2(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
-        } else {
+        var useV2 = self.call.context.sharedContext.immediateExperimentalUISettings.callV2
+        if let data = self.call.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_callui_v2"] {
+            useV2 = false
+        }
+        
+        if !useV2 {
             self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+            self.isContentsReady.set(.single(true))
+        } else {
+            let displayNode = CallControllerNodeV2(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), easyDebugAccess: self.easyDebugAccess, call: self.call)
+            self.displayNode = displayNode
+            self.isContentsReady.set(displayNode.isReady.get())
+            
+            displayNode.restoreUIForPictureInPicture = { [weak self] completion in
+                guard let self, let restoreUIForPictureInPicture = self.restoreUIForPictureInPicture else {
+                    completion(false)
+                    return
+                }
+                restoreUIForPictureInPicture(completion)
+            }
         }
         self.displayNodeDidLoad()
         
@@ -299,8 +328,11 @@ public final class CallController: ViewController {
         }
         
         self.controllerNode.dismissedInteractively = { [weak self] in
-            self?.didPlayPresentationAnimation = false
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            guard let self else {
+                return
+            }
+            self.didPlayPresentationAnimation = false
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
         self.peerDisposable = (combineLatest(self.account.postbox.peerView(id: self.account.peerId) |> take(1), self.account.postbox.peerView(id: self.call.peerId), self.sharedContext.activeAccountsWithInfo |> take(1))
@@ -309,7 +341,7 @@ public final class CallController: ViewController {
                 if let accountPeer = accountView.peers[accountView.peerId], let peer = view.peers[view.peerId] {
                     strongSelf.peer = peer
                     strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.count > 1)
-                    strongSelf._ready.set(.single(true))
+                    strongSelf.isDataReady.set(.single(true))
                 }
             }
         })

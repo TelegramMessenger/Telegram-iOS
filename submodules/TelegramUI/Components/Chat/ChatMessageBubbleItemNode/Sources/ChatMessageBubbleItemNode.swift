@@ -102,6 +102,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     var needReactions = true
     
+    let hideAllAdditionalInfo = item.presentationData.isPreview
+    
     var hasSeparateCommentsButton = false
     
     outer: for (message, itemAttributes) in item.content {
@@ -221,6 +223,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if let _ = media as? TelegramMediaGiveaway {
                 result.append((message, ChatMessageGiveawayBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
+            } else if let _ = media as? TelegramMediaGiveawayResults {
+                result.append((message, ChatMessageGiveawayBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                needReactions = false
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
                 needReactions = false
@@ -310,13 +315,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         needReactions = false
     }
     
-    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
+    if !isAction && !hasSeparateCommentsButton && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) && !hideAllAdditionalInfo {
         if hasCommentButton(item: item) {
             result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .footer, neighborSpacing: .default)))
         }
     }
     
-    if !reactionsAreInline, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
+    if !reactionsAreInline && !hideAllAdditionalInfo, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
         if result.last?.1 == ChatMessageTextBubbleContentNode.self {
         } else {
             if result.last?.1 == ChatMessagePollBubbleContentNode.self ||
@@ -1383,7 +1388,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 
                 var allowAuthor = incoming
                 
-                if let author = firstMessage.author, author is TelegramChannel, !incoming {
+                if let author = firstMessage.author, author is TelegramChannel, !incoming || item.presentationData.isPreview {
                     allowAuthor = true
                     ignoreNameHiding = true
                 }
@@ -1882,7 +1887,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         } else {
             bubbleReactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
         }
-        if !bubbleReactions.reactions.isEmpty {
+        if !bubbleReactions.reactions.isEmpty && !item.presentationData.isPreview {
             bottomNodeMergeStatus = .Both
         }
         
@@ -1948,11 +1953,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 authorNameColor = color
 
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
+                    if effectiveAuthor is TelegramChannel, let emojiStatus = effectiveAuthor.emojiStatus {
+                        currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: color.withMultipliedAlpha(0.4), loopMode: .count(2))
+                    }
                 } else if effectiveAuthor.isScam {
                     currentCredibilityIcon = .text(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                 } else if effectiveAuthor.isFake {
                     currentCredibilityIcon = .text(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
-                } else if let user = effectiveAuthor as? TelegramUser, let emojiStatus = user.emojiStatus {
+                } else if let emojiStatus = effectiveAuthor.emojiStatus {
                     currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: color.withMultipliedAlpha(0.4), loopMode: .count(2))
                 } else if effectiveAuthor.isVerified {
                     currentCredibilityIcon = .verified(fillColor: item.presentationData.theme.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
@@ -2054,7 +2062,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 let dateFormat: MessageTimestampStatusFormat
-                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
+                if item.presentationData.isPreview {
+                    dateFormat = .full
+                } else if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
@@ -2082,8 +2092,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let statusSuggestedWidthAndContinue = mosaicStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                     context: item.context,
                     presentationData: item.presentationData,
-                    edited: edited,
-                    impressionCount: viewCount,
+                    edited: edited && !item.presentationData.isPreview,
+                    impressionCount: !item.presentationData.isPreview ? viewCount : nil,
                     dateText: dateText,
                     type: statusType,
                     layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
@@ -2389,14 +2399,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var maxContentWidth: CGFloat = headerSize.width
         
         var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
-        if let replyMarkup = replyMarkup {
+        if let replyMarkup = replyMarkup, !item.presentationData.isPreview {
             let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
         }
         
         var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
-        if !bubbleReactions.reactions.isEmpty {
+        if !bubbleReactions.reactions.isEmpty && !item.presentationData.isPreview {
             var maximumNodeWidth = maximumNodeWidth
             if hasInstantVideo {
                 maximumNodeWidth = min(309, baseWidth - 84)
@@ -5453,5 +5463,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         return (image, self.backgroundNode.frame)
+    }
+    
+    public func isServiceLikeMessage() -> Bool {
+        for contentNode in self.contentNodes {
+            if contentNode is ChatMessageActionBubbleContentNode {
+                return true
+            }
+        }
+        return false
     }
 }

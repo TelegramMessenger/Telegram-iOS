@@ -416,6 +416,9 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatQrCodeScreen",
         "//submodules/UIKitRuntimeUtils",
+        "//submodules/TelegramUI/Components/SavedMessages/SavedMessagesScreen",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
+        "//submodules/TelegramUI/Components/Settings/WallpaperGridScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

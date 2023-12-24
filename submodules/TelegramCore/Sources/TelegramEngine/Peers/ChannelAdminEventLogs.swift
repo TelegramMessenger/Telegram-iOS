@@ -87,8 +87,10 @@ public enum AdminLogEventAction {
     case pinTopic(prevInfo: EngineMessageHistoryThread.Info?, newInfo: EngineMessageHistoryThread.Info?)
     case toggleForum(isForum: Bool)
     case toggleAntiSpam(isEnabled: Bool)
-    case changeNameColor(prev: PeerNameColor, new: PeerNameColor)
-    case changeBackgroundEmojiId(prev: Int64?, new: Int64?)
+    case changeNameColor(prevColor: PeerNameColor, prevIcon: Int64?, newColor: PeerNameColor, newIcon: Int64?)
+    case changeProfileColor(prevColor: PeerNameColor?, prevIcon: Int64?, newColor: PeerNameColor?, newIcon: Int64?)
+    case changeWallpaper(prev: TelegramWallpaper?, new: TelegramWallpaper?)
+    case changeStatus(prev: PeerEmojiStatus?, new: PeerEmojiStatus?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -202,16 +204,16 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     case .messageEmpty:
                                         action = .updatePinned(nil)
                                     default:
-                                        if let message = StoreMessage(apiMessage: new, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: new, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .updatePinned(rendered)
                                         }
                                     }
                                 case let .channelAdminLogEventActionEditMessage(prev, new):
-                                    if let prev = StoreMessage(apiMessage: prev, peerIsForum: peer.isForum), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new, peerIsForum: peer.isForum), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
+                                    if let prev = StoreMessage(apiMessage: prev, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
                                         action = .editMessage(prev: prevRendered, new: newRendered)
                                     }
                                 case let .channelAdminLogEventActionDeleteMessage(message):
-                                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                         action = .deleteMessage(rendered)
                                     }
                                 case .channelAdminLogEventActionParticipantJoin:
@@ -245,7 +247,7 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                 case let .channelAdminLogEventActionDefaultBannedRights(prevBannedRights, newBannedRights):
                                     action = .updateDefaultBannedRights(prev: TelegramChatBannedRights(apiBannedRights: prevBannedRights), new: TelegramChatBannedRights(apiBannedRights: newBannedRights))
                                 case let .channelAdminLogEventActionStopPoll(message):
-                                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                         action = .pollStopped(rendered)
                                     }
                                 case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
@@ -284,7 +286,7 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                 case let .channelAdminLogEventActionToggleNoForwards(new):
                                     action = .toggleCopyProtection(boolFromApiValue(new))
                                 case let .channelAdminLogEventActionSendMessage(message):
-                                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                    if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                         action = .sendMessage(rendered)
                                     }
                                 case let .channelAdminLogEventActionChangeAvailableReactions(prevValue, newValue):
@@ -348,10 +350,70 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     action = .toggleForum(isForum: newValue == .boolTrue)
                                 case let .channelAdminLogEventActionToggleAntiSpam(newValue):
                                     action = .toggleAntiSpam(isEnabled: newValue == .boolTrue)
-                                case let .channelAdminLogEventActionChangeColor(prevValue, newValue):
-                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
-                                case let .channelAdminLogEventActionChangeBackgroundEmoji(prevValue, newValue):
-                                    action = .changeBackgroundEmojiId(prev: prevValue, new: newValue)
+                                case let .channelAdminLogEventActionChangePeerColor(prevValue, newValue):
+                                    var prevColorIndex: Int32
+                                    var prevEmojiId: Int64?
+                                    switch prevValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        prevColorIndex = color ?? 0
+                                        prevEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    var newColorIndex: Int32
+                                    var newEmojiId: Int64?
+                                    switch newValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        newColorIndex = color ?? 0
+                                        newEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    action = .changeNameColor(prevColor: PeerNameColor(rawValue: prevColorIndex), prevIcon: prevEmojiId, newColor: PeerNameColor(rawValue: newColorIndex), newIcon: newEmojiId)
+                                case let .channelAdminLogEventActionChangeProfilePeerColor(prevValue, newValue):
+                                    var prevColorIndex: Int32?
+                                    var prevEmojiId: Int64?
+                                    switch prevValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        prevColorIndex = color
+                                        prevEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    var newColorIndex: Int32?
+                                    var newEmojiId: Int64?
+                                    switch newValue {
+                                    case let .peerColor(_, color, backgroundEmojiIdValue):
+                                        newColorIndex = color
+                                        newEmojiId = backgroundEmojiIdValue
+                                    }
+                                    
+                                    action = .changeProfileColor(prevColor: prevColorIndex.flatMap(PeerNameColor.init(rawValue:)), prevIcon: prevEmojiId, newColor: newColorIndex.flatMap(PeerNameColor.init(rawValue:)), newIcon: newEmojiId)
+                                case let .channelAdminLogEventActionChangeWallpaper(prevValue, newValue):
+                                    let prev: TelegramWallpaper?
+                                    if case let .wallPaperNoFile(_, _, settings) = prevValue {
+                                        if settings == nil {
+                                            prev = nil
+                                        } else if case let .wallPaperSettings(flags, _, _, _, _, _, _, _) = settings, flags == 0 {
+                                            prev = nil
+                                        } else {
+                                            prev = TelegramWallpaper(apiWallpaper: prevValue)
+                                        }
+                                    } else {
+                                        prev = TelegramWallpaper(apiWallpaper: prevValue)
+                                    }
+                                    let new: TelegramWallpaper?
+                                    if case let .wallPaperNoFile(_, _, settings) = newValue {
+                                        if settings == nil {
+                                            new = nil
+                                        } else if case let .wallPaperSettings(flags, _, _, _, _, _, _, _) = settings, flags == 0 {
+                                            new = nil
+                                        } else {
+                                            new = TelegramWallpaper(apiWallpaper: newValue)
+                                        }
+                                    } else {
+                                        new = TelegramWallpaper(apiWallpaper: newValue)
+                                    }
+                                    action = .changeWallpaper(prev: prev, new: new)
+                                case let .channelAdminLogEventActionChangeEmojiStatus(prevValue, newValue):
+                                    action = .changeStatus(prev: PeerEmojiStatus(apiStatus: prevValue), new: PeerEmojiStatus(apiStatus: newValue))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

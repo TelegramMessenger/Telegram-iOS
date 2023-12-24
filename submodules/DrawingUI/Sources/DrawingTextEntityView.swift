@@ -34,6 +34,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     
     var textChanged: () -> Void = {}
     var replaceWithImage: (UIImage, Bool) -> Void = { _, _ in }
+    var replaceWithAnimatedImage: (Data, UIImage) -> Void = { _, _ in }
     
     init(context: AccountContext, entity: DrawingTextEntity) {
         self.blurredBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.25), enableBlur: true)
@@ -103,8 +104,13 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         var images: [UIImage] = []
         var isPNG = false
         var isMemoji = false
+        var animatedImageData: Data?
         for item in pasteboard.items {
-            if let image = item["com.apple.png-sticker"] as? UIImage {
+            print(item.keys)
+            if let data = item["public.heics"] as? Data, let image = item[kUTTypePNG as String] as? UIImage {
+                animatedImageData = data
+                images.append(image)
+            } else if let imageData = item["com.apple.png-sticker"] as? Data, let image = UIImage(data: imageData) {
                 images.append(image)
                 isPNG = true
                 isMemoji = true
@@ -119,6 +125,12 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             } else if let image = item[kUTTypeGIF as String] as? UIImage {
                 images.append(image)
             }
+        }
+        
+        if let animatedImageData, let image = images.first {
+            self.endEditing(reset: true)
+            self.replaceWithAnimatedImage(animatedImageData, image)
+            return false
         }
         
         if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {

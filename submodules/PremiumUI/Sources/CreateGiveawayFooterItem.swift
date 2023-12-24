@@ -97,8 +97,8 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
         if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
             totalPanelHeight = panelHeight + insets.bottom
         } else {
+            totalPanelHeight = panelHeight + insets.bottom
             panelHeight += insets.bottom
-            totalPanelHeight = panelHeight
         }
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - totalPanelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
@@ -155,7 +155,7 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: panelFrame.origin, size: CGSize(width: panelFrame.width, height: UIScreenPixel)))
         
-        return panelHeight
+        return totalPanelHeight
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

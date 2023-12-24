@@ -100,11 +100,13 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
+    let openPremiumGift: () -> Void
     let openActiveSessions: () -> Void
     let performActiveSessionAction: (NewSessionReview, Bool) -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
+    let dismissNotice: (ChatListNotice) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -150,11 +152,13 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
+        openPremiumGift: @escaping () -> Void,
         openActiveSessions: @escaping () -> Void,
         performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
-        openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
+        openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void,
+        dismissNotice: @escaping (ChatListNotice) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -187,11 +191,13 @@ public final class ChatListNodeInteraction {
         self.openStorageManagement = openStorageManagement
         self.openPasswordSetup = openPasswordSetup
         self.openPremiumIntro = openPremiumIntro
+        self.openPremiumGift = openPremiumGift
         self.openActiveSessions = openActiveSessions
         self.performActiveSessionAction = performActiveSessionAction
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
         self.openStories = openStories
+        self.dismissNotice = dismissNotice
     }
 }
 
@@ -698,7 +704,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     hideChatListContacts(context: context)
                 } : nil), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
                     switch action {
                     case .activate:
                         switch notice {
@@ -708,14 +714,13 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .xmasPremiumGift:
+                            nodeInteraction?.openPremiumGift()
                         case .reviewLogin:
                             break
                         }
                     case .hide:
-                        switch notice {
-                        default:
-                            break
-                        }
+                        nodeInteraction?.dismissNotice(notice)
                     case let .buttonChoice(isPositive):
                         switch notice {
                         case let .reviewLogin(newSessionReview, _):
@@ -1018,7 +1023,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     hideChatListContacts(context: context)
                 } : nil), directionHint: entry.directionHint)
             case let .Notice(presentationData, notice):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListStorageInfoItem(context: context, theme: presentationData.theme, strings: presentationData.strings, notice: notice, action: { [weak nodeInteraction] action in
                     switch action {
                     case .activate:
                         switch notice {
@@ -1028,14 +1033,13 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .xmasPremiumGift:
+                            nodeInteraction?.openPremiumGift()
                         case .reviewLogin:
                             break
                         }
                     case .hide:
-                        switch notice {
-                        default:
-                            break
-                        }
+                        nodeInteraction?.dismissNotice(notice)
                     case let .buttonChoice(isPositive):
                         switch notice {
                         case let .reviewLogin(newSessionReview, _):
@@ -1604,6 +1608,12 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
+        }, openPremiumGift: { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
+            self.push?(controller)
         }, openActiveSessions: { [weak self] in
             guard let self else {
                 return
@@ -1690,6 +1700,20 @@ public final class ChatListNode: ListView {
                 return
             }
             self.openStories?(subject, itemNode)
+        }, dismissNotice: { [weak self] notice in
+            guard let self else {
+                return
+            }
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            switch notice {
+            case .xmasPremiumGift:
+                let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .xmasPremiumGift).startStandalone()
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_PremiumGiftInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                    return true
+                }))
+            default:
+                break
+            }
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -1793,7 +1817,9 @@ public final class ChatListNode: ListView {
                         return .single(.setupPassword)
                     }
                 }
-                if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
+                if suggestions.contains(.xmasPremiumGift) {
+                    return .single(.xmasPremiumGift)
+                } else if suggestions.contains(.annualPremium) || suggestions.contains(.upgradePremium) || suggestions.contains(.restorePremium), let inAppPurchaseManager = context.inAppPurchaseManager {
                     return inAppPurchaseManager.availableProducts
                     |> map { products -> ChatListNotice? in
                         if products.count > 1 {
@@ -2606,6 +2632,8 @@ public final class ChatListNode: ListView {
                             continue
                         }
                         threadId = threadIdValue
+                    case .savedMessagesChats:
+                        return
                     }
                     var cachedChatResult: [(EnginePeer, PeerInputActivity)] = []
                     for (peerId, activity) in activities {
@@ -2656,6 +2684,8 @@ public final class ChatListNode: ListView {
                                 continue
                             }
                             itemId = ChatListNodePeerInputActivities.ItemId(peerId: chatPeerId.peerId, threadId: threadIdValue)
+                        case .savedMessagesChats:
+                            return [:]
                         }
                         
                         var chatResult: [(EnginePeer, PeerInputActivity)] = []
@@ -2882,6 +2912,8 @@ public final class ChatListNode: ListView {
                 } else {
                     return .single(false)
                 }
+            case .savedMessagesChats:
+                return .single(false)
             }
         }
         var startedScrollingWithCanExpandHiddenItems = false
@@ -3195,8 +3227,17 @@ public final class ChatListNode: ListView {
                     if case .chatList = strongSelf.mode {
                         let entryCount = transition.chatListView.filteredEntries.count
                         if entryCount >= 1 {
-                            if case let .index(index) = transition.chatListView.filteredEntries[entryCount - 1].sortIndex, case let .chatList(chatListIndex) = index, chatListIndex.pinningIndex != nil {
-                                pinnedOverscroll = true
+                            for i in 0 ..< 2 {
+                                if entryCount - 1 - i < 0 {
+                                    continue
+                                }
+                                if case .PeerEntry = transition.chatListView.filteredEntries[entryCount - 1 - i] {
+                                } else {
+                                    continue
+                                }
+                                if case let .index(index) = transition.chatListView.filteredEntries[entryCount - 1 - i].sortIndex, case let .chatList(chatListIndex) = index, chatListIndex.pinningIndex != nil {
+                                    pinnedOverscroll = true
+                                }
                             }
                         }
                     }
@@ -3788,6 +3829,8 @@ public final class ChatListNode: ListView {
                         self.threadSelectionPanState = (selecting, threadId, [])
                         self.interaction?.toggleThreadsSelection([threadId], selecting)
                     }
+                case .savedMessagesChats:
+                    break
                 }
             case .changed:
                 self.handlePanSelection(location: location)
@@ -3894,6 +3937,8 @@ public final class ChatListNode: ListView {
                     }
                 }
             }
+        case .savedMessagesChats:
+            break
         }
         guard hasState else {
             return

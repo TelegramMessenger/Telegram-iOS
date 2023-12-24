@@ -29,7 +29,8 @@ public final class ViewController: UIViewController {
         shortName: "Emma",
         avatarImage: UIImage(named: "test"),
         audioOutput: .internalSpeaker,
-        isMicrophoneMuted: false,
+        isLocalAudioMuted: false,
+        isRemoteAudioMuted: false,
         localVideo: nil,
         remoteVideo: nil,
         isRemoteBatteryLow: false
@@ -60,11 +61,11 @@ public final class ViewController: UIViewController {
             }
             
             switch self.callState.lifecycleState {
-            case .connecting:
+            case .requesting:
                 self.callState.lifecycleState = .ringing
             case .ringing:
-                self.callState.lifecycleState = .exchangingKeys
-            case .exchangingKeys:
+                self.callState.lifecycleState = .connecting
+            case .connecting:
                 self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: Date().timeIntervalSince1970,
                     signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
@@ -73,6 +74,12 @@ public final class ViewController: UIViewController {
             case var .active(activeState):
                 activeState.signalInfo.quality = activeState.signalInfo.quality == 1.0 ? 0.1 : 1.0
                 self.callState.lifecycleState = .active(activeState)
+            case .reconnecting:
+                self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
+                    startTime: Date().timeIntervalSince1970,
+                    signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
+                    emojiKey: ["😂", "😘", "😍", "😊"]
+                ))
             case .terminated:
                 self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: Date().timeIntervalSince1970,
@@ -112,8 +119,8 @@ public final class ViewController: UIViewController {
             }
             if let input = self.callState.localVideo as? FileVideoSource {
                 input.sourceId = input.sourceId == 0 ? 1 : 0
-                input.fixedRotationAngle = input.sourceId == 0 ? Float.pi * 0.0 : Float.pi * 0.5
-                input.sizeMultiplicator = input.sourceId == 0 ? CGPoint(x: 1.0, y: 1.0) : CGPoint(x: 1.5, y: 1.0)
+                //input.fixedRotationAngle = input.sourceId == 0 ? Float.pi * 0.5 : Float.pi * 0.5
+                //input.sizeMultiplicator = input.sourceId == 0 ? CGPoint(x: 1.0, y: 1.0) : CGPoint(x: 1.0, y: 0.5)
             }
         }
         callScreenView.videoAction = { [weak self] in
@@ -121,7 +128,7 @@ public final class ViewController: UIViewController {
                 return
             }
             if self.callState.localVideo == nil {
-                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test3", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.0)
+                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test3", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.5)
             } else {
                 self.callState.localVideo = nil
             }
@@ -129,7 +136,7 @@ public final class ViewController: UIViewController {
         }
         callScreenView.microhoneMuteAction = {
             if self.callState.remoteVideo == nil {
-                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test4", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 0.0)
+                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test4", withExtension: "mp4")!, fixedRotationAngle: Float.pi * 1.0)
             } else {
                 self.callState.remoteVideo = nil
             }
@@ -139,33 +146,41 @@ public final class ViewController: UIViewController {
             guard let self else {
                 return
             }
-            self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0))
+            self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0, reason: .hangUp))
             self.callState.remoteVideo = nil
             self.callState.localVideo = nil
+            self.callState.isLocalAudioMuted = false
+            self.callState.isRemoteBatteryLow = false
             self.update(transition: .spring(duration: 0.4))
         }
         callScreenView.backAction = { [weak self] in
             guard let self else {
                 return
             }
-            self.callState.isMicrophoneMuted = !self.callState.isMicrophoneMuted
+            self.callState.isLocalAudioMuted = !self.callState.isLocalAudioMuted
             self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.closeAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.callScreenView?.speakerAction?()
         }
     }
     
     private func update(transition: Transition) {
         if let (size, insets) = self.currentLayout {
-            self.update(size: size, insets: insets, transition: transition)
+            self.update(size: size, insets: insets, interfaceOrientation: self.interfaceOrientation, transition: transition)
         }
     }
     
-    private func update(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
+    private func update(size: CGSize, insets: UIEdgeInsets, interfaceOrientation: UIInterfaceOrientation, transition: Transition) {
         guard let callScreenView = self.callScreenView else {
             return
         }
         
         transition.setFrame(view: callScreenView, frame: CGRect(origin: CGPoint(), size: size))
-        callScreenView.update(size: size, insets: insets, screenCornerRadius: UIScreen.main.displayCornerRadius, state: self.callState, transition: transition)
+        callScreenView.update(size: size, insets: insets, interfaceOrientation: interfaceOrientation, screenCornerRadius: UIScreen.main.displayCornerRadius, state: self.callState, transition: transition)
     }
     
     override public func viewWillLayoutSubviews() {
@@ -182,7 +197,7 @@ public final class ViewController: UIViewController {
         if let currentLayout = self.currentLayout, currentLayout == (size, insets) {
         } else {
             self.currentLayout = (size, insets)
-            self.update(size: size, insets: insets, transition: transition)
+            self.update(size: size, insets: insets, interfaceOrientation: self.interfaceOrientation, transition: transition)
         }
     }
     

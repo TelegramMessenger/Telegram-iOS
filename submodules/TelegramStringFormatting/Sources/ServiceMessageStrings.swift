@@ -625,8 +625,14 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(titleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 }
-            case let .customText(text, entities):
-                attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false, message: message._asMessage())
+            case let .customText(text, entities, additionalAttributes):
+                let mutableAttributedString = NSMutableAttributedString(attributedString: stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false, message: message._asMessage()))
+                if let additionalAttributes {
+                    for (range, key, value) in additionalAttributes.attributes {
+                        mutableAttributedString.addAttribute(key, value: value, range: range)
+                    }
+                }
+                attributedString = mutableAttributedString
             case let .botDomainAccessGranted(domain):
                 attributedString = NSAttributedString(string: strings.AuthSessions_Message(domain).string, font: titleFont, textColor: primaryTextColor)
             case let .botAppAccessGranted(appName, type):
@@ -733,7 +739,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .topicCreated(title, iconColor, iconFileId):
                 if forForumOverview {
                     let maybeFileId = iconFileId ?? 0
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicCreated(".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicCreated(".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                 } else {
                     attributedString = NSAttributedString(string: strings.Notification_ForumTopicCreated, font: titleFont, textColor: primaryTextColor)
                 }
@@ -757,9 +763,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                                 maybeFileId = info.icon ?? 0
                             }
                             if isHidden {
-                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicHidden(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicHidden(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                             } else {
-                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicUnhidden(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicUnhidden(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                             }
                         } else {
                             if isHidden {
@@ -794,9 +800,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                                 maybeFileId = info.icon ?? 0
                             }
                             if isClosed {
-                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicClosed(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicClosed(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                             } else {
-                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicReopened(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_OverviewTopicReopened(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                             }
                         } else {
                             if isClosed {
@@ -834,7 +840,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         }
                         attributedString = addAttributesToStringWithRanges(strings.Notification_ForumTopicRenamedIconChangedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".", title)._tuple, body: bodyAttributes, argumentAttributes: [
                             0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id),
-                            1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])
+                            1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])
                         ])
                     } else {
                         attributedString = NSAttributedString(string: strings.Notification_ForumTopicRenamed(title).string, font: titleFont, textColor: primaryTextColor)
@@ -867,9 +873,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         title = info.title
                     }
                     if case let .user(user) = message.author {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_ForumTopicIconChangedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".")._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_ForumTopicIconChangedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".")._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                     } else {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_ForumTopicIconChanged(".")._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, topicInfo: maybeFileId == 0 ? (message.threadId ?? 0, EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_ForumTopicIconChanged(".")._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil, custom: maybeFileId == 0 ? .topic(id: message.threadId ?? 0, info: EngineMessageHistoryThread.Info(title: title, icon: nil, iconColor: iconColor)) : nil)])])
                     }
                 }
             case let .suggestedProfilePhoto(image):
@@ -880,10 +886,19 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .attachMenuBotAllowed:
                 attributedString = NSAttributedString(string: strings.Notification_BotWriteAllowed, font: titleFont, textColor: primaryTextColor)
-            case let .requestedPeer(_, peerId):
+            case let .requestedPeer(_, peerIds):
                 let botName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
-                let peerName = message.peers[peerId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
-                attributedString = addAttributesToStringWithRanges(strings.Notification_RequestedPeer(peerName, botName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId), (1, message.id.peerId)]))
+                var attributePeerIds: [(Int, EnginePeer.Id?)] = []
+                let resultTitleString: PresentationStrings.FormattedString
+                if peerIds.count == 1 {
+                    attributePeerIds.append((0, peerIds.first))
+                    attributePeerIds.append((1, message.id.peerId))
+                    resultTitleString = strings.Notification_RequestedPeer(peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
+                } else {
+                    attributePeerIds.append((1, message.id.peerId))
+                    resultTitleString = strings.Notification_RequestedPeerMultiple(peerDisplayTitles(peerIds, message.peers, strings: strings, nameDisplayOrder: nameDisplayOrder), botName)
+                }
+                attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case let .setChatWallpaper(_, forBoth):
                 if message.author?.id == accountPeerId {
                     if forBoth {
@@ -894,8 +909,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
                     }
                 } else {
-                    let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
-                    attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    if message.id.peerId.isGroupOrChannel {
+                        attributedString = NSAttributedString(string: strings.Notification_ChannelChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    }
                 }
             case .setSameChatWallpaper:
                 if message.author?.id == accountPeerId {
@@ -904,8 +923,19 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultTitleString = strings.Notification_ChangedToSameWallpaper(compactAuthorName)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 }
-            case .giftCode:
-                attributedString = NSAttributedString(string: strings.Notification_GiftLink, font: titleFont, textColor: primaryTextColor)
+            case let .giftCode(_, _, _, boostPeerId, _, currency, amount, _, _):
+                if boostPeerId == nil, let currency, let amount {
+                    let price = formatCurrencyAmount(amount, currency: currency)
+                    if message.author?.id == accountPeerId {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else {
+                        var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                        attributes[1] = boldAttributes
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(compactAuthorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                    }
+                } else {
+                    attributedString = NSAttributedString(string: strings.Notification_GiftLink, font: titleFont, textColor: primaryTextColor)
+                }
             case .giveawayLaunched:
                 let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])

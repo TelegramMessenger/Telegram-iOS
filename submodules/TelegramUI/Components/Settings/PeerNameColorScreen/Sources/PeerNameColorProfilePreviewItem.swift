@@ -14,24 +14,29 @@ import ComponentFlow
 import PeerInfoCoverComponent
 import AvatarNode
 import EmojiStatusComponent
+import ListItemComponentAdaptor
+import ComponentDisplayAdapters
+import MultilineTextComponent
 
-final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem {
+final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     let context: AccountContext
     let theme: PresentationTheme
     let componentTheme: PresentationTheme
     let strings: PresentationStrings
     let sectionId: ItemListSectionId
     let peer: EnginePeer?
+    let subtitleString: String?
     let files: [Int64: TelegramMediaFile]
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, peer: EnginePeer?, files: [Int64: TelegramMediaFile], nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, peer: EnginePeer?, subtitleString: String? = nil, files: [Int64: TelegramMediaFile], nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.theme = theme
         self.componentTheme = componentTheme
         self.strings = strings
         self.sectionId = sectionId
         self.peer = peer
+        self.subtitleString = subtitleString
         self.files = files
         self.nameDisplayOrder = nameDisplayOrder
     }
@@ -46,7 +51,7 @@ final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply() })
+                    return (nil, { _ in apply(.None) })
                 })
             }
         }
@@ -61,12 +66,42 @@ final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply()
+                            apply(animation)
                         })
                     }
                 }
             }
         }
+    }
+    
+    func item() -> ListViewItem {
+        return self
+    }
+    
+    static func ==(lhs: PeerNameColorProfilePreviewItem, rhs: PeerNameColorProfilePreviewItem) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.componentTheme !== rhs.componentTheme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.files != rhs.files {
+            return false
+        }
+        if lhs.nameDisplayOrder != rhs.nameDisplayOrder {
+            return false
+        }
+        
+        return true
     }
 }
 
@@ -104,7 +139,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
     deinit {
     }
     
-    func asyncLayout() -> (_ item: PeerNameColorProfilePreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PeerNameColorProfilePreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         return { [weak self] item, params, neighbors in
             let separatorHeight = UIScreenPixel
             
@@ -117,7 +152,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            return (layout, { [weak self] in
+            return (layout, { [weak self] animation in
                 guard let self else {
                     return
                 }
@@ -139,32 +174,41 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 if self.maskNode.supernode == nil {
                     self.addSubnode(self.maskNode)
                 }
-                    
-                let hasCorners = itemListHasRoundedBlockLayout(params)
-                var hasTopCorners = false
-                var hasBottomCorners = false
-                switch neighbors.top {
+                
+                if params.isStandalone {
+                    self.topStripeNode.isHidden = true
+                    self.bottomStripeNode.isHidden = true
+                    self.maskNode.isHidden = true
+                } else {
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
+                    switch neighbors.top {
                     case .sameSection(false):
                         self.topStripeNode.isHidden = true
                     default:
                         hasTopCorners = true
                         self.topStripeNode.isHidden = hasCorners
+                    }
+                    let bottomStripeInset: CGFloat
+                    let bottomStripeOffset: CGFloat
+                    switch neighbors.bottom {
+                    case .sameSection(false):
+                        bottomStripeInset = 0.0
+                        bottomStripeOffset = -separatorHeight
+                        self.bottomStripeNode.isHidden = item.peer?.profileColor == nil
+                    default:
+                        bottomStripeInset = 0.0
+                        bottomStripeOffset = 0.0
+                        hasBottomCorners = true
+                        self.bottomStripeNode.isHidden = hasCorners
+                    }
+                    
+                    self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    
+                    self.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                    self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                 }
-                let bottomStripeInset: CGFloat
-                let bottomStripeOffset: CGFloat
-                switch neighbors.bottom {
-                case .sameSection(false):
-                    bottomStripeInset = 0.0
-                    bottomStripeOffset = -separatorHeight
-                    self.bottomStripeNode.isHidden = item.peer?.profileColor == nil
-                default:
-                    bottomStripeInset = 0.0
-                    bottomStripeOffset = 0.0
-                    hasBottomCorners = true
-                    self.bottomStripeNode.isHidden = hasCorners
-                }
-                
-                self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                 
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                 
@@ -217,6 +261,61 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 }
                 self.avatarNode.frame = avatarFrame.offsetBy(dx: coverFrame.minX, dy: coverFrame.minY)
                 
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+                
+                enum CredibilityIcon {
+                    case none
+                    case premium
+                    case verified
+                    case fake
+                    case scam
+                    case emojiStatus(PeerEmojiStatus)
+                }
+                
+                let credibilityIcon: CredibilityIcon
+                if let peer = item.peer {
+                    if peer.isFake {
+                        credibilityIcon = .fake
+                    } else if peer.isScam {
+                        credibilityIcon = .scam
+                    } else if case let .user(user) = peer, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                        credibilityIcon = .emojiStatus(emojiStatus)
+                    } else if case let .channel(channel) = peer, let emojiStatus = channel.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                        credibilityIcon = .emojiStatus(emojiStatus)
+                    } else if peer.isVerified {
+                        credibilityIcon = .verified
+                    } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != item.context.account.peerId) {
+                        credibilityIcon = .premium
+                    } else {
+                        credibilityIcon = .none
+                    }
+                } else {
+                    credibilityIcon = .none
+                }
+                
+                let statusColor: UIColor
+                if let peer = item.peer, peer.profileColor != nil {
+                    statusColor = .white
+                } else {
+                    statusColor = item.theme.list.itemCheckColors.fillColor
+                }
+                
+                let emojiStatusContent: EmojiStatusComponent.Content
+                switch credibilityIcon {
+                case .none:
+                    emojiStatusContent = .none
+                case .premium:
+                    emojiStatusContent = .premium(color: statusColor)
+                case .verified:
+                    emojiStatusContent = .verified(fillColor: statusColor, foregroundColor: .clear, sizeType: .large)
+                case .fake:
+                    emojiStatusContent = .text(color: item.theme.chat.message.incoming.scamColor, string: item.strings.Message_FakeAccount.uppercased())
+                case .scam:
+                    emojiStatusContent = .text(color: item.theme.chat.message.incoming.scamColor, string: item.strings.Message_ScamAccount.uppercased())
+                case let .emojiStatus(emojiStatus):
+                    emojiStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: item.theme.list.mediaPlaceholderColor, themeColor: statusColor, loopMode: .forever)
+                }
+                
                 let backgroundColor: UIColor
                 let titleColor: UIColor
                 let subtitleColor: UIColor
@@ -230,24 +329,82 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                     backgroundColor = .clear
                 }
                 
+                var hasStatusIcon = false
+                if case .none = emojiStatusContent {
+                } else {
+                    hasStatusIcon = true
+                }
+                
+                var maxTitleWidth = coverFrame.width - 16.0
+                if hasStatusIcon {
+                    maxTitleWidth -= 4.0 + 34.0
+                }
+                
                 let titleString: String = item.peer?.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) ?? " "
                 let titleSize = self.title.update(
                     transition: .immediate,
-                    component: AnyComponent(Text(
-                        text: titleString, font: Font.semibold(28.0), color: titleColor
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: titleString, font: Font.semibold(28.0), textColor: titleColor)),
+                        maximumNumberOfLines: 1
                     )),
                     environment: {},
-                    containerSize: CGSize(width: coverFrame.width - 16.0, height: 100.0)
+                    containerSize: CGSize(width: maxTitleWidth, height: 100.0)
                 )
-                let titleFrame = CGRect(origin: CGPoint(x: coverFrame.minX + floor((coverFrame.width - titleSize.width) * 0.5), y: avatarFrame.maxY + 10.0), size: titleSize)
-                if let titleView = self.title.view {
-                    if titleView.superview == nil {
-                        self.view.addSubview(titleView)
-                    }
-                    titleView.frame = titleFrame
+                
+                var titleContentWidth = titleSize.width
+                if case .none = emojiStatusContent {
+                } else {
+                    titleContentWidth += 4.0 + 34.0
                 }
                 
-                let subtitleString: String = item.strings.LastSeen_JustNow
+                let titleFrame = CGRect(origin: CGPoint(x: coverFrame.minX + floor((coverFrame.width - titleContentWidth) * 0.5), y: avatarFrame.maxY + 10.0), size: titleSize)
+                if let titleView = self.title.view {
+                    if titleView.superview == nil {
+                        titleView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.0)
+                        self.view.addSubview(titleView)
+                    }
+                    titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                    animation.animator.updatePosition(layer: titleView.layer, position: titleFrame.origin, completion: nil)
+                }
+                
+                let icon: ComponentView<Empty>
+                if let current = self.icon {
+                    icon = current
+                } else {
+                    icon = ComponentView()
+                    self.icon = icon
+                }
+                let iconSize = CGSize(width: 34.0, height: 34.0)
+                let _ = icon.update(
+                    transition: Transition(animation.transition),
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: item.context,
+                        animationCache: item.context.animationCache,
+                        animationRenderer: item.context.animationRenderer,
+                        content: emojiStatusContent,
+                        isVisibleForAnimations: true,
+                        action: nil
+                    )),
+                    environment: {},
+                    containerSize: iconSize
+                )
+                if let iconView = icon.view {
+                    if iconView.superview == nil {
+                        self.view.addSubview(iconView)
+                    }
+                    let iconFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - iconSize.height) * 0.5)), size: iconSize)
+                    iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+                    animation.animator.updatePosition(layer: iconView.layer, position: iconFrame.center, completion: nil)
+                }
+                
+                let subtitleString: String
+                if let value = item.subtitleString {
+                    subtitleString = value
+                } else if case .channel = item.peer {
+                    subtitleString = item.strings.Channel_Status
+                } else {
+                    subtitleString = item.strings.LastSeen_JustNow
+                }
                 let subtitleSize = self.subtitle.update(
                     transition: .immediate,
                     component: AnyComponent(Text(
@@ -265,8 +422,6 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 }
                 
                 self.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
-                self.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
             })
         }
     }

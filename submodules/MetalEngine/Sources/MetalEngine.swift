@@ -1,8 +1,16 @@
 import Foundation
 import Metal
-import UIKit
-import IOSurface
+
+#if os(iOS)
 import Display
+import UIKit
+#else
+import AppKit
+import TGUIKit
+#endif
+
+
+import IOSurface
 import ShelfPack
 
 public final class Placeholder<Resolved> {
@@ -658,13 +666,6 @@ public final class MetalEngine {
         fileprivate var computeStates: [ObjectIdentifier: ComputeState] = [:]
         
         init?(device: MTLDevice) {
-            let mainBundle = Bundle(for: Impl.self)
-            guard let path = mainBundle.path(forResource: "MetalEngineMetalSourcesBundle", ofType: "bundle") else {
-                return nil
-            }
-            guard let bundle = Bundle(path: path) else {
-                return nil
-            }
             
             self.device = device
             
@@ -673,15 +674,42 @@ public final class MetalEngine {
             }
             self.commandQueue = commandQueue
             
-            guard let library = try? device.makeDefaultLibrary(bundle: bundle) else {
-                return nil
-            }
-            self.library = library
+            let library: MTLLibrary?
             
-            guard let vertexFunction = library.makeFunction(name: "clearVertex") else {
+            #if os(iOS)
+            let mainBundle = Bundle(for: Impl.self)
+            guard let path = mainBundle.path(forResource: "MetalEngineMetalSourcesBundle", ofType: "bundle") else {
                 return nil
             }
-            guard let fragmentFunction = library.makeFunction(name: "clearFragment") else {
+            guard let bundle = Bundle(path: path) else {
+                return nil
+            }
+            library = try? device.makeDefaultLibrary(bundle: bundle)
+            #else
+            let mainBundle = Bundle(for: Impl.self)
+            guard let path = mainBundle.path(forResource: "MetalEngineMetalSourcesBundle", ofType: "bundle") else {
+                return nil
+            }
+            guard let bundle = Bundle(path: path) else {
+                return nil
+            }
+            guard let path = bundle.path(forResource: "MetalEngineShaders", ofType: "metallib") else {
+                return nil
+            }
+            library = try? device.makeLibrary(URL: .init(fileURLWithPath: path))
+            #endif
+            
+            
+            
+            guard let lib = library else {
+                return nil
+            }
+            self.library = lib
+            
+            guard let vertexFunction = lib.makeFunction(name: "clearVertex") else {
+                return nil
+            }
+            guard let fragmentFunction = lib.makeFunction(name: "clearFragment") else {
                 return nil
             }
             

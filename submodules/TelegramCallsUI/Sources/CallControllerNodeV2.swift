@@ -17,8 +17,17 @@ import ImageBlur
 import TelegramVoip
 import MetalEngine
 import DeviceAccess
+import LibYuvBinding
 
 final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeProtocol {
+    private struct PanGestureState {
+        var offsetFraction: CGFloat
+        
+        init(offsetFraction: CGFloat) {
+            self.offsetFraction = offsetFraction
+        }
+    }
+    
     private let sharedContext: SharedAccountContext
     private let account: Account
     private let presentationData: PresentationData
@@ -29,7 +38,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private let callScreen: PrivateCallScreen
     private var callScreenState: PrivateCallScreen.State?
     
-    private var shouldStayHiddenUntilConnection: Bool = false
+    let isReady = Promise<Bool>()
+    private var didInitializeIsReady: Bool = false
     
     private var callStartTimestamp: Double?
     
@@ -47,6 +57,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     var dismissAllTooltips: (() -> Void)?
+    var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
     
     private var emojiKey: (data: Data, resolvedKey: [String])?
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
@@ -55,11 +66,16 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private var peerAvatarDisposable: Disposable?
     
     private var availableAudioOutputs: [AudioSessionOutput]?
+    private var currentAudioOutput: AudioSessionOutput?
     private var isMicrophoneMutedDisposable: Disposable?
     private var audioLevelDisposable: Disposable?
+    private var audioOutputCheckTimer: Foundation.Timer?
     
     private var localVideo: AdaptedCallVideoSource?
     private var remoteVideo: AdaptedCallVideoSource?
+    
+    private var panGestureState: PanGestureState?
+    private var notifyDismissedInteractivelyOnPanGestureApply: Bool = false
     
     init(
         sharedContext: SharedAccountContext,
@@ -67,7 +83,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         presentationData: PresentationData,
         statusBar: StatusBar,
         debugInfo: Signal<(String, String), NoError>,
-        shouldStayHiddenUntilConnection: Bool = false,
         easyDebugAccess: Bool,
         call: PresentationCall
     ) {
@@ -78,9 +93,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         self.call = call
         
         self.containerView = UIView()
+        self.containerView.clipsToBounds = true
         self.callScreen = PrivateCallScreen()
-        
-        self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         
         super.init()
         
@@ -122,6 +136,20 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 return
             }
             self.back?()
+            self.callScreen.beginPictureInPictureIfPossible()
+        }
+        self.callScreen.closeAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismissedInteractively?()
+        }
+        self.callScreen.restoreUIForPictureInPicture = { [weak self] completion in
+            guard let self else {
+                completion(false)
+                return
+            }
+            self.restoreUIForPictureInPicture?(completion)
         }
         
         self.callScreenState = PrivateCallScreen.State(
@@ -130,7 +158,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             shortName: " ",
             avatarImage: nil,
             audioOutput: .internalSpeaker,
-            isMicrophoneMuted: false,
+            isLocalAudioMuted: false,
+            isRemoteAudioMuted: false,
             localVideo: nil,
             remoteVideo: nil,
             isRemoteBatteryLow: false
@@ -145,8 +174,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 return
             }
             self.isMuted = isMuted
-            if callScreenState.isMicrophoneMuted != isMuted {
-                callScreenState.isMicrophoneMuted = isMuted
+            if callScreenState.isLocalAudioMuted != isMuted {
+                callScreenState.isLocalAudioMuted = isMuted
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.3, curve: .spring))
             }
@@ -159,16 +188,20 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             self.callScreen.addIncomingAudioLevel(value: audioLevel)
         })
+        
+        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
     
     deinit {
         self.peerAvatarDisposable?.dispose()
         self.isMicrophoneMutedDisposable?.dispose()
         self.audioLevelDisposable?.dispose()
+        self.audioOutputCheckTimer?.invalidate()
     }
     
     func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?) {
         self.availableAudioOutputs = availableOutputs
+        self.currentAudioOutput = currentOutput
         
         if var callScreenState = self.callScreenState {
             let mappedOutput: PrivateCallScreen.State.AudioOutput
@@ -189,6 +222,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.audioOutput = mappedOutput
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.3, curve: .spring))
+                
+                self.setupAudioOutputForVideoIfNeeded()
             }
         }
     }
@@ -242,7 +277,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                             
                             var updateLayoutImpl: ((ContainerViewLayout, CGFloat) -> Void)?
                             
-                            let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: { [weak self] in
+                            let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, displayPlaceholderUntilReady: true, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: { [weak self] in
                                 guard let self, let (layout, navigationBarHeight) = self.validLayout else {
                                     return
                                 }
@@ -295,20 +330,22 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         let mappedLifecycleState: PrivateCallScreen.State.LifecycleState
         switch callState.state {
         case .waiting:
-            mappedLifecycleState = .connecting
+            mappedLifecycleState = .requesting
         case .ringing:
             mappedLifecycleState = .ringing
         case let .requesting(isRinging):
             if isRinging {
                 mappedLifecycleState = .ringing
             } else {
-                mappedLifecycleState = .connecting
+                mappedLifecycleState = .requesting
             }
-        case let .connecting(keyData):
-            let _ = keyData
-            mappedLifecycleState = .exchangingKeys
+        case .connecting:
+            mappedLifecycleState = .connecting
         case let .active(startTime, signalQuality, keyData):
             self.callStartTimestamp = startTime
+            
+            var signalQuality = signalQuality
+            signalQuality = 4
             
             let _ = keyData
             mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
@@ -317,20 +354,51 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 emojiKey: self.resolvedEmojiKey(data: keyData)
             ))
         case let .reconnecting(startTime, _, keyData):
-            let _ = keyData
-            mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
-                startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
-                signalInfo: PrivateCallScreen.State.SignalInfo(quality: 0.0),
-                emojiKey: self.resolvedEmojiKey(data: keyData)
-            ))
-        case .terminating, .terminated:
+            if self.callStartTimestamp != nil {
+                mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
+                    startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
+                    signalInfo: PrivateCallScreen.State.SignalInfo(quality: 0.0),
+                    emojiKey: self.resolvedEmojiKey(data: keyData)
+                ))
+            } else {
+                mappedLifecycleState = .connecting
+            }
+        case .terminating(let reason), .terminated(_, let reason, _):
             let duration: Double
             if let callStartTimestamp = self.callStartTimestamp {
                 duration = CFAbsoluteTimeGetCurrent() - callStartTimestamp
             } else {
                 duration = 0.0
             }
-            mappedLifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: duration))
+            
+            let mappedReason: PrivateCallScreen.State.TerminatedState.Reason
+            if let reason {
+                switch reason {
+                case let .ended(type):
+                    switch type {
+                    case .missed:
+                        if self.call.isOutgoing {
+                            mappedReason = .hangUp
+                        } else {
+                            mappedReason = .missed
+                        }
+                    case .busy:
+                        mappedReason = .busy
+                    case .hungUp:
+                        if self.callStartTimestamp != nil {
+                            mappedReason = .hangUp
+                        } else {
+                            mappedReason = .declined
+                        }
+                    }
+                case .error:
+                    mappedReason = .failed
+                }
+            } else {
+                mappedReason = .hangUp
+            }
+            
+            mappedLifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: duration, reason: mappedReason))
         }
         
         switch callState.state {
@@ -373,14 +441,68 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 callScreenState.isRemoteBatteryLow = false
             }
             
+            switch callState.remoteAudioState {
+            case .muted:
+                callScreenState.isRemoteAudioMuted = true
+            case .active:
+                callScreenState.isRemoteAudioMuted = false
+            }
+            
             if self.callScreenState != callScreenState {
                 self.callScreenState = callScreenState
                 self.update(transition: .animated(duration: 0.35, curve: .spring))
             }
+            
+            self.setupAudioOutputForVideoIfNeeded()
         }
         
         if case let .terminated(_, _, reportRating) = callState.state {
             self.callEnded?(reportRating)
+        }
+        
+        if !self.didInitializeIsReady {
+            self.didInitializeIsReady = true
+            
+            if let localVideo = self.localVideo {
+                self.isReady.set(Signal { subscriber in
+                    return localVideo.addOnUpdated {
+                        subscriber.putNext(true)
+                        subscriber.putCompletion()
+                    }
+                })
+            } else {
+                self.isReady.set(.single(true))
+            }
+        }
+    }
+    
+    private func setupAudioOutputForVideoIfNeeded() {
+        guard let callScreenState = self.callScreenState, let currentAudioOutput = self.currentAudioOutput else {
+            return
+        }
+        if callScreenState.localVideo != nil || callScreenState.remoteVideo != nil {
+            switch currentAudioOutput {
+            case .headphones, .speaker:
+                break
+            case let .port(port) where port.type == .bluetooth || port.type == .wired:
+                break
+            default:
+                self.setCurrentAudioOutput?(.speaker)
+            }
+            
+            if self.audioOutputCheckTimer == nil {
+                self.audioOutputCheckTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true, block: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.setupAudioOutputForVideoIfNeeded()
+                })
+            }
+        } else {
+            if let audioOutputCheckTimer = self.audioOutputCheckTimer {
+                self.audioOutputCheckTimer = nil
+                audioOutputCheckTimer.invalidate()
+            }
         }
     }
     
@@ -393,6 +515,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             return
         }
         callScreenState.name = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+        callScreenState.shortName = peer.compactDisplayTitle
         
         if self.currentPeer?.smallProfileImage != peer.smallProfileImage {
             self.peerAvatarDisposable?.dispose()
@@ -450,6 +573,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
 
     func animateIn() {
+        self.panGestureState = nil
+        self.update(transition: .immediate)
+        
         if !self.containerView.alpha.isZero {
             var bounds = self.bounds
             bounds.origin = CGPoint()
@@ -460,16 +586,20 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.containerView.layer.removeAnimation(forKey: "scale")
             self.statusBar.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            if !self.shouldStayHiddenUntilConnection {
-                self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
-                self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            }
+            self.containerView.layer.animateScale(from: 1.04, to: 1.0, duration: 0.3)
+            self.containerView.layer.allowsGroupOpacity = true
+            self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                self.containerView.layer.allowsGroupOpacity = false
+            })
         }
     }
     
     func animateOut(completion: @escaping () -> Void) {
         self.statusBar.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        if !self.shouldStayHiddenUntilConnection || self.containerView.alpha > 0.0 {
+        if self.containerView.alpha > 0.0 {
             self.containerView.layer.allowsGroupOpacity = true
             self.containerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
                 self?.containerView.layer.allowsGroupOpacity = false
@@ -483,7 +613,35 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
     
     func expandFromPipIfPossible() {
-
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began, .changed:
+            if !self.bounds.height.isZero && !self.notifyDismissedInteractivelyOnPanGestureApply {
+                let translation = recognizer.translation(in: self.view)
+                self.panGestureState = PanGestureState(offsetFraction: translation.y / self.bounds.height)
+                self.update(transition: .immediate)
+            }
+        case .cancelled, .ended:
+            if !self.bounds.height.isZero {
+                let translation = recognizer.translation(in: self.view)
+                let panGestureState = PanGestureState(offsetFraction: translation.y / self.bounds.height)
+                
+                let velocity = recognizer.velocity(in: self.view)
+                
+                self.panGestureState = nil
+                if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
+                    self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
+                    self.notifyDismissedInteractivelyOnPanGestureApply = true
+                    self.callScreen.beginPictureInPictureIfPossible()
+                }
+                
+                self.update(transition: .animated(duration: 0.4, curve: .spring))
+            }
+        default:
+            break
+        }
     }
     
     private func update(transition: ContainedViewLayoutTransition) {
@@ -496,13 +654,38 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         
-        transition.updateFrame(view: self.containerView, frame: CGRect(origin: CGPoint(), size: layout.size))
+        var containerOffset: CGFloat = 0.0
+        if let panGestureState = self.panGestureState {
+            containerOffset = panGestureState.offsetFraction * layout.size.height
+            self.containerView.layer.cornerRadius = layout.deviceMetrics.screenCornerRadius
+        }
+        
+        transition.updateFrame(view: self.containerView, frame: CGRect(origin: CGPoint(x: 0.0, y: containerOffset), size: layout.size), completion: { [weak self] completed in
+            guard let self, completed else {
+                return
+            }
+            if self.panGestureState == nil {
+                self.containerView.layer.cornerRadius = 0.0
+            }
+            if self.notifyDismissedInteractivelyOnPanGestureApply {
+                self.notifyDismissedInteractivelyOnPanGestureApply = false
+                self.dismissedInteractively?()
+            }
+        })
         transition.updateFrame(view: self.callScreen, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        if let callScreenState = self.callScreenState {
+        if var callScreenState = self.callScreenState {
+            if case .terminated = callScreenState.lifecycleState {
+                callScreenState.isLocalAudioMuted = false
+                callScreenState.isRemoteAudioMuted = false
+                callScreenState.isRemoteBatteryLow = false
+                callScreenState.localVideo = nil
+                callScreenState.remoteVideo = nil
+            }
             self.callScreen.update(
                 size: layout.size,
                 insets: layout.insets(options: [.statusBar]),
+                interfaceOrientation: layout.metrics.orientation ?? .portrait,
                 screenCornerRadius: layout.deviceMetrics.screenCornerRadius,
                 state: callScreenState,
                 transition: Transition(transition)
@@ -511,7 +694,100 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
 }
 
+private func copyI420BufferToNV12Buffer(buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer, pixelBuffer: CVPixelBuffer) -> Bool {
+    guard CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange else {
+        return false
+    }
+    guard CVPixelBufferGetWidthOfPlane(pixelBuffer, 0) == buffer.width else {
+        return false
+    }
+    guard CVPixelBufferGetHeightOfPlane(pixelBuffer, 0) == buffer.height else {
+        return false
+    }
+
+    let cvRet = CVPixelBufferLockBaseAddress(pixelBuffer, [])
+    if cvRet != kCVReturnSuccess {
+        return false
+    }
+    defer {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+    }
+
+    guard let dstY = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0) else {
+        return false
+    }
+    let dstStrideY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
+
+    guard let dstUV = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1) else {
+        return false
+    }
+    let dstStrideUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
+
+    buffer.y.withUnsafeBytes { srcYBuffer in
+        guard let srcY = srcYBuffer.baseAddress else {
+            return
+        }
+        buffer.u.withUnsafeBytes { srcUBuffer in
+            guard let srcU = srcUBuffer.baseAddress else {
+                return
+            }
+            buffer.v.withUnsafeBytes { srcVBuffer in
+                guard let srcV = srcVBuffer.baseAddress else {
+                    return
+                }
+                libyuv_I420ToNV12(
+                    srcY.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideY),
+                    srcU.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideU),
+                    srcV.assumingMemoryBound(to: UInt8.self),
+                    Int32(buffer.strideV),
+                    dstY.assumingMemoryBound(to: UInt8.self),
+                    Int32(dstStrideY),
+                    dstUV.assumingMemoryBound(to: UInt8.self),
+                    Int32(dstStrideUV),
+                    Int32(buffer.width),
+                    Int32(buffer.height)
+                )
+            }
+        }
+    }
+
+    return true
+}
+
 private final class AdaptedCallVideoSource: VideoSource {
+    final class I420DataBuffer: Output.DataBuffer {
+        private let buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer
+        
+        override var pixelBuffer: CVPixelBuffer? {
+            let ioSurfaceProperties = NSMutableDictionary()
+            let options = NSMutableDictionary()
+            options.setObject(ioSurfaceProperties, forKey: kCVPixelBufferIOSurfacePropertiesKey as NSString)
+            
+            var pixelBuffer: CVPixelBuffer?
+            CVPixelBufferCreate(
+                kCFAllocatorDefault,
+                self.buffer.width,
+                self.buffer.height,
+                kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+                options,
+                &pixelBuffer
+            )
+            if let pixelBuffer, copyI420BufferToNV12Buffer(buffer: buffer, pixelBuffer: pixelBuffer) {
+                return pixelBuffer
+            } else {
+                return nil
+            }
+        }
+        
+        init(buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer) {
+            self.buffer = buffer
+            
+            super.init()
+        }
+    }
+    
     private static let queue = Queue(name: "AdaptedCallVideoSource")
     private var onUpdatedListeners = Bag<() -> Void>()
     private(set) var currentOutput: Output?
@@ -539,6 +815,8 @@ private final class AdaptedCallVideoSource: VideoSource {
             case .rotation270:
                 rotationAngle = Float.pi * 3.0 / 2.0
             }
+            
+            let followsDeviceOrientation = videoFrameData.deviceRelativeOrientation != nil
             
             var mirrorDirection: Output.MirrorDirection = []
             
@@ -601,12 +879,45 @@ private final class AdaptedCallVideoSource: VideoSource {
                     
                     output = Output(
                         resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)),
-                        y: yTexture,
-                        uv: uvTexture,
+                        textureLayout: .biPlanar(Output.BiPlanarTextureLayout(
+                            y: yTexture,
+                            uv: uvTexture
+                        )),
+                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
                         rotationAngle: rotationAngle,
+                        followsDeviceOrientation: followsDeviceOrientation,
                         mirrorDirection: mirrorDirection,
                         sourceId: sourceId
                     )
+                case let .i420(i420Buffer):
+                    let width = i420Buffer.width
+                    let height = i420Buffer.height
+                    
+                    let _ = width
+                    let _ = height
+                    return
+                    
+                    /*var cvMetalTextureY: CVMetalTexture?
+                    var status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, nativeBuffer.pixelBuffer, nil, .r8Unorm, width, height, 0, &cvMetalTextureY)
+                    guard status == kCVReturnSuccess, let yTexture = CVMetalTextureGetTexture(cvMetalTextureY!) else {
+                        return
+                    }
+                    var cvMetalTextureUV: CVMetalTexture?
+                    status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, nativeBuffer.pixelBuffer, nil, .rg8Unorm, width / 2, height / 2, 1, &cvMetalTextureUV)
+                    guard status == kCVReturnSuccess, let uvTexture = CVMetalTextureGetTexture(cvMetalTextureUV!) else {
+                        return
+                    }
+                    
+                    output = Output(
+                        resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)),
+                        y: yTexture,
+                        uv: uvTexture,
+                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
+                        rotationAngle: rotationAngle,
+                        followsDeviceOrientation: followsDeviceOrientation,
+                        mirrorDirection: mirrorDirection,
+                        sourceId: sourceId
+                    )*/
                 default:
                     return
                 }

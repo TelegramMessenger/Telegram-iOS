@@ -12,6 +12,7 @@ import ChatListUI
 import AnimationCache
 import MultiAnimationRenderer
 import EditableTokenListNode
+import SolidRoundedButtonNode
 
 private struct SearchResultEntry: Identifiable {
     let index: Int
@@ -72,6 +73,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     
+    private let footerPanelNode: FooterPanelNode?
+    
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     
     init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
@@ -85,18 +88,34 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.isPeerEnabled = isPeerEnabled
         
+        var proceedImpl: (() -> Void)?
+        
         var placeholder: String
+        var shortPlaceholder: String?
         var includeChatList = false
         switch mode {
-            case let .peerSelection(_, searchGroups, searchChannels):
-                includeChatList = searchGroups || searchChannels
-                if searchGroups {
-                    placeholder = self.presentationData.strings.Contacts_SearchUsersAndGroupsLabel
-                } else {
-                    placeholder = self.presentationData.strings.Contacts_SearchLabel
-                }
-            default:
-                placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
+        case let .peerSelection(_, searchGroups, searchChannels):
+            includeChatList = searchGroups || searchChannels
+            if searchGroups {
+                placeholder = self.presentationData.strings.Contacts_SearchUsersAndGroupsLabel
+            } else {
+                placeholder = self.presentationData.strings.Contacts_SearchLabel
+            }
+            self.footerPanelNode = nil
+        case .premiumGifting:
+            placeholder = self.presentationData.strings.Premium_Gift_ContactSelection_Placeholder
+            shortPlaceholder = self.presentationData.strings.Common_Search
+            self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
+                proceedImpl?()
+            })
+        case .requestedUsersSelection:
+            placeholder = self.presentationData.strings.RequestPeer_SelectUsers_SearchPlaceholder
+            self.footerPanelNode = FooterPanelNode(theme: self.presentationData.theme, strings: self.presentationData.strings, action: {
+                proceedImpl?()
+            })
+        default:
+            placeholder = self.presentationData.strings.Compose_TokenListPlaceholder
+            self.footerPanelNode = nil
         }
         
         if case let .chatSelection(chatSelection) = mode {
@@ -132,10 +151,16 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
             self.contentNode = .chats(chatListNode)
         } else {
-            self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
+            var displayTopPeers = false
+            if case .premiumGifting = mode {
+                displayTopPeers = true
+            } else if case .requestedUsersSelection = mode {
+                displayTopPeers = true
+            }
+            self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
         }
         
-        self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder)
+        self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder, shortPlaceholder: shortPlaceholder)
         
         super.init()
         
@@ -215,6 +240,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchGroups = true
                             searchChannels = true
                             globalSearch = false
+                        case .premiumGifting, .requestedUsersSelection:
+                            searchChatList = true
                         }
                         let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
@@ -247,6 +274,13 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         }
         self.tokenListNode.textReturned = { [weak self] in
             self?.complete?()
+        }
+        
+        if let footerPanelNode = self.footerPanelNode {
+            proceedImpl = { [weak self] in
+                self?.complete?()
+            }
+            self.addSubnode(footerPanelNode)
         }
     }
     
@@ -284,6 +318,21 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         insets.top += tokenListHeight
         headerInsets.top += tokenListHeight
         
+        if let footerPanelNode = self.footerPanelNode {
+            var count = 0
+            if case let .contacts(contactListNode) = self.contentNode {
+                count = contactListNode.selectionState?.selectedPeerIndices.count ?? 0
+            }
+            footerPanelNode.count = count
+            let panelHeight = footerPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: headerInsets.bottom, transition: transition)
+            if count == 0 {
+                transition.updateFrame(node: footerPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: panelHeight)))
+            } else {
+                insets.bottom += panelHeight
+                transition.updateFrame(node: footerPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+            }
+        }
+        
         switch self.contentNode {
         case let .contacts(contactsNode):
             contactsNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
@@ -316,5 +365,70 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 completion?()
             }
         })
+    }
+}
+
+
+private final class FooterPanelNode: ASDisplayNode {
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
+    private let separatorNode: ASDisplayNode
+    private let button: SolidRoundedButtonView
+    
+    private var validLayout: (CGFloat, CGFloat, CGFloat)?
+    
+    var count: Int = 0 {
+        didSet {
+            if self.count != oldValue && self.count > 0 {
+                self.button.title = self.strings.Premium_Gift_ContactSelection_Proceed
+                self.button.badge = "\(self.count)"
+                
+                if let (width, sideInset, bottomInset) = self.validLayout {
+                    let _ = self.updateLayout(width: width, sideInset: sideInset, bottomInset: bottomInset, transition: .immediate)
+                }
+            }
+        }
+    }
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
+        self.theme = theme
+        self.strings = strings
+
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
+        
+        self.button = SolidRoundedButtonView(theme: SolidRoundedButtonTheme(theme: theme), height: 48.0, cornerRadius: 10.0)
+        
+        super.init()
+        
+        self.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
+        
+        self.addSubnode(self.separatorNode)
+        
+        self.button.pressed = {
+            action()
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        self.view.addSubview(self.button)
+    }
+    
+    func updateLayout(width: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (width, sideInset, bottomInset)
+        let topInset: CGFloat = 9.0
+        var bottomInset = bottomInset
+        bottomInset += topInset - (bottomInset.isZero ? 0.0 : 4.0)
+        
+        let buttonInset: CGFloat = 16.0 + sideInset
+        let buttonWidth = width - buttonInset * 2.0
+        let buttonHeight = self.button.updateLayout(width: buttonWidth, transition: transition)
+        transition.updateFrame(view: self.button, frame: CGRect(x: buttonInset, y: topInset, width: buttonWidth, height: buttonHeight))
+        
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
+        
+        return topInset + buttonHeight + bottomInset
     }
 }

@@ -491,9 +491,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if remainingCutoutHeight > 0.0 {
                                 cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
                             }
-                            
+                            var maximumNumberOfLines: Int = 12
+                            if isPreview {
+                                maximumNumberOfLines = mediaAndFlags != nil ? 4 : 6
+                            }
                             let textString = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: messageTheme.primaryTextColor, linkColor: incoming ? mainColor : messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil, adjustQuoteFontSize: true)
-                            let textLayoutAndApplyValue = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
+                            let textLayoutAndApplyValue = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: maximumNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
                             textLayoutAndApply = textLayoutAndApplyValue
                             
                             remainingCutoutHeight -= textLayoutAndApplyValue.0.size.height
@@ -580,7 +583,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var viewCount: Int?
                 var dateReplies = 0
                 var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
-                if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
+                if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) || presentationData.isPreview {
                     dateReactionsAndPeers = ([], [])
                 }
                 for attribute in message.attributes {
@@ -595,7 +598,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, associatedData: associatedData)
+                let dateFormat: MessageTimestampStatusFormat
+                if presentationData.isPreview {
+                    dateFormat = .full
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, format: dateFormat, associatedData: associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType
                 if incoming {
@@ -625,8 +634,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             let statusLayoutAndContinueValue = makeStatusLayout(ChatMessageDateAndStatusNode.Arguments(
                                 context: context,
                                 presentationData: presentationData,
-                                edited: edited,
-                                impressionCount: viewCount,
+                                edited: edited && !isPreview,
+                                impressionCount: !isPreview ? viewCount : nil,
                                 dateText: dateText,
                                 type: statusType,
                                 layoutInput: .trailingContent(
@@ -869,32 +878,15 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         animation.animator.updateFrame(layer: self.transformContainer.layer, frame: CGRect(origin: CGPoint(), size: actualSize), completion: nil)
                         
                         let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: actualSize.width - backgroundInsets.left - backgroundInsets.right, height: actualSize.height - backgroundInsets.top - backgroundInsets.bottom))
-                        
-                        if displayLine {
-                            let backgroundView: MessageInlineBlockBackgroundView
-                            if let current = self.backgroundView {
-                                backgroundView = current
-                                animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
-                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: nil, animation: animation)
-                            } else {
-                                backgroundView = MessageInlineBlockBackgroundView()
-                                self.backgroundView = backgroundView
-                                backgroundView.frame = backgroundFrame
-                                self.transformContainer.view.insertSubview(backgroundView, at: 0)
-                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: nil, animation: .None)
-                            }
-                        } else {
-                            if let backgroundView = self.backgroundView {
-                                self.backgroundView = nil
-                                backgroundView.removeFromSuperview()
-                            }
-                        }
+                        var patternTopRightPosition = CGPoint()
                         
                         if let (inlineMediaValue, inlineMediaSize) = inlineMediaAndSize {
                             var inlineMediaFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - inlineMediaSize.width, y: backgroundInsets.top + inlineMediaEdgeInset), size: inlineMediaSize)
                             if contentLayoutOrder.isEmpty {
                                 inlineMediaFrame.origin.x = insets.left
                             }
+                            
+                            patternTopRightPosition.x = insets.right + inlineMediaSize.width - 6.0
                             
                             let inlineMedia: TransformImageNode
                             var updateMedia = false
@@ -979,6 +971,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.transformContainer.addSubnode(title.textNode)
                                 
                                 title.textNode.frame = titleFrame
+                                
+                                title.textNode.displaysAsynchronously = !presentationData.isPreview
                             } else {
                                 title.textNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                                 animation.animator.updatePosition(layer: title.textNode.layer, position: titleFrame.origin, completion: nil)
@@ -1079,6 +1073,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.transformContainer.addSubnode(subtitle.textNode)
                                 
                                 subtitle.textNode.frame = subtitleFrame
+                                
+                                subtitle.textNode.displaysAsynchronously = !presentationData.isPreview
                             } else {
                                 subtitle.textNode.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
                                 animation.animator.updatePosition(layer: subtitle.textNode.layer, position: subtitleFrame.origin, completion: nil)
@@ -1108,6 +1104,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.transformContainer.addSubnode(text.textNode)
                                 
                                 text.textNode.frame = textFrame
+                                
+                                text.textNode.displaysAsynchronously = !presentationData.isPreview
                             } else {
                                 text.textNode.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
                                 animation.animator.updatePosition(layer: text.textNode.layer, position: textFrame.origin, completion: nil)
@@ -1121,6 +1119,21 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         if let item = contentDisplayOrder.first(where: { $0.item == .media }), let (contentMediaSize, contentMediaApply) = contentMediaSizeAndApply {
                             let contentMediaFrame = CGRect(origin: CGPoint(x: insets.left, y: item.offsetY), size: contentMediaSize)
+                            
+                            var offsetPatternForMedia = false
+                            if let index = contentLayoutOrder.firstIndex(where: { $0 == .media }), index != contentLayoutOrder.count - 1 {
+                                for i in (index + 1) ..< contentLayoutOrder.count {
+                                    switch contentLayoutOrder[i] {
+                                    case .title, .subtitle, .text:
+                                        offsetPatternForMedia = true
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
+                            if offsetPatternForMedia {
+                                patternTopRightPosition.y = contentMediaFrame.maxY + 6.0
+                            }
                             
                             let contentMedia = contentMediaApply(animation, synchronousLoads)
                             if self.contentMedia !== contentMedia {
@@ -1289,6 +1302,38 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let tapRecognizer = self.tapRecognizer {
                                 self.tapRecognizer = nil
                                 self.view.removeGestureRecognizer(tapRecognizer)
+                            }
+                        }
+                        
+                        if displayLine {
+                            var pattern: MessageInlineBlockBackgroundView.Pattern?
+                            if let backgroundEmojiId = author?.backgroundEmojiId {
+                                pattern = MessageInlineBlockBackgroundView.Pattern(
+                                    context: context,
+                                    fileId: backgroundEmojiId,
+                                    file: message.associatedMedia[MediaId(
+                                        namespace: Namespaces.Media.CloudFile,
+                                        id: backgroundEmojiId
+                                    )] as? TelegramMediaFile
+                                )
+                            }
+                            
+                            let backgroundView: MessageInlineBlockBackgroundView
+                            if let current = self.backgroundView {
+                                backgroundView = current
+                                animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
+                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: pattern, patternTopRightPosition: patternTopRightPosition, animation: animation)
+                            } else {
+                                backgroundView = MessageInlineBlockBackgroundView()
+                                self.backgroundView = backgroundView
+                                backgroundView.frame = backgroundFrame
+                                self.transformContainer.view.insertSubview(backgroundView, at: 0)
+                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: pattern, patternTopRightPosition: patternTopRightPosition, animation: .None)
+                            }
+                        } else {
+                            if let backgroundView = self.backgroundView {
+                                self.backgroundView = nil
+                                backgroundView.removeFromSuperview()
                             }
                         }
                     })

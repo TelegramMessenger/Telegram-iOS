@@ -1,11 +1,12 @@
 import Foundation
+import Postbox
 import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
 
 public struct PremiumGiftCodeInfo: Equatable {
     public let slug: String
-    public let fromPeerId: EnginePeer.Id
+    public let fromPeerId: EnginePeer.Id?
     public let messageId: EngineMessage.Id?
     public let toPeerId: EnginePeer.Id?
     public let date: Int32
@@ -138,13 +139,19 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
     }
 }
 
-func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id) -> Signal<[PremiumGiftCodeOption], NoError> {
-    let flags: Int32 = 1 << 0
-    return account.postbox.loadedPeerWithId(peerId)
-    |> mapToSignal { peer in
-        guard let inputPeer = apiInputPeer(peer) else {
-            return .complete()
+func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?) -> Signal<[PremiumGiftCodeOption], NoError> {
+    var flags: Int32 = 0
+    if let _ = peerId {
+        flags |= 1 << 0
+    }
+    return account.postbox.transaction { transaction -> Peer? in
+        if let peerId = peerId {
+            return transaction.getPeer(peerId)
         }
+        return nil
+    }
+    |> mapToSignal { peer in
+        let inputPeer = peer.flatMap(apiInputPeer)
         return account.network.request(Api.functions.payments.getPremiumGiftCodeOptions(flags: flags, boostPeer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Api.PremiumGiftCodeOption]?, NoError> in
@@ -184,11 +191,19 @@ func _internal_checkPremiumGiftCode(account: Account, slug: String) -> Signal<Pr
 
 public enum ApplyPremiumGiftCodeError {
     case generic
+    case waitForExpiration(Int32)
 }
 
 func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Never, ApplyPremiumGiftCodeError> {
     return account.network.request(Api.functions.payments.applyGiftCode(slug: slug))
-    |> mapError { _ -> ApplyPremiumGiftCodeError in
+    |> mapError { error -> ApplyPremiumGiftCodeError in
+        if error.errorDescription.hasPrefix("PREMIUM_SUB_ACTIVE_UNTIL_") {
+            if let range = error.errorDescription.range(of: "_", options: .backwards) {
+                if let value = Int32(error.errorDescription[range.upperBound...]) {
+                    return .waitForExpiration(value)
+                }
+            }
+        }
         return .generic
     }
     |> mapToSignal { updates -> Signal<Never, ApplyPremiumGiftCodeError> in
@@ -201,18 +216,19 @@ public enum LaunchPrepaidGiveawayError {
     case generic
 }
 
-func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
+func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
     return account.postbox.transaction { transaction -> Signal<Never, LaunchPrepaidGiveawayError> in
         var flags: Int32 = 0
         if onlyNewSubscribers {
             flags |= (1 << 0)
         }
-        
+        if showWinners {
+            flags |= (1 << 3)
+        }
         var inputPeer: Api.InputPeer?
         if let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
             inputPeer = apiPeer
         }
-        
         var additionalPeers: [Api.InputPeer] = []
         if !additionalPeerIds.isEmpty {
             flags |= (1 << 1)
@@ -222,15 +238,16 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
                 }
             }
         }
-        
         if !countries.isEmpty {
             flags |= (1 << 2)
         }
-        
+        if let _ = prizeDescription {
+            flags |= (1 << 4)
+        }
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
+        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
         |> mapError { _ -> LaunchPrepaidGiveawayError in
             return .generic
         }
@@ -257,8 +274,12 @@ extension PremiumGiftCodeInfo {
         switch apiCheckedGiftCode {
         case let .checkedGiftCode(flags, fromId, giveawayMsgId, toId, date, months, usedDate, _, _):
             self.slug = slug
-            self.fromPeerId = fromId.peerId
-            self.messageId = giveawayMsgId.flatMap { EngineMessage.Id(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: $0) }
+            self.fromPeerId = fromId?.peerId
+            if let fromId = fromId, let giveawayMsgId = giveawayMsgId {
+                self.messageId = EngineMessage.Id(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId)
+            } else {
+                self.messageId = nil
+            }
             self.toPeerId = toId.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }
             self.date = date
             self.months = months

@@ -28,14 +28,16 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
     let initiallySelectedSlot: Int32?
     let selectedSlotsUpdated: ([Int32]) -> Void
     let presentController: (ViewController) -> Void
+    let giftPremium: () -> Void
     
-    init(context: AccountContext, peerId: EnginePeer.Id, myBoostStatus: MyBoostStatus, initiallySelectedSlot: Int32?, selectedSlotsUpdated: @escaping ([Int32]) -> Void, presentController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, myBoostStatus: MyBoostStatus, initiallySelectedSlot: Int32?, selectedSlotsUpdated: @escaping ([Int32]) -> Void, presentController: @escaping (ViewController) -> Void, giftPremium: @escaping () -> Void) {
         self.context = context
         self.peerId = peerId
         self.myBoostStatus = myBoostStatus
         self.initiallySelectedSlot = initiallySelectedSlot
         self.selectedSlotsUpdated = selectedSlotsUpdated
         self.presentController = presentController
+        self.giftPremium = giftPremium
     }
     
     static func ==(lhs: ReplaceBoostScreenComponent, rhs: ReplaceBoostScreenComponent) -> Bool {
@@ -170,14 +172,26 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
             if channelName.count > 48 {
                 channelName = "\(channelName.prefix(48))..."
             }
-            let descriptionString = strings.ReassignBoost_Description(channelName, "\(premiumConfiguration.boostsPerGiftCount)").string
+            let descriptionString = strings.ReassignBoost_DescriptionWithLink(channelName, "\(premiumConfiguration.boostsPerGiftCount)").string
             
+            let giftPremium = context.component.giftPremium
             let description = description.update(
                 component: MultilineTextComponent(
                     text: .markdown(text: descriptionString, attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.1
+                    lineSpacing: 0.1,
+                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { _, _ in
+                        giftPremium()
+                    }
                 ),
                 environment: {},
                 availableSize: CGSize(width: availableSize.width - sideInset * 2.0 - textSideInset, height: availableSize.height),
@@ -229,7 +243,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                 selectionPosition: .right,
                                 isEnabled: isEnabled,
                                 hasNext: i != occupiedBoosts.count - 1,
-                                action: { [weak state] _ in
+                                action: { [weak state] _, _, _ in
                                     guard let state, hasSelection else {
                                         return
                                     }
@@ -831,10 +845,13 @@ public class ReplaceBoostScreen: ViewController {
         
         var selectedSlotsUpdatedImpl: (([Int32]) -> Void)?
         var presentControllerImpl: ((ViewController) -> Void)?
+        var giftPremiumImpl: (() -> Void)?
         self.init(context: context, component: ReplaceBoostScreenComponent(context: context, peerId: peerId, myBoostStatus: myBoostStatus, initiallySelectedSlot: initiallySelectedSlot, selectedSlotsUpdated: { slots in
             selectedSlotsUpdatedImpl?(slots)
         }, presentController: { c in
             presentControllerImpl?(c)
+        }, giftPremium: {
+            giftPremiumImpl?()
         }))
         
         self.title = presentationData.strings.ReassignBoost_Title
@@ -855,6 +872,17 @@ public class ReplaceBoostScreen: ViewController {
         
         if let initiallySelectedSlot {
             self.node.selectedSlots = [initiallySelectedSlot]
+        }
+        
+        giftPremiumImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            let navigationController = self.navigationController
+            self.dismiss(animated: true, completion: {
+                let giftController = context.sharedContext.makePremiumGiftController(context: context)
+                navigationController?.pushViewController(giftController, animated: true)
+            })
         }
     }
     

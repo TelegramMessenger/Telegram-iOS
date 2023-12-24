@@ -96,6 +96,7 @@ public final class ForwardInfoPanelComponent: Component {
                 iconView.alpha = 0.55
                 iconView.tintColor = .white
                 self.addSubview(iconView)
+                self.iconView = iconView
             }
             if let image = iconView.image {
                 iconView.frame = CGRect(origin: CGPoint(x: sideInset + UIScreenPixel, y: 5.0), size: image.size)

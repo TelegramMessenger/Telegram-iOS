@@ -110,6 +110,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
         "//submodules/InvisibleInkDustNode",
         "//submodules/AlertUI",
+        "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
     ],
     visibility = [
         "//visibility:public",

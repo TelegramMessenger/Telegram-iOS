@@ -261,6 +261,9 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
         }
     }
     
+    
+    public var forceSynchronous = false
+    
     public init(useMetalCache: Bool = false) {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
@@ -366,7 +369,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                     strongSelf.play(firstFrame: true)
                 }
             }
-            self.disposable.set((source.directDataPath(attemptSynchronously: false)
+            self.disposable.set((source.directDataPath(attemptSynchronously: self.forceSynchronous)
             |> filter { $0 != nil }
             |> deliverOnMainQueue).startStrict(next: { path in
                 f(path!)
@@ -698,7 +701,8 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
         let frameSourceHolder = self.frameSource
         let timerHolder = self.timer
         let useMetalCache = self.useMetalCache
-        self.queue.async { [weak self] in
+        
+        let action = { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
             if case .timestamp = position {
             } else {
@@ -794,6 +798,11 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
             frameQueue.with { frameQueue in
                 frameQueue.generateFramesIfNeeded()
             }
+        }
+        if self.forceSynchronous {
+            action()
+        } else {
+            self.queue.async(action)
         }
     }
     

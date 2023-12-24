@@ -134,6 +134,8 @@ func _internal_setChatWallpaper(postbox: Postbox, network: Network, stateManager
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                 if let current = current as? CachedUserData {
                     return current.withUpdatedWallpaper(wallpaper)
+                } else if let current = current as? CachedChannelData {
+                    return current.withUpdatedWallpaper(wallpaper)
                 } else {
                     return current
                 }
