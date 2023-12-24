@@ -88,10 +88,11 @@ public func PremiumBoostScreen(
                 }
             }
         }
-                
-        let initialState = BoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: Int32(status.boosts))
+        
+        let boosts = max(Int32(status.boosts), myBoostCount)
+        let initialState = BoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: boosts)
         let updatedState = Promise<BoostState?>()
-        updatedState.set(.single(BoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: Int32(status.boosts + 1))))
+        updatedState.set(.single(BoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: boosts + 1)))
         
         var updateImpl: (() -> Void)?
         var dismissImpl: (() -> Void)?
