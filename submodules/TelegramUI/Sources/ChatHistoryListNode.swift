@@ -1847,7 +1847,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             if apply {
                 switch strongSelf.chatLocation {
                 case .peer, .replyThread, .feed:
-                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                    if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory &&
+                       !strongSelf.context.account.isSupportAccount { // Mark conversation as read only for non-support accounts
                         strongSelf.context.applyMaxReadIndex(for: strongSelf.chatLocation, contextHolder: strongSelf.chatLocationContextHolder, messageIndex: messageIndex)
                     }
                 }
