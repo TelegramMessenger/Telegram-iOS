@@ -92,6 +92,8 @@ private func calculateColors(context: AccountContext?, explicitColorIndex: Int?,
             colors = AvatarNode.repostColors
         } else if case .repliesIcon = icon {
             colors = AvatarNode.savedMessagesColors
+        } else if case .anonymousSavedMessagesIcon = icon {
+            colors = AvatarNode.savedMessagesColors
         } else if case .editAvatarIcon = icon, let theme {
             colors = [theme.list.itemAccentColor.withAlphaComponent(0.1), theme.list.itemAccentColor.withAlphaComponent(0.1)]
         } else if case let .archivedChatsIcon(hiddenByDefault) = icon, let theme = theme {
@@ -172,6 +174,7 @@ private enum AvatarNodeIcon: Equatable {
     case none
     case savedMessagesIcon
     case repliesIcon
+    case anonymousSavedMessagesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
     case deletedIcon
@@ -184,6 +187,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case image(TelegramMediaImageRepresentation)
     case savedMessagesIcon
     case repliesIcon
+    case anonymousSavedMessagesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon(forceNone: Bool)
     case deletedIcon
@@ -470,32 +474,35 @@ public final class AvatarNode: ASDisplayNode {
             var icon = AvatarNodeIcon.none
             if let overrideImage = overrideImage {
                 switch overrideImage {
-                    case .none:
-                        representation = nil
-                    case let .image(image):
-                        representation = image
-                        synchronousLoad = false
-                    case .savedMessagesIcon:
-                        representation = nil
-                        icon = .savedMessagesIcon
-                    case .repostIcon:
-                        representation = nil
-                        icon = .repostIcon
-                    case .repliesIcon:
-                        representation = nil
-                        icon = .repliesIcon
-                    case let .archivedChatsIcon(hiddenByDefault):
-                        representation = nil
-                        icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
-                    case let .editAvatarIcon(forceNone):
-                        representation = forceNone ? nil : peer?.smallProfileImage
-                        icon = .editAvatarIcon
-                    case .deletedIcon:
-                        representation = nil
-                        icon = .deletedIcon
-                    case .phoneIcon:
-                        representation = nil
-                        icon = .phoneIcon
+                case .none:
+                    representation = nil
+                case let .image(image):
+                    representation = image
+                    synchronousLoad = false
+                case .savedMessagesIcon:
+                    representation = nil
+                    icon = .savedMessagesIcon
+                case .repostIcon:
+                    representation = nil
+                    icon = .repostIcon
+                case .repliesIcon:
+                    representation = nil
+                    icon = .repliesIcon
+                case .anonymousSavedMessagesIcon:
+                    representation = nil
+                    icon = .anonymousSavedMessagesIcon
+                case let .archivedChatsIcon(hiddenByDefault):
+                    representation = nil
+                    icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
+                case let .editAvatarIcon(forceNone):
+                    representation = forceNone ? nil : peer?.smallProfileImage
+                    icon = .editAvatarIcon
+                case .deletedIcon:
+                    representation = nil
+                    icon = .deletedIcon
+                case .phoneIcon:
+                    representation = nil
+                    icon = .phoneIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: contentSettings) == nil {
                 representation = peer?.smallProfileImage
@@ -637,32 +644,35 @@ public final class AvatarNode: ASDisplayNode {
             var icon = AvatarNodeIcon.none
             if let overrideImage = overrideImage {
                 switch overrideImage {
-                    case .none:
-                        representation = nil
-                    case let .image(image):
-                        representation = image
-                        synchronousLoad = false
-                    case .savedMessagesIcon:
-                        representation = nil
-                        icon = .savedMessagesIcon
-                    case .repostIcon:
-                        representation = nil
-                        icon = .repostIcon
-                    case .repliesIcon:
-                        representation = nil
-                        icon = .repliesIcon
-                    case let .archivedChatsIcon(hiddenByDefault):
-                        representation = nil
-                        icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
-                    case let .editAvatarIcon(forceNone):
-                        representation = forceNone ? nil : peer?.smallProfileImage
-                        icon = .editAvatarIcon
-                    case .deletedIcon:
-                        representation = nil
-                        icon = .deletedIcon
-                    case .phoneIcon:
-                        representation = nil
-                        icon = .phoneIcon
+                case .none:
+                    representation = nil
+                case let .image(image):
+                    representation = image
+                    synchronousLoad = false
+                case .savedMessagesIcon:
+                    representation = nil
+                    icon = .savedMessagesIcon
+                case .repostIcon:
+                    representation = nil
+                    icon = .repostIcon
+                case .repliesIcon:
+                    representation = nil
+                    icon = .repliesIcon
+                case .anonymousSavedMessagesIcon:
+                    representation = nil
+                    icon = .repliesIcon
+                case let .archivedChatsIcon(hiddenByDefault):
+                    representation = nil
+                    icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
+                case let .editAvatarIcon(forceNone):
+                    representation = forceNone ? nil : peer?.smallProfileImage
+                    icon = .editAvatarIcon
+                case .deletedIcon:
+                    representation = nil
+                    icon = .deletedIcon
+                case .phoneIcon:
+                    representation = nil
+                    icon = .phoneIcon
                 }
             } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
                 representation = peer?.smallProfileImage
@@ -873,6 +883,15 @@ public final class AvatarNode: ASDisplayNode {
                         }
                     }
                 } else if case .repliesIcon = parameters.icon {
+                    let factor = bounds.size.width / 60.0
+                    context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                    context.scaleBy(x: factor, y: -factor)
+                    context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                    
+                    if let repliesIcon = repliesIcon {
+                        context.draw(repliesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repliesIcon.size.width) / 2.0), y: floor((bounds.size.height - repliesIcon.size.height) / 2.0)), size: repliesIcon.size))
+                    }
+                } else if case .anonymousSavedMessagesIcon = parameters.icon {
                     let factor = bounds.size.width / 60.0
                     context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
                     context.scaleBy(x: factor, y: -factor)

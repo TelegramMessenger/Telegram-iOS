@@ -616,6 +616,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     public private(set) var loadState: ChatHistoryNodeLoadState?
     private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
+    private var additionalLoadStateUpdated: [(ChatHistoryNodeLoadState, Bool) -> Void] = []
     
     public private(set) var hasPlentyOfMessages: Bool = false
     public var hasPlentyOfMessagesUpdated: ((Bool) -> Void)?
@@ -1507,6 +1508,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         if strongSelf.loadState != loadState {
                             strongSelf.loadState = loadState
                             strongSelf.loadStateUpdated?(loadState, false)
+                            for f in strongSelf.additionalLoadStateUpdated {
+                                f(loadState, false)
+                            }
                         }
                         
                         let historyState: ChatHistoryNodeHistoryState = .loading
@@ -1947,6 +1951,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
+    }
+    
+    public func addSetLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
+        self.additionalLoadStateUpdated.append(f)
     }
 
     private func maybeUpdateOverscrollAction(offset: CGFloat?) {
@@ -2966,6 +2974,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             if self.loadState != loadState {
                 self.loadState = loadState
                 self.loadStateUpdated?(loadState, transition.options.contains(.AnimateInsertion))
+                for f in self.additionalLoadStateUpdated {
+                    f(loadState, transition.options.contains(.AnimateInsertion))
+                }
             }
             
             let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
@@ -3291,7 +3302,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         }
                     }
                     strongSelf.loadState = loadState
-                    strongSelf.loadStateUpdated?(loadState, animated || transition.animateIn || animateIn)
+                    let isAnimated = animated || transition.animateIn || animateIn
+                    strongSelf.loadStateUpdated?(loadState, isAnimated)
+                    for f in strongSelf.additionalLoadStateUpdated {
+                        f(loadState, isAnimated)
+                    }
                 }
                 
                 var hasPlentyOfMessages = false

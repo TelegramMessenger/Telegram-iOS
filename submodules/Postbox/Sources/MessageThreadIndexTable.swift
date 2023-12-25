@@ -300,6 +300,10 @@ class MessageHistoryThreadIndexTable: Table {
         return result
     }
     
+    func getCount(peerId: PeerId) -> Int {
+        return self.valueBox.count(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId))
+    }
+    
     override func beforeCommit() {
         super.beforeCommit()
         

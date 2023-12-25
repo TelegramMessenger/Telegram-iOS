@@ -251,7 +251,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             switch item.content {
             case let .peer(peerData):
                 if let message = peerData.messages.first {
-                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerData.peer.peerId), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), botStart: nil, mode: .standard(previewing: true))
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerData.peer.peerId), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), botStart: nil, mode: .standard(.previewing))
                     chatController.canReadHistory.set(false)
                     let contextController = ContextController(presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list([]))), gesture: gesture)
                     presentInGlobalOverlay(contextController)

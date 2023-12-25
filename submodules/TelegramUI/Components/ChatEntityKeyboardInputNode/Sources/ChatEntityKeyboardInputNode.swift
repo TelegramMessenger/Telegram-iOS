@@ -2429,7 +2429,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             fontSize: self.presentationData.chatFontSize,
             bubbleCorners: self.presentationData.chatBubbleCorners,
             accountPeerId: self.context.account.peerId,
-            mode: .standard(previewing: false),
+            mode: .standard(.default),
             chatLocation: .peer(id: self.context.account.peerId),
             subject: nil,
             peerNearbyData: nil,

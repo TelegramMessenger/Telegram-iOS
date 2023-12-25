@@ -379,9 +379,10 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes)
                 
-        if case .forum = self.location {
+        switch self.location {
+        case .forum, .savedMessagesChats:
             self.backgroundColor = .clear
-        } else {
+        default:
             self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         }
         let paneFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))

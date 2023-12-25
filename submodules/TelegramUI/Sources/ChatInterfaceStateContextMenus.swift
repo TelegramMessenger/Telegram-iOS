@@ -267,6 +267,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     switch chatPresentationInterfaceState.mode {
     case .inline:
         return false
+    case .standard(.embedded):
+        return false
     default:
         break
     }
@@ -424,6 +426,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return .single(ContextController.Items(content: .list([])))
     }
     
+    var isEmbeddedMode = false
+    if case .standard(.embedded) = chatPresentationInterfaceState.mode {
+        isEmbeddedMode = true
+    }
+    
     var hasExpandedAudioTranscription = false
     if let messageNode = messageNode as? ChatMessageBubbleItemNode {
         hasExpandedAudioTranscription = messageNode.hasExpandedAudioTranscription()
@@ -509,7 +516,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         actions.append(.separator)
 
         if chatPresentationInterfaceState.copyProtectionEnabled {
-            
         } else {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
@@ -769,7 +775,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             loggingSettings = LoggingSettings.defaultSettings
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
+        return (MessageContextMenuData(
+            starStatus: stickerSaveStatus,
+            canReply: canReply && !isEmbeddedMode,
+            canPin: canPin && !isEmbeddedMode,
+            canEdit: canEdit && !isEmbeddedMode,
+            canSelect: canSelect && !isEmbeddedMode,
+            resourceStatus: resourceStatus,
+            messageActions: isEmbeddedMode ? ChatAvailableMessageActions(
+                options: [],
+                banAuthor: nil,
+                disableDelete: true,
+                isCopyProtected: messageActions.isCopyProtected
+            ) : messageActions
+        ), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
     }
     
     return dataSignal

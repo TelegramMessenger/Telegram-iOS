@@ -439,7 +439,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             let controller = ContextController(presentationData: self.presentationData, source: .extracted(ContactContextExtractedContentSource(sourceNode: node, shouldBeDismissed: .single(false))), items: items, recognizer: nil, gesture: gesture)
             contactsController.presentInGlobalOverlay(controller)
         } else {
-            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing))
             chatController.canReadHistory.set(false)
             let contextController = ContextController(presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: items, gesture: gesture)
             contactsController.presentInGlobalOverlay(contextController)

@@ -783,6 +783,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                         } else if peer.id.isReplies {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleBoldFont, textColor: textColor)
+                        } else if peer.id.isAnonymousSavedMessages {
+                            //TODO:localize
+                            titleAttributedString = NSAttributedString(string: "Author Hidden", font: titleBoldFont, textColor: textColor)
                         } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                             let string = NSMutableAttributedString()
                             switch item.displayOrder {
@@ -1030,6 +1033,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                             overrideImage = .savedMessagesIcon
                                         } else if peer.id.isReplies, case .generalSearch = item.peerMode {
                                             overrideImage = .repliesIcon
+                                        } else if peer.id.isAnonymousSavedMessages, case .generalSearch = item.peerMode {
+                                            overrideImage = .anonymousSavedMessagesIcon
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }

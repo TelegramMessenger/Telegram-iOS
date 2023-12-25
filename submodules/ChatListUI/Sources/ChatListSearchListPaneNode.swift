@@ -1228,6 +1228,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 enableRecentlySearched = true
             }
         }
+        if case .savedMessagesChats = location {
+            enableRecentlySearched = false
+        }
         
         if enableRecentlySearched {
             fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
@@ -1406,7 +1409,26 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             
             let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
             let foundLocalPeers: Signal<(peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>), NoError>
-            if let query = query, (key == .chats || key == .topics) {
+            
+            if case .savedMessagesChats = location {
+                if let query {
+                    foundLocalPeers = context.engine.messages.searchLocalSavedMessagesPeers(query: query.lowercased(), indexNameMapping: [
+                        context.account.peerId: [
+                            PeerIndexNameRepresentation.title(title: "saved messages", addressNames: []),
+                            PeerIndexNameRepresentation.title(title: presentationData.strings.DialogList_SavedMessages.lowercased(), addressNames: [])
+                        ],
+                        PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2666000)): [
+                            //TODO:localize
+                            PeerIndexNameRepresentation.title(title: "author hidden", addressNames: [])
+                        ]
+                    ])
+                    |> map { peers -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>) in
+                        return (peers.map(EngineRenderedPeer.init(peer:)), [:], Set())
+                    }
+                } else {
+                    foundLocalPeers = .single(([], [:], Set()))
+                }
+            } else if let query = query, (key == .chats || key == .topics) {
                 let fixedOrRemovedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
                 |> map { peers -> [RecentlySearchedPeer] in
                     let allIds = peers.map(\.peer.peerId)
@@ -1524,7 +1546,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             
             let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
             let currentRemotePeersValue: ([FoundPeer], [FoundPeer]) = currentRemotePeers.with { $0 } ?? ([], [])
-            if let query = query, case .chats = key {
+            if case .savedMessagesChats = location {
+                foundRemotePeers = .single(([], [], false))
+            } else if let query = query, case .chats = key {
                 foundRemotePeers = (
                     .single((currentRemotePeersValue.0, currentRemotePeersValue.1, true))
                     |> then(
@@ -1579,7 +1603,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
             
             let foundRemoteMessages: Signal<([FoundRemoteMessages], Bool), NoError>
-            if peersFilter.contains(.doNotSearchMessages) {
+            if case .savedMessagesChats = location {
+                foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0)], false))
+            } else if peersFilter.contains(.doNotSearchMessages) {
                 foundRemoteMessages = .single(([FoundRemoteMessages(messages: [], readCounters: [:], threadsData: [:], totalCount: 0)], false))
             } else {
                 if !finalQuery.isEmpty {
@@ -1676,18 +1702,23 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 )
             }
             
-            let resolvedMessage = .single(nil)
-            |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
-            |> mapToSignal { resolvedUrl -> Signal<EngineMessage?, NoError> in
-                if case let .channelMessage(_, messageId, _) = resolvedUrl {
-                    return context.engine.messages.downloadMessage(messageId: messageId)
-                    |> map { message -> EngineMessage? in
-                        return message.flatMap(EngineMessage.init)
+            let resolvedMessage: Signal<EngineMessage?, NoError>
+            if case .savedMessagesChats = location {
+                resolvedMessage = .single(nil)
+            } else {
+                resolvedMessage = .single(nil)
+                |> then(context.sharedContext.resolveUrl(context: context, peerId: nil, url: finalQuery, skipUrlAuth: true)
+                |> mapToSignal { resolvedUrl -> Signal<EngineMessage?, NoError> in
+                    if case let .channelMessage(_, messageId, _) = resolvedUrl {
+                        return context.engine.messages.downloadMessage(messageId: messageId)
+                        |> map { message -> EngineMessage? in
+                            return message.flatMap(EngineMessage.init)
+                        }
+                    } else {
+                        return .single(nil)
                     }
-                } else {
-                    return .single(nil)
-                }
-            })
+                })
+            }
             
             let foundThreads: Signal<[EngineChatList.Item], NoError>
             if case let .forum(peerId) = location, (key == .topics || key == .chats) {
@@ -2617,6 +2648,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         if peersFilter.contains(.excludeRecent) {
+            recentItems = .single([])
+        }
+        if case .savedMessagesChats = location {
             recentItems = .single([])
         }
         

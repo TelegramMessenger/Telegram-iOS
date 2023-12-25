@@ -1507,7 +1507,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                         proceed(chatController)
                                     })
                                 } else {
-                                    proceed(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
+                                    proceed(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(.default)))
                                 }
 
                                 strongSelf.updateState { state in

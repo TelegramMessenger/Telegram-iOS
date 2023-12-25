@@ -471,7 +471,18 @@ public extension TelegramEngine {
                         for i in 0 ..< tags.count {
                             let (count, maxId) = counts[i]
                             if let count = count {
-                                transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, count: count, maxId: maxId ?? 1)
+                                if count == 0, peerId == account.peerId, let threadId {
+                                    var localCount = 0
+                                    var maxId: Int32 = 1
+                                    transaction.scanMessages(peerId: peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, tag: tags[i], { message in
+                                        localCount += 1
+                                        maxId = max(maxId, message.id.id)
+                                        return true
+                                    })
+                                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, count: Int32(localCount), maxId: maxId)
+                                } else {
+                                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, count: count, maxId: maxId ?? 1)
+                                }
                             }
                         }
                     }
@@ -1300,7 +1311,25 @@ public extension TelegramEngine {
         }
         
         public func synchronouslyIsMessageDeletedInteractively(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
-            return account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
+            return self.account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
+        }
+        
+        public func savedMessagesPeersStats() -> Signal<Int?, NoError> {
+            return self.account.postbox.combinedView(keys: [.savedMessagesStats(peerId: self.account.peerId)])
+            |> map { views -> Int? in
+                guard let view = views.views[.savedMessagesStats(peerId: self.account.peerId)] as? MessageHistorySavedMessagesStatsView else {
+                    return nil
+                }
+                if view.isLoading {
+                    return nil
+                } else {
+                    return view.count
+                }
+            }
+        }
+        
+        public func searchLocalSavedMessagesPeers(query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
+            return _internal_searchLocalSavedMessagesPeers(account: self.account, query: query, indexNameMapping: indexNameMapping)
         }
     }
 }

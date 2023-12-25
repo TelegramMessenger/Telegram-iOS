@@ -1101,7 +1101,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         return self._itemInteraction!
     }
     
-    private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -1605,7 +1605,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
 
         self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            guard let strongSelf = self, let (size, topInset, sideInset, bottomInset, _, _, _, _) = strongSelf.currentParams  else {
+            guard let strongSelf = self, let (size, topInset, sideInset, bottomInset, _, _, _, _, _) = strongSelf.currentParams  else {
                 return
             }
             strongSelf.itemGridBinding.updatePresentationData(presentationData: presentationData)
@@ -1742,12 +1742,12 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
     private func updateHistory(items: SparseItemGrid.Items, synchronous: Bool, reloadAtTop: Bool) {
         self.items = items
 
-        if let (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+        if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
             var gridSnapshot: UIView?
             if reloadAtTop {
                 gridSnapshot = self.itemGrid.view.snapshotView(afterScreenUpdates: false)
             }
-            self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: false, transition: .immediate)
+            self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, deviceMetrics: deviceMetrics, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: false, transition: .immediate)
             if let gridSnapshot = gridSnapshot {
                 self.view.addSubview(gridSnapshot)
                 gridSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak gridSnapshot] _ in
@@ -2036,7 +2036,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         switch self.contentType {
         case .files, .music, .voiceAndVideoMessages:
             self.itemGrid.forEachVisibleItem { item in
-                guard let itemView = item.view as? ItemView, let (size, topInset, sideInset, bottomInset, _, _, _, _) = self.currentParams else {
+                guard let itemView = item.view as? ItemView, let (size, topInset, sideInset, bottomInset, _, _, _, _, _) = self.currentParams else {
                     return
                 }
                 if let item = itemView.item {
@@ -2093,8 +2093,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         }
     }
     
-    public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
+    public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        self.currentParams = (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
 
         transition.updateFrame(node: self.contextGestureContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
 

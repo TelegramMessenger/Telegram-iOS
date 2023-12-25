@@ -135,6 +135,8 @@ extension ChatControllerImpl {
                     navigateToLocation = .peer(peer)
                 }
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always))
+                
+                completion?()
             })
         } else if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allScheduled.contains(messageId.namespace)) {
             let _ = (self.context.engine.data.get(
@@ -158,6 +160,8 @@ extension ChatControllerImpl {
                     
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil), keepStack: .always))
                 }
+                
+                completion?()
             })
         } else if forceInCurrentChat {
             if let _ = fromId, let fromIndex = fromIndex, rememberInStack {
@@ -308,17 +312,19 @@ extension ChatControllerImpl {
                     |> deliverOnMainQueue).startStrict(next: { [weak self] index in
                         if let strongSelf = self, let index = index.0 {
                             strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, quote: quote, scrollPosition: scrollPosition)
-                            completion?()
                         } else if index.1 {
                             if !progressStarted {
                                 progressStarted = true
                                 progressDisposable.set(progressSignal.start())
                             }
+                        } else if let strongSelf = self {
+                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil))
                         }
                     }, completed: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.loadingMessage.set(.single(nil))
                         }
+                        completion?()
                     }))
                     cancelImpl = { [weak self] in
                         if let strongSelf = self {
