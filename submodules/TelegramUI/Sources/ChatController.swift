@@ -2251,6 +2251,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let concealed = urlData.concealed
                 let message = urlData.message
                 let progress = urlData.progress
+                let forceExternal = urlData.external ?? false
                 
                 var skipConcealedAlert = false
                 if let author = message?.author, author.isVerified {
@@ -2264,7 +2265,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let performOpenURL = strongSelf.performOpenURL {
                     performOpenURL(message, url, progress)
                 } else {
-                    strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
+                    strongSelf.openUrl(url, concealed: concealed, forceExternal: forceExternal, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
                 }
             }
         }, shareCurrentLocation: { [weak self] in
@@ -4164,7 +4165,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .join(_, joinHash):
                 self.controllerInteraction?.openJoinLink(joinHash)
             case let .webPage(_, url):
-                self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: false))
+                self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: true))
             case let .botApp(peerId, botApp, startParam):
                 let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in

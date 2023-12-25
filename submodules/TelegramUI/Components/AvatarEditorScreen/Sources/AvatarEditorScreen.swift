@@ -1045,8 +1045,9 @@ final class AvatarEditorScreenComponent: Component {
                             state.updated(transition: .easeInOut(duration: 0.2))
                         }
                     },
-                    openColorPicker: { [weak state] in
-                        if let state {
+                    openColorPicker: { [weak self, weak state] in
+                        if let self, let state {
+                            self.endEditing(true)
                             state.editingColor = true
                             state.previousColor = state.selectedBackground
                             state.previousCustomColor = state.customColor
