@@ -86,6 +86,10 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         timestamp = forwardInfo.date
     }
     
+    if let sourceAuthorInfo = message.sourceAuthorInfo, let orignalDate = sourceAuthorInfo.orignalDate {
+        timestamp = orignalDate
+    }
+    
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
     if timestamp == scheduleWhenOnlineTimestamp {
         dateText = "         "

@@ -109,7 +109,7 @@ public class QuotedReplyMessageAttribute: MessageAttribute {
 extension QuotedReplyMessageAttribute {
     convenience init(apiHeader: Api.MessageFwdHeader, quote: EngineMessageReplyQuote?, isQuote: Bool) {
         switch apiHeader {
-        case let .messageFwdHeader(_, fromId, fromName, _, _, _, _, _, _):
+        case let .messageFwdHeader(_, fromId, fromName, _, _, _, _, _, _, _, _, _):
             self.init(peerId: fromId?.peerId, authorName: fromName, quote: quote, isQuote: isQuote)
         }
     }

@@ -1331,6 +1331,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 break
             }
         }
+        let sourceAuthorInfo = item.content.firstMessage.sourceAuthorInfo
         
         var isCrosspostFromChannel = false
         if let _ = sourceReference {
@@ -1357,10 +1358,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 displayAuthorInfo = false
             } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if let forwardInfo = item.content.firstMessage.forwardInfo {
-                    ignoreForward = true
                     effectiveAuthor = forwardInfo.author
-                    if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                    
+                    if let sourceAuthorInfo, let originalAuthorId = sourceAuthorInfo.originalAuthor, let peer = item.message.peers[originalAuthorId] {
+                        effectiveAuthor = peer
+                    } else if let sourceAuthorInfo, let originalAuthorName = sourceAuthorInfo.originalAuthorName {
+                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(originalAuthorName.persistentHashValue % 32))), accessHash: nil, firstName: originalAuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                    } else {
+                        ignoreForward = true
+                        if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature {
+                            effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                        }
                     }
                 }
                 displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
