@@ -52,7 +52,9 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
     public init(context: AccountContext, navigationController: @escaping () -> NavigationController?) {
         self.context = context
         self.navigationController = navigationController
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
+        let strings = presentationData.strings
         
         self.chatListNode = ChatListNode(
             context: self.context,
@@ -89,6 +91,15 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
         })
         
         self.ready.set(self.chatListNode.ready)
+        
+        self.statusPromise.set(self.context.engine.messages.savedMessagesPeersStats()
+        |> map { count in
+            if let count {
+                return PeerInfoStatusData(text: strings.Notifications_Exceptions(Int32(count)), isActivity: false, key: .savedMessagesChats)
+            } else {
+                return PeerInfoStatusData(text: strings.Channel_NotificationLoading.lowercased(), isActivity: false, key: .savedMessagesChats)
+            }
+        })
         
         self.chatListNode.peerSelected = { [weak self] peer, _, _, _, _ in
             guard let self, let navigationController = self.navigationController() else {
@@ -229,7 +240,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
     public func updateSelectedMessages(animated: Bool) {
     }
     
-    public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         
         transition.updateFrame(node: self.chatListNode, frame: CGRect(origin: CGPoint(), size: size))

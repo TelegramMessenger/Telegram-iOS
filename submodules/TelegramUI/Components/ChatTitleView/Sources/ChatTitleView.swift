@@ -247,6 +247,9 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     segments = [.text(0, NSAttributedString(string: customTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else if peerView.peerId == self.context.account.peerId {
                                     segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                } else if peerView.peerId.isAnonymousSavedMessages {
+                                    //TODO:localize
+                                    segments = [.text(0, NSAttributedString(string: "Author Hidden", font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else {
                                     if !peerView.isContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
                                         segments = [.text(0, NSAttributedString(string: formatPhoneNumber(context: self.context, number: phone), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]

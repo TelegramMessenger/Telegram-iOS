@@ -259,7 +259,7 @@ final class StoryItemSetContainerSendMessage {
                 fontSize: presentationData.chatFontSize,
                 bubbleCorners: presentationData.chatBubbleCorners,
                 accountPeerId: context.account.peerId,
-                mode: .standard(previewing: false),
+                mode: .standard(.default),
                 chatLocation: .peer(id: context.account.peerId),
                 subject: nil,
                 peerNearbyData: nil,

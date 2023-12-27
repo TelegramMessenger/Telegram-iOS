@@ -114,7 +114,21 @@ public extension Message {
         return nil
     }
     
+    var sourceAuthorInfo: SourceAuthorInfoMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? SourceAuthorInfoMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
     var effectiveAuthor: Peer? {
+        if let sourceAuthorInfo = self.sourceAuthorInfo {
+            if let sourceAuthorId = sourceAuthorInfo.originalAuthor, let peer = self.peers[sourceAuthorId] {
+                return peer
+            }
+        }
         if let forwardInfo = self.forwardInfo, let sourceReference = self.sourceReference, forwardInfo.author?.id == sourceReference.messageId.peerId {
             if let peer = self.peers[sourceReference.messageId.peerId] {
                 return peer

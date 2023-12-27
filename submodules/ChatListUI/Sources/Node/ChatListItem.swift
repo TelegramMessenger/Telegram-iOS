@@ -1394,6 +1394,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var overrideImage: AvatarNodeImageOverride?
             if peer.id.isReplies {
                 overrideImage = .repliesIcon
+            } else if peer.id.isAnonymousSavedMessages {
+                overrideImage = .anonymousSavedMessagesIcon
             } else if peer.id == item.context.account.peerId && !displayAsMessage {
                 overrideImage = .savedMessagesIcon
             } else if peer.isDeleted {
@@ -2294,6 +2296,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
                     } else if let id = itemPeer.chatMainPeer?.id, id.isReplies {
                          titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleFont, textColor: theme.titleColor)
+                    } else if let id = itemPeer.chatMainPeer?.id, id.isAnonymousSavedMessages {
+                        //TODO:localize
+                        titleAttributedString = NSAttributedString(string: "Author Hidden", font: titleFont, textColor: theme.titleColor)
                     } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         let textColor: UIColor
                         if case let .chatList(index) = item.index, index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {

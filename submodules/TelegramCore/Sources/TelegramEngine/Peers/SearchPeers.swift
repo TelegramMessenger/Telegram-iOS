@@ -83,3 +83,8 @@ public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, netwo
     return processedSearchResult
 }
 
+func _internal_searchLocalSavedMessagesPeers(account: Account, query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
+    return account.postbox.transaction { transaction -> [EnginePeer] in
+        return transaction.searchSubPeers(peerId: account.peerId, query: query, indexNameMapping: indexNameMapping).map(EnginePeer.init)
+    }
+}

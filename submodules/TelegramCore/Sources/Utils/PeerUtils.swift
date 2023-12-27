@@ -424,4 +424,13 @@ public extension PeerId {
         }
         return false
     }
+    
+    var isAnonymousSavedMessages: Bool {
+        if self.namespace == Namespaces.Peer.CloudUser {
+            if self.id._internalGetInt64Value() == 2666000 {
+                return true
+            }
+        }
+        return false
+    }
 }

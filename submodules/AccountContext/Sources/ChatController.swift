@@ -758,7 +758,13 @@ public enum ChatControllerSubject: Equatable {
 }
 
 public enum ChatControllerPresentationMode: Equatable {
-    case standard(previewing: Bool)
+    public enum StandardPresentation {
+        case `default`
+        case previewing
+        case embedded
+    }
+    
+    case standard(StandardPresentation)
     case overlay(NavigationController?)
     case inline(NavigationController?)
 }

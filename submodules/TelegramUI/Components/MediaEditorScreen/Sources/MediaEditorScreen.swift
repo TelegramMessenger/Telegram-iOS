@@ -1015,7 +1015,7 @@ final class MediaEditorScreenComponent: Component {
                     fontSize: presentationData.chatFontSize,
                     bubbleCorners: presentationData.chatBubbleCorners,
                     accountPeerId: component.context.account.peerId,
-                    mode: .standard(previewing: false),
+                    mode: .standard(.default),
                     chatLocation: .peer(id: component.context.account.peerId),
                     subject: nil,
                     peerNearbyData: nil,

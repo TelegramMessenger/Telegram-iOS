@@ -142,7 +142,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         return chatInfoNavigationButton
     }
     
-    if case .standard(true) = presentationInterfaceState.mode {
+    if case .standard(.previewing) = presentationInterfaceState.mode {
         return chatInfoNavigationButton
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {

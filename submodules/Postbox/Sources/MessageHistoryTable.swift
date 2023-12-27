@@ -1554,7 +1554,7 @@ final class MessageHistoryTable: Table {
             
             let updatedGroupInfo = self.updateMovingGroupInfoInNamespace(index: updatedIndex, updatedIndex: updatedIndex, groupingKey: message.groupingKey, previousInfo: previousMessage.groupInfo, updatedGroupInfos: &updatedGroupInfos)
             
-            if previousMessage.tags != message.tags || index != updatedIndex {
+            if previousMessage.tags != message.tags || previousMessage.threadId != message.threadId || index != updatedIndex {
                 if !previousMessage.tags.isEmpty {
                     self.tagsTable.remove(tags: previousMessage.tags, index: index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                     if let threadId = previousMessage.threadId {

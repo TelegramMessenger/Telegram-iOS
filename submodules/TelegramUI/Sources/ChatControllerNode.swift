@@ -263,7 +263,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var isLoadingValue: Bool = false
     private var isLoadingEarlier: Bool = false
     private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
-        let useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
+        var useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
+        if case let .replyThread(message) = self.chatLocation, message.peerId == self.context.account.peerId {
+            useLoadingPlaceholder = true
+        }
         
         let updated = isLoading != self.isLoadingValue || (isLoading && earlier && !self.isLoadingEarlier)
         
@@ -1342,7 +1345,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let previewing: Bool
-        if case .standard(true) = self.chatPresentationInterfaceState.mode {
+        if case .standard(.previewing) = self.chatPresentationInterfaceState.mode {
             previewing = true
         } else {
             previewing = false
@@ -1366,9 +1369,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             insets = layout.insets(options: [.input])
         }
 
-        if case .overlay = self.chatPresentationInterfaceState.mode {
+        switch self.chatPresentationInterfaceState.mode {
+        case .standard(.embedded):
+            break
+        case .overlay:
             insets.top = 44.0
-        } else {
+        default:
             insets.top += navigationBarHeight
         }
         
@@ -1993,6 +1999,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelUpdateTransition = .immediate
         }
         
+        if case .standard(.embedded) = self.chatPresentationInterfaceState.mode {
+            self.inputPanelBackgroundNode.isHidden = true
+            self.inputPanelBackgroundSeparatorNode.isHidden = true
+            self.inputPanelBottomBackgroundSeparatorNode.isHidden = true
+        }
         self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: inputPanelUpdateTransition, beginWithCurrentState: true)
         self.inputPanelBottomBackgroundSeparatorBaseOffset = intrinsicInputPanelBackgroundNodeSize.height
         inputPanelUpdateTransition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: UIScreenPixel)), beginWithCurrentState: true)
@@ -3066,7 +3077,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         switch self.chatPresentationInterfaceState.mode {
-        case .standard(previewing: true):
+        case .standard(.previewing):
             if let subject = self.controller?.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
                 if let controller = self.controller {
                     if let result = controller.presentationContext.hitTest(view: self.view, point: point, with: event) {

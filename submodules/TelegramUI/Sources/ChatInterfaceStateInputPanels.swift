@@ -10,6 +10,10 @@ import ChatChannelSubscriberInputPanelNode
 import ChatMessageSelectionInputPanelNode
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
+    if case .standard(.embedded) = chatPresentationInterfaceState.mode {
+        return (nil, nil)
+    }
+    
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
         return (nil, nil)
     }
@@ -118,13 +122,24 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
         
         if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation, message.peerId == context.account.peerId {
-            if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
-                return (currentPanel, nil)
+            if EnginePeer.Id(message.threadId).isAnonymousSavedMessages {
+                if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                    return (currentPanel, nil)
+                } else {
+                    let panel = ChatRestrictedInputPanelNode()
+                    panel.context = context
+                    panel.interfaceInteraction = interfaceInteraction
+                    return (panel, nil)
+                }
             } else {
-                let panel = ChatChannelSubscriberInputPanelNode()
-                panel.interfaceInteraction = interfaceInteraction
-                panel.context = context
-                return (panel, nil)
+                if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                    return (currentPanel, nil)
+                } else {
+                    let panel = ChatChannelSubscriberInputPanelNode()
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.context = context
+                    return (panel, nil)
+                }
             }
         }
         

@@ -25,6 +25,9 @@ public func stringForFullAuthorName(message: EngineMessage, strings: Presentatio
         } else {
             if message.id.peerId == accountPeerId {
                 authorString = [strings.DialogList_SavedMessages]
+            } else if message.id.peerId.isAnonymousSavedMessages {
+                //TODO:localize
+                authorString = ["Author Hidden"]
             } else if message.flags.contains(.Incoming) {
                 authorString = [peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)]
             } else {

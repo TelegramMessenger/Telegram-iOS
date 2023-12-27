@@ -1559,7 +1559,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             })
         },
         peerContextAction: { peer, node, gesture, location in
-            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.previewing))
             chatController.canReadHistory.set(false)
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             

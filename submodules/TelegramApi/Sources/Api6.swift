@@ -75,6 +75,52 @@ public extension Api {
     }
 }
 public extension Api {
+    enum FeedPosition: TypeConstructorDescription {
+        case feedPosition(date: Int32, peer: Api.Peer, id: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .feedPosition(let date, let peer, let id):
+                    if boxed {
+                        buffer.appendInt32(1348066419)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .feedPosition(let date, let peer, let id):
+                return ("feedPosition", [("date", date as Any), ("peer", peer as Any), ("id", id as Any)])
+    }
+    }
+    
+        public static func parse_feedPosition(_ reader: BufferReader) -> FeedPosition? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.FeedPosition.feedPosition(date: _1!, peer: _2!, id: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     

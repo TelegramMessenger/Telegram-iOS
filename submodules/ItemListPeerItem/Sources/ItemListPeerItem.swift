@@ -1041,6 +1041,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: currentBoldFont, textColor: titleColor)
             } else if item.peer.id.isReplies {
                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: currentBoldFont, textColor: titleColor)
+            } else if item.peer.id.isAnonymousSavedMessages {
+                //TODO:localize
+                titleAttributedString = NSAttributedString(string: "Author Hidden", font: currentBoldFont, textColor: titleColor)
             } else if case let .user(user) = item.peer {
                 if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                     let string = NSMutableAttributedString()

@@ -155,12 +155,15 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
         
             if let fwdHeader = fwdHeader {
                 switch fwdHeader {
-                    case let .messageFwdHeader(_, fromId, _, _, _, _, savedFromPeer, _, _):
+                    case let .messageFwdHeader(_, fromId, _, _, _, _, savedFromPeer, _, savedFromId, _, _, _):
                         if let fromId = fromId {
                             result.append(fromId.peerId)
                         }
                         if let savedFromPeer = savedFromPeer {
                             result.append(savedFromPeer.peerId)
+                        }
+                        if let savedFromId = savedFromId {
+                            result.append(savedFromId.peerId)
                         }
                 }
             }
@@ -669,7 +672,7 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(flags, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                        case let .messageFwdHeader(flags, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, savedFromId, savedFromName, savedDate, psaType):
                             var forwardInfoFlags: MessageForwardInfo.Flags = []
                             let isImported = (flags & (1 << 7)) != 0
                             if isImported {
@@ -693,15 +696,20 @@ extension StoreMessage {
                                     authorId = fromId.peerId
                                 }
                             }
+                        
+                            let originalOutgoing = (flags & (1 << 11)) != 0
                             
                             if let savedFromPeer = savedFromPeer, let savedFromMsgId = savedFromMsgId {
                                 let peerId: PeerId = savedFromPeer.peerId
                                 let messageId: MessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: savedFromMsgId)
                                 attributes.append(SourceReferenceMessageAttribute(messageId: messageId))
                             }
+                            if savedFromId != nil || savedFromName != nil || savedDate != nil || originalOutgoing {
+                                attributes.append(SourceAuthorInfoMessageAttribute(originalAuthor: savedFromId?.peerId, originalAuthorName: savedFromName, orignalDate: savedDate, originalOutgoing: originalOutgoing))
+                            }
                         
                             if let authorId = authorId {
-                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
+                                forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor,  psaType: psaType, flags: forwardInfoFlags)
                             } else if let sourceId = sourceId {
                                 forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date, authorSignature: postAuthor, psaType: psaType, flags: forwardInfoFlags)
                             } else if let postAuthor = postAuthor ?? fromName {
