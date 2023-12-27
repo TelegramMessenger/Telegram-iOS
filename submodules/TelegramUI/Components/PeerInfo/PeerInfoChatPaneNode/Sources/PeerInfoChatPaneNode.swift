@@ -61,7 +61,7 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.navigationController = navigationController
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .replyThread(message: ChatReplyThreadMessage(peerId: context.account.peerId, threadId: peerId.toInt64(), channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)), subject: nil, botStart: nil, mode: .standard(.embedded))
+        self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .replyThread(message: ChatReplyThreadMessage(peerId: context.account.peerId, threadId: peerId.toInt64(), channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)), subject: nil, botStart: nil, mode: .standard(.embedded(invertDirection: true)))
         
         super.init()
         
@@ -105,6 +105,9 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     public func transferVelocity(_ velocity: CGFloat) {
+        if velocity > 0.0 {
+            self.chatController.transferScrollingVelocity(velocity)
+        }
     }
     
     public func cancelPreviewGestures() {
@@ -142,9 +145,10 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         let chatFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset))
         
-        let combinedBottomInset = max(0.0, size.height - visibleHeight) + bottomInset
+        let combinedBottomInset = bottomInset
         transition.updateFrame(node: self.chatController.displayNode, frame: chatFrame)
-        self.chatController.containerLayoutUpdated(ContainerViewLayout(size: chatFrame.size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), safeInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+        self.chatController.updateIsScrollingLockedAtTop(isScrollingLockedAtTop: isScrollingLockedAtTop)
+        self.chatController.containerLayoutUpdated(ContainerViewLayout(size: chatFrame.size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), safeInsets: UIEdgeInsets(top: 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

@@ -397,6 +397,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
+    var navigationController: (() -> NavigationController?)?
     
     var dismissTooltipsImpl: (() -> Void)?
     
@@ -463,7 +464,21 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                     }
                 }
                 
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                    if savedMessages {
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            guard let peer else {
+                                return
+                            }
+                            guard let navigationController = navigationController?() else {
+                                return
+                            }
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                        })
+                    }
+                    return false
+                }), nil)
             })
         }
         shareController.actionCompleted = {
@@ -665,7 +680,21 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                                 }
                             }
                             
-                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                if savedMessages {
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        guard let peer else {
+                                            return
+                                        }
+                                        guard let navigationController = navigationController?() else {
+                                            return
+                                        }
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                    })
+                                }
+                                return false
+                            }), nil)
                         })
                     }
                     shareController.actionCompleted = {
@@ -924,6 +953,9 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c, animated: true)
         }
+    }
+    navigationController = { [weak controller] in
+        return controller?.navigationController as? NavigationController
     }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {

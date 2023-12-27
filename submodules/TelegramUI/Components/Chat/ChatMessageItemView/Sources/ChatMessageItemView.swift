@@ -653,13 +653,11 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     
     open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
-    public required convenience init() {
-        self.init(layerBacked: false)
-    }
-    
-    public init(layerBacked: Bool) {
-        super.init(layerBacked: layerBacked, dynamicBounce: true, rotated: true)
-        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+    public required init(rotated: Bool) {
+        super.init(layerBacked: false, dynamicBounce: true, rotated: rotated)
+        if rotated {
+            self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
     }
 
     required public init?(coder aDecoder: NSCoder) {
@@ -684,7 +682,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ChatMessageItem {
             let doLayout = self.asyncLayout()
-            let merged = item.mergedWithItems(top: previousItem, bottom: nextItem)
+            let merged = item.mergedWithItems(top: previousItem, bottom: nextItem, isRotated: item.controllerInteraction.chatIsRotated)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets

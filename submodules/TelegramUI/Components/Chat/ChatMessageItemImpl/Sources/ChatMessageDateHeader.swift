@@ -47,9 +47,13 @@ public final class ChatMessageDateHeader: ListViewItemHeader {
         self.action = action
         self.roundedTimestamp = dateHeaderTimestampId(timestamp: timestamp)
         self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.roundedTimestamp))
+        
+        let isRotated = controllerInteraction?.chatIsRotated ?? true
+        
+        self.stickDirection = isRotated ? .bottom : .top
     }
     
-    public let stickDirection: ListViewItemHeaderStickDirection = .bottom
+    public let stickDirection: ListViewItemHeaderStickDirection
     public let stickOverInsets: Bool = true
     
     public let height: CGFloat = 34.0
@@ -191,9 +195,13 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         self.text = text
         
-        super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
+        let isRotated = controllerInteraction?.chatIsRotated ?? true
         
-        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        super.init(layerBacked: false, dynamicBounce: true, isRotated: isRotated, seeThrough: false)
+        
+        if isRotated {
+            self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
 
@@ -398,9 +406,13 @@ public final class ChatMessageAvatarHeader: ListViewItemHeader {
         self.controllerInteraction = controllerInteraction
         self.id = ListViewItemNode.HeaderId(space: 1, id: Id(peerId: peerId, timestampId: dateHeaderTimestampId(timestamp: timestamp)))
         self.storyStats = storyStats
+        
+        let isRotated = controllerInteraction?.chatIsRotated ?? true
+        
+        self.stickDirection = isRotated ? .top : .bottom
     }
     
-    public let stickDirection: ListViewItemHeaderStickDirection = .top
+    public let stickDirection: ListViewItemHeaderStickDirection
     public let stickOverInsets: Bool = false
 
     public let height: CGFloat = 38.0
@@ -484,9 +496,13 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.contentNode.displaysAsynchronously = !presentationData.isPreview
 
-        super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
+        let isRotated = controllerInteraction?.chatIsRotated ?? true
+        
+        super.init(layerBacked: false, dynamicBounce: true, isRotated: isRotated, seeThrough: false)
 
-        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        if isRotated {
+            self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
 
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.avatarNode)

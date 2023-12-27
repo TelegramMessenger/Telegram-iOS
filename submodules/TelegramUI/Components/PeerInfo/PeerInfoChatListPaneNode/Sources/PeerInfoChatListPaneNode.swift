@@ -14,6 +14,8 @@ import TelegramUIPreferences
 import AppBundle
 import PeerInfoPaneNode
 import ChatListUI
+import DeleteChatPeerActionSheetItem
+import UndoUI
 
 public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let context: AccountContext
@@ -174,6 +176,113 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                 self.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: currentParams.size, insets: UIEdgeInsets(top: currentParams.topInset, left: currentParams.sideInset, bottom: currentParams.bottomInset, right: currentParams.sideInset), verticalOffset: offset + self.shimmerNodeOffset, transition: transition)
             }
         }
+        
+        self.chatListNode.push = { [weak self] c in
+            guard let self else {
+                return
+            }
+            self.parentController?.push(c)
+        }
+        
+        self.chatListNode.present = { [weak self] c in
+            guard let self else {
+                return
+            }
+            self.parentController?.present(c, in: .window(.root))
+        }
+        
+        self.chatListNode.deletePeerChat = { [weak self] peerId, _ in
+            guard let self else {
+                return
+            }
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                
+                self.view.window?.endEditing(true)
+                
+                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                var items: [ActionSheetItem] = []
+                items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: peer, chatPeer: peer, action: .deleteSavedPeer, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, balancedLayout: true))
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.chatListNode.updateState({ state in
+                        var state = state
+                        state.pendingRemovalItemIds.insert(ChatListNodeState.ItemId(peerId: peer.id, threadId: nil))
+                        return state
+                    })
+                    self.parentController?.forEachController({ controller in
+                        if let controller = controller as? UndoOverlayController {
+                            controller.dismissWithCommitActionAndReplacementAnimation()
+                        }
+                        return true
+                    })
+                    
+                    //TODO:localize
+                    self.parentController?.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: "Saved messages deleted.", text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                        guard let self else {
+                            return false
+                        }
+                        if value == .commit {
+                            let _ = self.context.engine.messages.clearHistoryInteractively(peerId: self.context.account.peerId, threadId: peer.id.toInt64(), type: .forLocalPeer).startStandalone(completed: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.chatListNode.updateState({ state in
+                                    var state = state
+                                    state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peer.id, threadId: nil))
+                                    return state
+                                })
+                            })
+                            return true
+                        } else if value == .undo {
+                            self.chatListNode.updateState({ state in
+                                var state = state
+                                state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peer.id, threadId: nil))
+                                return state
+                            })
+                            return true
+                        }
+                        return false
+                    }), in: .current)
+                }))
+                
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                self.parentController?.present(actionSheet, in: .window(.root))
+            })
+        }
+        
+        self.chatListNode.activateChatPreview = { [weak self] item, _, node, gesture, location in
+            guard let self, let parentController = self.parentController else {
+                gesture?.cancel()
+                return
+            }
+            
+            if case let .peer(peerData) = item.content {
+                let threadId = peerData.peer.peerId.toInt64()
+                let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .replyThread(message: ChatReplyThreadMessage(
+                    peerId: self.context.account.peerId, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                )), subject: nil, botStart: nil, mode: .standard(.previewing))
+                chatController.canReadHistory.set(false)
+                let source: ContextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: parentController.navigationController as? NavigationController))
+                
+                let contextController = ContextController(presentationData: self.presentationData, source: source, items: savedMessagesPeerMenuItems(context: self.context, threadId: threadId, parentController: parentController) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                parentController.presentInGlobalOverlay(contextController)
+            }
+        }
     }
     
     deinit {
@@ -266,5 +375,34 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
             return nil
         }
         return result
+    }
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    let navigationController: NavigationController?
+    
+    let passthroughTouches: Bool = true
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?, navigationController: NavigationController?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.navigationController = navigationController
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode.view, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
+    
+    func animatedIn() {
     }
 }

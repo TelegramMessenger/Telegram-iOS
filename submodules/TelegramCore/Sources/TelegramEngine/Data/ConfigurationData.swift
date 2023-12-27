@@ -37,6 +37,7 @@ public enum EngineConfiguration {
     
     public struct UserLimits: Equatable {
         public let maxPinnedChatCount: Int32
+        public let maxPinnedSavedChatCount: Int32
         public let maxArchivedPinnedChatCount: Int32
         public let maxChannelsCount: Int32
         public let maxPublicLinksCount: Int32
@@ -67,6 +68,7 @@ public enum EngineConfiguration {
 
         public init(
             maxPinnedChatCount: Int32,
+            maxPinnedSavedChatCount: Int32,
             maxArchivedPinnedChatCount: Int32,
             maxChannelsCount: Int32,
             maxPublicLinksCount: Int32,
@@ -92,6 +94,7 @@ public enum EngineConfiguration {
             maxChannelRecommendationsCount: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
+            self.maxPinnedSavedChatCount = maxPinnedSavedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
             self.maxChannelsCount = maxChannelsCount
             self.maxPublicLinksCount = maxPublicLinksCount
@@ -153,6 +156,7 @@ public extension EngineConfiguration.UserLimits {
     init(_ userLimitsConfiguration: UserLimitsConfiguration) {
         self.init(
             maxPinnedChatCount: userLimitsConfiguration.maxPinnedChatCount,
+            maxPinnedSavedChatCount: userLimitsConfiguration.maxPinnedSavedChatCount,
             maxArchivedPinnedChatCount: userLimitsConfiguration.maxArchivedPinnedChatCount,
             maxChannelsCount: userLimitsConfiguration.maxChannelsCount,
             maxPublicLinksCount: userLimitsConfiguration.maxPublicLinksCount,

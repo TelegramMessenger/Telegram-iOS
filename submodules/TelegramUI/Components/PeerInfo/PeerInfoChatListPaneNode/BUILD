@@ -22,6 +22,8 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/ChatListUI",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode",
+        "//submodules/DeleteChatPeerActionSheetItem",
+        "//submodules/UndoUI",
     ],
     visibility = [
         "//visibility:public",

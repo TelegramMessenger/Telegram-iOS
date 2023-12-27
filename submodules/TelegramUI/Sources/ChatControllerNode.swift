@@ -132,6 +132,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let loadingNode: ChatLoadingNode
     private(set) var loadingPlaceholderNode: ChatLoadingPlaceholderNode?
     
+    var isScrollingLockedAtTop: Bool = false
+    
     private var emptyNode: ChatEmptyNode?
     private(set) var emptyType: ChatHistoryNodeLoadState.EmptyType?
     private var didDisplayEmptyGreeting = false
@@ -579,15 +581,23 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             source = .default
         }
+        
+        var historyNodeRotated = true
+        switch chatPresentationInterfaceState.mode {
+        case let .standard(standardMode):
+            if case .embedded(true) = standardMode {
+                historyNodeRotated = false
+            }
+        default:
+            break
+        }
+        
+        self.controllerInteraction.chatIsRotated = historyNodeRotated
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
-        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), rotated: historyNodeRotated, messageTransitionNode: {
             return getMessageTransitionNode?()
         })
-        self.historyNode.rotated = true
-
-        //self.historyScrollingArea = SparseDiscreteScrollingArea()
-        //self.historyNode.historyScrollingArea = self.historyScrollingArea
 
         self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
         
@@ -625,7 +635,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputPanelBottomBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputMediaPanel.panelSeparatorColor
         self.inputPanelBottomBackgroundSeparatorNode.isLayerBacked = true
         
-        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, backgroundNode: self.backgroundNode)
+        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat, backgroundNode: self.backgroundNode, isChatRotated: historyNodeRotated)
         self.navigateButtons.accessibilityElementsHidden = true
         
         super.init()
@@ -1857,6 +1867,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        if !self.historyNode.rotated {
+            let current = listInsets
+            listInsets.top = current.bottom
+            listInsets.bottom = current.top
+        }
+        
         var displayTopDimNode = false
         let ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil
         var expandTopDimNode = false
@@ -1923,6 +1939,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.notifyTransitionCompletionListeners(transition: transition)
             }
         })
+        if self.isScrollingLockedAtTop {
+            switch self.historyNode.visibleContentOffset() {
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                break
+            case .none:
+                break
+            default:
+                self.historyNode.scrollToEndOfHistory()
+            }
+        }
+        self.historyNode.scrollEnabled = !self.isScrollingLockedAtTop
         
         let navigateButtonsSize = self.navigateButtons.updateLayout(transition: transition)
         var navigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: layout.size.height - containerInsets.bottom - inputPanelsHeight - navigateButtonsSize.height - 6.0), size: navigateButtonsSize)
@@ -1944,6 +1971,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if layout.additionalInsets.right > 0.0 {
             apparentNavigateButtonsFrame.origin.y -= 16.0
+        }
+        
+        if !self.historyNode.rotated {
+            apparentNavigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: 6.0), size: navigateButtonsSize)
         }
         
         var isInputExpansionEnabled = false

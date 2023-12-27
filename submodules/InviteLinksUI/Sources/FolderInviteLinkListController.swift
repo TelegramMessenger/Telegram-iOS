@@ -311,6 +311,7 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var attemptNavigationImpl: ((@escaping () -> Void) -> Bool)?
+    var navigationController: (() -> NavigationController?)?
     
     var dismissTooltipsImpl: (() -> Void)?
     
@@ -385,7 +386,21 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
                     }
                 }
                 
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                    if savedMessages {
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            guard let peer else {
+                                return
+                            }
+                            guard let navigationController = navigationController?() else {
+                                return
+                            }
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                        })
+                    }
+                    return false
+                }), nil)
             })
         }
         shareController.actionCompleted = {
@@ -745,6 +760,9 @@ public func folderInviteLinkListController(context: AccountContext, updatedPrese
             f()
             return true
         }
+    }
+    navigationController = { [weak controller] in
+        return controller?.navigationController as? NavigationController
     }
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {

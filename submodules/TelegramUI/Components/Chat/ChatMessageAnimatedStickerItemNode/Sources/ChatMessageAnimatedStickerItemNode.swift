@@ -141,7 +141,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var wasPending: Bool = false
     private var didChangeFromPendingToSent: Bool = false
     
-    required public init() {
+    required public init(rotated: Bool) {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
@@ -156,7 +156,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.textNode.textNode.displaysAsynchronously = false
         self.textNode.textNode.isUserInteractionEnabled = false
         
-        super.init(layerBacked: false)
+        super.init(rotated: rotated)
         
         self.containerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self else {

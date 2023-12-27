@@ -259,7 +259,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         self.associatedData = associatedData
         self.controllerInteraction = controllerInteraction
         self.content = content
-        self.disableDate = disableDate
+        self.disableDate = disableDate || !controllerInteraction.chatIsRotated
         self.additionalContent = additionalContent
         
         var avatarHeader: ChatMessageAvatarHeader?
@@ -369,6 +369,9 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         if case .messageOptions = associatedData.subject {
             headers = []
         }
+        if !controllerInteraction.chatIsRotated {
+            headers = []
+        }
         if let avatarHeader = self.avatarHeader {
             headers.append(avatarHeader)
         }
@@ -450,11 +453,11 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
         
         let configure = {
-            let node = (viewClassName as! ChatMessageItemView.Type).init()
+            let node = (viewClassName as! ChatMessageItemView.Type).init(rotated: self.controllerInteraction.chatIsRotated)
             node.setupItem(self, synchronousLoad: synchronousLoads)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
+            let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem, isRotated:  self.controllerInteraction.chatIsRotated)
             
             var disableDate = self.disableDate
             if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {
@@ -490,7 +493,15 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
     }
     
-    public func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
+    public func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
+        var top = top
+        var bottom = bottom
+        if !isRotated {
+            let previousTop = top
+            top = bottom
+            bottom = previousTop
+        }
+        
         var mergedTop: ChatMessageMerge = .none
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false
@@ -530,8 +541,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 
                 let nodeLayout = nodeValue.asyncLayout()
                 
+                let isRotated = self.controllerInteraction.chatIsRotated
+                
                 async {
-                    let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
+                    let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem, isRotated: isRotated)
                     
                     var disableDate = self.disableDate
                     if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {

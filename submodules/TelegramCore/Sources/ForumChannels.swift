@@ -458,33 +458,51 @@ public enum SetForumChannelTopicPinnedError {
 }
 
 func _internal_setForumChannelPinnedTopics(account: Account, id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, SetForumChannelTopicPinnedError> {
-    return account.postbox.transaction { transaction -> Api.InputChannel? in
-        guard let inputChannel = transaction.getPeer(id).flatMap(apiInputChannel) else {
-            return nil
-        }
-        
-        transaction.setPeerPinnedThreads(peerId: id, threadIds: threadIds)
-        
-        return inputChannel
-    }
-    |> castError(SetForumChannelTopicPinnedError.self)
-    |> mapToSignal { inputChannel -> Signal<Never, SetForumChannelTopicPinnedError> in
-        guard let inputChannel = inputChannel else {
-            return .fail(.generic)
-        }
-        
-        return account.network.request(Api.functions.channels.reorderPinnedForumTopics(
-            flags: 1 << 0,
-            channel: inputChannel,
-            order: threadIds.map(Int32.init(clamping:))
-        ))
-        |> mapError { _ -> SetForumChannelTopicPinnedError in
-            return .generic
-        }
-        |> mapToSignal { result -> Signal<Never, SetForumChannelTopicPinnedError> in
-            account.stateManager.addUpdates(result)
+    if id == account.peerId {
+        return account.postbox.transaction { transaction -> [Api.InputDialogPeer] in
+            transaction.setPeerPinnedThreads(peerId: id, threadIds: threadIds)
             
-            return .complete()
+            return threadIds.compactMap { transaction.getPeer(PeerId($0)).flatMap(apiInputPeer).flatMap({ .inputDialogPeer(peer: $0) }) }
+        }
+        |> castError(SetForumChannelTopicPinnedError.self)
+        |> mapToSignal { inputPeers -> Signal<Never, SetForumChannelTopicPinnedError> in
+            return account.network.request(Api.functions.messages.reorderPinnedSavedDialogs(flags: 1 << 0, order: inputPeers))
+            |> mapError { _ -> SetForumChannelTopicPinnedError in
+                return .generic
+            }
+            |> mapToSignal { _ -> Signal<Never, SetForumChannelTopicPinnedError> in
+                return .complete()
+            }
+        }
+    } else {
+        return account.postbox.transaction { transaction -> Api.InputChannel? in
+            guard let inputChannel = transaction.getPeer(id).flatMap(apiInputChannel) else {
+                return nil
+            }
+            
+            transaction.setPeerPinnedThreads(peerId: id, threadIds: threadIds)
+            
+            return inputChannel
+        }
+        |> castError(SetForumChannelTopicPinnedError.self)
+        |> mapToSignal { inputChannel -> Signal<Never, SetForumChannelTopicPinnedError> in
+            guard let inputChannel = inputChannel else {
+                return .fail(.generic)
+            }
+            
+            return account.network.request(Api.functions.channels.reorderPinnedForumTopics(
+                flags: 1 << 0,
+                channel: inputChannel,
+                order: threadIds.map(Int32.init(clamping:))
+            ))
+            |> mapError { _ -> SetForumChannelTopicPinnedError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Never, SetForumChannelTopicPinnedError> in
+                account.stateManager.addUpdates(result)
+                
+                return .complete()
+            }
         }
     }
 }
@@ -687,8 +705,12 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
             limit: Int32(limit),
             hash: 0
         ))
-        |> mapError { _ -> LoadMessageHistoryThreadsError in
-            return .generic
+        |> `catch` { error -> Signal<Api.messages.SavedDialogs, LoadMessageHistoryThreadsError> in
+            if error.errorDescription == "SAVED_DIALOGS_UNSUPPORTED" {
+                return .never()
+            } else {
+                return .fail(.generic)
+            }
         }
         |> mapToSignal { result -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> in
             switch result {

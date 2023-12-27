@@ -636,7 +636,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
     }
     
-    required public init() {
+    required public init(rotated: Bool) {
         self.mainContextSourceNode = ContextExtractedContentContainingNode()
         self.mainContainerNode = ContextControllerSourceNode()
         self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
@@ -654,7 +654,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         //self.debugNode = ASDisplayNode()
         //self.debugNode.backgroundColor = .blue
         
-        super.init(layerBacked: false)
+        super.init(rotated: rotated)
         
         //self.addSubnode(self.debugNode)
         

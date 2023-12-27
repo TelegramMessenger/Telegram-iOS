@@ -8,6 +8,7 @@ import WallpaperBackgroundNode
 final class ChatHistoryNavigationButtons: ASDisplayNode {
     private var theme: PresentationTheme
     private var dateTimeFormat: PresentationDateTimeFormat
+    private let isChatRotated: Bool
     
     let reactionsButton: ChatHistoryNavigationButtonNode
     let mentionsButton: ChatHistoryNavigationButtonNode
@@ -68,7 +69,8 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat, backgroundNode: WallpaperBackgroundNode) {
+    init(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat, backgroundNode: WallpaperBackgroundNode, isChatRotated: Bool) {
+        self.isChatRotated = isChatRotated
         self.theme = theme
         self.dateTimeFormat = dateTimeFormat
         
@@ -80,7 +82,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         self.reactionsButton.alpha = 0.0
         self.reactionsButton.isHidden = true
         
-        self.downButton = ChatHistoryNavigationButtonNode(theme: theme, backgroundNode: backgroundNode, type: .down)
+        self.downButton = ChatHistoryNavigationButtonNode(theme: theme, backgroundNode: backgroundNode, type: isChatRotated ? .down : .up)
         self.downButton.alpha = 0.0
         self.downButton.isHidden = true
         
@@ -186,11 +188,15 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
             transition.updateTransformScale(node: self.reactionsButton, scale: 0.2)
         }
         
-        transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height), size: buttonSize).center)
-        
-        transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize).center)
-        
-        transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset - reactionsOffset), size: buttonSize).center)
+        if self.isChatRotated {
+            transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height), size: buttonSize).center)
+            transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize).center)
+            transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset - reactionsOffset), size: buttonSize).center)
+        } else {
+            transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: buttonSize).center)
+            transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset), size: buttonSize).center)
+            transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset + reactionsOffset), size: buttonSize).center)
+        }
         
         if let (rect, containerSize) = self.absoluteRect {
             self.update(rect: rect, within: containerSize, transition: transition)

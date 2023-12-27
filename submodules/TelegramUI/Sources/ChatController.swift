@@ -321,6 +321,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var preloadNextChatPeerId: PeerId?
     let preloadNextChatPeerIdDisposable = MetaDisposable()
     
+    var preloadSavedMessagesChatsDisposable: Disposable?
+    
     let botCallbackAlertMessage = Promise<String?>(nil)
     var botCallbackAlertMessageDisposable: Disposable?
     
@@ -2518,7 +2520,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                            if savedMessages, let self {
+                                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                    guard let self, let peer else {
+                                        return
+                                    }
+                                    guard let navigationController = self.navigationController as? NavigationController else {
+                                        return
+                                    }
+                                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                                })
+                            }
+                            return false
+                        }), in: .current)
                     })
                 }
                 strongSelf.chatDisplayNode.dismissInput()
@@ -5703,6 +5719,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }))
+                
+                if peerId == context.account.peerId {
+                    self.preloadSavedMessagesChatsDisposable = context.engine.messages.savedMessagesPeerListHead().start()
+                }
             } else if case let .replyThread(messagePromise) = self.chatLocationInfoData, let peerId = peerId {
                 self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                 
@@ -5896,7 +5916,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let mappedPeerData = ChatTitleContent.PeerData(
                                 peerId: savedMessagesPeerId,
                                 peer: savedMessagesPeer?.peer?._asPeer(),
-                                isContact: false,
+                                isContact: true,
                                 notificationSettings: nil,
                                 peerPresences: [:],
                                 cachedData: nil
@@ -6748,6 +6768,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.automaticMediaDownloadSettingsDisposable?.dispose()
             self.stickerSettingsDisposable?.dispose()
             self.searchQuerySuggestionState?.1.dispose()
+            self.preloadSavedMessagesChatsDisposable?.dispose()
         }
         deallocate()
     }
@@ -7188,6 +7209,39 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
+            }
+        }
+        if case .peer(self.context.account.peerId) = self.chatLocation {
+            var didDisplayTooltip = false
+            self.chatDisplayNode.historyNode.hasLotsOfMessagesUpdated = { [weak self] hasLotsOfMessages in
+                guard let self, hasLotsOfMessages else {
+                    return
+                }
+                if didDisplayTooltip {
+                    return
+                }
+                didDisplayTooltip = true
+                
+                let _ = (ApplicationSpecificNotice.getSavedMessagesChatsSuggestion(accountManager: self.context.sharedContext.accountManager)
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
+                    guard let self else {
+                        return
+                    }
+                    if counter >= 3 {
+                        return
+                    }
+                    guard let navigationBar = self.navigationBar else {
+                        return
+                    }
+                    
+                    //TODO:localize
+                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap to view your Saved Messages organized by type or source"), location: .point(navigationBar.frame, .top), displayDuration: .manual, shouldDismissOnTouch: { point, _ in
+                        return .ignore
+                    })
+                    self.present(tooltipScreen, in: .current)
+                    
+                    let _ = ApplicationSpecificNotice.incrementSavedMessagesChatsSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+                })
             }
         }
 
@@ -11949,6 +12003,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return nil
     }
     
+    public func updateIsScrollingLockedAtTop(isScrollingLockedAtTop: Bool) {
+        self.chatDisplayNode.isScrollingLockedAtTop = isScrollingLockedAtTop
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.suspendNavigationBarLayout = true
         super.containerLayoutUpdated(layout, transition: transition)
@@ -16380,7 +16438,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                        if savedMessages, let self {
+                            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                guard let self, let peer else {
+                                    return
+                                }
+                                guard let navigationController = self.navigationController as? NavigationController else {
+                                    return
+                                }
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                            })
+                        }
+                        return false
+                    }), in: .current)
                 }
                 
                 switch mode {
@@ -18942,6 +19014,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         )
         self.push(controller)
+    }
+    
+    public func transferScrollingVelocity(_ velocity: CGFloat) {
+        self.chatDisplayNode.historyNode.transferVelocity(velocity)
     }
 }
 

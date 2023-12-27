@@ -10839,3 +10839,5 @@ Sorry for the inconvenience.";
 "RequestPeer.SelectUsers.SearchPlaceholder" = "Search";
 "RequestPeer.ReachedMaximum_1" = "You can select up to %@ user.";
 "RequestPeer.ReachedMaximum_any" = "You can select up to %@ users.";
+
+"ChatList.DeleteSavedPeerConfirmation" = "Are you sure you want to delete saved messages from %@?";

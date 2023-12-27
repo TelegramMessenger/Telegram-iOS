@@ -1063,13 +1063,23 @@ public extension TelegramEngine {
         
         public func toggleForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, SetForumChannelTopicPinnedError> {
             return self.account.postbox.transaction { transaction -> ([Int64], Int) in
-                var limit = 5
-                let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-                if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
-                    limit = Int(value)
+                if id == self.account.peerId {
+                    var limit = 5
+                    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                    if let data = appConfiguration.data, let value = data["saved_pinned_limit"] as? Double {
+                        limit = Int(value)
+                    }
+                    
+                    return (transaction.getPeerPinnedThreads(peerId: id), limit)
+                } else {
+                    var limit = 5
+                    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                    if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
+                        limit = Int(value)
+                    }
+                    
+                    return (transaction.getPeerPinnedThreads(peerId: id), limit)
                 }
-                
-                return (transaction.getPeerPinnedThreads(peerId: id), limit)
             }
             |> castError(SetForumChannelTopicPinnedError.self)
             |> mapToSignal { threadIds, limit -> Signal<Never, SetForumChannelTopicPinnedError> in

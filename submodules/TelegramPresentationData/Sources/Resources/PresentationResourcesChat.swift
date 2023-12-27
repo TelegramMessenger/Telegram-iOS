@@ -606,6 +606,28 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatHistoryNavigationUpButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatHistoryNavigationUpButtonImage.rawValue, { theme in
+            return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setLineWidth(0.5)
+                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
+                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
+                context.setStrokeColor(theme.chat.historyNavigation.foregroundColor.cgColor)
+                context.setLineWidth(1.5)
+                
+                context.translateBy(x: size.width * 0.5, y: size.height * 0.5)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -size.width * 0.5, y: -size.height * 0.5)
+                let position = CGPoint(x: 9.0 - 0.5, y: 24.0)
+                context.move(to: CGPoint(x: position.x + 1.0, y: position.y - 1.0))
+                context.addLine(to: CGPoint(x: position.x + 10.0, y: position.y - 10.0))
+                context.addLine(to: CGPoint(x: position.x + 19.0, y: position.y - 1.0))
+                context.strokePath()
+            })
+        })
+    }
+    
     public static func chatHistoryMentionsButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatHistoryMentionsButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
