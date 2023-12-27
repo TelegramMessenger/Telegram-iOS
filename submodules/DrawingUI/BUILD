@@ -106,6 +106,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/Camera",
         "//submodules/TelegramUI/Components/DustEffect",
+        "//submodules/TelegramUI/Components/DynamicCornerRadiusView",
     ],
     visibility = [
         "//visibility:public",

@@ -26,10 +26,10 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
                 accentColor = UIColor(rgb: 0x999999)
             }
             context.setStrokeColor(accentColor.cgColor)
-            lineWidth = 2.0
+            lineWidth = 2.0 - UIScreenPixel
         } else {
             context.setStrokeColor(theme.list.disclosureArrowColor.withAlphaComponent(0.4).cgColor)
-            lineWidth = 1.0
+            lineWidth = 1.0 - UIScreenPixel
         }
         
         if bordered || selected {
@@ -95,10 +95,13 @@ class ThemeSettingsAppIconItem: ListViewItem, ItemListItem {
     }
 }
 
+private let badgeSize = CGSize(width: 24.0, height: 24.0)
+private let badgeStrokeSize: CGFloat = 2.0
+
 private final class ThemeSettingsAppIconNode : ASDisplayNode {
     private let iconNode: ASImageNode
     private let overlayNode: ASImageNode
-    private let lockNode: ASImageNode
+    fileprivate let lockNode: ASImageNode
     private let textNode: ImmediateTextNode
     private var action: (() -> Void)?
     
@@ -108,11 +111,11 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
     
     override init() {
         self.iconNode = ASImageNode()
-        self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
+        self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 63.0, height: 63.0))
         self.iconNode.isLayerBacked = true
         
         self.overlayNode = ASImageNode()
-        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
+        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 63.0, height: 63.0))
         self.overlayNode.isLayerBacked = true
         
         self.lockNode = ASImageNode()
@@ -141,7 +144,7 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         self.iconNode.image = icon
         self.textNode.attributedText = title
         self.overlayNode.image = generateBorderImage(theme: theme, bordered: bordered, selected: selected)
-        self.lockNode.image = locked ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: color) : nil
+        self.lockNode.isHidden = !locked
         self.action = {
             action()
         }
@@ -172,26 +175,25 @@ private final class ThemeSettingsAppIconNode : ASDisplayNode {
         super.layout()
         
         let bounds = self.bounds
+        let iconSize = CGSize(width: 63.0, height: 63.0)
         
-        self.iconNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
-        self.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 14.0), size: CGSize(width: 62.0, height: 62.0))
+        self.iconNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - iconSize.width) / 2.0), y: 13.0), size: iconSize)
+        self.overlayNode.frame = self.iconNode.frame
         
         let textSize = self.textNode.updateLayout(bounds.size)
-        var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - textSize.width)) / 2.0, y: 87.0), size: textSize)
-        if self.locked {
-            textFrame = textFrame.offsetBy(dx: 5.0, dy: 0.0)
-        }
+        let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - textSize.width) / 2.0), y: 81.0), size: textSize)
         self.textNode.frame = textFrame
         
-        self.lockNode.frame = CGRect(x: self.textNode.frame.minX - 10.0, y: 90.0, width: 6.0, height: 8.0)
+        let badgeFinalSize = CGSize(width: badgeSize.width + badgeStrokeSize * 2.0, height: badgeSize.height + badgeStrokeSize * 2.0)
+        self.lockNode.frame = CGRect(x: bounds.width - 24.0, y: 4.0, width: badgeFinalSize.width, height: badgeFinalSize.height)
         
-        self.activateAreaNode.frame = self.bounds
+        self.activateAreaNode.frame = bounds
     }
 }
 
 
 private let textFont = Font.regular(12.0)
-private let selectedTextFont = Font.bold(12.0)
+private let selectedTextFont = Font.medium(12.0)
 
 class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -199,7 +201,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let scrollNode: ASScrollNode
+    private let containerNode: ASDisplayNode
     private var nodes: [ThemeSettingsAppIconNode] = []
         
     private var item: ThemeSettingsAppIconItem?
@@ -208,6 +210,8 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
+    
+    private var lockImage: UIImage?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -221,35 +225,23 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
         
         self.maskNode = ASImageNode()
         
-        self.scrollNode = ASScrollNode()
+        self.containerNode = ASDisplayNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.scrollNode)
+        self.addSubnode(self.containerNode)
     }
-    
-    override func didLoad() {
-        super.didLoad()
-        self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
-        self.scrollNode.view.showsHorizontalScrollIndicator = false
-    }
-    
-    private func scrollToNode(_ node: ThemeSettingsAppIconNode, animated: Bool) {
-        let bounds = self.scrollNode.view.bounds
-        let frame = node.frame.insetBy(dx: -48.0, dy: 0.0)
-        
-        if frame.minX < bounds.minX || frame.maxX > bounds.maxX {
-            self.scrollNode.view.scrollRectToVisible(frame, animated: animated)
-        }
-    }
-    
+            
     func asyncLayout() -> (_ item: ThemeSettingsAppIconItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            contentSize = CGSize(width: params.width, height: 116.0)
+            let nodeSize = CGSize(width: 74.0, height: 102.0)
+            let height: CGFloat = nodeSize.height * ceil(CGFloat(item.icons.count) / 4.0) + 12.0
+            
+            contentSize = CGSize(width: params.width, height: height)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -257,10 +249,32 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    let previousItem = strongSelf.item
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
-                    strongSelf.scrollNode.view.contentInset = UIEdgeInsets()
+                    if previousItem?.theme !== item.theme {
+                        strongSelf.lockImage = generateImage(CGSize(width: badgeSize.width + badgeStrokeSize, height: badgeSize.height + badgeStrokeSize), contextGenerator: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+                            
+                            context.setFillColor(item.theme.list.itemBlocksBackgroundColor.cgColor)
+                            context.fillEllipse(in: CGRect(origin: .zero, size: size))
+                            
+                            context.addEllipse(in: CGRect(origin: .zero, size: size).insetBy(dx: badgeStrokeSize, dy: badgeStrokeSize))
+                            context.clip()
+                            
+                            var locations: [CGFloat] = [0.0, 1.0]
+                            let colors: [CGColor] = [UIColor(rgb: 0x9076FF).cgColor, UIColor(rgb: 0xB86DEA).cgColor]
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+                            
+                            if let icon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: .white) {
+                                context.draw(icon.cgImage!, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - icon.size.width) / 2.0), y: floorToScreenPixels((size.height - icon.size.height) / 2.0)), size: icon.size), byTiling: false)
+                            }
+                        })
+                    }
+                    
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -309,33 +323,37 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 2.0), size: CGSize(width: layoutSize.width - params.leftInset - params.rightInset, height: layoutSize.height))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 2.0), size: CGSize(width: layoutSize.width - params.leftInset - params.rightInset, height: layoutSize.height))
                     
-                    let nodeInset: CGFloat = 4.0
-                    let nodeSize = CGSize(width: 80.0, height: 112.0)
-                    var nodeOffset = nodeInset
+                    let sideInset: CGFloat = 8.0
+                    let spacing: CGFloat = floorToScreenPixels((params.width - sideInset * 2.0 - params.leftInset - params.rightInset - nodeSize.width * 4.0) / 3.0)
+                    let verticalSpacing: CGFloat = 0.0
                     
-                    var updated = false
-                    var selectedNode: ThemeSettingsAppIconNode?
+                    var x: CGFloat = sideInset
+                    var y: CGFloat = 0.0
                     
                     var i = 0
                     for icon in item.icons {
+                        if i > 0 && i % 4 == 0 {
+                            x = sideInset
+                            y += nodeSize.height + verticalSpacing
+                        }
+                        let nodeFrame = CGRect(x: x, y: y, width: nodeSize.width, height: nodeSize.height)
+                        x += nodeSize.width + spacing
+                        
                         let imageNode: ThemeSettingsAppIconNode
                         if strongSelf.nodes.count > i {
                             imageNode = strongSelf.nodes[i]
                         } else {
                             imageNode = ThemeSettingsAppIconNode()
                             strongSelf.nodes.append(imageNode)
-                            strongSelf.scrollNode.addSubnode(imageNode)
-                            updated = true
+                            strongSelf.containerNode.addSubnode(imageNode)
                         }
+                        imageNode.lockNode.image = strongSelf.lockImage
                         
                         if let image = UIImage(named: icon.imageName, in: getAppBundle(), compatibleWith: nil) {
                             let selected = icon.name == item.currentIconName
-                            if selected {
-                                selectedNode = imageNode
-                            }
-                            
+
                             var name = "Icon"
                             var bordered = true
                             switch icon.name {
@@ -369,29 +387,14 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = icon.name
                             }
                         
-                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), locked: !item.isPremium && icon.isPremium, color: item.theme.list.itemPrimaryTextColor, bordered: bordered, selected: selected, action: { [weak self, weak imageNode] in
+                            imageNode.setup(theme: item.theme, icon: image, title: NSAttributedString(string: name, font: selected ? selectedTextFont : textFont, textColor: selected  ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center), locked: !item.isPremium && icon.isPremium, color: item.theme.list.itemPrimaryTextColor, bordered: bordered, selected: selected, action: {
                                 item.updated(icon)
-                                if let imageNode = imageNode {
-                                    self?.scrollToNode(imageNode, animated: true)
-                                }
                             })
                         }
                         
-                        imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)
-                        nodeOffset += nodeSize.width + 15.0
+                        imageNode.frame = nodeFrame
                         
                         i += 1
-                    }
-                    
-                    if let lastNode = strongSelf.nodes.last {
-                        let contentSize = CGSize(width: lastNode.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
-                        if strongSelf.scrollNode.view.contentSize != contentSize {
-                            strongSelf.scrollNode.view.contentSize = contentSize
-                        }
-                    }
-                    
-                    if updated, let selectedNode = selectedNode {
-                        strongSelf.scrollToNode(selectedNode, animated: false)
                     }
                 }
             })

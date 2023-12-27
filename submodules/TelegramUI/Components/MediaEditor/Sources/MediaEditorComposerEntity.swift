@@ -81,7 +81,14 @@ func composerEntitiesForDrawingEntity(postbox: Postbox, textScale: CGFloat, enti
                 return []
             case .message:
                 if let renderImage = entity.renderImage, let image = CIImage(image: renderImage, options: [.colorSpace: colorSpace]) {
-                    return [MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false)]
+                    var entities: [MediaEditorComposerEntity] = []
+                    entities.append(MediaEditorComposerStaticEntity(image: image, position: entity.position, scale: entity.scale, rotation: entity.rotation, baseSize: entity.baseSize, mirrored: false))
+                    if let renderSubEntities = entity.renderSubEntities {
+                        for subEntity in renderSubEntities {
+                            entities.append(contentsOf: composerEntitiesForDrawingEntity(postbox: postbox, textScale: textScale, entity: subEntity, colorSpace: colorSpace))
+                        }
+                    }
+                    return entities
                 } else {
                     return []
                 }

@@ -352,7 +352,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                     case .Sticker:
                         return []
                     case .Animated:
-                        return []
+                        break
                     case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             return []
