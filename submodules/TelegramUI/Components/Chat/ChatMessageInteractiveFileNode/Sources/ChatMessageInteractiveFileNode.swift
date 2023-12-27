@@ -33,6 +33,7 @@ import ChatMessageDateAndStatusNode
 import ChatHistoryEntry
 import ChatMessageItemCommon
 import TelegramStringFormatting
+import AnimatedCountLabelNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -120,6 +121,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let descriptionMeasuringNode: TextNode
     public let fetchingTextNode: ImmediateTextNode
     public let fetchingCompactTextNode: ImmediateTextNode
+    private let countNode: ImmediateAnimatedCountLabelNode
     
     public var waveformView: ComponentHostView<Empty>?
     
@@ -194,6 +196,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var progressFrame: CGRect?
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
+    private var viewOnceIconImage: UIImage?
     
     public var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     public var forcedAudioTranscriptionText: TranscribedText?
@@ -217,6 +220,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.descriptionNode = TextNode()
         self.descriptionNode.displaysAsynchronously = false
         self.descriptionNode.isUserInteractionEnabled = false
+        
+        self.countNode = ImmediateAnimatedCountLabelNode()
+        self.countNode.alwaysOneDirection = true
         
         self.descriptionMeasuringNode = TextNode()
         
@@ -733,6 +739,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let (titleLayout, titleApply) = titleAsyncLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: hasThumbnail ? 2 : 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
+                let isViewOnceMessage = "".isEmpty || arguments.message.autoremoveAttribute?.timeout == viewOnceTimeout
+                
                 let fileSizeString: String
                 if let _ = arguments.file.size {
                     fileSizeString = "000.0 MB"
@@ -747,7 +755,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
                 var displayTranscribe = false
-                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat && !arguments.presentationData.isPreview {
+                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat && !isViewOnceMessage && !arguments.presentationData.isPreview {
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
                     if arguments.associatedData.isPremium {
                         displayTranscribe = true
@@ -965,12 +973,14 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 minLayoutWidth = max(minLayoutWidth, textLayout.size.width + horizontalInset)
                                 
                 let fileIconImage: UIImage?
+                var viewOnceIconImage: UIImage?
                 if hasThumbnail {
                     fileIconImage = nil
                 } else {
                     let principalGraphics = PresentationResourcesChat.principalGraphics(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, bubbleCorners: arguments.presentationData.chatBubbleCorners)
                     
                     fileIconImage = arguments.incoming ? principalGraphics.radialIndicatorFileIconIncoming : principalGraphics.radialIndicatorFileIconOutgoing
+                    viewOnceIconImage = principalGraphics.radialIndicatorViewOnceIcon
                 }
                 
                 return (minLayoutWidth, { boundingWidth in
@@ -1050,7 +1060,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.titleNode.frame = titleFrame
                             strongSelf.descriptionNode.frame = descriptionFrame
                             strongSelf.descriptionMeasuringNode.frame = CGRect(origin: CGPoint(), size: descriptionMeasuringLayout.size)
-                            
+                                    
                             if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                                 strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
                             }
@@ -1432,7 +1442,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
                             strongSelf.fileIconImage = fileIconImage
-
+                            strongSelf.viewOnceIconImage = viewOnceIconImage
+                            
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                                 if arguments.automaticDownload {
@@ -1548,6 +1559,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
             }
         }
+        let isViewOnceMessage = "".isEmpty || (isVoice && message.autoremoveAttribute?.timeout == viewOnceTimeout)
         
         var state: SemanticStatusNodeState
         var streamingState: SemanticStatusNodeState = .none
@@ -1556,6 +1568,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         var downloadingStrings: (String, String, UIFont)?
         
+        var playbackState: (position: Double, duration: Double, generationTimestamp: Double) = (0.0, 0.0, 0.0)
         if !isAudio {
             var fetchStatus: MediaResourceStatus?
             if let actualFetchStatus = self.actualFetchStatus, message.forwardInfo != nil {
@@ -1579,75 +1592,84 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         } else if isVoice {
             if let playerStatus = self.playerStatus {
-                var playerPosition: Int32?
-                var playerDuration: Int32 = 0
+                var playerPosition: Double?
+                var playerDuration: Double = 0.0
                 if !playerStatus.generationTimestamp.isZero, case .playing = playerStatus.status {
-                    playerPosition = Int32(playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp))
+                    playerPosition = playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp)
                 } else {
-                    playerPosition = Int32(playerStatus.timestamp)
+                    playerPosition = playerStatus.timestamp
                 }
-                playerDuration = Int32(playerStatus.duration)
+                playerDuration = playerStatus.duration
                 
-                let durationString = stringForDuration(playerDuration > 0 ? playerDuration : (audioDuration ?? 0), position: playerPosition)
+                let effectiveDuration = playerDuration > 0 ? playerDuration : Double(audioDuration ?? 0)
+                
+                let durationString = stringForDuration(Int32(effectiveDuration), position: playerPosition.flatMap { Int32($0) })
                 let durationFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
                 downloadingStrings = (durationString, durationString, durationFont)
+                
+                playbackState = (playerStatus.timestamp, playerDuration, playerStatus.generationTimestamp)
             }
         }
         
         switch resourceStatus.mediaStatus {
-            case var .fetchStatus(fetchStatus):
-                if self.message?.forwardInfo != nil {
-                    fetchStatus = resourceStatus.fetchStatus
-                }
-                (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = false
-                //self.waveformScrubbingNode?.enableScrubbing = false
+        case var .fetchStatus(fetchStatus):
+            if self.message?.forwardInfo != nil {
+                fetchStatus = resourceStatus.fetchStatus
+            }
+            (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = false
             
-                switch fetchStatus {
-                    case let .Fetching(_, progress):
-                        let adjustedProgress = max(progress, 0.027)
-                        var wasCheck = false
-                        if let statusNode = self.statusNode, case .check = statusNode.state {
-                            wasCheck = true
-                        }
-                        
-                        if isAudio && !isVoice && !isSending {
-                            state = .play
-                        } else {
-                            if message.groupingKey != nil, adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
-                                state = .check(appearance: nil)
-                            } else {
-                                state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
-                            }
-                        }
-                    case .Local:
-                        if isAudio  {
-                            state = .play
-                        } else if let fileIconImage = self.fileIconImage {
-                            state = .customIcon(fileIconImage)
-                        } else {
-                            state = .none
-                        }
-                    case .Remote, .Paused:
-                        if isAudio && !isVoice {
-                            state = .play
-                        } else {
-                            state = .download
-                        }
+            switch fetchStatus {
+            case let .Fetching(_, progress):
+                let adjustedProgress = max(progress, 0.027)
+                var wasCheck = false
+                if let statusNode = self.statusNode, case .check = statusNode.state {
+                    wasCheck = true
                 }
-            case let .playbackStatus(playbackStatus):
-                (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = true
-                //self.waveformScrubbingNode?.enableScrubbing = true
+                
+                if isAudio && !isVoice && !isSending {
+                    state = .play
+                } else {
+                    if message.groupingKey != nil, adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
+                        state = .check(appearance: nil)
+                    } else {
+                        state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+                    }
+                }
+            case .Local:
+                if isAudio  {
+                    state = .play
+                } else if let fileIconImage = self.fileIconImage {
+                    state = .customIcon(fileIconImage)
+                } else {
+                    state = .none
+                }
+            case .Remote, .Paused:
+                if isAudio && !isVoice {
+                    state = .play
+                } else {
+                    state = .download
+                }
+            }
+        case let .playbackStatus(playbackStatus):
+            (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = !isViewOnceMessage
             
+            if isViewOnceMessage && playbackStatus == .playing {
+                state = .secretTimeout(position: playbackState.position, duration: playbackState.duration, generationTimestamp: playbackState.generationTimestamp, appearance: .init(inset: 1.0 + UIScreenPixel, lineWidth: 2.0 - UIScreenPixel))
+            } else {
                 switch playbackStatus {
-                    case .playing:
-                        state = .pause
-                    case .paused:
-                        state = .play
+                case .playing:
+                    state = .pause
+                case .paused:
+                    state = .play
                 }
+            }
         }
         
-        if isAudio && !isVoice && !isSending && state != .pause {
-            switch resourceStatus.fetchStatus {
+        if isViewOnceMessage, let viewOnceIconImage = self.viewOnceIconImage, state == .play {
+            streamingState = .customIcon(viewOnceIconImage)
+        } else {
+            if isAudio && !isVoice && !isSending && state != .pause {
+                switch resourceStatus.fetchStatus {
                 case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)
                     streamingState = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: .init(inset: 1.0, lineWidth: 2.0))
@@ -1655,9 +1677,10 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     streamingState = .none
                 case .Remote, .Paused:
                     streamingState = .download
+                }
+            } else {
+                streamingState = .none
             }
-        } else {
-            streamingState = .none
         }
         
         if isSending {
@@ -1721,7 +1744,13 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         
         let effectsEnabled = self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true
-        if case .pause = state, isVoice, self.playbackAudioLevelNode == nil, effectsEnabled {
+        var showBlobs = false
+        if case .pause = state {
+            showBlobs = true
+        } else if case .secretTimeout = state {
+            showBlobs = true
+        }
+        if showBlobs, isVoice, self.playbackAudioLevelNode == nil, effectsEnabled {
             let blobFrame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
             let playbackAudioLevelNode = VoiceBlobNode(
                 maxLevel: 0.3,
@@ -1801,9 +1830,28 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             statusNode.setCutout(cutoutFrame, animated: true)
         }
         
+        var displayingCountdown = false
         if let (expandedString, compactString, font) = downloadingStrings {
             self.fetchingTextNode.attributedText = NSAttributedString(string: expandedString, font: font, textColor: messageTheme.fileDurationColor)
             self.fetchingCompactTextNode.attributedText = NSAttributedString(string: compactString, font: font, textColor: messageTheme.fileDurationColor)
+            
+            if isViewOnceMessage {
+                var segments: [AnimatedCountLabelNode.Segment] = []
+                var textCount = 0
+                for char in expandedString {
+                    if let intValue = Int(String(char)) {
+                        segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: messageTheme.fileDurationColor)))
+                    } else {
+                        segments.append(.text(textCount, NSAttributedString(string: String(char), font: font, textColor: messageTheme.fileDurationColor)))
+                        textCount += 1
+                    }
+                }
+                if self.countNode.supernode == nil {
+                    self.addSubnode(self.countNode)
+                }
+                self.countNode.segments = segments
+                displayingCountdown = true
+            }
         } else {
             self.fetchingTextNode.attributedText = nil
             self.fetchingCompactTextNode.attributedText = nil
@@ -1812,24 +1860,32 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let maxFetchingStatusWidth = max(self.titleNode.frame.width, self.descriptionMeasuringNode.frame.width) + 2.0
         let fetchingInfo = self.fetchingTextNode.updateLayoutInfo(CGSize(width: maxFetchingStatusWidth, height: CGFloat.greatestFiniteMagnitude))
         let fetchingCompactSize = self.fetchingCompactTextNode.updateLayout(CGSize(width: maxFetchingStatusWidth, height: CGFloat.greatestFiniteMagnitude))
+        let countSize = self.countNode.updateLayout(size: CGSize(width: maxFetchingStatusWidth, height: CGFloat.greatestFiniteMagnitude), animated: true)
         
-        if downloadingStrings != nil {
-            self.descriptionNode.isHidden = true
-            if fetchingInfo.truncated {
-                self.fetchingTextNode.isHidden = true
-                self.fetchingCompactTextNode.isHidden = false
-            } else {
-                self.fetchingTextNode.isHidden = false
-                self.fetchingCompactTextNode.isHidden = true
-            }
-        } else {
-            self.descriptionNode.isHidden = false
+        if displayingCountdown {
             self.fetchingTextNode.isHidden = true
             self.fetchingCompactTextNode.isHidden = true
+            self.descriptionNode.isHidden = true
+        } else {
+            if downloadingStrings != nil {
+                self.descriptionNode.isHidden = true
+                if fetchingInfo.truncated {
+                    self.fetchingTextNode.isHidden = true
+                    self.fetchingCompactTextNode.isHidden = false
+                } else {
+                    self.fetchingTextNode.isHidden = false
+                    self.fetchingCompactTextNode.isHidden = true
+                }
+            } else {
+                self.descriptionNode.isHidden = false
+                self.fetchingTextNode.isHidden = true
+                self.fetchingCompactTextNode.isHidden = true
+            }
         }
         
         self.fetchingTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingInfo.size)
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
+        self.countNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: countSize)
     }
     
     public typealias Apply = (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> ChatMessageInteractiveFileNode

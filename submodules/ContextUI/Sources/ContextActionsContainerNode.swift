@@ -199,7 +199,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         if let minimalWidth = minimalWidth, minimalWidth > minActionsWidth {
             minActionsWidth = minimalWidth
         }
-        
+                
         switch widthClass {
         case .compact:
             minActionsWidth = max(minActionsWidth, floor(constrainedWidth / 3.0))

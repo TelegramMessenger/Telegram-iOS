@@ -733,6 +733,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if !displayVoiceMessageDiscardAlert() {
                             return false
                         }
+                        
+//                        if (file.isVoice || file.isInstantVideo) && "".isEmpty {
+//                            strongSelf.openViewOnceMediaMessage(message)
+//                            return false
+//                        }
                     }
                 }
                 if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
@@ -18823,6 +18828,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: messageId)
         })
+    }
+    
+    func openViewOnceMediaMessage(_ message: Message) {
+        let source: ContextContentSource = .extracted(ChatMessageContextExtractedContentSource(chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: false, centerVertically: true))
+        
+        let configuration = ContextController.Configuration(
+            sources: [
+                ContextController.Source(
+                    id: 0,
+                    title: "",
+                    source: source,
+                    items: .single(ContextController.Items(content: .list([]))),
+                    closeActionTitle: "Delete and Close"
+                )
+            ], initialId: 0
+        )
+        
+        let contextController = ContextController(presentationData: self.presentationData, configuration: configuration)
+        contextController.getOverlayViews = { [weak self] in
+            guard let self else {
+                return []
+            }
+            return [self.chatDisplayNode.navigateButtons.view]
+        }
+        self.currentContextController = contextController
+        self.presentInGlobalOverlay(contextController)
+        
+        let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: nil))
     }
     
     func openStorySharing(messages: [Message]) {

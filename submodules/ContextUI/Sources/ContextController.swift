@@ -2214,12 +2214,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public let title: String
         public let source: ContextContentSource
         public let items: Signal<ContextController.Items, NoError>
+        public let closeActionTitle: String?
         
-        public init(id: AnyHashable, title: String, source: ContextContentSource, items: Signal<ContextController.Items, NoError>) {
+        public init(id: AnyHashable, title: String, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, closeActionTitle: String? = nil) {
             self.id = id
             self.title = title
             self.source = source
             self.items = items
+            self.closeActionTitle = closeActionTitle
         }
     }
     
