@@ -184,7 +184,21 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     text = ""
                                 }
                             }
-                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                if savedMessages, let self {
+                                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                        guard let self, let peer else {
+                                            return
+                                        }
+                                        guard let navigationController = self.getNavigationController() else {
+                                            return
+                                        }
+                                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                                    })
+                                }
+                                return false
+                            }), nil)
                         }
                     })
                 }

@@ -581,6 +581,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             if strongSelf.tabsContainerNode.bounds.contains(strongSelf.view.convert(point, to: strongSelf.tabsContainerNode.view)) {
                 return []
             }
+            if case .savedMessagesChats = currentPaneKey {
+                if index == 0 {
+                    return .leftCenter
+                }
+                return [.leftCenter, .rightCenter]
+            }
             if index == 0 {
                 return .left
             }

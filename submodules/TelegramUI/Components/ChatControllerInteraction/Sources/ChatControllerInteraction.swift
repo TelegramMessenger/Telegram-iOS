@@ -259,6 +259,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var playNextOutgoingGift: Bool = false
     public var recommendedChannelsOpenUp: Bool = false
     public var enableFullTranslucency: Bool = true
+    public var chatIsRotated: Bool = true
     
     public init(
         openMessage: @escaping (Message, OpenMessageParams) -> Bool,

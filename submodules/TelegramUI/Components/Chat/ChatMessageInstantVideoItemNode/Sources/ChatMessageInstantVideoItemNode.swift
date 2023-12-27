@@ -89,13 +89,13 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
     
     fileprivate var wasPlaying = false
     
-    required public init() {
+    required public init(rotated: Bool) {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false)
+        super.init(rotated: rotated)
         
         self.interactiveVideoNode.shouldOpen = { [weak self] in
             if let strongSelf = self {

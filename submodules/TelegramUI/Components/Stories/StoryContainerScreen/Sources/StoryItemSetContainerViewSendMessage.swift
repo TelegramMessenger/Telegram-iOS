@@ -1090,13 +1090,28 @@ final class StoryItemSetContainerSendMessage {
                     }
                     
                     if let controller = component.controller() {
+                        let context = component.context
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                         controller.present(UndoOverlayController(
                             presentationData: presentationData,
                             content: .forward(savedMessages: savedMessages, text: text),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
-                            action: { _ in return false }
+                            action: { [weak controller] _ in
+                                if savedMessages {
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        guard let controller, let peer else {
+                                            return
+                                        }
+                                        guard let navigationController = controller.navigationController as? NavigationController else {
+                                            return
+                                        }
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                    })
+                                }
+                                return false
+                            }
                         ), in: .current)
                     }
                 })

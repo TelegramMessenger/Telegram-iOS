@@ -621,6 +621,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     public private(set) var hasPlentyOfMessages: Bool = false
     public var hasPlentyOfMessagesUpdated: ((Bool) -> Void)?
     
+    public private(set) var hasLotsOfMessages: Bool = false
+    public var hasLotsOfMessagesUpdated: ((Bool) -> Void)?
+    
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -683,7 +686,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var allowDustEffect: Bool = true
     private var dustEffectLayer: DustEffectLayer?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, rotated: Bool = false, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
         var tagMask = tagMask
         if case .pinnedMessages = subject {
             tagMask = .pinned
@@ -738,6 +741,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         nextClientId += 1
         
         super.init()
+        
+        self.rotated = rotated
+        if rotated {
+            self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        }
 
         self.clipsToBounds = false
         
@@ -809,12 +817,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         
         self.preloadPages = false
-        switch self.mode {
-            case .bubbles:
-                self.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
-            case .list:
-                break
-        }
         
         self.beginChatHistoryTransitions(
             selectedMessages: selectedMessages,
@@ -3092,7 +3094,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: self.bounds.size)
                     self.dustEffectLayer = dustEffectLayer
                     dustEffectLayer.zPosition = 10.0
-                    dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+                    if self.rotated {
+                        dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+                    }
                     self.layer.addSublayer(dustEffectLayer)
                     dustEffectLayer.becameEmpty = { [weak self] in
                         guard let self else {
@@ -3310,12 +3314,17 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 
                 var hasPlentyOfMessages = false
+                var hasLotsOfMessages = false
                 if let historyView = strongSelf.historyView {
                     if historyView.originalView.holeEarlier || historyView.originalView.holeLater {
                         hasPlentyOfMessages = true
+                        hasLotsOfMessages = true
                     } else if !historyView.originalView.holeEarlier && !historyView.originalView.holeLater {
                         if historyView.filteredEntries.count >= 10 {
                             hasPlentyOfMessages = true
+                        }
+                        if historyView.filteredEntries.count >= 40 {
+                            hasLotsOfMessages = true
                         }
                     }
                 }
@@ -3323,6 +3332,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 if strongSelf.hasPlentyOfMessages != hasPlentyOfMessages {
                     strongSelf.hasPlentyOfMessages = hasPlentyOfMessages
                     strongSelf.hasPlentyOfMessagesUpdated?(hasPlentyOfMessages)
+                }
+                if strongSelf.hasLotsOfMessages != hasLotsOfMessages {
+                    strongSelf.hasLotsOfMessages = hasLotsOfMessages
+                    strongSelf.hasLotsOfMessagesUpdated?(hasLotsOfMessages)
                 }
                 
                 if let _ = visibleRange.loadedRange {
@@ -4170,7 +4183,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             overscrollView.frame = overscrollView.convert(overscrollView.bounds, to: self.view)
             snapshotView.addSubview(overscrollView)
 
-            overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+            if self.rotated {
+                overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+            }
         }
 
         return SnapshotState(
@@ -4195,13 +4210,17 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
 
         let snapshotParentView = UIView()
         snapshotParentView.addSubview(snapshotState.snapshotView)
-        snapshotParentView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        if self.rotated {
+            snapshotParentView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+        }
         snapshotParentView.frame = self.view.frame
 
         snapshotState.snapshotView.frame = snapshotParentView.bounds
         
         snapshotState.snapshotView.clipsToBounds = true
-        snapshotState.snapshotView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        if self.rotated {
+            snapshotState.snapshotView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
         
         self.view.superview?.insertSubview(snapshotParentView, belowSubview: self.view)
 

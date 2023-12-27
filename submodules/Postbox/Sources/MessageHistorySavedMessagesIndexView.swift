@@ -40,7 +40,7 @@ final class MutableMessageHistorySavedMessagesIndexView: MutablePostboxView {
         
         self.peer = postbox.peerTable.get(self.peerId)
         
-        let validIndexBoundary = postbox.peerThreadCombinedStateTable.get(peerId: peerId)?.validIndexBoundary
+        let validIndexBoundary = postbox.peerThreadCombinedStateTable.get(peerId: self.peerId)?.validIndexBoundary
         self.isLoading = validIndexBoundary == nil
         
         if let validIndexBoundary = validIndexBoundary {

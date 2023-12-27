@@ -379,7 +379,13 @@ public struct ChatListItemFilterData: Equatable {
 private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, location: ChatListControllerLocation, peerId: EnginePeer.Id, accountPeerId: EnginePeer.Id, canDelete: Bool, isEditing: Bool, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if case .chatList(.archive) = location {
+        if case .savedMessagesChats = location {
+            if isPinned {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            }
+        } else if case .chatList(.archive) = location {
             if isPinned {
                 options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             } else {
@@ -398,28 +404,31 @@ private func revealOptions(strings: PresentationStrings, theme: PresentationThem
     if canDelete {
         options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
     }
-    if !isEditing {
-        var canArchive = false
-        var canUnarchive = false
-        if let filterData = filterData {
-            if filterData.excludesArchived {
-                canArchive = true
-            }
-        } else {
-            if case let .chatList(groupId) = location {
-                if case .root = groupId {
+    if case .savedMessagesChats = location {
+    } else {
+        if !isEditing {
+            var canArchive = false
+            var canUnarchive = false
+            if let filterData = filterData {
+                if filterData.excludesArchived {
                     canArchive = true
-                } else {
-                    canUnarchive = true
+                }
+            } else {
+                if case let .chatList(groupId) = location {
+                    if case .root = groupId {
+                        canArchive = true
+                    } else {
+                        canUnarchive = true
+                    }
                 }
             }
-        }
-        if canArchive {
-            if canArchivePeer(id: peerId, accountPeerId: accountPeerId) {
-                options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
+            if canArchive {
+                if canArchivePeer(id: peerId, accountPeerId: accountPeerId) {
+                    options.append(ItemListRevealOption(key: RevealOptionKey.archive.rawValue, title: strings.ChatList_ArchiveAction, icon: archiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
+                }
+            } else if canUnarchive {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
             }
-        } else if canUnarchive {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unarchive.rawValue, title: strings.ChatList_UnarchiveAction, icon: unarchiveIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
         }
     }
     return options

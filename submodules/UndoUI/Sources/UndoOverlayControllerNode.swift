@@ -639,10 +639,19 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animatedStickerNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
-                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let bold: MarkdownAttributeSet
+                if savedMessages {
+                    bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0), additionalAttributes: ["URL": ""])
+                } else {
+                    bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                }
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
+            
+                if savedMessages {
+                    isUserInteractionEnabled = true
+                }
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3

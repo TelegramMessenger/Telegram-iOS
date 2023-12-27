@@ -1147,7 +1147,18 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                     }
                 }
                 
-                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }))
+                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                    if savedMessages {
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            guard let peer else {
+                                return
+                            }
+                            navigateToChatImpl?(peer)
+                        })
+                    }
+                    return false
+                }))
             })
         }
         shareController.actionCompleted = {

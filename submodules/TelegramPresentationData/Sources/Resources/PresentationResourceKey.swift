@@ -213,6 +213,7 @@ public enum PresentationResourceKey: Int32 {
     case chatInputSearchPanelMembersImage
         
     case chatHistoryNavigationButtonImage
+    case chatHistoryNavigationUpButtonImage
     case chatHistoryMentionsButtonImage
     case chatHistoryReactionsButtonImage
     case chatHistoryNavigationButtonBadgeImage

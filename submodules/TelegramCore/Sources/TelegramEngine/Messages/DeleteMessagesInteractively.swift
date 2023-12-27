@@ -148,7 +148,18 @@ func _internal_clearHistoryInteractively(postbox: Postbox, peerId: PeerId, threa
                 }
                 if let topIndex = topIndex {
                     if peerId.namespace == Namespaces.Peer.CloudUser {
-                        let _ = transaction.addMessages([StoreMessage(id: topIndex.id, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: topIndex.timestamp, flags: StoreMessageFlags(), tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [TelegramMediaAction(action: .historyCleared)])], location: .Random)
+                        var addEmptyMessage = false
+                        if threadId == nil {
+                            addEmptyMessage = true
+                        } else {
+                            if transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) == nil {
+                                addEmptyMessage = true
+                            }
+                        }
+                        
+                        if addEmptyMessage {
+                            let _ = transaction.addMessages([StoreMessage(id: topIndex.id, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: topIndex.timestamp, flags: StoreMessageFlags(), tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [TelegramMediaAction(action: .historyCleared)])], location: .Random)
+                        }
                     } else {
                         updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: topIndex.timestamp, forceRootGroupIfNotExists: false)
                     }

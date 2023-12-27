@@ -4584,6 +4584,25 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func deleteSavedHistory(flags: Int32, peer: Api.InputPeer, maxId: Int32, minDate: Int32?, maxDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1855459371)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(minDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(maxDate!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.deleteSavedHistory", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("maxId", String(describing: maxId)), ("minDate", String(describing: minDate)), ("maxDate", String(describing: maxDate))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.AffectedHistory?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.AffectedHistory
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func deleteScheduledMessages(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1504586518)

@@ -95,7 +95,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
     
-    required public init() {
+    required public init(rotated: Bool) {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
@@ -104,7 +104,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false)
+        super.init(rotated: rotated)
         
         var firstTime = true
         self.imageNode.imageUpdated = { [weak self] image in

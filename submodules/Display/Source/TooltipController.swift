@@ -178,7 +178,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        if self.layout != nil && self.layout! != layout {
+        if self.layout != nil && self.layout!.size != layout.size {
             if self.dismissImmediatelyOnLayoutUpdate {
                 self.dismissImmediately()
             } else {

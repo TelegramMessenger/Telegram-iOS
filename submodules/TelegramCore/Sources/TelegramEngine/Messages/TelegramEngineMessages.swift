@@ -1314,6 +1314,21 @@ public extension TelegramEngine {
             return self.account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
         }
         
+        public func savedMessagesPeerListHead() -> Signal<EnginePeer.Id?, NoError> {
+            return self.account.postbox.combinedView(keys: [.savedMessagesIndex(peerId: self.account.peerId)])
+            |> map { views -> EnginePeer.Id? in
+                //TODO:api optimize
+                guard let view = views.views[.savedMessagesIndex(peerId: self.account.peerId)] as? MessageHistorySavedMessagesIndexView else {
+                    return nil
+                }
+                if view.isLoading {
+                    return nil
+                } else {
+                    return view.items.first?.peer?.id
+                }
+            }
+        }
+        
         public func savedMessagesPeersStats() -> Signal<Int?, NoError> {
             return self.account.postbox.combinedView(keys: [.savedMessagesStats(peerId: self.account.peerId)])
             |> map { views -> Int? in
