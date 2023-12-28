@@ -10,6 +10,7 @@ import ChatControllerInteraction
 import OverlayStatusController
 import TelegramPresentationData
 import PresentationDataUtils
+import UndoUI
 
 extension ChatControllerImpl {
     func navigateToMessage(
@@ -149,8 +150,13 @@ extension ChatControllerImpl {
                 }
                 if let navigationController = self.effectiveNavigationController {
                     var chatLocation: NavigateToChatControllerParams.Location = .peer(peer)
-                    if case let .channel(channel) = peer, channel.flags.contains(.isForum), let message = message, let threadId = message.threadId {
-                        chatLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                    var displayMessageNotFoundToast = false
+                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        if let message = message, let threadId = message.threadId {
+                            chatLocation = .replyThread(ChatReplyThreadMessage(peerId: peer.id, threadId: threadId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                        } else {
+                            displayMessageNotFoundToast = true
+                        }
                     }
                     
                     var quote: ChatControllerSubject.MessageHighlight.Quote?
@@ -158,7 +164,15 @@ extension ChatControllerImpl {
                         quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
                     }
                     
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil), keepStack: .always))
+                    let context = self.context
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil), keepStack: .always, chatListCompletion: { chatListController in
+                        if displayMessageNotFoundToast {
+                            let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                            chatListController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                                return true
+                            }), in: .current)
+                        }
+                    }))
                 }
                 
                 completion?()

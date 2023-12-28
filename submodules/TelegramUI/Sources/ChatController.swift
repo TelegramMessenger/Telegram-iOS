@@ -3014,6 +3014,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.effectiveMessageId == message.id {
                     return .none
                 }
+                if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.peerId == strongSelf.context.account.peerId {
+                    return .none
+                }
                 if case .peer = strongSelf.chatLocation, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
                     if message.threadId == nil {
                         return .none
@@ -17472,7 +17475,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         if options.contains(.deleteLocally) {
             var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
-            if case .scheduledMessages = self.presentationInterfaceState.subject {
+            if case .peer(self.context.account.peerId) = self.chatLocation {
+                //TODO:localize
+                localOptionText = "Remove from Saved Messages"
+            } else if case .scheduledMessages = self.presentationInterfaceState.subject {
                 localOptionText = messageIds.count > 1 ? self.presentationData.strings.ScheduledMessages_DeleteMany : self.presentationData.strings.ScheduledMessages_Delete
             } else {
                 if options.contains(.unsendPersonal) {

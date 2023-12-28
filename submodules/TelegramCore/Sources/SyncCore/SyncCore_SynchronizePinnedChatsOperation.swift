@@ -61,3 +61,21 @@ public func addSynchronizePinnedChatsOperation(transaction: Transaction, groupId
     }
     transaction.operationLogAddEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(Int64(rawId))), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }
+
+public func addSynchronizePinnedSavedChatsOperation(transaction: Transaction, accountPeerId: PeerId) {
+    var previousItemIds = transaction.getPeerPinnedThreads(peerId: accountPeerId).map { PinnedItemId.peer(PeerId($0)) }
+    var updateLocalIndex: Int32?
+    
+    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(0)), tag: OperationLogTags.SynchronizePinnedSavedChats, { entry in
+        updateLocalIndex = entry.tagLocalIndex
+        if let contents = entry.contents as? SynchronizePinnedChatsOperation {
+            previousItemIds = contents.previousItemIds
+        }
+        return false
+    })
+    let operationContents = SynchronizePinnedChatsOperation(previousItemIds: previousItemIds)
+    if let updateLocalIndex = updateLocalIndex {
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(0)), tag: OperationLogTags.SynchronizePinnedSavedChats, tagLocalIndex: updateLocalIndex)
+    }
+    transaction.operationLogAddEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(0)), tag: OperationLogTags.SynchronizePinnedSavedChats, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+}

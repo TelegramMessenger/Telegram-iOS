@@ -293,6 +293,8 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
     }
     
     public func scrollToTop() -> Bool {
+        self.chatListNode.scrollToPosition(.top(adjustForTempInset: false))
+        
         return false
     }
 

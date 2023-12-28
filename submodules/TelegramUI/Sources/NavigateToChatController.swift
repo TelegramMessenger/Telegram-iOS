@@ -76,22 +76,22 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             let controller = ChatListControllerImpl(context: params.context, location: .forum(peerId: peer.id), controlsHistoryPreload: false, enableDebugActions: false)
             
             let activateMessageSearch = params.activateMessageSearch
+            let chatListCompletion = params.chatListCompletion
             params.navigationController.pushViewController(controller, completion: { [weak controller] in
-                guard let controller, let activateMessageSearch else {
+                guard let controller else {
                     return
                 }
-                controller.activateSearch(query: activateMessageSearch.1)
+                if let activateMessageSearch {
+                    controller.activateSearch(query: activateMessageSearch.1)
+                }
+                
+                if let chatListCompletion {
+                    chatListCompletion(controller)
+                }
             })
             
             return
         }
-        
-        /*if case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {
-            let savedMessagesScreen = SavedMessagesScreen(context: params.context)
-            params.navigationController.pushViewController(savedMessagesScreen, completion: {
-            })
-            return
-        }*/
         
         var found = false
         var isFirst = true
