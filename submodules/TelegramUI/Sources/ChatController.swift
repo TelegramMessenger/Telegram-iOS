@@ -3023,7 +3023,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                if canReplyInChat(strongSelf.presentationInterfaceState) {
+                if canReplyInChat(strongSelf.presentationInterfaceState, accountPeerId: strongSelf.context.account.peerId) {
                     return .reply
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 }
@@ -17475,7 +17475,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         if options.contains(.deleteLocally) {
             var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
-            if case .peer(self.context.account.peerId) = self.chatLocation {
+            if self.chatLocation.peerId == self.context.account.peerId {
                 //TODO:localize
                 localOptionText = "Remove from Saved Messages"
             } else if case .scheduledMessages = self.presentationInterfaceState.subject {
@@ -18014,7 +18014,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             )
         )
         
-        if canReplyInChat(self.presentationInterfaceState) {
+        if canReplyInChat(self.presentationInterfaceState, accountPeerId: self.context.account.peerId) {
             inputShortcuts.append(
                 KeyShortcut(
                     input: UIKeyCommand.inputUpArrow,
