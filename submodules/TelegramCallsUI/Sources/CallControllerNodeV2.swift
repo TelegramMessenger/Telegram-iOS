@@ -42,6 +42,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private var didInitializeIsReady: Bool = false
     
     private var callStartTimestamp: Double?
+    private var smoothSignalQuality: Double?
+    private var smoothSignalQualityTarget: Double?
     
     private var callState: PresentationCallState?
     var isMuted: Bool = false
@@ -76,6 +78,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     
     private var panGestureState: PanGestureState?
     private var notifyDismissedInteractivelyOnPanGestureApply: Bool = false
+    
+    private var signalQualityTimer: Foundation.Timer?
     
     init(
         sharedContext: SharedAccountContext,
@@ -190,6 +194,22 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         })
         
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        
+        self.signalQualityTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true, block: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            if let smoothSignalQuality = self.smoothSignalQuality, let smoothSignalQualityTarget = self.smoothSignalQualityTarget {
+                let updatedSmoothSignalQuality = (smoothSignalQuality + smoothSignalQualityTarget) * 0.5
+                if abs(updatedSmoothSignalQuality - smoothSignalQuality) > 0.001 {
+                    self.smoothSignalQuality = updatedSmoothSignalQuality
+                    
+                    if let callState = self.callState {
+                        self.updateCallState(callState)
+                    }
+                }
+            }
+        })
     }
     
     deinit {
@@ -197,6 +217,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         self.isMicrophoneMutedDisposable?.dispose()
         self.audioLevelDisposable?.dispose()
         self.audioOutputCheckTimer?.invalidate()
+        self.signalQualityTimer?.invalidate()
     }
     
     func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?) {
@@ -211,8 +232,24 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                     mappedOutput = .internalSpeaker
                 case .speaker:
                     mappedOutput = .speaker
-                case .headphones, .port:
-                    mappedOutput = .speaker
+                case .headphones:
+                    mappedOutput = .headphones
+                case let .port(port):
+                    switch port.type {
+                    case .wired:
+                        mappedOutput = .headphones
+                    default:
+                        let portName = port.name.lowercased()
+                        if portName.contains("airpods pro") {
+                            mappedOutput = .airpodsPro
+                        } else if portName.contains("airpods max") {
+                            mappedOutput = .airpodsMax
+                        } else if portName.contains("airpods") {
+                            mappedOutput = .airpods
+                        } else {
+                            mappedOutput = .bluetooth
+                        }
+                    }
                 }
             } else {
                 mappedOutput = .internalSpeaker
@@ -342,10 +379,16 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         case .connecting:
             mappedLifecycleState = .connecting
         case let .active(startTime, signalQuality, keyData):
-            self.callStartTimestamp = startTime
+            var signalQuality = signalQuality.flatMap(Int.init)
+            self.smoothSignalQualityTarget = Double(signalQuality ?? 4)
             
-            var signalQuality = signalQuality
-            signalQuality = 4
+            if let smoothSignalQuality = self.smoothSignalQuality {
+                signalQuality = Int(round(smoothSignalQuality))
+            } else {
+                signalQuality = 4
+            }
+            
+            self.callStartTimestamp = startTime
             
             let _ = keyData
             mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
@@ -354,6 +397,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 emojiKey: self.resolvedEmojiKey(data: keyData)
             ))
         case let .reconnecting(startTime, _, keyData):
+            self.smoothSignalQuality = nil
+            self.smoothSignalQualityTarget = nil
+            
             if self.callStartTimestamp != nil {
                 mappedLifecycleState = .active(PrivateCallScreen.State.ActiveState(
                     startTime: startTime + kCFAbsoluteTimeIntervalSince1970,
@@ -517,51 +563,31 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         callScreenState.name = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
         callScreenState.shortName = peer.compactDisplayTitle
         
-        if self.currentPeer?.smallProfileImage != peer.smallProfileImage {
+        if (self.currentPeer?.smallProfileImage != peer.smallProfileImage) || self.callScreenState?.avatarImage == nil {
             self.peerAvatarDisposable?.dispose()
             
-            if let smallProfileImage = peer.largeProfileImage, let peerReference = PeerReference(peer._asPeer()) {
-                if let thumbnailImage = smallProfileImage.immediateThumbnailData.flatMap(decodeTinyThumbnail).flatMap(UIImage.init(data:)), let cgImage = thumbnailImage.cgImage {
-                    callScreenState.avatarImage = generateImage(CGSize(width: 128.0, height: 128.0), contextGenerator: { size, context in
-                        context.draw(cgImage, in: CGRect(origin: CGPoint(), size: size))
-                    }, scale: 1.0).flatMap { image in
-                        return blurredImage(image, radius: 10.0)
-                    }
-                }
-                
-                let postbox = self.call.context.account.postbox
-                self.peerAvatarDisposable = (Signal<UIImage?, NoError> { subscriber in
-                    let fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: .other, userContentType: .avatar, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource)).start()
-                    let dataDisposable = postbox.mediaBox.resourceData(smallProfileImage.resource).start(next: { data in
-                        if data.complete, let image = UIImage(contentsOfFile: data.path)?.precomposed() {
-                            subscriber.putNext(image)
-                            subscriber.putCompletion()
-                        }
-                    })
-                    
-                    return ActionDisposable {
-                        fetchDisposable.dispose()
-                        dataDisposable.dispose()
-                    }
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] image in
+            let size = CGSize(width: 128.0, height: 128.0)
+            if let representation = peer.largeProfileImage, let signal = peerAvatarImage(account: self.call.context.account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: representation, displayDimensions: size, synchronousLoad: self.callScreenState?.avatarImage == nil) {
+                self.peerAvatarDisposable = (signal
+                |> deliverOnMainQueue).startStrict(next: { [weak self] imageVersions in
                     guard let self else {
                         return
                     }
-                    if var callScreenState = self.callScreenState {
+                    let image = imageVersions?.0
+                    if let image {
                         callScreenState.avatarImage = image
                         self.callScreenState = callScreenState
                         self.update(transition: .immediate)
                     }
                 })
             } else {
-                self.peerAvatarDisposable?.dispose()
-                self.peerAvatarDisposable = nil
-                
-                callScreenState.avatarImage = generateImage(CGSize(width: 512, height: 512), scale: 1.0, rotatedContext: { size, context in
+                let image = generateImage(size, rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
-                    drawPeerAvatarLetters(context: context, size: size, font: Font.semibold(20.0), letters: peer.displayLetters, peerId: peer.id, nameColor: peer.nameColor)
-                })
+                    drawPeerAvatarLetters(context: context, size: size, font: avatarPlaceholderFont(size: 50.0), letters: peer.displayLetters, peerId: peer.id, nameColor: peer.nameColor)
+                })!
+                callScreenState.avatarImage = image
+                self.callScreenState = callScreenState
+                self.update(transition: .immediate)
             }
         }
         self.currentPeer = peer
@@ -892,6 +918,19 @@ private final class AdaptedCallVideoSource: VideoSource {
                 case let .i420(i420Buffer):
                     let width = i420Buffer.width
                     let height = i420Buffer.height
+                    
+                    /*output = Output(
+                        resolution: CGSize(width: CGFloat(width), height: CGFloat(height)),
+                        textureLayout: .triPlanar(Output.TriPlanarTextureLayout(
+                            y: yTexture,
+                            uv: uvTexture
+                        )),
+                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
+                        rotationAngle: rotationAngle,
+                        followsDeviceOrientation: followsDeviceOrientation,
+                        mirrorDirection: mirrorDirection,
+                        sourceId: sourceId
+                    )*/
                     
                     let _ = width
                     let _ = height

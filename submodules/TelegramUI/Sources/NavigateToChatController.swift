@@ -20,6 +20,7 @@ import MediaEditorScreen
 import ChatControllerInteraction
 import SavedMessagesScreen
 import WallpaperGalleryScreen
+import ChatMessageNotificationItem
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation {

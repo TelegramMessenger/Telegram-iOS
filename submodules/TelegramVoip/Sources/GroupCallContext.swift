@@ -25,6 +25,17 @@ final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc
     func isCurrent() -> Bool {
         return self.queue.isCurrent()
     }
+    
+    func scheduleBlock(_ f: @escaping () -> Void, after timeout: Double) -> GroupCallDisposable {
+        let timer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: {
+            f()
+        }, queue: self.queue)
+        timer.start()
+        
+        return GroupCallDisposable(block: {
+            timer.invalidate()
+        })
+    }
 }
 
 enum BroadcastPartSubject {

@@ -44,7 +44,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     case iPadPro
     case iPadPro3rdGen
     case iPadMini6thGen
-    case unknown(screenSize: CGSize, statusBarHeight: CGFloat, onScreenNavigationHeight: CGFloat?)
+    case unknown(screenSize: CGSize, statusBarHeight: CGFloat, onScreenNavigationHeight: CGFloat?, screenCornerRadius: CGFloat)
     
     public static let performance = Performance()
 
@@ -111,14 +111,24 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return
             }
         }
-        self = .unknown(screenSize: screenSize, statusBarHeight: statusBarHeight, onScreenNavigationHeight: onScreenNavigationHeight)
+        
+        let screenCornerRadius: CGFloat
+        if screenSize.width >= 1024.0 || screenSize.height >= 1024.0 {
+            screenCornerRadius = 0.0
+        } else if onScreenNavigationHeight != nil {
+            screenCornerRadius = 39.0
+        } else {
+            screenCornerRadius = 0.0
+        }
+        
+        self = .unknown(screenSize: screenSize, statusBarHeight: statusBarHeight, onScreenNavigationHeight: onScreenNavigationHeight, screenCornerRadius: screenCornerRadius)
     }
     
     public var type: DeviceType {
         switch self {
             case .iPad, .iPad102Inch, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
                 return .tablet
-            case let .unknown(screenSize, _, _) where screenSize.width >= 744.0 && screenSize.height >= 1024.0:
+            case let .unknown(screenSize, _, _, _) where screenSize.width >= 744.0 && screenSize.height >= 1024.0:
                 return .tablet
             default:
                 return .phone
@@ -175,7 +185,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return CGSize(width: 1024.0, height: 1366.0)
             case .iPadMini6thGen:
                 return CGSize(width: 744.0, height: 1133.0)
-            case let .unknown(screenSize, _, _):
+            case let .unknown(screenSize, _, _, _):
                 return screenSize
         }
     }
@@ -194,12 +204,8 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return 53.0 + UIScreenPixel
             case .iPhone14Pro, .iPhone14ProMax:
                 return 55.0
-            case let .unknown(_, _, onScreenNavigationHeight):
-                if let _ = onScreenNavigationHeight {
-                    return 39.0
-                } else {
-                    return 0.0
-                }
+            case let .unknown(_, _, _, screenCornerRadius):
+                return screenCornerRadius
             default:
                 return 0.0
         }
@@ -230,7 +236,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             } else {
                 return nil
             }
-        case let .unknown(_, _, onScreenNavigationHeight):
+        case let .unknown(_, _, onScreenNavigationHeight, _):
             return onScreenNavigationHeight
         default:
             return nil
@@ -260,7 +266,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return 44.0
             case .iPadPro11Inch, .iPadPro3rdGen, .iPadMini, .iPadMini6thGen:
                 return 24.0
-            case let .unknown(_, statusBarHeight, _):
+            case let .unknown(_, statusBarHeight, _, _):
                 return statusBarHeight
             default:
                 return 20.0

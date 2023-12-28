@@ -28,6 +28,7 @@ import TelegramCallsUI
 import AuthorizationUI
 import ChatListUI
 import StoryContainerScreen
+import ChatMessageNotificationItem
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl

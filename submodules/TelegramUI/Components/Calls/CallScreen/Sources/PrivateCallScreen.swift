@@ -60,6 +60,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         public enum AudioOutput: Equatable {
             case internalSpeaker
             case speaker
+            case headphones
+            case airpods
+            case airpodsPro
+            case airpodsMax
+            case bluetooth
         }
         
         public var lifecycleState: LifecycleState
@@ -354,6 +359,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if !self.isUpdating {
             let wereControlsHidden = self.areControlsHidden
             self.areControlsHidden = true
+            self.displayEmojiTooltip = false
             self.update(transition: .immediate)
             
             if !wereControlsHidden {
@@ -417,6 +423,24 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if self.activeRemoteVideoSource != nil || self.activeLocalVideoSource != nil {
                 self.areControlsHidden = !self.areControlsHidden
                 update = true
+                
+                if self.areControlsHidden {
+                    self.displayEmojiTooltip = false
+                    self.hideControlsTimer?.invalidate()
+                    self.hideControlsTimer = nil
+                } else {
+                    self.hideControlsTimer?.invalidate()
+                    self.hideControlsTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        if !self.areControlsHidden {
+                            self.areControlsHidden = true
+                            self.displayEmojiTooltip = false
+                            self.update(transition: .spring(duration: 0.4))
+                        }
+                    })
+                }
             }
             
             if update {
@@ -515,7 +539,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if let previousParams = self.params, case .active = params.state.lifecycleState {
             switch previousParams.state.lifecycleState {
             case .requesting, .ringing, .connecting, .reconnecting:
-                if self.hideEmojiTooltipTimer == nil {
+                if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden {
                     self.displayEmojiTooltip = true
                     
                     self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
@@ -592,6 +616,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 }
                 if !self.areControlsHidden {
                     self.areControlsHidden = true
+                    self.displayEmojiTooltip = false
                     self.update(transition: .spring(duration: 0.4))
                 }
             })
@@ -704,7 +729,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 self.flipCameraAction?()
             }), at: 0)
         } else {
-            buttons.insert(ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), isEnabled: !isTerminated, action: { [weak self] in
+            buttons.insert(ButtonGroupView.Button(content: .speaker(audioOutput: params.state.audioOutput), isEnabled: !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -1157,9 +1182,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         transition.setPosition(layer: self.blobLayer, position: CGPoint(x: blobFrame.width * 0.5, y: blobFrame.height * 0.5))
         transition.setBounds(layer: self.blobLayer, bounds: CGRect(origin: CGPoint(), size: blobFrame.size))
         
+        let displayAudioLevelBlob: Bool
         let titleString: String
         switch params.state.lifecycleState {
         case let .terminated(terminatedState):
+            displayAudioLevelBlob = false
+            
             self.titleView.contentMode = .center
             
             switch terminatedState.reason {
@@ -1174,6 +1202,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             case .missed:
                 titleString = "Call Missed"
             }
+        default:
+            displayAudioLevelBlob = !params.state.isRemoteAudioMuted
+            
+            self.titleView.contentMode = .scaleToFill
+            titleString = params.state.name
+        }
+        
+        if !displayAudioLevelBlob {
             genericAlphaTransition.setScale(layer: self.blobLayer, scale: 0.3)
             genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: 0.0)
             self.canAnimateAudioLevel = false
@@ -1181,11 +1217,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.currentAvatarAudioScale = 1.0
             transition.setScale(layer: self.avatarTransformLayer, scale: 1.0)
             transition.setScale(layer: self.blobTransformLayer, scale: 1.0)
-        default:
-            self.titleView.contentMode = .scaleToFill
-            titleString = params.state.name
+        } else {
             genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo) ? 0.0 : 1.0)
             transition.setScale(layer: self.blobLayer, scale: expandedEmojiKeyOverlapsAvatar ? 0.001 : 1.0)
+            if !havePrimaryVideo {
+                self.canAnimateAudioLevel = true
+            }
         }
         
         let titleSize = self.titleView.update(
