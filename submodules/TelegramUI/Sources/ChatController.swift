@@ -18986,6 +18986,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     public func transferScrollingVelocity(_ velocity: CGFloat) {
         self.chatDisplayNode.historyNode.transferVelocity(velocity)
     }
+    
+    public func performScrollToTop() -> Bool {
+        let offset = self.chatDisplayNode.historyNode.visibleContentOffset()
+        switch offset {
+        case let .known(value) where value <= CGFloat.ulpOfOne:
+            return false
+        default:
+            self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+            return true
+        }
+    }
 }
 
 final class ChatContextControllerContentSourceImpl: ContextControllerContentSource {

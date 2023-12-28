@@ -913,6 +913,7 @@ public protocol ChatController: ViewController {
     func activateSearch(domain: ChatSearchDomain, query: String)
     func beginClearHistory(type: InteractiveHistoryClearingType)
     
+    func performScrollToTop() -> Bool
     func transferScrollingVelocity(_ velocity: CGFloat)
     func updateIsScrollingLockedAtTop(isScrollingLockedAtTop: Bool)
 }

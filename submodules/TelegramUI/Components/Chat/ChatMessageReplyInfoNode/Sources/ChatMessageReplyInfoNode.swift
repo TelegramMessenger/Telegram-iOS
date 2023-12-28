@@ -203,7 +203,15 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var dashSecondaryColor: UIColor?
             var dashTertiaryColor: UIColor?
             
-            let author = arguments.message?.effectiveAuthor
+            var author = arguments.message?.effectiveAuthor
+            
+            if let forwardInfo = arguments.message?.forwardInfo {
+                if let peer = forwardInfo.author {
+                    author = peer
+                } else if let authorSignature = forwardInfo.authorSignature {
+                    author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                }
+            }
             
             let colors = author?.nameColor.flatMap { arguments.context.peerNameColors.get($0, dark: arguments.presentationData.theme.theme.overallDarkAppearance) }
             authorNameColor = colors?.main

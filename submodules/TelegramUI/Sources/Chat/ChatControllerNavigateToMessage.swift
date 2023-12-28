@@ -393,7 +393,7 @@ extension ChatControllerImpl {
                                         quote = params.quote.flatMap { quote in ChatControllerSubject.MessageHighlight.Quote(string: quote.string, offset: quote.offset) }
                                     }
                                     
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil) }))
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil) }, keepStack: .always))
                                 }
                             })
                             completion?()
