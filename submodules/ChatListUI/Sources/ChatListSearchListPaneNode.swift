@@ -1418,8 +1418,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             PeerIndexNameRepresentation.title(title: presentationData.strings.DialogList_SavedMessages.lowercased(), addressNames: [])
                         ],
                         PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2666000)): [
-                            //TODO:localize
-                            PeerIndexNameRepresentation.title(title: "author hidden", addressNames: [])
+                            PeerIndexNameRepresentation.title(title: presentationData.strings.ChatList_AuthorHidden.lowercased(), addressNames: [])
                         ]
                     ])
                     |> map { peers -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>) in

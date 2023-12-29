@@ -969,8 +969,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if peer.id == self.context.account.peerId && !self.isSettings {
                 title = presentationData.strings.Conversation_SavedMessages
             } else if peer.id.isAnonymousSavedMessages {
-                //TODO:localize
-                title = "Author Hidden"
+                title = presentationData.strings.ChatList_AuthorHidden
             } else if let threadData = threadData {
                 title = threadData.info.title
             } else {

@@ -7216,6 +7216,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         if case .peer(self.context.account.peerId) = self.chatLocation {
             var didDisplayTooltip = false
+            if "".isEmpty {
+                didDisplayTooltip = true
+            }
             self.chatDisplayNode.historyNode.hasLotsOfMessagesUpdated = { [weak self] hasLotsOfMessages in
                 guard let self, hasLotsOfMessages else {
                     return
@@ -7237,8 +7240,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    //TODO:localize
-                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap to view your Saved Messages organized by type or source"), location: .point(navigationBar.frame, .top), displayDuration: .manual, shouldDismissOnTouch: { point, _ in
+                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Chat_SavedMessagesChatsTooltip), location: .point(navigationBar.frame, .top), displayDuration: .manual, shouldDismissOnTouch: { point, _ in
                         return .ignore
                     })
                     self.present(tooltipScreen, in: .current)
@@ -17503,8 +17505,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if options.contains(.deleteLocally) {
             var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
             if self.chatLocation.peerId == self.context.account.peerId {
-                //TODO:localize
-                localOptionText = "Remove from Saved Messages"
+                localOptionText = self.presentationData.strings.Chat_ConfirmationRemoveFromSavedMessages
             } else if case .scheduledMessages = self.presentationInterfaceState.subject {
                 localOptionText = messageIds.count > 1 ? self.presentationData.strings.ScheduledMessages_DeleteMany : self.presentationData.strings.ScheduledMessages_Delete
             } else {

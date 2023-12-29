@@ -133,7 +133,6 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                     text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
             case .deleteSavedPeer:
-                //TODO:localize
                 let peerTitle = peer.displayTitle(strings: strings, displayOrder: nameOrder)
                 text = strings.ChatList_DeleteSavedPeerConfirmation(peerTitle)
             case let .clearHistory(canClearCache):

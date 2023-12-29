@@ -225,8 +225,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                         return true
                     })
                     
-                    //TODO:localize
-                    self.parentController?.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: "Saved messages deleted.", text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                    self.parentController?.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: self.presentationData.strings.SavedMessages_SubChatDeleted, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                         guard let self else {
                             return false
                         }

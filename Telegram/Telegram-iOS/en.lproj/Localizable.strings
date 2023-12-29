@@ -10850,3 +10850,16 @@ Sorry for the inconvenience.";
 
 "Chat.TapToPlayVoiceMessageOnceTooltip" = "Tap to set this message to **Play Once**";
 "Chat.PlayVoiceMessageOnceTooltip" = "The recipients will be able to listen to it only once.";
+
+"ChatList.AuthorHidden" = "Author Hidden";
+"SavedMessages.SubChatDeleted" = "Saved messages deleted.";
+"PeerInfo.SavedMessagesTabTitle" = "Saved";
+
+"Chat.PanelStatusAuthorHidden" = "Senders of these messages restricted to link\ntheir name when forwarding.";
+"Chat.SavedMessagesChatsTooltip" = "Tap to view your Saved Messages organized by type or source";
+
+"Chat.ConfirmationRemoveFromSavedMessages" = "Remove from Saved Messages";
+
+"Premium.MaxSavedPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some that are currently pinned or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxSavedPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
+"Premium.MaxSavedPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";

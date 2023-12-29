@@ -1026,12 +1026,11 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
                 }
             case .pinnedSavedPeers:
-                //TODO:localize
                 let limit = state.limits.maxPinnedSavedChatCount
                 let premiumLimit = state.premiumLimits.maxPinnedSavedChatCount
                 iconName = "Premium/Pin"
                 badgeText = "\(component.count)"
-                string = component.count >= premiumLimit ? strings.Premium_MaxPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
+                string = component.count >= premiumLimit ? strings.Premium_MaxSavedPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxSavedPinsText("\(limit)", "\(premiumLimit)").string
                 defaultValue = component.count > limit ? "\(limit)" : ""
                 premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                 badgePosition = max(0.15, min(0.85, CGFloat(component.count) / CGFloat(premiumLimit)))
@@ -1040,7 +1039,7 @@ private final class LimitSheetContent: CombinedComponent {
             
                 if isPremiumDisabled {
                     badgeText = "\(limit)"
-                    string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
+                    string = strings.Premium_MaxSavedPinsNoPremiumText("\(limit)").string
                 }
             case .files:
                 let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100

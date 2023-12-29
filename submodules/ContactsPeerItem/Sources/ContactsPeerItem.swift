@@ -784,8 +784,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         } else if peer.id.isReplies {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleBoldFont, textColor: textColor)
                         } else if peer.id.isAnonymousSavedMessages {
-                            //TODO:localize
-                            titleAttributedString = NSAttributedString(string: "Author Hidden", font: titleBoldFont, textColor: textColor)
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_AuthorHidden, font: titleBoldFont, textColor: textColor)
                         } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                             let string = NSMutableAttributedString()
                             switch item.displayOrder {
