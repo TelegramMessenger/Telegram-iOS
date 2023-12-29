@@ -145,6 +145,15 @@ public enum EnqueueMessage {
             return nil
         }
     }
+    
+    public var attributes: [MessageAttribute] {
+        switch self {
+        case let .message(_, attributes, _, _, _, _, _, _, _, _):
+            return attributes
+        case let .forward(_, _, _, attributes, _):
+            return attributes
+        }
+    }
 }
 
 private extension EnqueueMessage {

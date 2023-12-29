@@ -47,8 +47,4 @@ open class ASImageNode: ASDisplayNode {
     override public func calculateSizeThatFits(_ contrainedSize: CGSize) -> CGSize {
         return self.image?.size ?? CGSize()
     }
-    
-    public var asdf: Int {
-        return 1234
-    }
 }

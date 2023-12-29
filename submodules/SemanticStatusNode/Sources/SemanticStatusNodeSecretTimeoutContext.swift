@@ -68,7 +68,7 @@ final class SemanticStatusNodeSecretTimeoutContext: SemanticStatusNodeStateConte
                 context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                 context.scaleBy(x: 1.0, y: -1.0)
                 context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-                context.translateBy(x: 4.0, y: 7.0)
+                context.translateBy(x: 6.0, y: 8.0)
                 context.clip(to: iconRect, mask: iconImage.cgImage!)
                 context.fill(iconRect)
                 context.restoreGState()
@@ -218,9 +218,9 @@ private struct ContentParticle {
 
 private final class FireIconNode: ManagedAnimationNode {
     init() {
-        super.init(size: CGSize(width: 36.0, height: 36.0))
+        super.init(size: CGSize(width: 32.0, height: 32.0))
         
-        self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 0, endFrame: 80), duration: 2.5))
-        self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 80, endFrame: 115), duration: 0.85, loop: true))
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_flame_1"), frames: .range(startFrame: 0, endFrame: 60), duration: 1.5))
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_flame_2"), frames: .range(startFrame: 0, endFrame: 120), duration: 2.0, loop: true))
     }
 }

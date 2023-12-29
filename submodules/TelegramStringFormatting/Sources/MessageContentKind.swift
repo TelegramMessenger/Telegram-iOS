@@ -278,7 +278,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         switch expiredMedia.data {
         case .image:
             return .expiredImage
-        case .file:
+        case .file, .videoMessage, .voiceMessage:
             return .expiredVideo
         }
     case .image:

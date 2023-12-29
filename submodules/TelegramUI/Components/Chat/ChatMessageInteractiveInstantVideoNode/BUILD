@@ -30,6 +30,7 @@ swift_library(
         "//submodules/TelegramNotices",
         "//submodules/Markdown",
         "//submodules/TextFormat",
+        "//submodules/InvisibleInkDustNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageForwardInfoNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",

@@ -736,10 +736,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return false
                         }
                         
-//                        if (file.isVoice || file.isInstantVideo) && "".isEmpty {
-//                            strongSelf.openViewOnceMediaMessage(message)
-//                            return false
-//                        }
+                        if (file.isVoice || file.isInstantVideo) && message.minAutoremoveOrClearTimeout == viewOnceTimeout {
+                            strongSelf.openViewOnceMediaMessage(message)
+                            return false
+                        }
                     }
                 }
                 if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
@@ -9503,8 +9503,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.lockMediaRecorder()
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
-        }, sendRecordedMedia: { [weak self] silentPosting in
-            self?.sendMediaRecording(silentPosting: silentPosting)
+        }, sendRecordedMedia: { [weak self] silentPosting, viewOnce in
+            self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce)
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
@@ -15453,9 +15453,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                         let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
                         let correlationId = Int64.random(in: 0 ..< Int64.max)
+                        
                         let updatedMessage = message
                             .withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)
                             .withUpdatedCorrelationId(correlationId)
+//                            .withUpdatedAttributes({ attributes in
+//                                var attributes = attributes
+//#if DEBUG
+//                                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
+//#endif
+//                                return attributes
+//                            })
 
                         var usedCorrelationId = false
 
@@ -15548,10 +15556,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 })
                                 strongSelf.recorderFeedback = nil
+                                strongSelf.updateDownButtonVisibility()
                             }
                         }
                     })
-                case .send:
+                case let .send(viewOnce):
                     self.chatDisplayNode.updateRecordedMediaDeleted(false)
                     let _ = (audioRecorderValue.takenRecordedData()
                     |> deliverOnMainQueue).startStandalone(next: { [weak self] data in
@@ -15593,7 +15602,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }, usedCorrelationId ? correlationId : nil)
                                 
-                                strongSelf.sendMessages([.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])])
+                                var attributes: [MessageAttribute] = []
+                                if viewOnce {
+                                    attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
+                                }
+                                
+                                strongSelf.sendMessages([.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(data.compressedData.count), attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])])
                                 
                                 strongSelf.recorderFeedback?.tap()
                                 strongSelf.recorderFeedback = nil
@@ -15660,9 +15674,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
             $0.updatedRecordedMediaPreview(nil)
         })
+        self.updateDownButtonVisibility()
     }
     
-    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil) {
+    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         
         if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
@@ -15687,10 +15702,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                         $0.updatedRecordedMediaPreview(nil).updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
                     })
+
+                    strongSelf.updateDownButtonVisibility()
                 }
             }, nil)
             
-            let messages: [EnqueueMessage] = [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+            var attributes: [MessageAttribute] = []
+            if viewOnce {
+                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
+            }
+            
+            let messages: [EnqueueMessage] = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
             
             let transformedMessages: [EnqueueMessage]
             if let silentPosting = silentPosting {
@@ -16008,7 +16030,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func updateDownButtonVisibility() {
-        let recordingMediaMessage = self.audioRecorderValue != nil || self.videoRecorderValue != nil
+        let recordingMediaMessage = self.audioRecorderValue != nil || self.videoRecorderValue != nil || self.presentationInterfaceState.recordedMediaPreview != nil
         self.chatDisplayNode.navigateButtons.displayDownButton = self.shouldDisplayDownButton && !recordingMediaMessage
     }
     
@@ -18923,16 +18945,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func openViewOnceMediaMessage(_ message: Message) {
-        let source: ContextContentSource = .extracted(ChatMessageContextExtractedContentSource(chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: false, centerVertically: true))
+        let isIncoming = message.effectivelyIncoming(self.context.account.peerId)
         
+        var presentImpl: ((ViewController) -> Void)?
         let configuration = ContextController.Configuration(
             sources: [
                 ContextController.Source(
                     id: 0,
                     title: "",
-                    source: source,
+                    source: .extracted(ChatViewOnceMessageContextExtractedContentSource(
+                        context: self.context,
+                        presentationData: self.presentationData,
+                        chatNode: self.chatDisplayNode,
+                        backgroundNode: self.chatBackgroundNode,
+                        engine: self.context.engine,
+                        message: message,
+                        present: { c in
+                            presentImpl?(c)
+                        }
+                    )),
                     items: .single(ContextController.Items(content: .list([]))),
-                    closeActionTitle: "Delete and Close"
+                    closeActionTitle: isIncoming ? "Delete and Close" : "Close",
+                    closeAction: { [weak self] in
+                        if let self {
+                            self.context.sharedContext.mediaManager.setPlaylist(nil, type: .voice, control: .playback(.pause))
+                        }
+                    }
                 )
             ], initialId: 0
         )
@@ -18947,7 +18985,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.currentContextController = contextController
         self.presentInGlobalOverlay(contextController)
         
-        let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: nil))
+        presentImpl = { [weak contextController] c in
+            contextController?.present(c, in: .current)
+        }
+        
+        let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .singleMessage(message.id)))
     }
     
     func openStorySharing(messages: [Message]) {

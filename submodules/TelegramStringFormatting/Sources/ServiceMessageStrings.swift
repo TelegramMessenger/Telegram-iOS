@@ -965,6 +965,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = NSAttributedString(string: strings.Message_ImageExpired, font: titleFont, textColor: primaryTextColor)
             case .file:
                 attributedString = NSAttributedString(string: strings.Message_VideoExpired, font: titleFont, textColor: primaryTextColor)
+            case .videoMessage:
+                attributedString = NSAttributedString(string: strings.Message_VideoMessageExpired, font: titleFont, textColor: primaryTextColor)
+            case .voiceMessage:
+                attributedString = NSAttributedString(string: strings.Message_VoiceMessageExpired, font: titleFont, textColor: primaryTextColor)
             }
         } else if let _ = media as? TelegramMediaStory {
             let compactPeerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""

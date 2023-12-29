@@ -20,6 +20,7 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ChatContextQuery",
+        "//submodules/TooltipUI",
     ],
     visibility = [
         "//visibility:public",

@@ -18,6 +18,7 @@ final class ContextSourceContainer: ASDisplayNode {
         let title: String
         let source: ContextContentSource
         let closeActionTitle: String?
+        let closeAction: (() -> Void)?
         
         private var _presentationNode: ContextControllerPresentationNode?
         var presentationNode: ContextControllerPresentationNode {
@@ -43,13 +44,15 @@ final class ContextSourceContainer: ASDisplayNode {
             title: String,
             source: ContextContentSource,
             items: Signal<ContextController.Items, NoError>,
-            closeActionTitle: String? = nil
+            closeActionTitle: String? = nil,
+            closeAction: (() -> Void)? = nil
         ) {
             self.controller = controller
             self.id = id
             self.title = title
             self.source = source
             self.closeActionTitle = closeActionTitle
+            self.closeAction = closeAction
             
             self.ready.set(combineLatest(queue: .mainQueue(), self.contentReady.get(), self.actionsReady.get())
             |> map { a, b -> Bool in
@@ -385,7 +388,8 @@ final class ContextSourceContainer: ASDisplayNode {
                 title: source.title,
                 source: source.source,
                 items: source.items,
-                closeActionTitle: source.closeActionTitle
+                closeActionTitle: source.closeActionTitle,
+                closeAction: source.closeAction
             )
             self.sources.append(mappedSource)
             self.addSubnode(mappedSource.presentationNode)
@@ -472,17 +476,27 @@ final class ContextSourceContainer: ASDisplayNode {
     }
     
     func animateOut(result: ContextMenuActionResult, completion: @escaping () -> Void) {
-        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        let delayDismissal = self.activeSource?.closeAction != nil
+        let delay: Double = delayDismissal ? 0.2 : 0.0
+        let duration: Double = delayDismissal ? 0.35 : 0.2
+        
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false, completion: { _ in
+            if delayDismissal {
+                Queue.mainQueue().after(0.55) {
+                    completion()
+                }
+            }
+        })
         
         if let tabSelectorView = self.tabSelector?.view {
-            tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
         }
         if let closeButtonView = self.closeButton?.view {
-            closeButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            closeButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
         }
         
         if let activeSource = self.activeSource {
-            activeSource.animateOut(result: result, completion: completion)
+            activeSource.animateOut(result: result, completion: delayDismissal ? {} : completion)
         } else {
             completion()
         }
@@ -670,11 +684,15 @@ final class ContextSourceContainer: ASDisplayNode {
                         )
                     ),
                     effectAlignment: .center,
-                    action: { [weak self] in
+                    action: { [weak self, weak source] in
                         guard let self else {
                             return
                         }
-                        self.controller?.dismiss(result: .dismissWithoutContent, completion: nil)
+                        if let source, let closeAction = source.closeAction {
+                            closeAction()
+                        } else {
+                            self.controller?.dismiss(result: .dismissWithoutContent, completion: nil)
+                        }
                     })
                 ),
                 environment: {},

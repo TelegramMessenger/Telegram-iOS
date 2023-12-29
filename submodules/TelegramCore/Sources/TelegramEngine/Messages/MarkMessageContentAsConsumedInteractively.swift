@@ -198,8 +198,14 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
                             for i in 0 ..< updatedMedia.count {
                                 if let _ = updatedMedia[i] as? TelegramMediaImage {
                                     updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                                } else if let _ = updatedMedia[i] as? TelegramMediaFile {
-                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                } else if let file = updatedMedia[i] as? TelegramMediaFile {
+                                    if file.isInstantVideo {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                    } else if file.isVoice {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                    } else {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                    }
                                 }
                             }
                         }
@@ -216,8 +222,14 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
                             if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
                                 if let _ = updatedMedia[i] as? TelegramMediaImage {
                                     updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                                } else if let _ = updatedMedia[i] as? TelegramMediaFile {
-                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                } else if let file = updatedMedia[i] as? TelegramMediaFile {
+                                    if file.isInstantVideo {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .videoMessage)
+                                    } else if file.isVoice {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .voiceMessage)
+                                    } else {
+                                        updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                    }
                                 }
                             }
                         }

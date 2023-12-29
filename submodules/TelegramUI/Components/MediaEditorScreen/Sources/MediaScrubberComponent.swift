@@ -1046,6 +1046,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                         samples: samples,
                         peak: peak,
                         status: .complete(),
+                        isViewOnceMessage: false,
                         seek: nil,
                         updateIsSeeking: nil
                     )

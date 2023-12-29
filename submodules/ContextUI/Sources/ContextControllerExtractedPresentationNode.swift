@@ -1121,13 +1121,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
 
                 var animationInContentXDistance: CGFloat = 0.0
                 let contentX = contentParentGlobalFrame.minX + contentRect.minX - contentNode.containingItem.contentRect.minX
-                let contentY = contentParentGlobalFrame.minY + contentRect.minY - contentNode.containingItem.contentRect.minY
                 let contentWidth = contentNode.containingItem.view.bounds.size.width
                 let contentHeight = contentNode.containingItem.view.bounds.size.height
                 if case let .extracted(extracted) = self.source, extracted.centerVertically {
                     if actionsSize.height.isZero {
                         let fixedContentY = floorToScreenPixels((layout.size.height - contentHeight) / 2.0)
-                        animationInContentYDistance = fixedContentY - contentY
+                        animationInContentYDistance = fixedContentY - contentRect.minY
                     } else if contentX + contentWidth > layout.size.width / 2.0, actionsSize.height > 0.0 {
                         let fixedContentX = layout.size.width - (contentX + contentWidth)
                         animationInContentXDistance = fixedContentX - contentX

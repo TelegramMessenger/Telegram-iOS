@@ -10841,3 +10841,12 @@ Sorry for the inconvenience.";
 "RequestPeer.ReachedMaximum_any" = "You can select up to %@ users.";
 
 "ChatList.DeleteSavedPeerConfirmation" = "Are you sure you want to delete saved messages from %@?";
+
+"Message.VoiceMessageExpired" = "Expired voice message";
+"Message.VideoMessageExpired" = "Expired video message";
+
+"Chat.PlayOnceVoiceMessageTooltip" = "This voice message can only be played once.";
+"Chat.PlayOnceVoiceMessageYourTooltip" = "This message will disappear once **%@** plays it once.";
+
+"Chat.TapToPlayVoiceMessageOnceTooltip" = "Tap to set this message to **Play Once**";
+"Chat.PlayVoiceMessageOnceTooltip" = "The recipients will be able to listen to it only once.";

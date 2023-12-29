@@ -643,7 +643,12 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             }
         }
         
-        if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
+        var isViewOnceMessage = false
+        if let (item, _, _, _, _, _) = self.playlistStateAndType, let source = item.playbackData?.source, case let .telegramFile(_, _, isViewOnce) = source, isViewOnce {
+            isViewOnceMessage = true
+        }
+        
+        if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden && !isViewOnceMessage {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelStartY), size: CGSize(width: layout.size.width, height: panelHeight))
             additionalHeight += panelHeight

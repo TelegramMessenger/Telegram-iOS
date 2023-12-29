@@ -7,6 +7,24 @@ import UniversalMediaPlayer
 import LegacyComponents
 import UIKitRuntimeUtils
 
+private struct ContentParticle {
+    var position: CGPoint
+    var direction: CGPoint
+    var velocity: CGFloat
+    var alpha: CGFloat
+    var lifetime: Double
+    var beginTime: Double
+    
+    init(position: CGPoint, direction: CGPoint, velocity: CGFloat, alpha: CGFloat, lifetime: Double, beginTime: Double) {
+        self.position = position
+        self.direction = direction
+        self.velocity = velocity
+        self.alpha = alpha
+        self.lifetime = lifetime
+        self.beginTime = beginTime
+    }
+}
+
 private final class InstantVideoRadialStatusNodeParameters: NSObject {
     let color: UIColor
     let progress: CGFloat
@@ -14,14 +32,18 @@ private final class InstantVideoRadialStatusNodeParameters: NSObject {
     let playProgress: CGFloat
     let blinkProgress: CGFloat
     let hasSeek: Bool
+    let sparks: Bool
+    let particles: [ContentParticle]
     
-    init(color: UIColor, progress: CGFloat, dimProgress: CGFloat, playProgress: CGFloat, blinkProgress: CGFloat, hasSeek: Bool) {
+    init(color: UIColor, progress: CGFloat, dimProgress: CGFloat, playProgress: CGFloat, blinkProgress: CGFloat, hasSeek: Bool, sparks: Bool, particles: [ContentParticle]) {
         self.color = color
         self.progress = progress
         self.dimProgress = dimProgress
         self.playProgress = playProgress
         self.blinkProgress = blinkProgress
         self.hasSeek = hasSeek
+        self.sparks = sparks
+        self.particles = particles
     }
 }
 
@@ -43,8 +65,12 @@ private extension CGPoint {
 public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let color: UIColor
     private let hasSeek: Bool
-    private let hapticFeedback = HapticFeedback()
+    private let sparks: Bool
     
+    private let hapticFeedback = HapticFeedback()
+
+    private var particles: [ContentParticle] = []
+
     private var effectiveProgress: CGFloat = 0.0 {
         didSet {
             self.setNeedsDisplay()
@@ -85,6 +111,8 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
         }
     }
     
+    private var animator: ConstantDisplayLinkAnimator?
+    
     private var statusDisposable: Disposable?
     private var statusValuePromise = Promise<MediaPlayerStatus?>()
     
@@ -111,9 +139,10 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
     
     public var seekTo: ((Double, Bool) -> Void)?
     
-    public init(color: UIColor, hasSeek: Bool) {
+    public init(color: UIColor, hasSeek: Bool, sparks: Bool = false) {
         self.color = color
         self.hasSeek = hasSeek
+        self.sparks = sparks
         
         super.init()
         
@@ -127,6 +156,13 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
         })
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
+        
+        if sparks {
+            self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                self?.updateSparks()
+            })
+            self.animator?.isPaused = false
+        }
     }
     
     deinit {
@@ -163,6 +199,60 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
         } else {
             return true
         }
+    }
+    
+    private func updateSparks() {
+//        let bounds = self.bounds
+        
+//        let lineWidth: CGFloat = 4.0
+//        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+//        let radius: CGFloat = (bounds.size.width - lineWidth - 4.0 * 2.0) * 0.5
+        
+        let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * self.effectiveProgress
+        
+        let v = CGPoint(x: sin(endAngle), y: -cos(endAngle))
+//        let c = CGPoint(x: -v.y * radius + center.x, y: v.x * radius + center.y)
+        
+        let timestamp = CACurrentMediaTime()
+        
+        let dt: CGFloat = 1.0 / 60.0
+        var removeIndices: [Int] = []
+        for i in 0 ..< self.particles.count {
+            let currentTime = timestamp - self.particles[i].beginTime
+            if currentTime > self.particles[i].lifetime {
+                removeIndices.append(i)
+            } else {
+                let input: CGFloat = CGFloat(currentTime / self.particles[i].lifetime)
+                let decelerated: CGFloat = (1.0 - (1.0 - input) * (1.0 - input))
+                self.particles[i].alpha = 1.0 - decelerated
+                
+                var p = self.particles[i].position
+                let d = self.particles[i].direction
+                let v = self.particles[i].velocity
+                p = CGPoint(x: p.x + d.x * v * dt, y: p.y + d.y * v * dt)
+                self.particles[i].position = p
+            }
+        }
+        
+        for i in removeIndices.reversed() {
+            self.particles.remove(at: i)
+        }
+        
+        let newParticleCount = 1
+        for _ in 0 ..< newParticleCount {
+            let degrees: CGFloat = CGFloat(arc4random_uniform(140)) - 70.0
+            let angle: CGFloat = degrees * CGFloat.pi / 180.0
+            
+            let direction = CGPoint(x: v.x * cos(angle) - v.y * sin(angle), y: v.x * sin(angle) + v.y * cos(angle))
+            let velocity = (25.0 + (CGFloat(arc4random()) / CGFloat(UINT32_MAX)) * 4.0) * 0.5
+            
+            let lifetime = Double(0.25 + CGFloat(arc4random_uniform(100)) * 0.01)
+            
+            let particle = ContentParticle(position: .zero, direction: direction, velocity: velocity, alpha: 0.8, lifetime: lifetime, beginTime: timestamp)
+            self.particles.append(particle)
+        }
+        
+        self.setNeedsDisplay()
     }
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -259,7 +349,7 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress, blinkProgress: self.effectiveBlinkProgress, hasSeek: self.hasSeek)
+        return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress, blinkProgress: self.effectiveBlinkProgress, hasSeek: self.hasSeek, sparks: self.sparks, particles: self.particles)
     }
     
     @objc public override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -296,8 +386,15 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
             context.setBlendMode(.normal)
             
             var progress = parameters.progress
-            let startAngle = -CGFloat.pi / 2.0
-            let endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
+            let startAngle: CGFloat
+            let endAngle: CGFloat
+            if parameters.sparks {
+                endAngle = -CGFloat.pi / 2.0
+                startAngle = CGFloat(progress) * 2.0 * CGFloat.pi + endAngle
+            } else {
+                startAngle = -CGFloat.pi / 2.0
+                endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
+            }
             
             progress = min(1.0, progress)
             
@@ -362,6 +459,16 @@ public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecogni
                 let handleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(handlePosition.x - handleSize.width / 2.0), y: floorToScreenPixels(handlePosition.y - handleSize.height / 2.0)), size: handleSize)
                 context.setFillColor(UIColor.white.cgColor)
                 context.fillEllipse(in: handleFrame)
+            }
+            
+            let v = CGPoint(x: sin(startAngle), y: -cos(startAngle))
+            let c = CGPoint(x: -v.y * pathDiameter * 0.5 + bounds.midX, y: v.x * pathDiameter * 0.5 + bounds.midY)
+            
+            context.setFillColor(parameters.color.cgColor)
+            for particle in parameters.particles {
+                let size: CGFloat = 1.3
+                context.setAlpha(particle.alpha)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: c.x + particle.position.x - size / 2.0, y: c.y + particle.position.y - size / 2.0), size: CGSize(width: size, height: size)))
             }
         }
     }

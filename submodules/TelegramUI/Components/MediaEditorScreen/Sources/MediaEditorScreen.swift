@@ -2448,6 +2448,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     if let maybeFile = messages.first?.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, maybeFile.isVideo, let _ = self.context.account.postbox.mediaBox.completedResourcePath(maybeFile.resource, pathExtension: nil) {
                         messageFile = maybeFile
                     }
+                    if "".isEmpty {
+                        messageFile = nil
+                    }
                     
                     let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
                     renderer.render(completion: { result in

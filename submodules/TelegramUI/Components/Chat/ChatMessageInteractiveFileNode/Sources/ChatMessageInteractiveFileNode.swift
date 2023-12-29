@@ -739,7 +739,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let (titleLayout, titleApply) = titleAsyncLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: hasThumbnail ? 2 : 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                let isViewOnceMessage = "".isEmpty || arguments.message.autoremoveAttribute?.timeout == viewOnceTimeout
+                let isViewOnceMessage = isVoice && arguments.message.minAutoremoveOrClearTimeout == viewOnceTimeout
                 
                 let fileSizeString: String
                 if let _ = arguments.file.size {
@@ -1300,6 +1300,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         samples: audioWaveform?.samples ?? Data(),
                                         peak: audioWaveform?.peak ?? 0,
                                         status: strongSelf.playbackStatus.get(),
+                                        isViewOnceMessage: isViewOnceMessage,
                                         seek: { timestamp in
                                             if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(EngineMessage(message)) {
                                                 context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
@@ -1559,7 +1560,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
             }
         }
-        let isViewOnceMessage = "".isEmpty || (isVoice && message.autoremoveAttribute?.timeout == viewOnceTimeout)
+        let isViewOnceMessage = isVoice && message.minAutoremoveOrClearTimeout == viewOnceTimeout
         
         var state: SemanticStatusNodeState
         var streamingState: SemanticStatusNodeState = .none
@@ -1780,6 +1781,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.streamingStatusNode = streamingStatusNode
             streamingStatusNode.frame = streamingCacheStatusFrame
             self.addSubnode(streamingStatusNode)
+            
+            if isViewOnceMessage {
+                streamingStatusNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                streamingStatusNode.layer.animateAlpha(from: 0.1, to: 1.0, duration: 0.2)
+            }
         } else if let streamingStatusNode = self.streamingStatusNode {
             streamingStatusNode.backgroundNodeColor = backgroundNodeColor
         }
@@ -1798,10 +1804,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
             })
             
-            switch state {
-            case .pause:
+            if showBlobs {
                 self.playbackAudioLevelNode?.startAnimating()
-            default:
+            } else {
                 self.playbackAudioLevelNode?.stopAnimating()
             }
         }
@@ -1809,6 +1814,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         if let streamingStatusNode = self.streamingStatusNode {
             if streamingState == .none {
                 self.streamingStatusNode = nil
+                if isViewOnceMessage {
+                    streamingStatusNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                }
                 streamingStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak streamingStatusNode] _ in
                     if streamingState == .none {
                         streamingStatusNode?.removeFromSupernode()

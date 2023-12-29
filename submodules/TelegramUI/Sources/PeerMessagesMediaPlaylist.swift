@@ -63,7 +63,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     lazy var playbackData: SharedMediaPlaybackData? = {
         if let file = extractFileMedia(self.message) {
             let fileReference = FileMediaReference.message(message: MessageReference(self.message), media: file)
-            let source = SharedMediaPlaybackDataSource.telegramFile(reference: fileReference, isCopyProtected: self.message.isCopyProtected())
+            let source = SharedMediaPlaybackDataSource.telegramFile(reference: fileReference, isCopyProtected: self.message.isCopyProtected(), isViewOnce: self.message.minAutoremoveOrClearTimeout == viewOnceTimeout)
             for attribute in file.attributes {
                 switch attribute {
                     case let .Audio(isVoice, _, _, _, _):
