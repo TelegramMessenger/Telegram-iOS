@@ -2306,7 +2306,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let id = itemPeer.chatMainPeer?.id, id.isReplies {
                          titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleFont, textColor: theme.titleColor)
                     } else if let id = itemPeer.chatMainPeer?.id, id.isAnonymousSavedMessages {
-                        titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_AuhtorHidden, font: titleFont, textColor: theme.titleColor)
+                        titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_AuthorHidden, font: titleFont, textColor: theme.titleColor)
                     } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         let textColor: UIColor
                         if case let .chatList(index) = item.index, index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
