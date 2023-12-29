@@ -326,6 +326,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         if let prevTextInputPanelNode = self.prevInputPanelNode as? ChatTextInputPanelNode {
             self.prevInputPanelNode = nil
             
+            self.viewOnceButton.isHidden = prevTextInputPanelNode.viewOnceButton.isHidden
             self.viewOnce = prevTextInputPanelNode.viewOnce
             self.viewOnceButton.update(isSelected: self.viewOnce, animated: false)
             
@@ -580,7 +581,7 @@ final class ChatRecordingViewOnceButtonNode: HighlightTrackingButtonNode {
         }
         
         if updated {
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: self.innerIsSelected ? "Media Gallery/ViewOnceOn" : "Media Gallery/ViewOnce"), color: theme.chat.inputPanel.panelControlAccentColor)
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: self.innerIsSelected ? "Media Gallery/ViewOnceEnabled" : "Media Gallery/ViewOnce"), color: theme.chat.inputPanel.panelControlAccentColor)
         }
     }
     
@@ -594,7 +595,7 @@ final class ChatRecordingViewOnceButtonNode: HighlightTrackingButtonNode {
             self.backgroundNode.updateColor(color: theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
             
             self.borderNode.image = generateCircleImage(diameter: innerSize.width, lineWidth: 0.5, color: theme.chat.historyNavigation.strokeColor, backgroundColor: nil)
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: self.innerIsSelected ? "Media Gallery/ViewOnceOn" : "Media Gallery/ViewOnce"), color: theme.chat.inputPanel.panelControlAccentColor)
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: self.innerIsSelected ? "Media Gallery/ViewOnceEnabled" : "Media Gallery/ViewOnce"), color: theme.chat.inputPanel.panelControlAccentColor)
         }
         
         let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width / 2.0 - innerSize.width / 2.0), y: floorToScreenPixels(size.height / 2.0 - innerSize.height / 2.0)), size: innerSize)

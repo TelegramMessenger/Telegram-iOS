@@ -1859,6 +1859,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 self.countNode.segments = segments
                 displayingCountdown = true
+            } else if self.countNode.supernode != nil {
+                self.countNode.removeFromSupernode()
             }
         } else {
             self.fetchingTextNode.attributedText = nil

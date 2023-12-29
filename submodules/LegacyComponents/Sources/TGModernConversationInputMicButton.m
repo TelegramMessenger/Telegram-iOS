@@ -6,6 +6,7 @@
 #import "TGOverlayController.h"
 #import "TGColor.h"
 #import "TGImageUtils.h"
+#import "TGPhotoEditorSparseView.h"
 
 static const CGFloat innerCircleRadius = 110.0f;
 static const CGFloat outerCircleRadius = innerCircleRadius + 50.0f;
@@ -379,7 +380,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             };
         }
                 
-        _lockPanelWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 72.0f)];
+        _lockPanelWrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 40.0f, 72.0f)];
         [[_presentation view] addSubview:_lockPanelWrapperView];
         
         _lockPanelView = [self createLockPanelView];

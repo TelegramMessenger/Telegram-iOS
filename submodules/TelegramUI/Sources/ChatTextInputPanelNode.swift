@@ -2626,7 +2626,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         transition.updatePosition(node: self.viewOnceButton, position: viewOnceButtonFrame.center)
         
         var viewOnceIsVisible = false
-        if let _ = interfaceState.renderedPeer?.peer as? TelegramUser, let recordingState = interfaceState.inputTextPanelState.mediaRecordingState, case let .audio(_, isLocked) = recordingState, isLocked {
+        if let recordingState = interfaceState.inputTextPanelState.mediaRecordingState, case let .audio(_, isLocked) = recordingState, isLocked {
             viewOnceIsVisible = true
         }
         if self.viewOnceButton.alpha.isZero && viewOnceIsVisible {
@@ -2634,6 +2634,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         transition.updateAlpha(node: self.viewOnceButton, alpha: viewOnceIsVisible ? 1.0 : 0.0)
         transition.updateTransformScale(node: self.viewOnceButton, scale: viewOnceIsVisible ? 1.0 : 0.01)
+        if let _ = interfaceState.renderedPeer?.peer as? TelegramUser {
+            self.viewOnceButton.isHidden = false
+        } else {
+            self.viewOnceButton.isHidden = true
+        }
         
         var clippingDelta: CGFloat = 0.0
         if case let .media(_, _, focused) = interfaceState.inputMode, focused {
