@@ -4418,6 +4418,7 @@ Sorry for the inconvenience.";
 
 "Call.Mute" = "mute";
 "Call.Camera" = "camera";
+"Call.Video" = "video";
 "Call.Flip" = "flip";
 "Call.End" = "end";
 "Call.Speaker" = "speaker";
@@ -5646,6 +5647,7 @@ Sorry for the inconvenience.";
 "Call.CameraConfirmationText" = "Switch to video call?";
 "Call.CameraConfirmationConfirm" = "Switch";
 
+"Call.YourCameraOff" = "Your camera is off";
 "Call.YourMicrophoneOff" = "Your microphone is off";
 "Call.MicrophoneOff" = "%@'s microphone is off";
 "Call.CameraOff" = "%@'s camera is off";
@@ -10867,3 +10869,12 @@ Sorry for the inconvenience.";
 "Chat.PlayOnceMesasgeClose" = "Close";
 "Chat.PlayOnceMesasgeCloseAndDelete" = "Close and Delete";
 "Chat.PlayOnceMesasge.DisableScreenCapture" = "Sorry, you can't play this message while screen recording is active.";
+
+"Call.EncryptedAlertTitle" = "This call is end-to-end encrypted";
+"Call.EncryptedAlertText" = "If the emoji on %@'s screen are the same, this call is 100% secure.";
+"Call.EncryptionKeyTooltip" = "Encryption key of this call";
+"Call.StatusBusy" = "Line Busy";
+"Call.StatusDeclined" = "Call Declined";
+"Call.StatusFailed" = "Call Failed";
+"Call.StatusEnded" = "Call Ended";
+"Call.StatusMissed" = "Call Missed";

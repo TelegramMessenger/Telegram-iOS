@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import AppBundle
+import TelegramPresentationData
 
 final class ButtonGroupView: OverlayMaskContainerView {
     final class Button {
@@ -85,7 +86,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
         return result
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, buttons: [Button], notices: [Notice], transition: Transition) -> CGFloat {
+    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, strings: PresentationStrings, buttons: [Button], notices: [Notice], transition: Transition) -> CGFloat {
         self.buttons = buttons
         
         let buttonSize: CGFloat = 56.0
@@ -190,7 +191,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 }
             }
             let closeButtonSize = CGSize(width: minWidth, height: buttonSize)
-            closeButtonView.update(text: "Close", size: closeButtonSize, transition: closeButtonTransition)
+            closeButtonView.update(text: strings.Common_Close, size: closeButtonSize, transition: closeButtonTransition)
             closeButtonTransition.setFrame(view: closeButtonView, frame: CGRect(origin: CGPoint(x: floor((size.width - closeButtonSize.width) * 0.5), y: buttonY), size: closeButtonSize))
             
             if animateIn && !transition.animation.isImmediate {
@@ -218,9 +219,9 @@ final class ButtonGroupView: OverlayMaskContainerView {
             case let .speaker(audioOutput):
                 switch audioOutput {
                 case .internalSpeaker, .speaker:
-                    title = "speaker"
+                    title = strings.Call_Speaker
                 default:
-                    title = "audio"
+                    title = strings.Call_Audio
                 }
                 
                 switch audioOutput {
@@ -247,19 +248,19 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     isActive = true
                 }
             case .flipCamera:
-                title = "flip"
+                title = strings.Call_Flip
                 image = UIImage(bundleImageName: "Call/Flip")
                 isActive = false
             case let .video(isActiveValue):
-                title = "video"
+                title = strings.Call_Video
                 image = UIImage(bundleImageName: "Call/Video")
                 isActive = isActiveValue
             case let .microphone(isActiveValue):
-                title = "mute"
+                title = strings.Call_Mute
                 image = UIImage(bundleImageName: "Call/Mute")
                 isActive = isActiveValue
             case .end:
-                title = "end"
+                title = strings.Call_End
                 image = UIImage(bundleImageName: "Call/End")
                 isActive = false
                 isDestructive = true
