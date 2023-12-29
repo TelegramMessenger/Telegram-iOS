@@ -81,6 +81,8 @@ public final class ScreenCaptureDetectionManager {
     private var screenRecordingDisposable: Disposable?
     private var screenRecordingCheckTimer: SwiftSignalKit.Timer?
     
+    public var isRecordingActive = false
+    
     public init(check: @escaping () -> Bool) {
         self.observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { [weak self] _ in
             guard let _ = self else {
@@ -94,6 +96,7 @@ public final class ScreenCaptureDetectionManager {
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.isRecordingActive = value
                 if value {
                     if strongSelf.screenRecordingCheckTimer == nil {
                         strongSelf.screenRecordingCheckTimer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: {

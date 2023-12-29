@@ -10850,3 +10850,7 @@ Sorry for the inconvenience.";
 
 "Chat.TapToPlayVoiceMessageOnceTooltip" = "Tap to set this message to **Play Once**";
 "Chat.PlayVoiceMessageOnceTooltip" = "The recipients will be able to listen to it only once.";
+
+"Chat.PlayOnceMesasgeClose" = "Close";
+"Chat.PlayOnceMesasgeCloseAndDelete" = "Close and Delete";
+"Chat.PlayOnceMesasge.DisableScreenCapture" = "Sorry, you can't play this message while screen recording is active.";

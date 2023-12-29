@@ -11586,6 +11586,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return false
                         }
                     })
+                } else if peerId.namespace == Namespaces.Peer.CloudUser {
+                    self.screenCaptureManager = ScreenCaptureDetectionManager(check: { [weak self] in
+                        guard let self else {
+                            return false
+                        }
+                        
+                        let _ = (self.context.sharedContext.mediaManager.globalMediaPlayerState
+                        |> filter { playlistStateAndType in
+                            if let (_, state, _) = playlistStateAndType, case .state = state {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        |> take(1)).startStandalone(next: { [weak self] playlistStateAndType in
+                            if let self, let (_, playbackState, _) = playlistStateAndType, case let .state(state) = playbackState {
+                                if let source = state.item.playbackData?.source, case let .telegramFile(_, _, isViewOnce) = source, isViewOnce {
+                                    self.context.sharedContext.mediaManager.setPlaylist(nil, type: .voice, control: .playback(.pause))
+                                }
+                            }
+                        })
+                        return true
+                    })
                 }
             }
             
@@ -18951,6 +18974,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func openViewOnceMediaMessage(_ message: Message) {
+        if self.screenCaptureManager?.isRecordingActive == true {
+            let controller = textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Chat_PlayOnceMesasge_DisableScreenCapture, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+            })])
+            self.present(controller, in: .window(.root))
+            return
+        }
+        
         let isIncoming = message.effectivelyIncoming(self.context.account.peerId)
         
         var presentImpl: ((ViewController) -> Void)?
@@ -18971,7 +19001,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     )),
                     items: .single(ContextController.Items(content: .list([]))),
-                    closeActionTitle: isIncoming ? "Delete and Close" : "Close",
+                    closeActionTitle: isIncoming ? self.presentationData.strings.Chat_PlayOnceMesasgeCloseAndDelete : self.presentationData.strings.Chat_PlayOnceMesasgeClose,
                     closeAction: { [weak self] in
                         if let self {
                             self.context.sharedContext.mediaManager.setPlaylist(nil, type: .voice, control: .playback(.pause))
