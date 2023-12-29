@@ -4,6 +4,40 @@ import Display
 import MetalEngine
 import MetalKit
 
+#if DEBUG
+import os
+#endif
+
+#if DEBUG
+class Signposter {
+    func emitEvent(_ string: StaticString) {
+    }
+}
+
+@available(iOS 15.0, *)
+final class SignposterImpl: Signposter {
+    private let signposter = OSSignposter()
+    private let signpostId: OSSignpostID
+    
+    override init() {
+        self.signpostId = self.signposter.makeSignpostID()
+    }
+    
+    override func emitEvent(_ string: StaticString) {
+        self.signposter.emitEvent("Fetch complete.", id: self.signpostId)
+    }
+}
+
+let signposter: Signposter = {
+    if #available(iOS 15.0, *) {
+        return SignposterImpl()
+    } else {
+        return Signposter()
+    }
+}()
+
+#endif
+
 private final class BundleMarker: NSObject {
 }
 
@@ -229,6 +263,13 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         
         let lastTimeStep = self.lastTimeStep
         self.lastTimeStep = 0.0
+        
+        #if DEBUG
+        if lastTimeStep * 1000.0 >= 20.0 {
+            print("Animation Lag: \(lastTimeStep * 1000.0) ms")
+            signposter.emitEvent("AnimationLag")
+        }
+        #endif
         
         let _ = context.compute(state: DustComputeState.self, commands: { [weak self] commandBuffer, state in
             guard let self else {
