@@ -121,6 +121,8 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
     private var messageNodeCopy: ChatMessageItemView?
     private weak var tooltipController: TooltipScreen?
     
+    private let idleTimerExtensionDisposable = MetaDisposable()
+    
     var shouldBeDismissed: Signal<Bool, NoError> {
         return self.context.sharedContext.mediaManager.globalMediaPlayerState
         |> filter { playlistStateAndType in
@@ -156,10 +158,16 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
         self.present = present
     }
     
+    deinit {
+        self.idleTimerExtensionDisposable.dispose()
+    }
+    
     func takeView() -> ContextControllerTakeViewInfo? {
         guard let chatNode = self.chatNode, let backgroundNode = self.backgroundNode, let validLayout = chatNode.validLayout?.0 else {
             return nil
         }
+        
+        self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         
         var result: ContextControllerTakeViewInfo?
         var sourceNode: ContextExtractedContentContainingNode?
@@ -308,6 +316,8 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
         guard let chatNode = self.chatNode else {
             return nil
         }
+        
+        self.idleTimerExtensionDisposable.set(nil)
         
         if let tooltipController = self.tooltipController {
             tooltipController.dismiss()

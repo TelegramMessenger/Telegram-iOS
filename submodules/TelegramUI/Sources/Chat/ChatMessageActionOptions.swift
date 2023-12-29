@@ -417,7 +417,9 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                 canReplyInAnotherChat = false
             }
-            
+            if message.minAutoremoveOrClearTimeout == viewOnceTimeout {
+                canReplyInAnotherChat = false
+            }
         }
         
         if canReplyInAnotherChat {

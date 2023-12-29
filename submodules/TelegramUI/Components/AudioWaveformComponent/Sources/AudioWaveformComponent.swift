@@ -212,6 +212,7 @@ public final class AudioWaveformComponent: Component {
         
         private var sparksView: SparksView?
         private var progress: CGFloat = 0.0
+        private var lastHeight: CGFloat = 0.0
         
         private var revealProgress: CGFloat = 1.0
         private var animator: DisplayLinkAnimator?
@@ -409,7 +410,7 @@ public final class AudioWaveformComponent: Component {
                     self.addSubview(sparksView)
                     self.sparksView = sparksView
                 }
-                sparksView.frame = CGRect(origin: .zero, size: size).insetBy(dx: -5.0, dy: -5.0)
+                sparksView.frame = CGRect(origin: .zero, size: size).insetBy(dx: -10.0, dy: -15.0)
             } else if let sparksView = self.sparksView {
                 self.sparksView = nil
                 sparksView.removeFromSuperview()
@@ -433,7 +434,7 @@ public final class AudioWaveformComponent: Component {
                 if needsAnimation {
                     self.playbackStatusAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
                         if let self, let component = self.component, let sparksView = self.sparksView {
-                            sparksView.update(position: CGPoint(x: sparksView.bounds.width * self.progress, y: sparksView.bounds.height / 2.0), color: component.foregroundColor)
+                            sparksView.update(position: CGPoint(x: 10.0 + (sparksView.bounds.width - 20.0) * self.progress, y: sparksView.bounds.height / 2.0 + 8.0), sampleHeight: self.lastHeight, color: component.foregroundColor)
                         }
                         self?.setNeedsDisplay()
                     })
@@ -574,6 +575,7 @@ public final class AudioWaveformComponent: Component {
                 
                 let commonRevealFraction = listViewAnimationCurveSystem(self.revealProgress)
                 
+                var lastHeight: CGFloat = 0.0
                 for i in 0 ..< numSamples {
                     let offset = CGFloat(i) * (sampleWidth + distance)
                     let peakSample = adjustedSamples[i]
@@ -596,6 +598,7 @@ public final class AudioWaveformComponent: Component {
                     let colorMixFraction: CGFloat
                     if startFraction < playbackProgress {
                         colorMixFraction = max(0.0, min(1.0, (playbackProgress - startFraction) / (nextStartFraction - startFraction)))
+                        lastHeight = sampleHeight
                     } else {
                         colorMixFraction = 0.0
                     }
@@ -637,6 +640,8 @@ public final class AudioWaveformComponent: Component {
                         context.fill(adjustedRect)
                     }
                 }
+                
+                self.lastHeight = lastHeight
             }
         }
     }
@@ -683,12 +688,18 @@ private class SparksView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(position: CGPoint, color: UIColor) {
+    private var presentationSampleHeight: CGFloat = 0.0
+    private var sampleHeight: CGFloat = 0.0
+    
+    func update(position: CGPoint, sampleHeight: CGFloat, color: UIColor) {
         self.color = color
+    
+        self.sampleHeight = sampleHeight
+        self.presentationSampleHeight = self.presentationSampleHeight * 0.9 + self.sampleHeight * 0.1
         
         let v = CGPoint(x: 1.0, y: 0.0)
-        let c = CGPoint(x: position.x - 3.0, y: position.y - 5.5 + 13.0 * CGFloat(arc4random_uniform(100)) / 100.0 + 1.0)
-        
+        let c = CGPoint(x: position.x - 4.0, y: position.y + 1.0 - self.presentationSampleHeight * CGFloat(arc4random_uniform(100)) / 100.0)
+
         let timestamp = CACurrentMediaTime()
         
         let dt: CGFloat = 1.0 / 60.0
@@ -714,9 +725,9 @@ private class SparksView: UIView {
             self.particles.remove(at: i)
         }
         
-        let newParticleCount = 2
+        let newParticleCount = 3
         for _ in 0 ..< newParticleCount {
-            let degrees: CGFloat = CGFloat(arc4random_uniform(100)) - 50.0
+            let degrees: CGFloat = CGFloat(arc4random_uniform(100)) - 65.0
             let angle: CGFloat = degrees * CGFloat.pi / 180.0
             
             let direction = CGPoint(x: v.x * cos(angle) - v.y * sin(angle), y: v.x * sin(angle) + v.y * cos(angle))
@@ -739,7 +750,7 @@ private class SparksView: UIView {
         context.setFillColor(self.color.cgColor)
         
         for particle in self.particles {
-            let size: CGFloat = 1.0
+            let size: CGFloat = 1.4
             context.setAlpha(particle.alpha * 1.0)
             context.fillEllipse(in: CGRect(origin: CGPoint(x: particle.position.x - size / 2.0, y: particle.position.y - size / 2.0), size: CGSize(width: size, height: size)))
         }

@@ -10863,3 +10863,7 @@ Sorry for the inconvenience.";
 "Premium.MaxSavedPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some that are currently pinned or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
 "Premium.MaxSavedPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
 "Premium.MaxSavedPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
+
+"Chat.PlayOnceMesasgeClose" = "Close";
+"Chat.PlayOnceMesasgeCloseAndDelete" = "Close and Delete";
+"Chat.PlayOnceMesasge.DisableScreenCapture" = "Sorry, you can't play this message while screen recording is active.";

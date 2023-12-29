@@ -1656,6 +1656,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             
             if isViewOnceMessage && playbackStatus == .playing {
                 state = .secretTimeout(position: playbackState.position, duration: playbackState.duration, generationTimestamp: playbackState.generationTimestamp, appearance: .init(inset: 1.0 + UIScreenPixel, lineWidth: 2.0 - UIScreenPixel))
+                if incoming {
+                    self.consumableContentNode.isHidden = true
+                }
             } else {
                 switch playbackStatus {
                 case .playing:
@@ -1783,8 +1786,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.addSubnode(streamingStatusNode)
             
             if isViewOnceMessage {
-                streamingStatusNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
-                streamingStatusNode.layer.animateAlpha(from: 0.1, to: 1.0, duration: 0.2)
+                streamingStatusNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+                streamingStatusNode.layer.animateAlpha(from: 0.1, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
             }
         } else if let streamingStatusNode = self.streamingStatusNode {
             streamingStatusNode.backgroundNodeColor = backgroundNodeColor
@@ -1815,9 +1818,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             if streamingState == .none {
                 self.streamingStatusNode = nil
                 if isViewOnceMessage {
-                    streamingStatusNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                    streamingStatusNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
                 }
-                streamingStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak streamingStatusNode] _ in
+                streamingStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak streamingStatusNode] _ in
                     if streamingState == .none {
                         streamingStatusNode?.removeFromSupernode()
                     }

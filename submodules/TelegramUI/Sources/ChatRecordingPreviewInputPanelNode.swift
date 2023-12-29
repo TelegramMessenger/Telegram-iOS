@@ -515,18 +515,14 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
 
 
 final class ChatRecordingViewOnceButtonNode: HighlightTrackingButtonNode {
-    private let backgroundNode: NavigationBackgroundNode
-    private let borderNode: ASImageNode
+    private let backgroundNode: ASImageNode
     private let iconNode: ASImageNode
     
     private var theme: PresentationTheme?
         
     override init(pointerStyle: PointerStyle? = nil) {
-        self.backgroundNode = NavigationBackgroundNode(color: .clear)
+        self.backgroundNode = ASImageNode()
         self.backgroundNode.isUserInteractionEnabled = false
-        
-        self.borderNode = ASImageNode()
-        self.borderNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
         self.iconNode.isUserInteractionEnabled = false
@@ -534,7 +530,6 @@ final class ChatRecordingViewOnceButtonNode: HighlightTrackingButtonNode {
         super.init(pointerStyle: pointerStyle)
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.borderNode)
         self.addSubnode(self.iconNode)
         
         self.highligthedChanged = { [weak self] highlighted in
@@ -592,19 +587,13 @@ final class ChatRecordingViewOnceButtonNode: HighlightTrackingButtonNode {
         if self.theme !== theme {
             self.theme = theme
             
-            self.backgroundNode.updateColor(color: theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
-            
-            self.borderNode.image = generateCircleImage(diameter: innerSize.width, lineWidth: 0.5, color: theme.chat.historyNavigation.strokeColor, backgroundColor: nil)
+            self.backgroundNode.image = generateFilledCircleImage(diameter: innerSize.width, color: theme.rootController.navigationBar.opaqueBackgroundColor, strokeColor: theme.chat.inputPanel.panelSeparatorColor, strokeWidth: 0.5, backgroundColor: nil)
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: self.innerIsSelected ? "Media Gallery/ViewOnceEnabled" : "Media Gallery/ViewOnce"), color: theme.chat.inputPanel.panelControlAccentColor)
         }
-        
-        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width / 2.0 - innerSize.width / 2.0), y: floorToScreenPixels(size.height / 2.0 - innerSize.height / 2.0)), size: innerSize)
-        self.backgroundNode.update(size: innerSize, cornerRadius: innerSize.width / 2.0, transition: .immediate, beginWithCurrentState: false)
-        self.backgroundNode.frame = backgroundFrame
-        
-        if let borderImage = self.borderNode.image {
-            let borderFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width / 2.0 - borderImage.size.width / 2.0), y: floorToScreenPixels(size.height / 2.0 - borderImage.size.height / 2.0)), size: borderImage.size)
-            self.borderNode.frame = borderFrame
+                
+        if let backgroundImage = self.backgroundNode.image {
+            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width / 2.0 - backgroundImage.size.width / 2.0), y: floorToScreenPixels(size.height / 2.0 - backgroundImage.size.height / 2.0)), size: backgroundImage.size)
+            self.backgroundNode.frame = backgroundFrame
         }
 
         if let iconImage = self.iconNode.image {
