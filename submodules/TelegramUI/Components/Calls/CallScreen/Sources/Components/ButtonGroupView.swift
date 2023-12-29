@@ -15,7 +15,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 case end
             }
             
-            case speaker(isActive: Bool)
+            case speaker(audioOutput: PrivateCallScreen.State.AudioOutput)
             case flipCamera
             case video(isActive: Bool)
             case microphone(isMuted: Bool)
@@ -215,10 +215,37 @@ final class ButtonGroupView: OverlayMaskContainerView {
             let isActive: Bool
             var isDestructive: Bool = false
             switch button.content {
-            case let .speaker(isActiveValue):
-                title = "speaker"
-                image = UIImage(bundleImageName: "Call/Speaker")
-                isActive = isActiveValue
+            case let .speaker(audioOutput):
+                switch audioOutput {
+                case .internalSpeaker, .speaker:
+                    title = "speaker"
+                default:
+                    title = "audio"
+                }
+                
+                switch audioOutput {
+                case .internalSpeaker:
+                    image = UIImage(bundleImageName: "Call/Speaker")
+                    isActive = false
+                case .speaker:
+                    image = UIImage(bundleImageName: "Call/Speaker")
+                    isActive = true
+                case .airpods:
+                    image = UIImage(bundleImageName: "Call/CallAirpodsButton")
+                    isActive = true
+                case .airpodsPro:
+                    image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
+                    isActive = true
+                case .airpodsMax:
+                    image = UIImage(bundleImageName: "Call/CallAirpodsMaxButton")
+                    isActive = true
+                case .headphones:
+                    image = UIImage(bundleImageName: "Call/CallHeadphonesButton")
+                    isActive = true
+                case .bluetooth:
+                    image = UIImage(bundleImageName: "Call/CallBluetoothButton")
+                    isActive = true
+                }
             case .flipCamera:
                 title = "flip"
                 image = UIImage(bundleImageName: "Call/Flip")

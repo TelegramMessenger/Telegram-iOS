@@ -183,7 +183,17 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             
             let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
-            let author = message.author
+            
+            var author = message.effectiveAuthor
+            
+            if let forwardInfo = message.forwardInfo {
+                if let peer = forwardInfo.author {
+                    author = peer
+                } else if let authorSignature = forwardInfo.authorSignature {
+                    author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                }
+            }
+            
             let nameColors = author?.nameColor.flatMap { context.peerNameColors.get($0, dark: presentationData.theme.theme.overallDarkAppearance) }
             
             let mainColor: UIColor

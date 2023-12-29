@@ -93,6 +93,7 @@ enum AccountStateMutationOperation {
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerActivitySpace, peerId: PeerId?, activity: PeerInputActivity?)
     case UpdatePinnedItemIds(PeerGroupId, AccountStateUpdatePinnedItemIdsOperation)
+    case UpdatePinnedSavedItemIds(AccountStateUpdatePinnedItemIdsOperation)
     case UpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool)
     case UpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64])
     case ReadMessageContents(peerIdsAndMessageIds: (PeerId?, [Int32]), date: Int32?)
@@ -571,6 +572,10 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedItemIds(groupId, operation))
     }
     
+    mutating func addUpdatePinnedSavedItemIds(operation: AccountStateUpdatePinnedItemIdsOperation) {
+        self.addOperation(.UpdatePinnedSavedItemIds(operation))
+    }
+    
     mutating func addUpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool) {
         self.addOperation(.UpdatePinnedTopic(peerId: peerId, threadId: threadId, isPinned: isPinned))
     }
@@ -665,7 +670,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .UpdateWallpaper, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {

@@ -296,6 +296,18 @@ func locallyRenderedMessage(message: StoreMessage, peers: AccumulatedPeers, asso
 public extension Message {
     func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
         if self.id.peerId == accountPeerId {
+            if let sourceAuthorInfo = self.sourceAuthorInfo {
+                if sourceAuthorInfo.originalOutgoing {
+                    return false
+                } else if let originalAuthor = sourceAuthorInfo.originalAuthor, originalAuthor == accountPeerId {
+                    return false
+                }
+            } else if let forwardInfo = self.forwardInfo {
+                if let author = forwardInfo.author, author.id == accountPeerId {
+                    return false
+                }
+            }
+            
             if self.forwardInfo != nil {
                 return true
             } else {

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import ChatMessageNotificationItem
 
 private final class NotificationContainerControllerNodeView: UITracingLayerView {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
@@ -16,6 +17,7 @@ private final class NotificationContainerControllerNodeView: UITracingLayerView 
 final class NotificationContainerControllerNode: ASDisplayNode {
     private var validLayout: ContainerViewLayout?
     private var topItemAndNode: (NotificationItem, NotificationItemContainerNode)?
+    private var blockingItemAndNode: (NotificationItem, NotificationItemContainerNode)?
     
     var displayingItemsUpdated: ((Bool) -> Void)?
     
@@ -49,6 +51,9 @@ final class NotificationContainerControllerNode: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let (_, blockingItemNode) = self.blockingItemAndNode {
+            return blockingItemNode.hitTest(point, with: event)
+        }
         if let (_, topItemNode) = self.topItemAndNode {
             return topItemNode.hitTest(point, with: event)
         }
@@ -77,6 +82,10 @@ final class NotificationContainerControllerNode: ASDisplayNode {
     }
     
     func enqueue(_ item: NotificationItem) {
+        if self.blockingItemAndNode != nil {
+            return
+        }
+        
         if let (_, topItemNode) = self.topItemAndNode {
             topItemNode.animateOut(completion: { [weak topItemNode] in
                 topItemNode?.removeFromSupernode()
@@ -89,9 +98,8 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         }
         
         let itemNode = item.node(compact: useCompactLayout)
-        let containerNode = NotificationItemContainerNode(theme: self.presentationData.theme)
+        let containerNode = NotificationItemContainerNode(theme: self.presentationData.theme, contentNode: itemNode)
         containerNode.item = item
-        containerNode.contentNode = itemNode
         containerNode.dismissed = { [weak self] item in
             if let strongSelf = self {
                 if let (topItem, topItemNode) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
@@ -120,7 +128,12 @@ final class NotificationContainerControllerNode: ASDisplayNode {
             }
         }
         self.topItemAndNode = (item, containerNode)
-        self.addSubnode(containerNode)
+        
+        if let blockingItemAndNode = self.blockingItemAndNode {
+            self.insertSubnode(containerNode, belowSubnode: blockingItemAndNode.1)
+        } else {
+            self.addSubnode(containerNode)
+        }
         
         if let validLayout = self.validLayout {
             containerNode.updateLayout(layout: validLayout, transition: .immediate)
@@ -131,6 +144,70 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         self.displayingItemsUpdated?(true)
         
         self.resetTimeoutTimer()
+    }
+    
+    func setBlocking(_ item: NotificationItem?) {
+        if let (_, blockingItemNode) = self.blockingItemAndNode {
+            blockingItemNode.animateOut(completion: { [weak blockingItemNode] in
+                blockingItemNode?.removeFromSupernode()
+            })
+            self.blockingItemAndNode = nil
+        }
+        
+        if let item = item {
+            if let (_, topItemNode) = self.topItemAndNode {
+                topItemNode.animateOut(completion: { [weak topItemNode] in
+                    topItemNode?.removeFromSupernode()
+                })
+            }
+            self.topItemAndNode = nil
+            
+            var useCompactLayout = false
+            if let validLayout = self.validLayout {
+                useCompactLayout = min(validLayout.size.width, validLayout.size.height) < 375.0
+            }
+            
+            let itemNode = item.node(compact: useCompactLayout)
+            let containerNode = NotificationItemContainerNode(theme: self.presentationData.theme, contentNode: itemNode)
+            containerNode.item = item
+            containerNode.dismissed = { [weak self] item in
+                if let strongSelf = self {
+                    if let (topItem, topItemNode) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
+                        topItemNode.removeFromSupernode()
+                        strongSelf.topItemAndNode = nil
+                        
+                        if let strongSelf = self, strongSelf.topItemAndNode == nil {
+                            strongSelf.displayingItemsUpdated?(false)
+                        }
+                    }
+                }
+            }
+            containerNode.cancelTimeout = { [weak self] item in
+                if let strongSelf = self {
+                    if let (topItem, _) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
+                        strongSelf.timeoutTimer?.invalidate()
+                        strongSelf.timeoutTimer = nil
+                    }
+                }
+            }
+            containerNode.resumeTimeout = { [weak self] item in
+                if let strongSelf = self {
+                    if let (topItem, _) = strongSelf.topItemAndNode, topItem.groupingKey != nil && topItem.groupingKey == item.groupingKey {
+                        strongSelf.resetTimeoutTimer()
+                    }
+                }
+            }
+            self.blockingItemAndNode = (item, containerNode)
+            self.addSubnode(containerNode)
+            
+            if let validLayout = self.validLayout {
+                containerNode.updateLayout(layout: validLayout, transition: .immediate)
+                containerNode.frame = CGRect(origin: CGPoint(), size: validLayout.size)
+                containerNode.animateIn()
+            }
+            
+            self.displayingItemsUpdated?(true)
+        }
     }
     
     func removeItems(_ f: (NotificationItem) -> Bool) {

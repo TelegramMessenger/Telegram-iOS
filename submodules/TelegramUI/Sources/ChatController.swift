@@ -3019,13 +3019,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.effectiveMessageId == message.id {
                     return .none
                 }
+                if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.peerId == strongSelf.context.account.peerId {
+                    return .none
+                }
                 if case .peer = strongSelf.chatLocation, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
                     if message.threadId == nil {
                         return .none
                     }
                 }
                 
-                if canReplyInChat(strongSelf.presentationInterfaceState) {
+                if canReplyInChat(strongSelf.presentationInterfaceState, accountPeerId: strongSelf.context.account.peerId) {
                     return .reply
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 }
@@ -17499,7 +17502,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         if options.contains(.deleteLocally) {
             var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
-            if case .scheduledMessages = self.presentationInterfaceState.subject {
+            if self.chatLocation.peerId == self.context.account.peerId {
+                //TODO:localize
+                localOptionText = "Remove from Saved Messages"
+            } else if case .scheduledMessages = self.presentationInterfaceState.subject {
                 localOptionText = messageIds.count > 1 ? self.presentationData.strings.ScheduledMessages_DeleteMany : self.presentationData.strings.ScheduledMessages_Delete
             } else {
                 if options.contains(.unsendPersonal) {
@@ -18035,7 +18041,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             )
         )
         
-        if canReplyInChat(self.presentationInterfaceState) {
+        if canReplyInChat(self.presentationInterfaceState, accountPeerId: self.context.account.peerId) {
             inputShortcuts.append(
                 KeyShortcut(
                     input: UIKeyCommand.inputUpArrow,
@@ -19060,6 +19066,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public func transferScrollingVelocity(_ velocity: CGFloat) {
         self.chatDisplayNode.historyNode.transferVelocity(velocity)
+    }
+    
+    public func performScrollToTop() -> Bool {
+        let offset = self.chatDisplayNode.historyNode.visibleContentOffset()
+        switch offset {
+        case let .known(value) where value <= CGFloat.ulpOfOne:
+            return false
+        default:
+            self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+            return true
+        }
     }
 }
 

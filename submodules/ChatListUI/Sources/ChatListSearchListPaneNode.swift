@@ -2205,7 +2205,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, peerSelected: { [weak self] peer, chatPeer, threadId, _ in
             interaction.dismissInput()
             interaction.openPeer(peer, chatPeer, threadId, false)
-            let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
+            switch location {
+            case .chatList, .forum:
+                let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
+            case .savedMessagesChats:
+                break
+            }
             self?.listNode.clearHighlightAnimated(true)
         }, disabledPeerSelected: { _, _ in
         }, togglePeerSelected: { _, _ in
@@ -2670,7 +2675,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, filter: peersFilter, peerSelected: { peer, threadId in
                     interaction.openPeer(peer, nil, threadId, true)
                     if threadId == nil {
-                        let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
+                        switch location {
+                        case .chatList, .forum:
+                            let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
+                        case .savedMessagesChats:
+                            break
+                        }
                     }
                     self?.recentListNode.clearHighlightAnimated(true)
                 }, disabledPeerSelected: { peer, threadId in

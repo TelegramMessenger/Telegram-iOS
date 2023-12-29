@@ -415,7 +415,7 @@ final class InstantPageSlideshowNode: ASDisplayNode, InstantPageNode {
         super.layout()
         
         self.pagerNode.frame = self.bounds
-        self.pagerNode.containerLayoutUpdated(ContainerViewLayout(size: self.bounds.size, metrics: LayoutMetrics(), deviceMetrics: .unknown(screenSize: CGSize(), statusBarHeight: 0.0, onScreenNavigationHeight: nil), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+        self.pagerNode.containerLayoutUpdated(ContainerViewLayout(size: self.bounds.size, metrics: LayoutMetrics(), deviceMetrics: .unknown(screenSize: CGSize(), statusBarHeight: 0.0, onScreenNavigationHeight: nil, screenCornerRadius: 0.0), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
         
         self.pageControlNode.layer.transform = CATransform3DIdentity
         self.pageControlNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.bounds.size.height - 20.0), size: CGSize(width: self.bounds.size.width, height: 20.0))

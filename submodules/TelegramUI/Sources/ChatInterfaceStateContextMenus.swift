@@ -249,7 +249,7 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
     return true
 }
 
-func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
+func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, accountPeerId: PeerId) -> Bool {
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return false
     }
@@ -271,6 +271,9 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         return false
     default:
         break
+    }
+    if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation, replyThreadMessage.peerId == accountPeerId {
+        return false
     }
     
     if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
@@ -611,7 +614,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
-    var canReply = canReplyInChat(chatPresentationInterfaceState)
+    var canReply = canReplyInChat(chatPresentationInterfaceState, accountPeerId: context.account.peerId)
     var canPin = false
     let canSelect = !isAction
     

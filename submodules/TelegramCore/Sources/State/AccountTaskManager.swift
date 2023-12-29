@@ -69,7 +69,8 @@ final class AccountTaskManager {
                     tasks.add(managedSynchronizeGroupMessageStats(network: self.stateManager.network, postbox: self.stateManager.postbox, stateManager: self.stateManager).start())
                     
                     tasks.add(managedGlobalNotificationSettings(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
-                    tasks.add(managedSynchronizePinnedChatsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId, stateManager: self.stateManager).start())
+                    tasks.add(managedSynchronizePinnedChatsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId, stateManager: self.stateManager, tag: OperationLogTags.SynchronizePinnedChats).start())
+                    tasks.add(managedSynchronizePinnedChatsOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId, stateManager: self.stateManager, tag: OperationLogTags.SynchronizePinnedSavedChats).start())
                     tasks.add(managedSynchronizeGroupedPeersOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager).start())
                     tasks.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager, namespace: .stickers).start())
                     tasks.add(managedSynchronizeInstalledStickerPacksOperations(postbox: self.stateManager.postbox, network: self.stateManager.network, stateManager: self.stateManager, namespace: .masks).start())

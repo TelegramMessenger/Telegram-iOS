@@ -1860,23 +1860,15 @@ public final class AccountViewTracker {
                     return transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self)
                 }
                 |> mapToSignal { threadInfo -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
-                    if let threadInfo = threadInfo {
-                        let anchor: HistoryViewInputAnchor
-                        if threadInfo.maxIncomingReadId <= 1 {
-                            anchor = .message(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1))
-                        } else if threadInfo.incomingUnreadCount > 0 && tagMask == nil {
-                            let customUnreadMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadInfo.maxIncomingReadId)
-                            anchor = .message(customUnreadMessageId)
-                        } else {
-                            anchor = .upperBound
-                        }
-                        
+                    if peerId == account.peerId {
                         return account.postbox.aroundMessageHistoryViewForLocation(
                             chatLocation,
-                            anchor: anchor,
+                            anchor: .upperBound,
                             ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange,
                             count: count,
-                            fixedCombinedReadStates: nil,
+                            fixedCombinedReadStates: .peer([peerId: CombinedPeerReadState(states: [
+                                (Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: Int32.max - 1, maxOutgoingReadId: Int32.max - 1, maxKnownId: Int32.max - 1, count: 0, markedUnread: false))
+                            ])]),
                             topTaggedMessageIdNamespaces: [],
                             tagMask: tagMask,
                             appendMessagesFromTheSameGroup: false,
@@ -1884,6 +1876,32 @@ public final class AccountViewTracker {
                             orderStatistics: orderStatistics,
                             additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData)
                         )
+                    } else {
+                        if let threadInfo = threadInfo {
+                            let anchor: HistoryViewInputAnchor
+                            if threadInfo.maxIncomingReadId <= 1 {
+                                anchor = .message(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1))
+                            } else if threadInfo.incomingUnreadCount > 0 && tagMask == nil {
+                                let customUnreadMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadInfo.maxIncomingReadId)
+                                anchor = .message(customUnreadMessageId)
+                            } else {
+                                anchor = .upperBound
+                            }
+                            
+                            return account.postbox.aroundMessageHistoryViewForLocation(
+                                chatLocation,
+                                anchor: anchor,
+                                ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange,
+                                count: count,
+                                fixedCombinedReadStates: nil,
+                                topTaggedMessageIdNamespaces: [],
+                                tagMask: tagMask,
+                                appendMessagesFromTheSameGroup: false,
+                                namespaces: .not(Namespaces.Message.allScheduled),
+                                orderStatistics: orderStatistics,
+                                additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData)
+                            )
+                        }
                     }
                     
                     return account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, customUnreadMessageId: nil, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))

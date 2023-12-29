@@ -21,6 +21,7 @@ public let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageNam
 public let repostStoryIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepostStoryIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
+private let anonymousSavedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/AnonymousSenderIcon"), color: .white)
 
 public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
     return Font.with(size: size, design: .round, weight: .bold)
@@ -660,7 +661,7 @@ public final class AvatarNode: ASDisplayNode {
                     icon = .repliesIcon
                 case .anonymousSavedMessagesIcon:
                     representation = nil
-                    icon = .repliesIcon
+                    icon = .anonymousSavedMessagesIcon
                 case let .archivedChatsIcon(hiddenByDefault):
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
@@ -897,8 +898,8 @@ public final class AvatarNode: ASDisplayNode {
                     context.scaleBy(x: factor, y: -factor)
                     context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                     
-                    if let repliesIcon = repliesIcon {
-                        context.draw(repliesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repliesIcon.size.width) / 2.0), y: floor((bounds.size.height - repliesIcon.size.height) / 2.0)), size: repliesIcon.size))
+                    if let anonymousSavedMessagesIcon = anonymousSavedMessagesIcon {
+                        context.draw(anonymousSavedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - anonymousSavedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - anonymousSavedMessagesIcon.size.height) / 2.0)), size: anonymousSavedMessagesIcon.size))
                     }
                 } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme, !parameters.hasImage {
                     context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)

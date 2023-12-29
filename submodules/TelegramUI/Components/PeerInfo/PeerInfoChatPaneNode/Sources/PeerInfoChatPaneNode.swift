@@ -87,7 +87,7 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     public func scrollToTop() -> Bool {
-        return false
+        return self.chatController.performScrollToTop()
     }
 
     public func hitTestResultForScrolling() -> UIView? {

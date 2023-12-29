@@ -1645,7 +1645,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 if case .admin = authorRank {
                 } else if case .owner = authorRank {
                 } else if authorRank == nil {
-                    enableAutoRank = true
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.peerId == item.context.account.peerId {
+                    } else {
+                        enableAutoRank = true
+                    }
                 }
                 if enableAutoRank {
                     if let topicAuthorId = item.associatedData.topicAuthorId, topicAuthorId == message.author?.id {

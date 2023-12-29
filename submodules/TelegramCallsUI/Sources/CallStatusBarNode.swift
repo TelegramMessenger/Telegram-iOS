@@ -157,7 +157,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
 }
 
 public class CallStatusBarNodeImpl: CallStatusBarNode {
-    public enum Content {
+    public enum Content: Equatable {
         case call(SharedAccountContext, Account, PresentationCall)
         case groupCall(SharedAccountContext, Account, PresentationGroupCall)
         
@@ -165,6 +165,23 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             switch self {
             case let .call(sharedContext, _, _), let .groupCall(sharedContext, _, _):
                 return sharedContext
+            }
+        }
+        
+        public static func ==(lhs: Content, rhs: Content) -> Bool {
+            switch lhs {
+            case let .call(sharedContext, account, call):
+                if case let .call(rhsSharedContext, rhsAccount, rhsCall) = rhs, sharedContext === rhsSharedContext, account === rhsAccount, call === rhsCall {
+                    return true
+                } else {
+                    return false
+                }
+            case let .groupCall(sharedContext, account, groupCall):
+                if case let .groupCall(rhsSharedContext, rhsAccount, rhsGroupCall) = rhs, sharedContext === rhsSharedContext, account === rhsAccount, groupCall === rhsGroupCall {
+                    return true
+                } else {
+                    return false
+                }
             }
         }
     }
@@ -236,10 +253,12 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     }
     
     public func update(content: Content) {
-        self.currentContent = content
-        self.backgroundNode.animationsEnabled = content.sharedContext.energyUsageSettings.fullTranslucency
-        if self.isCurrentlyInHierarchy {
-            self.update()
+        if self.currentContent != content {
+            self.currentContent = content
+            self.backgroundNode.animationsEnabled = content.sharedContext.energyUsageSettings.fullTranslucency
+            if self.isCurrentlyInHierarchy {
+                self.update()
+            }
         }
     }
     
