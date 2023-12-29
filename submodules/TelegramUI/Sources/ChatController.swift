@@ -11488,7 +11488,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if !strongSelf.traceVisibility() {
                         return false
                     }
-                    
+                    if strongSelf.currentContextController != nil {
+                        return false
+                    }
                     if !isTopmostChatController(strongSelf) {
                         return false
                     }
@@ -11593,14 +11595,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         let _ = (self.context.sharedContext.mediaManager.globalMediaPlayerState
-                        |> filter { playlistStateAndType in
-                            if let (_, state, _) = playlistStateAndType, case .state = state {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                        |> take(1)).startStandalone(next: { [weak self] playlistStateAndType in
+                        |> take(1)
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] playlistStateAndType in
                             if let self, let (_, playbackState, _) = playlistStateAndType, case let .state(state) = playbackState {
                                 if let source = state.item.playbackData?.source, case let .telegramFile(_, _, isViewOnce) = source, isViewOnce {
                                     self.context.sharedContext.mediaManager.setPlaylist(nil, type: .voice, control: .playback(.pause))

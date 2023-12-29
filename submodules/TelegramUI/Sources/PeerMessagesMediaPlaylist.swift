@@ -173,19 +173,27 @@ private func aroundMessagesFromMessages(_ messages: [Message], centralIndex: Mes
 }
 
 private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: MessageIndex) -> [Message] {
-    guard let index = view.entries.firstIndex(where: { $0.index.id == centralIndex.id }) else {
+    let filteredEntries = view.entries.filter { entry in
+        if entry.message.minAutoremoveOrClearTimeout == viewOnceTimeout {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    guard let index = filteredEntries.firstIndex(where: { $0.index.id == centralIndex.id }) else {
         return []
     }
     var result: [Message] = []
     if index != 0 {
         for i in (0 ..< index).reversed() {
-            result.append(view.entries[i].message)
+            result.append(filteredEntries[i].message)
             break
         }
     }
-    if index != view.entries.count - 1 {
-        for i in index + 1 ..< view.entries.count {
-            result.append(view.entries[i].message)
+    if index != filteredEntries.count - 1 {
+        for i in index + 1 ..< filteredEntries.count {
+            result.append(filteredEntries[i].message)
             break
         }
     }
@@ -234,7 +242,15 @@ private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: Me
 private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: MessageIndex, position: NavigatedMessageFromViewPosition, reversed: Bool) -> (message: Message, around: [Message], exact: Bool)? {
     var index = 0
     
-    for entry in view.entries {
+    let filteredEntries = view.entries.filter { entry in
+        if entry.message.minAutoremoveOrClearTimeout == viewOnceTimeout {
+            return false
+        } else {
+            return true
+        }
+    }
+    
+    for entry in filteredEntries {
         if entry.index.id == anchorIndex.id {
             let currentGroupKey = entry.message.groupingKey
             
@@ -243,63 +259,63 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
                     return (entry.message, aroundMessagesFromView(view: view, centralIndex: entry.index), true)
                 case .later:
                     if !reversed, let currentGroupKey {
-                        if index - 1 > 0, view.entries[index - 1].message.groupingKey == currentGroupKey {
-                            let message = view.entries[index - 1].message
-                            return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
+                        if index - 1 > 0, filteredEntries[index - 1].message.groupingKey == currentGroupKey {
+                            let message = filteredEntries[index - 1].message
+                            return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[index - 1].index), true)
                         } else {
-                            for i in index ..< view.entries.count {
-                                if view.entries[i].message.groupingKey != currentGroupKey {
-                                    let message = view.entries[i].message
-                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                            for i in index ..< filteredEntries.count {
+                                if filteredEntries[i].message.groupingKey != currentGroupKey {
+                                    let message = filteredEntries[i].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[i].index), true)
                                 }
                             }
                         }
-                    } else if index + 1 < view.entries.count {
-                        let message = view.entries[index + 1].message
-                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
+                    } else if index + 1 < filteredEntries.count {
+                        let message = filteredEntries[index + 1].message
+                        return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[index + 1].index), true)
                     } else {
                         return nil
                     }
                 case .earlier:
                     if !reversed, let currentGroupKey {
-                        if index + 1 < view.entries.count, view.entries[index + 1].message.groupingKey == currentGroupKey {
-                            let message = view.entries[index + 1].message
-                            return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index + 1].index), true)
+                        if index + 1 < filteredEntries.count, filteredEntries[index + 1].message.groupingKey == currentGroupKey {
+                            let message = filteredEntries[index + 1].message
+                            return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[index + 1].index), true)
                         } else {
                             var nextGroupingKey: Int64?
                             for i in (0 ..< index).reversed() {
                                 if let nextGroupingKey {
-                                    if view.entries[i].message.groupingKey != nextGroupingKey {
-                                        let message = view.entries[i + 1].message
-                                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i + 1].index), true)
+                                    if filteredEntries[i].message.groupingKey != nextGroupingKey {
+                                        let message = filteredEntries[i + 1].message
+                                        return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[i + 1].index), true)
                                     } else if i == 0 {
-                                        let message = view.entries[i].message
-                                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                        let message = filteredEntries[i].message
+                                        return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[i].index), true)
                                     }
-                                } else if view.entries[i].message.groupingKey != currentGroupKey {
-                                    if let groupingKey = view.entries[i].message.groupingKey {
+                                } else if filteredEntries[i].message.groupingKey != currentGroupKey {
+                                    if let groupingKey = filteredEntries[i].message.groupingKey {
                                         nextGroupingKey = groupingKey
                                     } else {
-                                        let message = view.entries[i].message
-                                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                        let message = filteredEntries[i].message
+                                        return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[i].index), true)
                                     }
                                 }
                             }
                         }
                     } else if index != 0 {
-                        let message = view.entries[index - 1].message
+                        let message = filteredEntries[index - 1].message
                         if !reversed, let nextGroupingKey = message.groupingKey {
                             for i in (0 ..< index).reversed() {
-                                if view.entries[i].message.groupingKey != nextGroupingKey {
-                                    let message = view.entries[i + 1].message
-                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i + 1].index), true)
+                                if filteredEntries[i].message.groupingKey != nextGroupingKey {
+                                    let message = filteredEntries[i + 1].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[i + 1].index), true)
                                 } else if i == 0 {
-                                    let message = view.entries[i].message
-                                    return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[i].index), true)
+                                    let message = filteredEntries[i].message
+                                    return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[i].index), true)
                                 }
                             }
                         }
-                        return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[index - 1].index), true)
+                        return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[index - 1].index), true)
                     } else {
                         return nil
                     }
@@ -307,14 +323,14 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
         }
         index += 1
     }
-    if !view.entries.isEmpty {
+    if !filteredEntries.isEmpty {
         switch position {
             case .later, .exact:
-                let message = view.entries[view.entries.count - 1].message
-                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[view.entries.count - 1].index), false)
+                let message = filteredEntries[filteredEntries.count - 1].message
+                return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[filteredEntries.count - 1].index), false)
             case .earlier:
-                let message = view.entries[0].message
-                return (message, aroundMessagesFromView(view: view, centralIndex: view.entries[0].index), false)
+                let message = filteredEntries[0].message
+                return (message, aroundMessagesFromView(view: view, centralIndex: filteredEntries[0].index), false)
         }
     } else {
         return nil
