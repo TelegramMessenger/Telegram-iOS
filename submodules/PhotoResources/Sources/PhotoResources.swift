@@ -2141,7 +2141,7 @@ public func chatSecretMessageVideo(account: Account, userLocation: MediaResource
             if blurredImage == nil {
                 if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                     let thumbnailSize = CGSize(width: image.width, height: image.height)
-                    let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+                    let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 40.0, height: 40.0))
                     if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
                         thumbnailContext.withFlippedContext { c in
                             c.interpolationQuality = .none

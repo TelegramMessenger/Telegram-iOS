@@ -29,6 +29,7 @@ import ChatInstantVideoMessageDurationNode
 import ChatControllerInteraction
 import WallpaperBackgroundNode
 import TelegramStringFormatting
+import InvisibleInkDustNode
 
 public struct ChatMessageInstantVideoItemLayoutResult {
     public let contentSize: CGSize
@@ -89,6 +90,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     public var audioTranscriptionButton: ComponentHostView<Empty>?
     
+    private var dustNode: MediaDustNode?
     private var statusNode: RadialStatusNode?
     private var disappearingStatusNode: RadialStatusNode?
     private var playbackStatusNode: InstantVideoRadialStatusNode?
@@ -278,8 +280,13 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.presentationData.theme.theme)
             }
             
+            let isViewOnceMessage = item.message.minAutoremoveOrClearTimeout == viewOnceTimeout
+            
             let theme = item.presentationData.theme
-            let isSecretMedia = item.message.containsSecretMedia
+            var isSecretMedia = item.message.containsSecretMedia
+            if isViewOnceMessage {
+                isSecretMedia = true
+            }
             if isSecretMedia {
                 secretVideoPlaceholderBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(theme.theme, wallpaper: !theme.wallpaper.isEmpty)
             }
@@ -805,9 +812,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                         }))
                     }
-                                        
+                                                            
                     var displayTranscribe = false
-                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free && !item.presentationData.isPreview {
+                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free && !isViewOnceMessage && !item.presentationData.isPreview {
                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
                         if item.associatedData.isPremium {
                             displayTranscribe = true
@@ -944,12 +951,15 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     animation.animator.updateFrame(layer: strongSelf.secretVideoPlaceholderBackground.layer, frame: displayVideoFrame, completion: nil)
                     
                     let placeholderFrame = videoFrame.insetBy(dx: 2.0, dy: 2.0)
-                    strongSelf.secretVideoPlaceholder.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
+                    strongSelf.secretVideoPlaceholder.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                     animation.animator.updateScale(layer: strongSelf.secretVideoPlaceholder.layer, scale: imageScale, completion: nil)
                     animation.animator.updatePosition(layer: strongSelf.secretVideoPlaceholder.layer, position: displayVideoFrame.center, completion: nil)
                     
+                    let placeholderSide = floor(placeholderFrame.size.width / 2.0) * 2.0
+                    let placeholderSize = CGSize(width: placeholderSide, height: placeholderSide)
+                    
                     let makeSecretPlaceholderLayout = strongSelf.secretVideoPlaceholder.asyncLayout()
-                    let arguments = TransformImageArguments(corners: ImageCorners(radius: placeholderFrame.size.width / 2.0), imageSize: placeholderFrame.size, boundingSize: placeholderFrame.size, intrinsicInsets: UIEdgeInsets())
+                    let arguments = TransformImageArguments(corners: ImageCorners(radius: placeholderSize.width / 2.0), imageSize: placeholderSize, boundingSize: placeholderSize, intrinsicInsets: UIEdgeInsets())
                     let applySecretPlaceholder = makeSecretPlaceholderLayout(arguments)
                     applySecretPlaceholder()
                     
@@ -1142,7 +1152,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
         let messageTheme = item.presentationData.theme.theme.chat.message
         
+        let isViewOnceMessage = item.message.minAutoremoveOrClearTimeout == viewOnceTimeout
+        
         let isSecretMedia = item.message.containsSecretMedia
+        
         var secretBeginTimeAndTimeout: (Double, Double)?
         if isSecretMedia {
             if let attribute = item.message.autoclearAttribute {
@@ -1195,6 +1208,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 self.infoBackgroundNode.layer.animateScale(from: 1.0, to: 0.4, duration: 0.15)
             }
         }
+        self.infoBackgroundNode.isHidden = isViewOnceMessage
         
         var isBuffering: Bool?
         if let message = self.item?.message, let media = self.media, isMediaStreamable(message: message, media: media) && (self.automaticDownload ?? false) {
@@ -1277,7 +1291,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                         }
                     case .Local:
-                        if isSecretMedia {
+                        if isViewOnceMessage {
+                            state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+                        } else if isSecretMedia {
                             if let (beginTime, timeout) = secretBeginTimeAndTimeout {
                                 state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
                             } else {
@@ -1319,7 +1335,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if let current = self.playbackStatusNode {
                 playbackStatusNode = current
             } else {
-                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6), hasSeek: true)
+                playbackStatusNode = InstantVideoRadialStatusNode(color: UIColor(white: 1.0, alpha: 0.6), hasSeek: !isViewOnceMessage, sparks: isViewOnceMessage)
+                playbackStatusNode.isUserInteractionEnabled = !isViewOnceMessage
                 playbackStatusNode.seekTo = { [weak self] position, play in
                     guard let strongSelf = self else {
                         return
@@ -1347,6 +1364,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             self.videoNode?.isHidden = false
             self.secretVideoPlaceholderBackground.isHidden = true
             self.secretVideoPlaceholder.isHidden = true
+            
+            if let dustNode = self.dustNode {
+                self.dustNode = nil
+                dustNode.removeFromSupernode()
+            }
         } else {
             if let playbackStatusNode = self.playbackStatusNode {
                 self.playbackStatusNode = nil
@@ -1354,9 +1376,24 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             self.durationNode?.status = .single(nil)
-            self.videoNode?.isHidden = isSecretMedia
-            self.secretVideoPlaceholderBackground.isHidden = !isSecretMedia
-            self.secretVideoPlaceholder.isHidden = !isSecretMedia && !item.presentationData.isPreview
+            self.videoNode?.isHidden = isSecretMedia || isViewOnceMessage
+            self.secretVideoPlaceholderBackground.isHidden = !isSecretMedia && !isViewOnceMessage
+            self.secretVideoPlaceholder.isHidden = !isSecretMedia && !isViewOnceMessage && !item.presentationData.isPreview
+            
+            if isViewOnceMessage {
+                let dustNode: MediaDustNode
+                if let current = self.dustNode {
+                    dustNode = current
+                } else {
+                    dustNode = MediaDustNode(enableAnimations: item.controllerInteraction.enableFullTranslucency)
+                    dustNode.clipsToBounds = true
+                    self.insertSubnode(dustNode, belowSubnode: self.dateAndStatusNode)
+                    self.dustNode = dustNode
+                }
+                dustNode.cornerRadius = videoFrame.width / 2.0
+                dustNode.frame = videoFrame
+                dustNode.update(size: videoFrame.size, color: .white, transition: .immediate)
+            }
         }
     }
     

@@ -288,6 +288,7 @@ public final class MediaPreviewPanelComponent: Component {
                             )
                         }
                     },
+                    isViewOnceMessage: false,
                     seek: { [weak self] timestamp in
                         guard let self, let mediaPlayer = self.mediaPlayer else {
                             return
@@ -318,6 +319,7 @@ public final class MediaPreviewPanelComponent: Component {
                     samples: component.mediaPreview.waveform.samples,
                     peak: component.mediaPreview.waveform.peak,
                     status: .complete(),
+                    isViewOnceMessage: false,
                     seek: nil,
                     updateIsSeeking: nil
                 )),

@@ -1034,8 +1034,9 @@ private final class LimitSheetContent: CombinedComponent {
                 string = component.count >= premiumLimit ? strings.Premium_MaxPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
                 defaultValue = component.count > limit ? "\(limit)" : ""
                 premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                badgePosition = max(0.15, min(0.85, CGFloat(component.count) / CGFloat(premiumLimit)))
                 badgeGraphPosition = badgePosition
+                buttonAnimationName = nil
             
                 if isPremiumDisabled {
                     badgeText = "\(limit)"

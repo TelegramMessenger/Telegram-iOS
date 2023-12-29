@@ -349,7 +349,15 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                     return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0, nil)
                 }
             } else {
-                return (TelegramMediaExpiredContent(data: .file), nil, nil, nil, nil)
+                var data: TelegramMediaExpiredContentData
+                if (flags & (1 << 7)) != 0 {
+                    data = .videoMessage
+                } else if (flags & (1 << 8)) != 0 {
+                    data = .voiceMessage
+                } else {
+                    data = .file
+                }
+                return (TelegramMediaExpiredContent(data: data), nil, nil, nil, nil)
             }
         case let .messageMediaWebPage(flags, webpage):
             if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage) {

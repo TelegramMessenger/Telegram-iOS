@@ -74,6 +74,16 @@ public final class MediaEditor {
         public let top: UIColor
         public let bottom: UIColor
         
+        public init(colors: [UIColor]) {
+            if colors.count == 2 || colors.count == 1 {
+                self.top = colors.first!
+                self.bottom = colors.last!
+            } else {
+                self.top = .black
+                self.bottom = .black
+            }
+        }
+        
         public init(top: UIColor, bottom: UIColor) {
             self.top = top
             self.bottom = bottom
@@ -110,7 +120,11 @@ public final class MediaEditor {
     
     private let clock = CMClockGetHostTimeClock()
         
-    private var player: AVPlayer?
+    private var player: AVPlayer? {
+        didSet {
+            
+        }
+    }
     private var playerAudioMix: AVMutableAudioMix?
     
     private var additionalPlayer: AVPlayer?
@@ -146,11 +160,6 @@ public final class MediaEditor {
     private var textureSourceDisposable: Disposable?
     
     private let gradientColorsPromise = Promise<GradientColors?>()
-    private var gradientColorsValue: GradientColors? {
-        didSet {
-            self.gradientColorsPromise.set(.single(self.gradientColorsValue))
-        }
-    }
     public var gradientColors: Signal<GradientColors?, NoError> {
         return self.gradientColorsPromise.get()
     }
@@ -468,103 +477,53 @@ public final class MediaEditor {
             return
         }
         
+        let context = self.context
+        let clock = self.clock
         if let device = renderTarget.mtlDevice, CVMetalTextureCacheCreate(nil, nil, device, nil, &self.textureCache) != kCVReturnSuccess {
             print("error")
         }
-                
-        let context = self.context
-        let clock = self.clock
-        let textureSource: Signal<(UIImage?, UIImage?, AVPlayer?, AVPlayer?, GradientColors), NoError>
-        switch subject {
-        case let .image(image, _):
-            let colors = mediaEditorGetGradientColors(from: image)
-            textureSource = .single((image, nil, nil, nil, colors))
-        case let .draft(draft):
-            if draft.isVideo {
-                textureSource = Signal { subscriber in
-                    let url = URL(fileURLWithPath: draft.fullPath(engine: context.engine))
-                    let asset = AVURLAsset(url: url)
-                    
-                    let playerItem = AVPlayerItem(asset: asset)
-                    let player = AVPlayer(playerItem: playerItem)
-                    if #available(iOS 15.0, *) {
-                        player.sourceClock = clock
-                    } else {
-                        player.masterClock = clock
-                    }
-                    player.automaticallyWaitsToMinimizeStalling = false
-   
-                    if let gradientColors = draft.values.gradientColors {
-                        let colors = GradientColors(top: gradientColors.first!, bottom: gradientColors.last!)
-                        subscriber.putNext((nil, nil, player, nil, colors))
-                        subscriber.putCompletion()
-                        
-                        return EmptyDisposable
-                    } else {
-                        let imageGenerator = AVAssetImageGenerator(asset: asset)
-                        imageGenerator.appliesPreferredTrackTransform = true
-                        imageGenerator.maximumSize = CGSize(width: 72, height: 128)
-                        imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
-                            let colors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
-                            subscriber.putNext((nil, nil, player, nil, colors))
-                            subscriber.putCompletion()
-                        }
-                        return ActionDisposable {
-                            imageGenerator.cancelAllCGImageGeneration()
-                        }
-                    }
-                }
-            } else {
-                guard let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) else {
-                    return
-                }
-                let colors: GradientColors
-                if let gradientColors = draft.values.gradientColors {
-                    colors = GradientColors(top: gradientColors.first!, bottom: gradientColors.last!)
-                } else {
-                    colors = mediaEditorGetGradientColors(from: image)
-                }
-                textureSource = .single((image, nil, nil, nil, colors))
+            
+        struct TextureSourceResult {
+            let image: UIImage?
+            let nightImage: UIImage?
+            let player: AVPlayer?
+            let playerIsReference: Bool
+            let gradientColors: GradientColors
+            
+            init(image: UIImage? = nil, nightImage: UIImage? = nil, player: AVPlayer? = nil, playerIsReference: Bool = false, gradientColors: GradientColors) {
+                self.image = image
+                self.nightImage = nightImage
+                self.player = player
+                self.playerIsReference = playerIsReference
+                self.gradientColors = gradientColors
             }
-        case let .video(path, transitionImage, mirror, _, _, _):
-            let _ = mirror
-            textureSource = Signal { subscriber in
-                let asset = AVURLAsset(url: URL(fileURLWithPath: path))
-                let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
-                if #available(iOS 15.0, *) {
-                    player.sourceClock = clock
-                } else {
-                    player.masterClock = clock
-                }
-                player.automaticallyWaitsToMinimizeStalling = false
-                
-//                var additionalPlayer: AVPlayer?
-//                if let additionalPath {
-//                    let additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
-//                    additionalPlayer = AVPlayer(playerItem: AVPlayerItem(asset: additionalAsset))
-//                    if #available(iOS 15.0, *) {
-//                        additionalPlayer?.sourceClock = clock
-//                    } else {
-//                        additionalPlayer?.masterClock = clock
-//                    }
-//                    additionalPlayer?.automaticallyWaitsToMinimizeStalling = false
-//                }
-                
-                if let transitionImage {
-                    let colors = mediaEditorGetGradientColors(from: transitionImage)
-                    //TODO pass mirror
-                    subscriber.putNext((nil, nil, player, nil, colors))
+        }
+        
+        func makePlayer(asset: AVAsset) -> AVPlayer {
+            let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            if #available(iOS 15.0, *) {
+                player.sourceClock = clock
+            } else {
+                player.masterClock = clock
+            }
+            player.automaticallyWaitsToMinimizeStalling = false
+            return player
+        }
+        
+        func textureSourceResult(for asset: AVAsset, gradientColors: GradientColors? = nil) -> Signal<TextureSourceResult, NoError> {
+            return Signal { subscriber in
+                let player = makePlayer(asset: asset)
+                if let gradientColors {
+                    subscriber.putNext(TextureSourceResult(player: player, gradientColors: gradientColors))
                     subscriber.putCompletion()
-                    
                     return EmptyDisposable
                 } else {
                     let imageGenerator = AVAssetImageGenerator(asset: asset)
                     imageGenerator.appliesPreferredTrackTransform = true
                     imageGenerator.maximumSize = CGSize(width: 72, height: 128)
                     imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
-                        let colors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
-                        //TODO pass mirror
-                        subscriber.putNext((nil, nil, player, nil, colors))
+                        let gradientColors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
+                        subscriber.putNext(TextureSourceResult(player: player, gradientColors: gradientColors))
                         subscriber.putCompletion()
                     }
                     return ActionDisposable {
@@ -572,47 +531,55 @@ public final class MediaEditor {
                     }
                 }
             }
+        }
+        
+        let textureSource: Signal<TextureSourceResult, NoError>
+        switch subject {
+        case let .image(image, _):
+            textureSource = .single(
+                TextureSourceResult(
+                    image: image,
+                    gradientColors: mediaEditorGetGradientColors(from: image)
+                )
+            )
+        case let .draft(draft):
+            let gradientColors = draft.values.gradientColors.flatMap { GradientColors(colors: $0) }
+            let fullPath = draft.fullPath(engine: context.engine)
+            if draft.isVideo {
+                let url = URL(fileURLWithPath: fullPath)
+                let asset = AVURLAsset(url: url)
+                textureSource = textureSourceResult(for: asset, gradientColors: gradientColors)
+            } else {
+                guard let image = UIImage(contentsOfFile: fullPath) else {
+                    return
+                }
+                textureSource = .single(
+                    TextureSourceResult(
+                        image: image,
+                        gradientColors: gradientColors ?? mediaEditorGetGradientColors(from: image)
+                    )
+                )
+            }
+        case let .video(path, _, mirror, _, _, _):
+            //TODO: pass mirror
+            let _ = mirror
+            let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+            textureSource = textureSourceResult(for: asset)
         case let .asset(asset):
             textureSource = Signal { subscriber in
-                if asset.mediaType == .video {
-                    let options = PHImageRequestOptions()
-                    options.deliveryMode = .fastFormat
-                    options.isNetworkAccessAllowed = true
-                    let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 128.0, height: 128.0), contentMode: .aspectFit, options: options, resultHandler: { image, info in
-                        if let image {
-                            if let info {
-                                if let cancelled = info[PHImageCancelledKey] as? Bool, cancelled {
-                                    return
-                                }
-                            }
-                            let colors = mediaEditorGetGradientColors(from: image)
-                            PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { asset, _, _ in
-                                if let asset {
-                                    let playerItem = AVPlayerItem(asset: asset)
-                                    let player = AVPlayer(playerItem: playerItem)
-                                    player.automaticallyWaitsToMinimizeStalling = false
-                                   
-                                    #if targetEnvironment(simulator)
-                                    let additionalPlayerItem = AVPlayerItem(asset: asset)
-                                    let additionalPlayer = AVPlayer(playerItem: additionalPlayerItem)
-                                    additionalPlayer.automaticallyWaitsToMinimizeStalling = false
-                                    subscriber.putNext((nil, nil, player, additionalPlayer, colors))
-                                    #else
-                                    subscriber.putNext((nil, nil, player, nil, colors))
-                                    #endif
-                                    subscriber.putCompletion()
-                                }
-                            })
-                        }
-                    })
-                    return ActionDisposable {
-                        PHImageManager.default().cancelImageRequest(requestId)
-                    }
-                } else {
-                    let options = PHImageRequestOptions()
-                    options.deliveryMode = .highQualityFormat
-                    options.isNetworkAccessAllowed = true
-                    let requestId = PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 1920.0, height: 1920.0), contentMode: .aspectFit, options: options, resultHandler: { image, info in
+                let isVideo = asset.mediaType == .video
+                
+                let targetSize = isVideo ? CGSize(width: 128.0, height: 128.0) : CGSize(width: 1920.0, height: 1920.0)
+                let options = PHImageRequestOptions()
+                options.deliveryMode = isVideo ? .fastFormat : .highQualityFormat
+                options.isNetworkAccessAllowed = true
+             
+                let requestId = PHImageManager.default().requestImage(
+                    for: asset,
+                    targetSize: targetSize,
+                    contentMode: .aspectFit,
+                    options: options,
+                    resultHandler: { image, info in
                         if let image {
                             var degraded = false
                             if let info {
@@ -623,29 +590,63 @@ public final class MediaEditor {
                                     degraded = true
                                 }
                             }
-                            if !degraded {
-                                let colors = mediaEditorGetGradientColors(from: image)
-                                subscriber.putNext((image, nil, nil, nil, colors))
-                                subscriber.putCompletion()
+                            if isVideo {
+                                PHImageManager.default().requestAVAsset(forVideo: asset, options: nil, resultHandler: { asset, _, _ in
+                                    if let asset {
+                                        let player = makePlayer(asset: asset)
+                                        subscriber.putNext(
+                                            TextureSourceResult(
+                                                player: player,
+                                                gradientColors: mediaEditorGetGradientColors(from: image)
+                                            )
+                                        )
+                                        subscriber.putCompletion()
+                                    }
+                                })
+                            } else {
+                                if !degraded {
+                                    subscriber.putNext(
+                                        TextureSourceResult(
+                                            image: image,
+                                            gradientColors: mediaEditorGetGradientColors(from: image)
+                                        )
+                                    )
+                                    subscriber.putCompletion()
+                                }
                             }
                         }
-                    })
-                    return ActionDisposable {
-                        PHImageManager.default().cancelImageRequest(requestId)
                     }
+                )
+                return ActionDisposable {
+                    PHImageManager.default().cancelImageRequest(requestId)
                 }
             }
         case let .message(messageId):
-            textureSource = getChatWallpaperImage(context: self.context, messageId: messageId)
-            |> map { _, image, nightImage in
-                return (image, nightImage, nil, nil, GradientColors(top: .black, bottom: .black))
+            textureSource = self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+            |> mapToSignal { message in
+                var player: AVPlayer?
+                if let message {
+                    if let maybeFile = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, maybeFile.isVideo, let path = self.context.account.postbox.mediaBox.completedResourcePath(maybeFile.resource, pathExtension: "mp4") {
+                        let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+                        player = makePlayer(asset: asset)
+                    }
+                }
+                return getChatWallpaperImage(context: self.context, messageId: messageId)
+                |> map { _, image, nightImage in
+                    return TextureSourceResult(
+                        image: image,
+                        nightImage: nightImage,
+                        player: player,
+                        playerIsReference: true,
+                        gradientColors: GradientColors(top: .black, bottom: .black)
+                    )
+                }
             }
         }
         
         self.textureSourceDisposable = (textureSource
-        |> deliverOnMainQueue).start(next: { [weak self] sourceAndColors in
+        |> deliverOnMainQueue).start(next: { [weak self] textureSourceResult in
             if let self {
-                let (image, nightImage, player, additionalPlayer, colors) = sourceAndColors
                 self.renderer.onNextRender = { [weak self] in
                     self?.onFirstDisplay()
                 }
@@ -653,25 +654,22 @@ public final class MediaEditor {
                 let textureSource = UniversalTextureSource(renderTarget: renderTarget)
                 
                 if case .message = self.self.subject {
-                    if let image {
-                        self.wallpapers = (image, nightImage ?? image)
+                    if let image = textureSourceResult.image {
+                        self.wallpapers = (image, textureSourceResult.nightImage ?? image)
                     }
                 }
             
-                self.player = player
+                self.player = textureSourceResult.player
                 self.playerPromise.set(.single(player))
-                
-                self.additionalPlayer = additionalPlayer
-                self.additionalPlayerPromise.set(.single(additionalPlayer))
             
-                if let image {
-                    if self.values.nightTheme, let nightImage {
+                if let image = textureSourceResult.image {
+                    if self.values.nightTheme, let nightImage = textureSourceResult.nightImage {
                         textureSource.setMainInput(.image(nightImage))
                     } else {
                         textureSource.setMainInput(.image(image))
                     }
                 }
-                if let player, let playerItem = player.currentItem {
+                if let player, let playerItem = player.currentItem, !textureSourceResult.playerIsReference {
                     textureSource.setMainInput(.video(playerItem))
                 }
                 if let additionalPlayer, let playerItem = additionalPlayer.currentItem {
@@ -679,13 +677,12 @@ public final class MediaEditor {
                 }
                 self.renderer.textureSource = textureSource
                 
-                self.gradientColorsValue = colors
-                self.setGradientColors(colors.array)
+                self.setGradientColors(textureSourceResult.gradientColors)
                 
-                if player == nil {
+                if let _ = textureSourceResult.player {
                     self.updateRenderChain()
 //                    let _ = image
-                    self.maybeGeneratePersonSegmentation(image)
+//                    self.maybeGeneratePersonSegmentation(image)
                 }
                 
                 if let _ = self.values.audioTrack {
@@ -697,7 +694,7 @@ public final class MediaEditor {
                     player.isMuted = self.values.videoIsMuted
                     if let trimRange = self.values.videoTrimRange {
                         player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
-                        additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+//                        additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
                     }
 
                     if let initialSeekPosition = self.initialSeekPosition {
@@ -711,7 +708,7 @@ public final class MediaEditor {
                     Queue.mainQueue().justDispatch {
                         let startPlayback = {
                             player.playImmediately(atRate: 1.0)
-                            additionalPlayer?.playImmediately(atRate: 1.0)
+//                            additionalPlayer?.playImmediately(atRate: 1.0)
                             self.audioPlayer?.playImmediately(atRate: 1.0)
                             self.onPlaybackAction(.play)
                             self.volumeFadeIn = player.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
@@ -1616,9 +1613,10 @@ public final class MediaEditor {
         }
     }
     
-    public func setGradientColors(_ gradientColors: [UIColor]) {
+    public func setGradientColors(_ gradientColors: GradientColors) {
+        self.gradientColorsPromise.set(.single(gradientColors))
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedGradientColors(gradientColors: gradientColors)
+            return values.withUpdatedGradientColors(gradientColors: gradientColors.array)
         }
     }
     

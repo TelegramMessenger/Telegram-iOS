@@ -168,8 +168,6 @@ final class ManagedAudioRecorderContext {
     private var micLevelPeakCount: Int = 0
     private var audioLevelPeakUpdate: Double = 0.0
     
-    fileprivate var isPaused = false
-    
     private var recordingStateUpdateTimestamp: Double?
     
     private var hasAudioSession = false

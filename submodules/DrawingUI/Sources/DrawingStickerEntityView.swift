@@ -14,6 +14,7 @@ import UniversalMediaPlayer
 import TelegramPresentationData
 import TelegramUniversalVideoContent
 import DustEffect
+import DynamicCornerRadiusView
 
 private class BlurView: UIVisualEffectView {
     private func setup() {
@@ -66,7 +67,9 @@ public class DrawingStickerEntityView: DrawingEntityView {
     let imageNode: TransformImageNode
     var animationNode: DefaultAnimatedStickerNodeImpl?
     var videoNode: UniversalVideoNode?
+    var videoMaskView: DynamicCornerRadiusView?
     var animatedImageView: UIImageView?
+    var overlayImageView: UIImageView?
     var cameraPreviewView: UIView?
     
     let progressDisposable = MetaDisposable()
@@ -154,7 +157,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             return CGSize(width: 512.0, height: 512.0)
-        case let .message(_, _, size):
+        case let .message(_, size, _, _, _):
             return size
         }
     }
@@ -276,14 +279,17 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.animatedImageView = imageView
             self.addSubview(imageView)
             self.setNeedsLayout()
-        } else if case .message = self.stickerEntity.content {
+        } else if case let .message(_, _, file, mediaRect, _) = self.stickerEntity.content {
             if let image = self.stickerEntity.renderImage {
-                self.setupWithImage(image)
+                self.setupWithImage(image, overlayImage: self.stickerEntity.overlayRenderImage)
+            }
+            if let file, let _ = mediaRect {
+                self.setupWithVideo(file)
             }
         }
     }
     
-    private func setupWithImage(_ image: UIImage) {
+    private func setupWithImage(_ image: UIImage, overlayImage: UIImage? = nil) {
         let imageView: UIImageView
         if let current = self.animatedImageView {
             imageView = current
@@ -294,6 +300,20 @@ public class DrawingStickerEntityView: DrawingEntityView {
             self.animatedImageView = imageView
         }
         imageView.image = image
+        
+        if let overlayImage {
+            let imageView: UIImageView
+            if let current = self.overlayImageView {
+                imageView = current
+            } else {
+                imageView = UIImageView()
+                imageView.contentMode = .scaleAspectFit
+                self.addSubview(imageView)
+                self.overlayImageView = imageView
+            }
+            imageView.image = overlayImage
+        }
+        
         self.currentSize = nil
         self.setNeedsLayout()
     }
@@ -335,6 +355,9 @@ public class DrawingStickerEntityView: DrawingEntityView {
         videoNode.isUserInteractionEnabled = false
         videoNode.clipsToBounds = true
         self.addSubnode(videoNode)
+        if let overlayImageView = self.overlayImageView {
+            self.addSubview(overlayImageView)
+        }
         self.videoNode = videoNode
         self.setNeedsLayout()
         videoNode.play()
@@ -579,20 +602,52 @@ public class DrawingStickerEntityView: DrawingEntityView {
             }
             
             if let videoNode = self.videoNode {
-                var imageSize = imageSize
-                if case let .message(_, file, _) = self.stickerEntity.content, let dimensions = file?.dimensions {
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(boundingSize)
-                    imageSize = fittedDimensions
-                    videoNode.cornerRadius = 0.0
+                if case let .message(_, size, _, rect, cornerRadius) = self.stickerEntity.content, let rect, let cornerRadius {
+                    let baseSize = self.stickerEntity.baseSize
+                    let scale = baseSize.width / size.width
+                    let scaledRect = CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale)
+                    videoNode.frame = scaledRect
+                    videoNode.updateLayout(size: scaledRect.size, transition: .immediate)
+                    
+                    if cornerRadius > 100.0 {
+                        videoNode.cornerRadius = cornerRadius * scale
+                    } else {
+                        videoNode.cornerRadius = 0.0
+                        
+                        let hasRoundBottomCorners = scaledRect.maxY > baseSize.height - 6.0
+                        if hasRoundBottomCorners {
+                            let maskView: DynamicCornerRadiusView
+                            if let current = self.videoMaskView {
+                                maskView = current
+                            } else {
+                                maskView = DynamicCornerRadiusView()
+                                self.videoMaskView = maskView
+                                videoNode.view.mask = maskView
+                            }
+                            
+                            let corners = DynamicCornerRadiusView.Corners(
+                                minXMinY: 0.0,
+                                maxXMinY: 0.0,
+                                minXMaxY: cornerRadius * scale,
+                                maxXMaxY: cornerRadius * scale
+                            )
+                            maskView.update(size: scaledRect.size, corners: corners, transition: .immediate)
+                        } else {
+                            videoNode.view.mask = nil
+                        }
+                    }
                 } else {
                     videoNode.cornerRadius = floor(imageSize.width * 0.03)
+                    videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
+                    videoNode.updateLayout(size: imageSize, transition: .immediate)
                 }
-                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
-                videoNode.updateLayout(size: imageSize, transition: .immediate)
             }
             
             if let animatedImageView = self.animatedImageView {
                 animatedImageView.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
+            }
+            if let overlayImageView = self.overlayImageView {
+                overlayImageView.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
             }
             
             if let cameraPreviewView = self.cameraPreviewView {
@@ -717,11 +772,42 @@ public class DrawingStickerEntityView: DrawingEntityView {
     }
     
     func getRenderSubEntities() -> [DrawingEntity] {
-        guard case let .message(_, file, _) = self.stickerEntity.content else {
-            return []
+        if case let .message(_, _, file, _, cornerRadius) = self.stickerEntity.content {
+            if let file, let cornerRadius, let videoNode = self.videoNode {
+                let _ = cornerRadius
+                let stickerSize = self.bounds.size
+                let stickerPosition = self.stickerEntity.position
+                let videoSize = videoNode.frame.size
+                let scale = self.stickerEntity.scale
+                let rotation = self.stickerEntity.rotation
+                
+                let videoPosition = videoNode.position.offsetBy(dx: -stickerSize.width / 2.0, dy: -stickerSize.height / 2.0)
+                let videoScale = videoSize.width / stickerSize.width
+                
+                let videoEntity = DrawingStickerEntity(content: .video(file))
+                videoEntity.referenceDrawingSize = self.stickerEntity.referenceDrawingSize
+                videoEntity.position = stickerPosition.offsetBy(
+                    dx: (videoPosition.x * cos(rotation) - videoPosition.y * sin(rotation)) * scale,
+                    dy: (videoPosition.y * cos(rotation) + videoPosition.x * sin(rotation)) * scale
+                )
+                videoEntity.scale = scale * videoScale
+                videoEntity.rotation = rotation
+                
+                var entities: [DrawingEntity] = []
+                entities.append(videoEntity)
+                
+                if let overlayImage = self.stickerEntity.overlayRenderImage {
+                    let overlayEntity = DrawingStickerEntity(content: .image(overlayImage, .sticker))
+                    overlayEntity.referenceDrawingSize = self.stickerEntity.referenceDrawingSize
+                    overlayEntity.position = self.stickerEntity.position
+                    overlayEntity.scale = self.stickerEntity.scale
+                    overlayEntity.rotation = self.stickerEntity.rotation
+                    entities.append(overlayEntity)
+                }
+                
+                return entities
+            }
         }
-        
-        let _ = file
         return []
     }
 }

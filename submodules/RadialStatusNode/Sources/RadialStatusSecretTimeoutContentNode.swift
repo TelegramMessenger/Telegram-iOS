@@ -143,7 +143,6 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             return
         }
         
-        
         let absoluteTimestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
         
         let alphaProgress: CGFloat

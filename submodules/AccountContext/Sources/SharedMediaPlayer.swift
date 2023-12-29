@@ -12,16 +12,19 @@ public enum SharedMediaPlaybackDataType {
 }
 
 public enum SharedMediaPlaybackDataSource: Equatable {
-    case telegramFile(reference: FileMediaReference, isCopyProtected: Bool)
+    case telegramFile(reference: FileMediaReference, isCopyProtected: Bool, isViewOnce: Bool)
     
     public static func ==(lhs: SharedMediaPlaybackDataSource, rhs: SharedMediaPlaybackDataSource) -> Bool {
         switch lhs {
-        case let .telegramFile(lhsFileReference, lhsIsCopyProtected):
-            if case let .telegramFile(rhsFileReference, rhsIsCopyProtected) = rhs {
+        case let .telegramFile(lhsFileReference, lhsIsCopyProtected, lhsIsViewOnce):
+            if case let .telegramFile(rhsFileReference, rhsIsCopyProtected, rhsIsViewOnce) = rhs {
                 if !lhsFileReference.media.isEqual(to: rhsFileReference.media) {
                     return false
                 }
                 if lhsIsCopyProtected != rhsIsCopyProtected {
+                    return false
+                }
+                if lhsIsViewOnce != rhsIsViewOnce {
                     return false
                 }
                 return true

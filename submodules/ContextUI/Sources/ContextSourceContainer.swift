@@ -7,6 +7,7 @@ import TelegramCore
 import ReactionSelectionNode
 import ComponentFlow
 import TabSelectorComponent
+import PlainButtonComponent
 import ComponentDisplayAdapters
 
 final class ContextSourceContainer: ASDisplayNode {
@@ -16,6 +17,8 @@ final class ContextSourceContainer: ASDisplayNode {
         let id: AnyHashable
         let title: String
         let source: ContextContentSource
+        let closeActionTitle: String?
+        let closeAction: (() -> Void)?
         
         private var _presentationNode: ContextControllerPresentationNode?
         var presentationNode: ContextControllerPresentationNode {
@@ -40,12 +43,16 @@ final class ContextSourceContainer: ASDisplayNode {
             id: AnyHashable,
             title: String,
             source: ContextContentSource,
-            items: Signal<ContextController.Items, NoError>
+            items: Signal<ContextController.Items, NoError>,
+            closeActionTitle: String? = nil,
+            closeAction: (() -> Void)? = nil
         ) {
             self.controller = controller
             self.id = id
             self.title = title
             self.source = source
+            self.closeActionTitle = closeActionTitle
+            self.closeAction = closeAction
             
             self.ready.set(combineLatest(queue: .mainQueue(), self.contentReady.get(), self.actionsReady.get())
             |> map { a, b -> Bool in
@@ -162,8 +169,11 @@ final class ContextSourceContainer: ASDisplayNode {
                         guard let self, let controller = self.controller else {
                             return
                         }
-                        controller.controllerNode.dismissedForCancel?()
-                        controller.controllerNode.beginDismiss(result)
+                        if let _ = self.closeActionTitle {
+                        } else {
+                            controller.controllerNode.dismissedForCancel?()
+                            controller.controllerNode.beginDismiss(result)
+                        }
                     },
                     requestAnimateOut: { [weak self] result, completion in
                         guard let self, let controller = self.controller else {
@@ -341,6 +351,7 @@ final class ContextSourceContainer: ASDisplayNode {
     var activeIndex: Int = 0
     
     private var tabSelector: ComponentView<Empty>?
+    private var closeButton: ComponentView<Empty>?
     
     private var presentationData: PresentationData?
     private var validLayout: ContainerViewLayout?
@@ -376,7 +387,9 @@ final class ContextSourceContainer: ASDisplayNode {
                 id: source.id,
                 title: source.title,
                 source: source.source,
-                items: source.items
+                items: source.items,
+                closeActionTitle: source.closeActionTitle,
+                closeAction: source.closeAction
             )
             self.sources.append(mappedSource)
             self.addSubnode(mappedSource.presentationNode)
@@ -457,17 +470,33 @@ final class ContextSourceContainer: ASDisplayNode {
         if let tabSelectorView = self.tabSelector?.view {
             tabSelectorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
+        if let closeButtonView = self.closeButton?.view {
+            closeButtonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
     }
     
     func animateOut(result: ContextMenuActionResult, completion: @escaping () -> Void) {
-        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        let delayDismissal = self.activeSource?.closeAction != nil
+        let delay: Double = delayDismissal ? 0.2 : 0.0
+        let duration: Double = delayDismissal ? 0.35 : 0.2
+        
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false, completion: { _ in
+            if delayDismissal {
+                Queue.mainQueue().after(0.55) {
+                    completion()
+                }
+            }
+        })
         
         if let tabSelectorView = self.tabSelector?.view {
-            tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
+        }
+        if let closeButtonView = self.closeButton?.view {
+            closeButtonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, delay: delay, removeOnCompletion: false)
         }
         
         if let activeSource = self.activeSource {
-            activeSource.animateOut(result: result, completion: completion)
+            activeSource.animateOut(result: result, completion: delayDismissal ? {} : completion)
         } else {
             completion()
         }
@@ -636,6 +665,47 @@ final class ContextSourceContainer: ASDisplayNode {
                 }
                 transition.updateFrame(view: tabSelectorView, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - tabSelectorSize.width) * 0.5), y: layout.size.height - layout.intrinsicInsets.bottom - tabSelectorSize.height), size: tabSelectorSize))
             }
+        } else if let source = self.sources.first, let closeActionTitle = source.closeActionTitle {
+            let closeButton: ComponentView<Empty>
+            if let current = self.closeButton {
+                closeButton = current
+            } else {
+                closeButton = ComponentView()
+                self.closeButton = closeButton
+            }
+            
+            let closeButtonSize = closeButton.update(
+                transition: Transition(transition),
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(
+                        CloseButtonComponent(
+                            backgroundColor: presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.1),
+                            text: closeActionTitle
+                        )
+                    ),
+                    effectAlignment: .center,
+                    action: { [weak self, weak source] in
+                        guard let self else {
+                            return
+                        }
+                        if let source, let closeAction = source.closeAction {
+                            closeAction()
+                        } else {
+                            self.controller?.dismiss(result: .dismissWithoutContent, completion: nil)
+                        }
+                    })
+                ),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width, height: 44.0)
+            )
+            childLayout.intrinsicInsets.bottom += 30.0
+            
+            if let closeButtonView = closeButton.view {
+                if closeButtonView.superview == nil {
+                    self.view.addSubview(closeButtonView)
+                }
+                transition.updateFrame(view: closeButtonView, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - closeButtonSize.width) * 0.5), y: layout.size.height - layout.intrinsicInsets.bottom - closeButtonSize.height - 10.0), size: closeButtonSize))
+            }
         } else if let tabSelector = self.tabSelector {
             self.tabSelector = nil
             tabSelector.view?.removeFromSuperview()
@@ -664,10 +734,73 @@ final class ContextSourceContainer: ASDisplayNode {
                 return result
             }
         }
+        if let closeButtonView = self.closeButton?.view {
+            if let result = closeButtonView.hitTest(self.view.convert(point, to: closeButtonView), with: event) {
+                return result
+            }
+        }
         
         guard let activeSource = self.activeSource else {
             return nil
         }
         return activeSource.presentationNode.view.hitTest(point, with: event)
+    }
+}
+
+
+private final class CloseButtonComponent: CombinedComponent {
+    let backgroundColor: UIColor
+    let text: String
+
+    init(
+        backgroundColor: UIColor,
+        text: String
+    ) {
+        self.backgroundColor = backgroundColor
+        self.text = text
+    }
+
+    static func ==(lhs: CloseButtonComponent, rhs: CloseButtonComponent) -> Bool {
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+
+    static var body: Body {
+        let background = Child(RoundedRectangle.self)
+        let text = Child(Text.self)
+
+        return { context in
+            let text = text.update(
+                component: Text(
+                    text: "\(context.component.text)",
+                    font: Font.regular(17.0),
+                    color: .white
+                ),
+                availableSize: CGSize(width: 200.0, height: 100.0),
+                transition: .immediate
+            )
+
+            let backgroundSize = CGSize(width: text.size.width + 34.0, height: 36.0)
+            let background = background.update(
+                component: RoundedRectangle(color: context.component.backgroundColor, cornerRadius: 18.0),
+                availableSize: backgroundSize,
+                transition: .immediate
+            )
+
+            context.add(background
+                .position(CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
+            )
+            
+            context.add(text
+                .position(CGPoint(x: backgroundSize.width / 2.0, y: backgroundSize.height / 2.0))
+            )
+
+            return backgroundSize
+        }
     }
 }

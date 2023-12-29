@@ -103,7 +103,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, stopMediaRecording: {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
-        }, sendRecordedMedia: { _ in
+        }, sendRecordedMedia: { _, _ in
         }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {

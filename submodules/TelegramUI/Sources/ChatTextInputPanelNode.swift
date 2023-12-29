@@ -562,6 +562,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     var audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator?
     var animatingBinNode: AnimationNode?
     
+    var viewOnce = false
+    let viewOnceButton: ChatRecordingViewOnceButtonNode
+    
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)] = []
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool, Bool)?
@@ -847,6 +850,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.counterTextNode = ImmediateTextNode()
         self.counterTextNode.textAlignment = .center
         
+        self.viewOnceButton = ChatRecordingViewOnceButtonNode()
+        
         super.init()
         
         self.viewForOverlayContent = ChatTextViewForOverlayContent(
@@ -958,13 +963,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             if let strongSelf = self, let interfaceState = strongSelf.presentationInterfaceState, let interfaceInteraction = strongSelf.interfaceInteraction {
                 if let _ = interfaceState.inputTextPanelState.mediaRecordingState {
                     if sendMedia {
-                        interfaceInteraction.finishMediaRecording(.send)
+                        interfaceInteraction.finishMediaRecording(.send(viewOnce: strongSelf.viewOnce))
                     } else {
                         interfaceInteraction.finishMediaRecording(.dismiss)
                     }
                 } else {
                     interfaceInteraction.finishMediaRecording(.dismiss)
                 }
+                strongSelf.viewOnce = false
+                strongSelf.tooltipController?.dismiss()
             }
         }
         self.actionButtons.micButton.offsetRecordingControls = { [weak self] in
@@ -984,6 +991,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.actionButtons.micButton.stopRecording = { [weak self] in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.stopMediaRecording()
+                
+                strongSelf.tooltipController?.dismiss()
             }
         }
         self.actionButtons.micButton.updateLocked = { [weak self] _ in
@@ -1071,6 +1080,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
             }
         }
+        
+        self.viewOnceButton.addTarget(self, action: #selector(self.viewOncePressed), forControlEvents: [.touchUpInside])
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -1082,6 +1093,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.startingBotDisposable.dispose()
         self.tooltipController?.dismiss()
         self.currentEmojiSuggestion?.disposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if let viewForOverlayContent = self.viewForOverlayContent {
+            viewForOverlayContent.addSubnode(self.viewOnceButton)
+        }
     }
     
     func loadTextInputNodeIfNeeded() {
@@ -2001,7 +2020,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 animateCancelSlideIn = transition.isAnimated && mediaRecordingState != nil
                 
                 audioRecordingCancelIndicator = ChatTextInputAudioRecordingCancelIndicator(theme: interfaceState.theme, strings: interfaceState.strings, cancel: { [weak self] in
+                    self?.viewOnce = false
                     self?.interfaceInteraction?.finishMediaRecording(.dismiss)
+                    self?.tooltipController?.dismiss()
                 })
                 self.audioRecordingCancelIndicator = audioRecordingCancelIndicator
                 self.clippingNode.insertSubnode(audioRecordingCancelIndicator, at: 0)
@@ -2272,7 +2293,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 mediaRecordingAccessibilityArea.accessibilityTraits = [.button, .startsMediaSession]
                 self.mediaRecordingAccessibilityArea = mediaRecordingAccessibilityArea
                 mediaRecordingAccessibilityArea.activate = { [weak self] in
-                    self?.interfaceInteraction?.finishMediaRecording(.send)
+                    if let self {
+                        self.interfaceInteraction?.finishMediaRecording(.send(viewOnce: self.viewOnce))
+                    }
                     return true
                 }
                 self.clippingNode.insertSubnode(mediaRecordingAccessibilityArea, aboveSubnode: self.actionButtons)
@@ -2510,6 +2533,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         if let prevPreviewInputPanelNode = self.prevInputPanelNode as? ChatRecordingPreviewInputPanelNode {
             self.prevInputPanelNode = nil
             
+            if prevPreviewInputPanelNode.viewOnceButton.alpha > 0.0 {
+                if let snapshotView = prevPreviewInputPanelNode.viewOnceButton.view.snapshotContentTree() {
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        snapshotView.removeFromSuperview()
+                    })
+                    snapshotView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    self.viewForOverlayContent?.addSubview(snapshotView)
+                }
+            }
+            
             prevPreviewInputPanelNode.gestureRecognizer?.isEnabled = false
             prevPreviewInputPanelNode.isUserInteractionEnabled = false
             
@@ -2586,6 +2619,27 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
         }
                 
+        
+        let viewOnceSize = self.viewOnceButton.update(theme: interfaceState.theme)
+        let viewOnceButtonFrame = CGRect(origin: CGPoint(x: width - rightInset - 44.0 - UIScreenPixel, y: -152.0), size: viewOnceSize)
+        self.viewOnceButton.bounds = CGRect(origin: .zero, size: viewOnceButtonFrame.size)
+        transition.updatePosition(node: self.viewOnceButton, position: viewOnceButtonFrame.center)
+        
+        var viewOnceIsVisible = false
+        if let recordingState = interfaceState.inputTextPanelState.mediaRecordingState, case let .audio(_, isLocked) = recordingState, isLocked {
+            viewOnceIsVisible = true
+        }
+        if self.viewOnceButton.alpha.isZero && viewOnceIsVisible {
+            self.viewOnceButton.update(isSelected: self.viewOnce, animated: false)
+        }
+        transition.updateAlpha(node: self.viewOnceButton, alpha: viewOnceIsVisible ? 1.0 : 0.0)
+        transition.updateTransformScale(node: self.viewOnceButton, scale: viewOnceIsVisible ? 1.0 : 0.01)
+        if let _ = interfaceState.renderedPeer?.peer as? TelegramUser {
+            self.viewOnceButton.isHidden = false
+        } else {
+            self.viewOnceButton.isHidden = true
+        }
+        
         var clippingDelta: CGFloat = 0.0
         if case let .media(_, _, focused) = interfaceState.inputMode, focused {
             clippingDelta = -panelHeight
@@ -2594,6 +2648,50 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         transition.updateSublayerTransformOffset(layer: self.clippingNode.layer, offset: CGPoint(x: 0.0, y: clippingDelta))
         
         return panelHeight
+    }
+    
+    @objc private func viewOncePressed() {
+        guard let interfaceState = self.presentationInterfaceState else {
+            return
+        }
+        self.viewOnce = !self.viewOnce
+    
+        self.viewOnceButton.update(isSelected: self.viewOnce, animated: true)
+        
+        self.tooltipController?.dismiss()
+        if self.viewOnce {
+            self.displayViewOnceTooltip(text: interfaceState.strings.Chat_PlayVoiceMessageOnceTooltip)
+        }
+    }
+    
+    private func displayViewOnceTooltip(text: String) {
+        guard let context = self.context, let parentController = self.interfaceInteraction?.chatController() else {
+            return
+        }
+        
+        let absoluteFrame = self.viewOnceButton.view.convert(self.viewOnceButton.bounds, to: parentController.view)
+        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX - 20.0, y: absoluteFrame.midY), size: CGSize())
+        
+        let tooltipController = TooltipScreen(
+            account: context.account,
+            sharedContext: context.sharedContext,
+            text: .plain(text: text),
+            balancedTextLayout: true,
+            constrainWidth: 240.0,
+            style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+            arrowStyle: .small,
+            icon: .animation(name: "anim_autoremove_on", delay: 0.1, tintColor: nil),
+            location: .point(location, .right),
+            displayDuration: .default,
+            inset: 8.0,
+            cornerRadius: 8.0,
+            shouldDismissOnTouch: { _, _ in
+                return .ignore
+            }
+        )
+        self.tooltipController = tooltipController
+        
+        parentController.present(tooltipController, in: .window(.root))
     }
     
     override func canHandleTransition(from prevInputPanelNode: ChatInputPanelNode?) -> Bool {

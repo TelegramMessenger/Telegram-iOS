@@ -4,6 +4,8 @@ import Postbox
 public enum TelegramMediaExpiredContentData: Int32 {
     case image
     case file
+    case voiceMessage
+    case videoMessage
 }
 
 public final class TelegramMediaExpiredContent: Media, Equatable {

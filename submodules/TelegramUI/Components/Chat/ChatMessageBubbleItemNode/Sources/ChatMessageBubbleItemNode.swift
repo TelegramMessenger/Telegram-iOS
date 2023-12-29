@@ -3852,7 +3852,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var isCurrentlyPlayingMedia = false
-        if item.associatedData.currentlyPlayingMessageId == item.message.index {
+        if item.associatedData.currentlyPlayingMessageId == item.message.index, let file = item.message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, file.isInstantVideo {
             isCurrentlyPlayingMedia = true
         }
         

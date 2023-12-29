@@ -140,7 +140,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
     var restrictedNode: ChatRecentActionsEmptyNode?
     
-    private var validLayout: (ContainerViewLayout, CGFloat)?
+    private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     private var visibleAreaInset = UIEdgeInsets()
     
     private var searchNavigationNode: ChatSearchNavigationContentNode?
@@ -1417,6 +1417,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     inputPanelNode.removeFromSupernode()
                     inputPanelNode.prevInputPanelNode = prevInputPanelNode
                     inputPanelNode.addSubnode(prevInputPanelNode)
+                    
+                    prevInputPanelNode.viewForOverlayContent?.removeFromSuperview()
                 } else {
                     dismissedInputPanelNode = self.inputPanelNode
                 }
@@ -1426,10 +1428,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if inputPanelNode.supernode !== self {
                     immediatelyLayoutInputPanelAndAnimateAppearance = true
                     self.inputPanelClippingNode.insertSubnode(inputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
-                    
-                    if let viewForOverlayContent = inputPanelNode.viewForOverlayContent {
-                        self.inputPanelOverlayNode.view.addSubview(viewForOverlayContent)
-                    }
+                }
+                if let viewForOverlayContent = inputPanelNode.viewForOverlayContent, viewForOverlayContent.superview == nil {
+                    self.inputPanelOverlayNode.view.addSubview(viewForOverlayContent)
                 }
             } else {
                 let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset - 120.0, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)

@@ -2277,7 +2277,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             var effectiveSubject = subject
             if case let .draft(draft, _ ) = subject {
                 for entity in draft.values.entities {
-                    if case let .sticker(sticker) = entity, case let .message(ids, _, _) = sticker.content {
+                    if case let .sticker(sticker) = entity, case let .message(ids, _, _, _, _) = sticker.content {
                         effectiveSubject = .message(ids)
                         break
                     }
@@ -2351,7 +2351,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             if let entityView = self.entitiesView.getView(for: mediaEntity.uuid) as? DrawingMediaEntityView {
                 self.entitiesView.sendSubviewToBack(entityView)
-//                entityView.previewView = self.previewView
                 entityView.updated = { [weak self, weak mediaEntity] in
                     if let self, let mediaEntity {
                         let rotationDelta = mediaEntity.rotation - initialRotation
@@ -2445,10 +2444,16 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }
                     }
                     
-                    let maybeFile = messages.first?.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile
+                    var messageFile: TelegramMediaFile?
+                    if let maybeFile = messages.first?.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, maybeFile.isVideo, let _ = self.context.account.postbox.mediaBox.completedResourcePath(maybeFile.resource, pathExtension: nil) {
+                        messageFile = maybeFile
+                    }
+                    if "".isEmpty {
+                        messageFile = nil
+                    }
                     
                     let renderer = DrawingMessageRenderer(context: self.context, messages: messages)
-                    renderer.render(completion: { size, dayImage, nightImage in
+                    renderer.render(completion: { result in
                         if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
                             if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
                                 return true
@@ -2458,17 +2463,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         }) as? DrawingStickerEntityView {
                             existingEntityView.isNightTheme = isNightTheme
                             let messageEntity = existingEntityView.entity as! DrawingStickerEntity
-                            messageEntity.renderImage = dayImage
-                            messageEntity.secondaryRenderImage = nightImage
+                            messageEntity.renderImage = result.dayImage
+                            messageEntity.secondaryRenderImage = result.nightImage
+                            messageEntity.overlayRenderImage = result.overlayImage
                             existingEntityView.update(animated: false)
                         } else {
-                            let messageEntity = DrawingStickerEntity(content: .message(messageIds, maybeFile?.isVideo == true ? maybeFile : nil, size))
-                            messageEntity.renderImage = dayImage
-                            messageEntity.secondaryRenderImage = nightImage
+                            let messageEntity = DrawingStickerEntity(content: .message(messageIds, result.size, messageFile, result.mediaFrame?.rect, result.mediaFrame?.cornerRadius))
+                            messageEntity.renderImage = result.dayImage
+                            messageEntity.secondaryRenderImage = result.nightImage
+                            messageEntity.overlayRenderImage = result.overlayImage
                             messageEntity.referenceDrawingSize = storyDimensions
                             messageEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
                             
-                            let fraction = max(size.width, size.height) / 353.0
+                            let fraction = max(result.size.width, result.size.height) / 353.0
                             messageEntity.scale = min(6.0, 3.3 * fraction)
                             
                             if let entityView = self.entitiesView.add(messageEntity, announce: false) as? DrawingStickerEntityView {
@@ -3365,7 +3372,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
                 let completeWithImage: (UIImage) -> Void = { [weak self] image in
                     let updatedImage = roundedImageWithTransparentCorners(image: image, cornerRadius: floor(image.size.width * 0.03))!
-                    self?.interaction?.insertEntity(DrawingStickerEntity(content: .image(updatedImage, .rectangle)), scale: 2.5)
+                    let entity = DrawingStickerEntity(content: .image(updatedImage, .rectangle))
+                    entity.canCutOut = false
+                    
+                    self?.interaction?.insertEntity(entity, scale: 2.5)
                 }
                 
                 if let asset = result as? PHAsset {
