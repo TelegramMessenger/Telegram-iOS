@@ -161,6 +161,18 @@ static bool notyfyingShiftState = false;
 
 @end
 
+@interface UIFocusSystem (Telegram)
+
+@end
+
+@implementation UIFocusSystem (Telegram)
+
+- (void)_65087dc8_updateFocusIfNeeded {
+    //TODO:Re-enable
+}
+
+@end
+
 @implementation UIViewController (Navigation)
 
 + (void)load
@@ -183,6 +195,8 @@ static bool notyfyingShiftState = false;
         } else if (@available(iOS 15.0, *)) {
             [RuntimeUtils swizzleInstanceMethodOfClass:[CADisplayLink class] currentSelector:@selector(setPreferredFrameRateRange:) newSelector:@selector(_65087dc8_setPreferredFrameRateRange:)];
         }
+        
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UIFocusSystem class] currentSelector:@selector(updateFocusIfNeeded) newSelector:@selector(_65087dc8_updateFocusIfNeeded)];
     });
 }
 
