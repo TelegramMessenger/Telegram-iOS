@@ -12,7 +12,7 @@ load("//build-system/bazel-utils:plist_fragment.bzl",
 filegroup(
     name = "MetalSources",
     srcs = glob([
-        "Metal/**/*.metal",
+        "Sources/**/*.metal",
     ]),
     visibility = ["//visibility:public"],
 )
