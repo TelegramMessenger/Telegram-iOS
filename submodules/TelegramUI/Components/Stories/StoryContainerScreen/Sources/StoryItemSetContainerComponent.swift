@@ -992,7 +992,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     if let selectedMediaArea {
-                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: selectedMediaArea)
+                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: selectedMediaArea, position: point)
                     } else {
                         var direction: NavigationDirection?
                         if point.x < itemLayout.containerSize.width * 0.25 {
