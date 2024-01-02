@@ -157,6 +157,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         }
         
         self.callScreenState = PrivateCallScreen.State(
+            strings: presentationData.strings,
             lifecycleState: .connecting,
             name: " ",
             shortName: " ",

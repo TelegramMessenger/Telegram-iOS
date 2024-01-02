@@ -2249,6 +2249,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
         public var selectedReactionItems: Set<MessageReaction.Reaction>
+        public var reactionsTitle: String?
         public var animationCache: AnimationCache?
         public var alwaysAllowPremiumReactions: Bool
         public var getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
@@ -2263,6 +2264,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             context: AccountContext? = nil,
             reactionItems: [ReactionContextItem] = [],
             selectedReactionItems: Set<MessageReaction.Reaction> = Set(),
+            reactionsTitle: String? = nil,
             animationCache: AnimationCache? = nil,
             alwaysAllowPremiumReactions: Bool = false,
             getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)? = nil,
@@ -2277,6 +2279,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.animationCache = animationCache
             self.reactionItems = reactionItems
             self.selectedReactionItems = selectedReactionItems
+            self.reactionsTitle = reactionsTitle
             self.alwaysAllowPremiumReactions = alwaysAllowPremiumReactions
             self.getEmojiContent = getEmojiContent
             self.disablePositionLock = disablePositionLock
@@ -2291,6 +2294,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.context = nil
             self.reactionItems = []
             self.selectedReactionItems = Set()
+            self.reactionsTitle = nil
             self.alwaysAllowPremiumReactions = false
             self.getEmojiContent = nil
             self.disablePositionLock = false
