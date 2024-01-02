@@ -3279,7 +3279,7 @@ final class StoryItemSetContainerSendMessage {
     }
         
     private var selectedMediaArea: MediaArea?
-    func activateMediaArea(view: StoryItemSetContainerComponent.View, mediaArea: MediaArea, immediate: Bool = false) {
+    func activateMediaArea(view: StoryItemSetContainerComponent.View, mediaArea: MediaArea, position: CGPoint? = nil, immediate: Bool = false) {
         guard let component = view.component, let controller = component.controller() else {
             return
         }
@@ -3288,6 +3288,8 @@ final class StoryItemSetContainerSendMessage {
         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
         
         let context = component.context
+        
+        var useGesturePosition = false
         
         var actions: [ContextMenuAction] = []
         switch mediaArea {
@@ -3325,6 +3327,7 @@ final class StoryItemSetContainerSendMessage {
                 action()
             }))
         case let .channelMessage(_, messageId):
+            useGesturePosition = true
             let action = { [weak self, weak view, weak controller] in
                 let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: true))
                 |> mapToSignal { result -> Signal<Message?, GetMessagesError> in
@@ -3383,6 +3386,10 @@ final class StoryItemSetContainerSendMessage {
         let size = CGSize(width: 16.0, height: mediaArea.coordinates.height / 100.0 * referenceSize.height * 1.1)
         var frame = CGRect(x: mediaArea.coordinates.x / 100.0 * referenceSize.width - size.width / 2.0, y: mediaArea.coordinates.y / 100.0 * referenceSize.height - size.height / 2.0, width: size.width, height: size.height)
         frame = view.controlsContainerView.convert(frame, to: nil)
+        
+        if useGesturePosition, let position {
+            frame = CGRect(origin: position.offsetBy(dx: 0.0, dy: 44.0), size: .zero)
+        }
         
         let node = controller.displayNode
         let menuController = makeContextMenuController(actions: actions, blurred: true)

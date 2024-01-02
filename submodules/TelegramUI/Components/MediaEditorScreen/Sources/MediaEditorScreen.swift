@@ -2473,7 +2473,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             messageEntity.secondaryRenderImage = result.nightImage
                             messageEntity.overlayRenderImage = result.overlayImage
                             messageEntity.referenceDrawingSize = storyDimensions
-                            messageEntity.position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
+                            messageEntity.position = CGPoint(x: storyDimensions.width / 2.0 - 16.0, y: storyDimensions.height / 2.0)
                             
                             let fraction = max(result.size.width, result.size.height) / 353.0
                             messageEntity.scale = min(6.0, 3.3 * fraction)
