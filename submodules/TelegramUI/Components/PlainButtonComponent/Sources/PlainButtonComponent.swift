@@ -13,6 +13,7 @@ public final class PlainButtonComponent: Component {
     public let content: AnyComponent<Empty>
     public let effectAlignment: EffectAlignment
     public let minSize: CGSize?
+    public let contentInsets: UIEdgeInsets
     public let action: () -> Void
     public let isEnabled: Bool
     
@@ -20,12 +21,14 @@ public final class PlainButtonComponent: Component {
         content: AnyComponent<Empty>,
         effectAlignment: EffectAlignment,
         minSize: CGSize? = nil,
+        contentInsets: UIEdgeInsets = UIEdgeInsets(),
         action: @escaping () -> Void,
         isEnabled: Bool = true
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
         self.minSize = minSize
+        self.contentInsets = contentInsets
         self.action = action
         self.isEnabled = isEnabled
     }
@@ -38,6 +41,9 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.minSize != rhs.minSize {
+            return false
+        }
+        if lhs.contentInsets != rhs.contentInsets {
             return false
         }
         if lhs.isEnabled != rhs.isEnabled {
@@ -143,6 +149,8 @@ public final class PlainButtonComponent: Component {
                 size.width = max(size.width, minSize.width)
                 size.height = max(size.height, minSize.height)
             }
+            size.width += component.contentInsets.left + component.contentInsets.right
+            size.height += component.contentInsets.top + component.contentInsets.bottom
 
             if let contentView = self.content.view {
                 var contentTransition = transition
@@ -151,7 +159,7 @@ public final class PlainButtonComponent: Component {
                     contentView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(contentView)
                 }
-                let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) * 0.5), y: floor((size.height - contentSize.height) * 0.5)), size: contentSize)
+                let contentFrame = CGRect(origin: CGPoint(x: component.contentInsets.left + floor((size.width - component.contentInsets.left - component.contentInsets.right - contentSize.width) * 0.5), y: component.contentInsets.top + floor((size.height - component.contentInsets.top - component.contentInsets.bottom - contentSize.height) * 0.5)), size: contentSize)
                 
                 contentTransition.setFrame(view: contentView, frame: contentFrame)
                 contentTransition.setAlpha(view: contentView, alpha: contentAlpha)
