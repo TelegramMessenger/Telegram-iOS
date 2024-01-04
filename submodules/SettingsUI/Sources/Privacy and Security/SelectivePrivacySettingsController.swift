@@ -1328,7 +1328,7 @@ func selectivePrivacySettingsController(
             })
             
             if case .presence = kind {
-                updated(settings, nil, phoneDiscoveryEnabled, updateGlobalSettingsSignal)
+                updated(settings, nil, phoneDiscoveryEnabled, updatedGlobalSettings)
             } else if case .voiceCalls = kind, let dataSaving = callDataSaving, let callP2PSettings = callP2PSettings, let systemIntegrationEnabled = callIntegrationEnabled {
                 updated(settings, (callP2PSettings, VoiceCallSettings(dataSaving: dataSaving, enableSystemIntegration: systemIntegrationEnabled)), phoneDiscoveryEnabled, nil)
             } else {
