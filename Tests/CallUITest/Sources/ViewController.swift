@@ -4,6 +4,7 @@ import MetalEngine
 import Display
 import CallScreen
 import ComponentFlow
+import TelegramPresentationData
 
 private extension UIScreen {
     private static let cornerRadiusKey: String = {
@@ -24,6 +25,7 @@ private extension UIScreen {
 public final class ViewController: UIViewController {    
     private var callScreenView: PrivateCallScreen?
     private var callState: PrivateCallScreen.State = PrivateCallScreen.State(
+        strings: defaultPresentationStrings,
         lifecycleState: .connecting,
         name: "Emma Walters",
         shortName: "Emma",

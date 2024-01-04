@@ -937,6 +937,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: arguments.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
+                        isSavedMessages: arguments.chatLocation == .peer(id: arguments.context.account.peerId),
                         replyCount: dateReplies,
                         isPinned: arguments.isPinned && !arguments.associatedData.isInPinnedListMode,
                         hasAutoremove: arguments.message.isSelfExpiring,

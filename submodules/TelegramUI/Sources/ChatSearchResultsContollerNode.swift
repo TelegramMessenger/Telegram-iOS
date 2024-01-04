@@ -76,13 +76,13 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
         return false
     }
     
-    public func item(context: AccountContext, interaction: ChatListNodeInteraction) -> ListViewItem {
+    public func item(context: AccountContext, interaction: ChatListNodeInteraction, location: ChatListControllerLocation) -> ListViewItem {
         switch self {
             case let .message(message, peer, readState, presentationData):
                 return ChatListItem(
                     presentationData: presentationData,
                     context: context,
-                    chatListLocation: .chatList(groupId: .root),
+                    chatListLocation: location,
                     filterData: nil,
                     index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index)),
                     content: .peer(ChatListItemContent.PeerData(
@@ -129,12 +129,12 @@ public struct ChatListSearchContainerTransition {
     }
 }
 
-private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], context: AccountContext, interaction: ChatListNodeInteraction) -> ChatListSearchContainerTransition {
+private func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], context: AccountContext, interaction: ChatListNodeInteraction, location: ChatListControllerLocation) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, location: location), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, interaction: interaction, location: location), directionHint: nil) }
     
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -148,6 +148,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     private let searchQuery: String
     private var searchResult: SearchMessagesResult
     private var searchState: SearchMessagesState
+    private let mappedLocation: ChatListControllerLocation
     
     private var interaction: ChatListNodeInteraction?
     
@@ -173,6 +174,12 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.searchQuery = searchQuery
         self.searchResult = searchResult
         self.searchState = searchState
+        
+        if case let .peer(peerId, _, _, _, _, _) = location, peerId == context.account.peerId {
+            self.mappedLocation = .savedMessagesChats
+        } else {
+            self.mappedLocation = .chatList(groupId: .root)
+        }
          
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
@@ -283,7 +290,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 let previousEntries = strongSelf.previousEntries.swap(entries)
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction)
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction, location: strongSelf.mappedLocation)
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
             }
         }))
@@ -352,7 +359,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                     let previousEntries = strongSelf.previousEntries.swap(entries)
                     
                     let firstTime = previousEntries == nil
-                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction)
+                    let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, context: context, interaction: interaction, location: strongSelf.mappedLocation)
                     strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 }
             }))

@@ -31,21 +31,23 @@ public enum ChatTitleContent: Equatable {
         public var peerId: PeerId
         public var peer: Peer?
         public var isContact: Bool
+        public var isSavedMessages: Bool
         public var notificationSettings: TelegramPeerNotificationSettings?
         public var peerPresences: [PeerId: PeerPresence]
         public var cachedData: CachedPeerData?
         
-        public init(peerId: PeerId, peer: Peer?, isContact: Bool, notificationSettings: TelegramPeerNotificationSettings?, peerPresences: [PeerId: PeerPresence], cachedData: CachedPeerData?) {
+        public init(peerId: PeerId, peer: Peer?, isContact: Bool, isSavedMessages: Bool, notificationSettings: TelegramPeerNotificationSettings?, peerPresences: [PeerId: PeerPresence], cachedData: CachedPeerData?) {
             self.peerId = peerId
             self.peer = peer
             self.isContact = isContact
+            self.isSavedMessages = isSavedMessages
             self.notificationSettings = notificationSettings
             self.peerPresences = peerPresences
             self.cachedData = cachedData
         }
         
         public init(peerView: PeerView) {
-            self.init(peerId: peerView.peerId, peer: peerViewMainPeer(peerView), isContact: peerView.peerIsContact, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, peerPresences: peerView.peerPresences, cachedData: peerView.cachedData)
+            self.init(peerId: peerView.peerId, peer: peerViewMainPeer(peerView), isContact: peerView.peerIsContact, isSavedMessages: false, notificationSettings: peerView.notificationSettings as? TelegramPeerNotificationSettings, peerPresences: peerView.peerPresences, cachedData: peerView.cachedData)
         }
         
         public static func ==(lhs: PeerData, rhs: PeerData) -> Bool {
@@ -57,6 +59,9 @@ public enum ChatTitleContent: Equatable {
                 return false
             }
             if lhs.isContact != rhs.isContact {
+                return false
+            }
+            if lhs.isSavedMessages != rhs.isSavedMessages {
                 return false
             }
             if lhs.notificationSettings != rhs.notificationSettings {
@@ -246,7 +251,12 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                 if let customTitle = customTitle {
                                     segments = [.text(0, NSAttributedString(string: customTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else if peerView.peerId == self.context.account.peerId {
-                                    segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                    if peerView.isSavedMessages {
+                                        //TODO:localize
+                                        segments = [.text(0, NSAttributedString(string: "My Notes", font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                    } else {
+                                        segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                    }
                                 } else if peerView.peerId.isAnonymousSavedMessages {
                                     segments = [.text(0, NSAttributedString(string: self.strings.ChatList_AuthorHidden, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else {

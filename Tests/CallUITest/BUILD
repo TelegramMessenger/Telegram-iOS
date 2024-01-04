@@ -43,6 +43,7 @@ swift_library(
     deps = [
         "//submodules/Display",
         "//submodules/MetalEngine",
+        "//submodules/TelegramPresentationData",
         "//submodules/TelegramUI/Components/Calls/CallScreen",
     ],
 )
@@ -188,5 +189,4 @@ xcodeproj(
         },
     },
     default_xcode_configuration = "Debug"
-
 )
