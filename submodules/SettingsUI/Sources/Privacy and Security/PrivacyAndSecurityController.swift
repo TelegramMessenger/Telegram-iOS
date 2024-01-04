@@ -767,7 +767,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .presence, current: info.presence, updated: { updated, _, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .presence, current: info.presence, globalSettings: info.globalSettings, updated: { updated, _, _, updatedGlobalSettings in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -790,7 +790,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .groupInvitations, current: info.groupInvitations, updated: { updated, _, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .groupInvitations, current: info.groupInvitations, updated: { updated, _, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -823,7 +823,7 @@ public func privacyAndSecurityController(
         currentInfoDisposable.set((combineLatest(privacySignal, callsSignal)
         |> deliverOnMainQueue).start(next: { [weak currentInfoDisposable] info, callSettings in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceCalls, current: info.voiceCalls, callSettings: (info.voiceCallsP2P, callSettings.0), voipConfiguration: callSettings.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceCalls, current: info.voiceCalls, callSettings: (info.voiceCallsP2P, callSettings.0), voipConfiguration: callSettings.1, callIntegrationAvailable: CallKitIntegration.isAvailable, updated: { updated, updatedCallSettings, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable, let (updatedCallsPrivacy, updatedCallSettings) = updatedCallSettings  {
                         let _ = updateVoiceCallSettingsSettingsInteractively(accountManager: context.sharedContext.accountManager, { _ in
                             return updatedCallSettings
@@ -854,7 +854,7 @@ public func privacyAndSecurityController(
                     requestPublicPhotoSetup?(completion)
                 }, requestPublicPhotoRemove: { completion in
                     requestPublicPhotoRemove?(completion)
-                }, updated: { updated, _, _ in
+                }, updated: { updated, _, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -877,7 +877,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .forwards, current: info.forwards, updated: { updated, _, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .forwards, current: info.forwards, updated: { updated, _, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                             |> filter { $0 != nil }
@@ -900,7 +900,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .phoneNumber, current: info.phoneNumber, phoneDiscoveryEnabled: info.phoneDiscoveryEnabled, updated: { updated, _, updatedDiscoveryEnabled in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .phoneNumber, current: info.phoneNumber, phoneDiscoveryEnabled: info.phoneDiscoveryEnabled, updated: { updated, _, updatedDiscoveryEnabled, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -930,7 +930,7 @@ public func privacyAndSecurityController(
             
             if isPremium {
                 if let info = info {
-                    pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceMessages, current: info.voiceMessages, updated: { updated, _, _ in
+                    pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceMessages, current: info.voiceMessages, updated: { updated, _, _, _ in
                         if let currentInfoDisposable = currentInfoDisposable {
                             let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                                 |> filter { $0 != nil }
@@ -970,7 +970,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .bio, current: info.bio, updated: { updated, _, updatedDiscoveryEnabled in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .bio, current: info.bio, updated: { updated, _, updatedDiscoveryEnabled, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }

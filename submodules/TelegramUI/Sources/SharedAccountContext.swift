@@ -1945,6 +1945,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .similarChannels
         case .wallpapers:
             mappedSource = .wallpapers
+        case .presence:
+            mappedSource = .presence
         }
         let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
