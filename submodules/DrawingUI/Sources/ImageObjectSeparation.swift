@@ -8,7 +8,7 @@ import VideoToolbox
 
 private let queue = Queue()
 
-func cutoutStickerImage(from image: UIImage) -> Signal<UIImage?, NoError> {
+public func cutoutStickerImage(from image: UIImage) -> Signal<UIImage?, NoError> {
     if #available(iOS 17.0, *) {
         guard let cgImage = image.cgImage else {
             return .single(nil)

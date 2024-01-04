@@ -21,6 +21,7 @@ func chatHistoryEntriesForView(
     selectedMessages: Set<MessageId>?,
     presentationData: ChatPresentationData,
     historyAppearsCleared: Bool,
+    skipViewOnceMedia: Bool,
     pendingUnpinnedAllMessages: Bool,
     pendingRemovedMessages: Set<MessageId>,
     associatedData: ChatMessageItemAssociatedData,
@@ -150,6 +151,10 @@ func chatHistoryEntriesForView(
                     break attibuteLoop
                 }
             }
+        }
+        
+        if skipViewOnceMedia, message.minAutoremoveOrClearTimeout != nil {
+            continue loop
         }
         
         var contentTypeHint: ChatMessageEntryContentType = .generic

@@ -317,24 +317,31 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
     CGContextSetLineWidth(context, TGScreenPixel);
     
-    CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 40.0f - TGScreenPixel, 40.0 - TGScreenPixel);
-    CGContextFillEllipseInRect(context, rect1);
-    CGContextStrokeEllipseInRect(context, rect1);
     
-    CGRect iconRect = CGRectInset(rect1, 12.0f, 12.0f);
-    CGFloat radius = 1.0f;
+    CGContextAddPath(context, [UIBezierPath bezierPathWithRoundedRect:CGRectMake(12.0, 12.0, 5.0, 14.0) cornerRadius:1.0].CGPath);
+    CGContextFillPath(context);
     
-    CGFloat minx = CGRectGetMinX(iconRect), midx = CGRectGetMidX(iconRect), maxx = CGRectGetMaxX(iconRect);
-    CGFloat miny = CGRectGetMinY(iconRect), midy = CGRectGetMidY(iconRect), maxy = CGRectGetMaxY(iconRect);
+    CGContextAddPath(context, [UIBezierPath bezierPathWithRoundedRect:CGRectMake(40.0 - 12.0 - 5.0, 12.0, 5.0, 14.0) cornerRadius:1.0].CGPath);
+    CGContextFillPath(context);
     
-    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
-    
-    CGContextMoveToPoint(context, minx, midy);
-    CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
-    CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
-    CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
-    CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
-    CGContextClosePath(context);
+//    CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 40.0f - TGScreenPixel, 40.0 - TGScreenPixel);
+//    CGContextFillEllipseInRect(context, rect1);
+//    CGContextStrokeEllipseInRect(context, rect1);
+//    
+//    CGRect iconRect = CGRectInset(rect1, 12.0f, 12.0f);
+//    CGFloat radius = 1.0f;
+//    
+//    CGFloat minx = CGRectGetMinX(iconRect), midx = CGRectGetMidX(iconRect), maxx = CGRectGetMaxX(iconRect);
+//    CGFloat miny = CGRectGetMinY(iconRect), midy = CGRectGetMidY(iconRect), maxy = CGRectGetMaxY(iconRect);
+//    
+//    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+//    
+//    CGContextMoveToPoint(context, minx, midy);
+//    CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
+//    CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
+//    CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
+//    CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
+//    CGContextClosePath(context);
     
     CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()).CGColor);
     CGContextDrawPath(context, kCGPathFill);

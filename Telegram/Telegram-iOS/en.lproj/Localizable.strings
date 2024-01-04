@@ -10867,3 +10867,6 @@ Sorry for the inconvenience.";
 "Chat.PlayOnceMesasgeClose" = "Close";
 "Chat.PlayOnceMesasgeCloseAndDelete" = "Close and Delete";
 "Chat.PlayOnceMesasge.DisableScreenCapture" = "Sorry, you can't play this message while screen recording is active.";
+
+"Conversation.ContactAddContact" = "ADD";
+"Conversation.ContactMessage" = "MESSAGE";

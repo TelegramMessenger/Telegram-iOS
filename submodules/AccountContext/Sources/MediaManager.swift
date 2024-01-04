@@ -228,6 +228,8 @@ public protocol ManagedAudioRecorder: AnyObject {
     var recordingState: Signal<AudioRecordingState, NoError> { get }
     
     func start()
+    func pause()
+    func resume()
     func stop()
     func takenRecordedData() -> Signal<RecordedAudioData?, NoError>
 }
