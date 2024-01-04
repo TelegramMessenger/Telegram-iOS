@@ -346,6 +346,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 prevTextInputPanelNode.viewOnceButton.update(isSelected: false, animated: false)
             })
             
+            self.recordMoreButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.recordMoreButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            
             if let audioRecordingDotNode = prevTextInputPanelNode.audioRecordingDotNode {
                 let startAlpha = CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1.0)
                 audioRecordingDotNode.layer.removeAllAnimations()
@@ -388,6 +391,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             ) { [weak self, weak prevTextInputPanelNode] finished in
                 if prevTextInputPanelNode?.supernode === self {
                     prevTextInputPanelNode?.removeFromSupernode()
+                    prevTextInputPanelNode?.finishedTransitionToPreview = true
+                    prevTextInputPanelNode?.requestLayout()
                 }
             }
         }

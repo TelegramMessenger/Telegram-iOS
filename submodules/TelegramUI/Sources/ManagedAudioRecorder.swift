@@ -500,7 +500,7 @@ final class ManagedAudioRecorderContext {
             free(buffer.mData)
         }
         
-        if !self.processSamples && !self.paused {
+        if !self.processSamples || self.paused {
             return
         }
         
