@@ -1097,8 +1097,8 @@ final class StoryItemSetContainerSendMessage {
                             content: .forward(savedMessages: savedMessages, text: text),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
-                            action: { [weak controller] _ in
-                                if savedMessages {
+                            action: { [weak controller] action in
+                                if savedMessages, action == .info {
                                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                                     |> deliverOnMainQueue).start(next: { peer in
                                         guard let controller, let peer else {
