@@ -1477,7 +1477,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var removedReaction: MessageReaction.Reaction?
                     var messageAlreadyHasThisReaction = false
                     
-                    let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    let currentReactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: context.account.peerId))?.reactions ?? []
                     var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
                     
                     if let index = updatedReactions.firstIndex(where: { $0 == chosenReaction }) {
@@ -1592,7 +1592,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message, isPremium: strongSelf.presentationInterfaceState.isPremium, forceInline: false) {
                             var hideRemovedReaction: Bool = false
-                            if let reactions = mergedMessageReactions(attributes: message.attributes) {
+                            if let reactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
                                 for reaction in reactions.reactions {
                                     if reaction.value == removedReaction {
                                         hideRemovedReaction = reaction.count == 1
@@ -19229,7 +19229,7 @@ func peerMessageAllowedReactions(context: AccountContext, message: Message) -> S
     |> map { data, availableReactions -> AllowedReactions? in
         let (peer, allowedReactions) = data
         
-        if let effectiveReactions = message.effectiveReactions, effectiveReactions.count >= 11 {
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= 11 {
             return .set(Set(effectiveReactions.map(\.value)))
         }
         
@@ -19270,7 +19270,7 @@ func peerMessageSelectedReactions(context: AccountContext, message: Message) -> 
         var result = Set<MediaId>()
         var reactions = Set<MessageReaction.Reaction>()
         
-        if let effectiveReactions = message.effectiveReactions {
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
             for reaction in effectiveReactions {
                 if !reaction.isSelected {
                     continue

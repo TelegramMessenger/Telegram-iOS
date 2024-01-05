@@ -332,7 +332,7 @@ extension ChatControllerImpl {
                     
                     let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
                     
-                    let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    let currentReactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: self.context.account.peerId))?.reactions ?? []
                     var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
                     var removedReaction: MessageReaction.Reaction?
                     var isFirst = false

@@ -417,23 +417,23 @@ public extension Message {
         }
         return nil
     }
-    var effectiveReactionsAttribute: ReactionsMessageAttribute? {
+    func effectiveReactionsAttribute(isTags: Bool) -> ReactionsMessageAttribute? {
         if !self.hasReactions {
             return nil
         }
         
-        if let result = mergedMessageReactions(attributes: self.attributes) {
+        if let result = mergedMessageReactions(attributes: self.attributes, isTags: isTags) {
             return result
         } else {
             return nil
         }
     }
-    var effectiveReactions: [MessageReaction]? {
+    func effectiveReactions(isTags: Bool) -> [MessageReaction]? {
         if !self.hasReactions {
             return nil
         }
         
-        if let result = mergedMessageReactions(attributes: self.attributes) {
+        if let result = mergedMessageReactions(attributes: self.attributes, isTags: isTags) {
             return result.reactions
         } else {
             return nil

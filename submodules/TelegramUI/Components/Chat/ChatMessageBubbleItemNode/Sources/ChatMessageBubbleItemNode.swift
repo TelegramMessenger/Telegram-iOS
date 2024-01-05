@@ -321,7 +321,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         }
     }
     
-    if !reactionsAreInline && !hideAllAdditionalInfo, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
+    if !reactionsAreInline && !hideAllAdditionalInfo, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes, isTags: firstMessage.areReactionsTags(accountPeerId: item.context.account.peerId)), !reactionsAttribute.reactions.isEmpty {
         if result.last?.1 == ChatMessageTextBubbleContentNode.self {
         } else {
             if result.last?.1 == ChatMessagePollBubbleContentNode.self ||
@@ -1894,7 +1894,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         let bubbleReactions: ReactionsMessageAttribute
         if needReactions {
-            bubbleReactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
+            bubbleReactions = mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)) ?? ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
         } else {
             bubbleReactions = ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
         }
@@ -2056,7 +2056,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: message)
+                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: item.associatedData.accountPeer, message: message)
                 if message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
                 }

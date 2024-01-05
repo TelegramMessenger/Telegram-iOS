@@ -592,7 +592,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
+                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: context.account.peerId, accountPeer: associatedData.accountPeer, message: message)
                 if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) || presentationData.isPreview {
                     dateReactionsAndPeers = ([], [])
                 }

@@ -59,8 +59,8 @@ extension ReactionsMessageAttribute {
     }
 }
 
-public func mergedMessageReactionsAndPeers(accountPeer: EnginePeer?, message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
-    guard let attribute = mergedMessageReactions(attributes: message.attributes) else {
+public func mergedMessageReactionsAndPeers(accountPeerId: EnginePeer.Id, accountPeer: EnginePeer?, message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
+    guard let attribute = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: accountPeerId)) else {
         return ([], [])
     }
     
@@ -150,7 +150,7 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
     return (result, recentPeers)
 }
 
-public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
+public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool) -> ReactionsMessageAttribute? {
     var current: ReactionsMessageAttribute?
     var pending: PendingReactionsMessageAttribute?
     for attribute in attributes {
@@ -170,7 +170,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
         recentPeers = updatedRecentPeers
         
         if !reactions.isEmpty {
-            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? false, reactions: reactions, recentPeers: recentPeers)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: recentPeers)
         } else {
             return nil
         }

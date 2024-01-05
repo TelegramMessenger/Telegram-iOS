@@ -883,7 +883,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     var viewCount: Int?
                     var dateReplies = 0
-                    var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: arguments.associatedData.accountPeer, message: arguments.topMessage)
+                    var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: arguments.context.account.peerId, accountPeer: arguments.associatedData.accountPeer, message: arguments.topMessage)
                     if arguments.topMessage.isRestricted(platform: "ios", contentSettings: arguments.context.currentContentSettings.with { $0 }) || arguments.presentationData.isPreview {
                         dateReactionsAndPeers = ([], [])
                     }

@@ -8,7 +8,7 @@ import ReactionSelectionNode
 func topMessageReactions(context: AccountContext, message: Message) -> Signal<[ReactionItem], NoError> {
     if message.id.peerId == context.account.peerId {
         var loadTags = true
-        if let effectiveReactionsAttribute = message.effectiveReactionsAttribute {
+        if let effectiveReactionsAttribute = message.effectiveReactionsAttribute(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
             if !effectiveReactionsAttribute.reactions.isEmpty {
                 if !effectiveReactionsAttribute.isTags {
                     loadTags = false
