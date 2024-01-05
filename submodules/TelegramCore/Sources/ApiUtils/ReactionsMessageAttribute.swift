@@ -8,6 +8,7 @@ extension ReactionsMessageAttribute {
         case let .messageReactions(flags, results, recentReactions):
             let min = (flags & (1 << 0)) != 0
             let canViewList = (flags & (1 << 2)) != 0
+            let isTags = (flags & (1 << 3)) != 0
             var reactions = results.compactMap { result -> MessageReaction? in
                 switch result {
                 case let .reactionCount(_, chosenOrder, reaction, count):
@@ -53,7 +54,7 @@ extension ReactionsMessageAttribute {
                     }
                 }
             }
-            return ReactionsMessageAttribute(canViewList: canViewList, reactions: reactions, recentPeers: parsedRecentReactions)
+            return ReactionsMessageAttribute(canViewList: canViewList, isTags: isTags, reactions: reactions, recentPeers: parsedRecentReactions)
         }
     }
 }
@@ -169,7 +170,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
         recentPeers = updatedRecentPeers
         
         if !reactions.isEmpty {
-            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, reactions: reactions, recentPeers: recentPeers)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? false, reactions: reactions, recentPeers: recentPeers)
         } else {
             return nil
         }
@@ -185,6 +186,7 @@ extension ReactionsMessageAttribute {
         switch apiReactions {
         case let .messageReactions(flags, results, recentReactions):
             let canViewList = (flags & (1 << 2)) != 0
+            let isTags = (flags & (1 << 3)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.compactMap { recentReaction -> ReactionsMessageAttribute.RecentPeer? in
@@ -206,6 +208,7 @@ extension ReactionsMessageAttribute {
             
             self.init(
                 canViewList: canViewList,
+                isTags: isTags,
                 reactions: results.compactMap { result -> MessageReaction? in
                     switch result {
                     case let .reactionCount(_, chosenOrder, reaction, count):

@@ -417,6 +417,17 @@ public extension Message {
         }
         return nil
     }
+    var effectiveReactionsAttribute: ReactionsMessageAttribute? {
+        if !self.hasReactions {
+            return nil
+        }
+        
+        if let result = mergedMessageReactions(attributes: self.attributes) {
+            return result
+        } else {
+            return nil
+        }
+    }
     var effectiveReactions: [MessageReaction]? {
         if !self.hasReactions {
             return nil
@@ -473,6 +484,19 @@ public extension Message {
             }
         }
         return nil
+    }
+}
+
+public extension Message {
+    func areReactionsTags(accountPeerId: PeerId) -> Bool {
+        if self.id.peerId == accountPeerId {
+            if let reactionsAttribute = self.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
+                return reactionsAttribute.isTags
+            } else {
+                return true
+            }
+        }
+        return false
     }
 }
 

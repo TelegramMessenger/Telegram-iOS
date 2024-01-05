@@ -6,52 +6,49 @@ public enum EnginePeer: Equatable {
 
     public struct Presence: Equatable {
         public enum Status: Comparable {
+            private struct SortKey: Comparable {
+                var major: Int
+                var minor: Int32
+                
+                init(major: Int, minor: Int32) {
+                    self.major = major
+                    self.minor = minor
+                }
+                
+                static func <(lhs: SortKey, rhs: SortKey) -> Bool {
+                    if lhs.major != rhs.major {
+                        return lhs.major < rhs.major
+                    }
+                    return lhs.minor < rhs.minor
+                }
+            }
+            
             case present(until: Int32)
+            case hidden
             case recently
             case lastWeek
             case lastMonth
             case longTimeAgo
+            
+            private var sortKey: SortKey {
+                switch self {
+                case let .present(until):
+                    return SortKey(major: 1, minor: until)
+                case .hidden:
+                    return SortKey(major: 2, minor: 0)
+                case .recently:
+                    return SortKey(major: 3, minor: 0)
+                case .lastWeek:
+                    return SortKey(major: 4, minor: 0)
+                case .lastMonth:
+                    return SortKey(major: 5, minor: 0)
+                case .longTimeAgo:
+                    return SortKey(major: 6, minor: 0)
+                }
+            }
 
             public static func <(lhs: Status, rhs: Status) -> Bool {
-                switch lhs {
-                case .longTimeAgo:
-                    switch rhs {
-                    case .longTimeAgo:
-                        return false
-                    case .lastMonth, .lastWeek, .recently, .present:
-                        return true
-                    }
-                case let .present(until):
-                    switch rhs {
-                    case .longTimeAgo:
-                        return false
-                    case let .present(rhsUntil):
-                        return until < rhsUntil
-                    case .lastWeek, .lastMonth, .recently:
-                        return false
-                    }
-                case .recently:
-                    switch rhs {
-                    case .longTimeAgo, .lastWeek, .lastMonth, .recently:
-                        return false
-                    case .present:
-                        return true
-                    }
-                case .lastWeek:
-                    switch rhs {
-                    case .longTimeAgo, .lastMonth, .lastWeek:
-                        return false
-                    case .present, .recently:
-                        return true
-                    }
-                case .lastMonth:
-                    switch rhs {
-                    case .longTimeAgo, .lastMonth:
-                        return false
-                    case .present, .recently, lastWeek:
-                        return true
-                    }
-                }
+                return lhs.sortKey < rhs.sortKey
             }
         }
 
@@ -368,6 +365,8 @@ public extension EnginePeer.Presence {
             switch presence.status {
             case .none:
                 mappedStatus = .longTimeAgo
+            case .hidden:
+                mappedStatus = .hidden
             case let .present(until):
                 mappedStatus = .present(until: until)
             case .recently:
@@ -387,6 +386,8 @@ public extension EnginePeer.Presence {
     func _asPresence() -> TelegramUserPresence {
         let mappedStatus: UserPresenceStatus
         switch self.status {
+        case .hidden:
+            mappedStatus = .hidden
         case .longTimeAgo:
             mappedStatus = .none
         case let .present(until):

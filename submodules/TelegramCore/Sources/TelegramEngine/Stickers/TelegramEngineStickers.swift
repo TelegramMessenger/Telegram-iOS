@@ -109,6 +109,24 @@ public extension TelegramEngine {
             return _internal_cachedAvailableReactions(postbox: self.account.postbox)
         }
         
+        public func savedMessageTags() -> Signal<([SavedMessageTags.Tag], [Int64: TelegramMediaFile]), NoError> {
+            return self.account.postbox.transaction { transaction -> ([SavedMessageTags.Tag], [Int64: TelegramMediaFile]) in
+                guard let savedMessageTags = _internal_savedMessageTags(transaction: transaction) else {
+                    return ([], [:])
+                }
+                var files: [Int64: TelegramMediaFile] = [:]
+                for tag in savedMessageTags.tags {
+                    if case let .custom(fileId) = tag.reaction {
+                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                        if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                            files[fileId] = file
+                        }
+                    }
+                }
+                return (savedMessageTags.tags, files)
+            }
+        }
+        
         public func emojiSearchCategories(kind: EmojiSearchCategories.Kind) -> Signal<EmojiSearchCategories?, NoError> {
             return _internal_cachedEmojiSearchCategories(postbox: self.account.postbox, kind: kind)
         }

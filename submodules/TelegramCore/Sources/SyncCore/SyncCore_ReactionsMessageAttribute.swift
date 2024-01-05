@@ -195,6 +195,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     }
     
     public let canViewList: Bool
+    public let isTags: Bool
     public let reactions: [MessageReaction]
     public let recentPeers: [RecentPeer]
     
@@ -220,26 +221,32 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         return result
     }
     
-    public init(canViewList: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
+    public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
         self.canViewList = canViewList
+        self.isTags = isTags
         self.reactions = reactions
         self.recentPeers = recentPeers
     }
     
     required public init(decoder: PostboxDecoder) {
         self.canViewList = decoder.decodeBoolForKey("vl", orElse: true)
+        self.isTags = decoder.decodeBoolForKey("tg", orElse: false)
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("r")
         self.recentPeers = decoder.decodeObjectArrayWithDecoderForKey("rp")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeBool(self.canViewList, forKey: "vl")
+        encoder.encodeBool(self.isTags, forKey: "tg")
         encoder.encodeObjectArray(self.reactions, forKey: "r")
         encoder.encodeObjectArray(self.recentPeers, forKey: "rp")
     }
     
     public static func ==(lhs: ReactionsMessageAttribute, rhs: ReactionsMessageAttribute) -> Bool {
         if lhs.canViewList != rhs.canViewList {
+            return false
+        }
+        if lhs.isTags != rhs.isTags {
             return false
         }
         if lhs.reactions != rhs.reactions {
@@ -263,6 +270,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     public func withAllSeen() -> ReactionsMessageAttribute {
         return ReactionsMessageAttribute(
             canViewList: self.canViewList,
+            isTags: self.isTags,
             reactions: self.reactions,
             recentPeers: self.recentPeers.map { recentPeer in
                 var recentPeer = recentPeer

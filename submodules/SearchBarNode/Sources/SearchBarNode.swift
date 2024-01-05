@@ -9,6 +9,8 @@ import ActivityIndicator
 import AppBundle
 import AvatarNode
 import AccountContext
+import ComponentFlow
+import EmojiStatusComponent
 
 private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)
@@ -43,20 +45,24 @@ public struct SearchBarToken {
     }
     
     public let id: AnyHashable
+    public let context: AccountContext?
     public let icon: UIImage?
     public let iconOffset: CGFloat?
     public let peer: (EnginePeer, AccountContext, PresentationTheme)?
     public let isTag: Bool
+    public let emojiFile: TelegramMediaFile?
     public let title: String
     public let style: Style?
     public let permanent: Bool
     
-    public init(id: AnyHashable, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, isTag: Bool = false, title: String, style: Style? = nil, permanent: Bool) {
+    public init(id: AnyHashable, context: AccountContext? = nil, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, isTag: Bool = false, emojiFile: TelegramMediaFile? = nil, title: String, style: Style? = nil, permanent: Bool) {
         self.id = id
+        self.context = context
         self.icon = icon
         self.iconOffset = iconOffset
         self.peer = peer
         self.isTag = isTag
+        self.emojiFile = emojiFile
         self.title = title
         self.style = style
         self.permanent = permanent
@@ -71,6 +77,7 @@ private final class TokenNode: ASDisplayNode {
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
     let avatarNode: AvatarNode?
+    var emojiView: ComponentView<Empty>?
     
     var isSelected: Bool = false
     var isCollapsed: Bool = false
@@ -204,6 +211,7 @@ private final class TokenNode: ASDisplayNode {
             height += 2.0
         }
         
+        var emojiFileSize: CGSize?
         var leftInset: CGFloat = 3.0
         if let icon = self.iconNode.image {
             leftInset += 1.0
@@ -214,8 +222,48 @@ private final class TokenNode: ASDisplayNode {
             transition.updateFrame(node: self.iconNode, frame: iconFrame)
             leftInset += icon.size.width + 3.0
         }
+        if let emojiFile = self.token.emojiFile, let context = self.token.context {
+            let emojiView: ComponentView<Empty>
+            if let current = self.emojiView {
+                emojiView = current
+            } else {
+                emojiView = ComponentView()
+                self.emojiView = emojiView
+            }
+            let emojiViewSize = emojiView.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: .animation(
+                        content: .file(file: emojiFile),
+                        size: CGSize(width: 32.0, height: 32.0),
+                        placeholderColor: self.theme.primaryText.withMultipliedAlpha(0.2),
+                        themeColor: self.theme.primaryText,
+                        loopMode: .forever
+                    ),
+                    isVisibleForAnimations: false,
+                    useSharedAnimation: true,
+                    action: nil,
+                    emojiFileUpdated: nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: 14.0, height: 14.0)
+            )
+            if let emojiComponentView = emojiView.view {
+                if emojiComponentView.superview == nil {
+                    self.containerNode.view.addSubview(emojiComponentView)
+                }
+                emojiComponentView.frame = CGRect(origin: CGPoint(x: leftInset + 2.0, y: floor((height - emojiViewSize.height) * 0.5)), size: emojiViewSize)
+            }
+            emojiFileSize = emojiViewSize
+        }
         if self.token.isTag {
             leftInset += 2.0
+        }
+        if let emojiFileSize {
+            leftInset += emojiFileSize.width + 7.0
         }
 
         let iconSize = self.token.icon?.size ?? CGSize()

@@ -15796,13 +15796,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             switch search.domain {
             case .everything:
-                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             case .members:
                 derivedSearchState = nil
             case let .member(peer):
-                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
-            case let .tag(tag):
-                derivedSearchState = ChatSearchState(query: "@#\(tag) " + search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, reactions: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+            case let .tag(tag, _):
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: [tag], threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             }
         }
         
@@ -15813,9 +15813,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if previousSearchState?.query != searchState.query || previousSearchState?.location != searchState.location {
                     var queryIsEmpty = false
                     if searchState.query.isEmpty {
-                        if case let .peer(_, fromId, _, _, _, _) = searchState.location {
+                        if case let .peer(_, fromId, _, reactions, _, _, _) = searchState.location {
                             if fromId == nil {
                                 queryIsEmpty = true
+                            }
+                            if let reactions, !reactions.isEmpty {
+                                queryIsEmpty = false
                             }
                         } else {
                             queryIsEmpty = true
@@ -19179,6 +19182,10 @@ enum AllowedReactions {
 }
 
 func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
+    if message.id.peerId == context.account.peerId {
+        return .single(.all)
+    }
+    
     if message.containsSecretMedia {
         return .single(AllowedReactions.set(Set()))
     }

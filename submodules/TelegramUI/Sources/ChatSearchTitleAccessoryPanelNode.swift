@@ -9,24 +9,61 @@ import ComponentFlow
 import MultilineTextComponent
 import PlainButtonComponent
 import UIKitRuntimeUtils
+import TelegramCore
+import EmojiStatusComponent
+import SwiftSignalKit
 
 final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UIScrollViewDelegate {
-    private final class Item {
-        let tag: String
+    private struct Params: Equatable {
+        var width: CGFloat
+        var leftInset: CGFloat
+        var rightInset: CGFloat
+        var interfaceState: ChatPresentationInterfaceState
         
-        init(tag: String) {
-            self.tag = tag
+        init(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+            self.width = width
+            self.leftInset = leftInset
+            self.rightInset = rightInset
+            self.interfaceState = interfaceState
+        }
+        
+        static func ==(lhs: Params, rhs: Params) -> Bool {
+            if lhs.width != rhs.width {
+                return false
+            }
+            if lhs.leftInset != rhs.leftInset {
+                return false
+            }
+            if lhs.rightInset != rhs.rightInset {
+                return false
+            }
+            if lhs.interfaceState != rhs.interfaceState {
+                return false
+            }
+            return true
+        }
+    }
+    
+    private final class Item {
+        let reaction: MessageReaction.Reaction
+        let count: Int
+        let file: TelegramMediaFile
+        
+        init(reaction: MessageReaction.Reaction, count: Int, file: TelegramMediaFile) {
+            self.reaction = reaction
+            self.count = count
+            self.file = file
         }
     }
     
     private final class ItemView: UIView {
         private let context: AccountContext
         private let item: Item
-        private let action: (String) -> Void
+        private let action: () -> Void
         
         private let view = ComponentView<Empty>()
         
-        init(context: AccountContext, item: Item, action: @escaping ((String) -> Void)) {
+        init(context: AccountContext, item: Item, action: @escaping (() -> Void)) {
             self.context = context
             self.item = item
             self.action = action
@@ -42,23 +79,41 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             let viewSize = self.view.update(
                 transition: transition,
                 component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: self.item.tag, font: Font.regular(15.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
-                        insets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)
-                    )),
+                    content: AnyComponent(HStack([
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiStatusComponent(
+                            context: self.context,
+                            animationCache: self.context.animationCache,
+                            animationRenderer: self.context.animationRenderer,
+                            content: .animation(
+                                content: .file(file: self.item.file),
+                                size: CGSize(width: 32.0, height: 32.0),
+                                placeholderColor: theme.list.mediaPlaceholderColor,
+                                themeColor: theme.list.itemPrimaryTextColor,
+                                loopMode: .forever
+                            ),
+                            size: CGSize(width: 16.0, height: 16.0),
+                            isVisibleForAnimations: false,
+                            useSharedAnimation: true,
+                            action: nil,
+                            emojiFileUpdated: nil
+                        ))),
+                        AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: "\(self.item.count)", font: Font.regular(15.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
+                        )))
+                    ], spacing: 4.0)),
                     effectAlignment: .center,
                     minSize: CGSize(width: 0.0, height: height),
-                    contentInsets: UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0),
+                    contentInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0),
                     action: { [weak self] in
                         guard let self else {
                             return
                         }
-                        self.action(self.item.tag)
+                        self.action()
                     },
                     isEnabled: true
                 )),
                 environment: {},
-                containerSize: CGSize(width: 100.0, height: 100.0)
+                containerSize: CGSize(width: 100.0, height: 32.0)
             )
             if let componentView = self.view.view {
                 if componentView.superview == nil {
@@ -81,29 +136,20 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
     }
     
     private let context: AccountContext
-    private var theme: PresentationTheme?
-    private var strings: PresentationStrings?
     
     private let scrollView: ScrollView
-    private let itemViews: [ItemView]
+    
+    private var params: Params?
+    
+    private var items: [Item] = []
+    private var itemViews: [MessageReaction.Reaction: ItemView] = [:]
+    
+    private var itemsDisposable: Disposable?
     
     init(context: AccountContext) {
         self.context = context
         
         self.scrollView = ScrollView(frame: CGRect())
-        
-        let tags: [String] = [
-            "⭐️", "❤️", "✅", "⏰", "💭", "❗️", "👍", "👎", "🤩", "⚡️", "🤡", "👌", "👏"
-        ]
-        let items = tags.map {
-            Item(tag: $0)
-        }
-        var itemAction: ((String) -> Void)?
-        self.itemViews = items.map { item in
-            return ItemView(context: context, item: item, action: { tag in
-                itemAction?(tag)
-            })
-        }
         
         super.init()
         
@@ -125,58 +171,105 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         
         self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
         
-        for itemView in self.itemViews {
-            self.scrollView.addSubview(itemView)
-        }
-        
-        itemAction = { [weak self] tag in
-            guard let self, let interfaceInteraction = self.interfaceInteraction else {
+        self.itemsDisposable = (context.engine.stickers.savedMessageTags()
+        |> deliverOnMainQueue).start(next: { [weak self] tags, files in
+            guard let self else {
                 return
             }
-            interfaceInteraction.beginMessageSearch(.tag(tag), "")
+            self.items = tags.compactMap { tag -> Item? in
+                switch tag.reaction {
+                case .builtin:
+                    return nil
+                case let .custom(fileId):
+                    guard let file = files[fileId] else {
+                        return nil
+                    }
+                    return Item(reaction: tag.reaction, count: tag.count, file: file)
+                }
+            }
+            self.update(transition: .immediate)
+        })
+    }
+    
+    deinit {
+        self.itemsDisposable?.dispose()
+    }
+    
+    private func update(transition: ContainedViewLayoutTransition) {
+        if let params = self.params {
+            self.update(params: params, transition: transition)
         }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
-        if interfaceState.strings !== self.strings {
-            self.strings = interfaceState.strings
-        }
-        
-        if interfaceState.theme !== self.theme {
-            self.theme = interfaceState.theme
+        let params = Params(width: width, leftInset: leftInset, rightInset: rightInset, interfaceState: interfaceState)
+        if self.params != params {
+            self.params = params
+            self.update(params: params, transition: transition)
         }
         
         let panelHeight: CGFloat = 33.0
         
-        let containerInsets = UIEdgeInsets(top: 0.0, left: leftInset + 2.0, bottom: 0.0, right: rightInset + 2.0)
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
+    }
+    
+    private func update(params: Params, transition: ContainedViewLayoutTransition) {
+        let panelHeight: CGFloat = 33.0
+        
+        let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 2.0, bottom: 0.0, right: params.rightInset + 2.0)
         let itemSpacing: CGFloat = 2.0
         
         var contentSize = CGSize(width: 0.0, height: panelHeight)
         contentSize.width += containerInsets.left
         
+        var validIds: [MessageReaction.Reaction] = []
         var isFirst = true
-        for itemView in self.itemViews {
+        for item in self.items {
             if isFirst {
                 isFirst = false
             } else {
                 contentSize.width += itemSpacing
             }
+            let itemId = item.reaction
+            validIds.append(itemId)
             
-            let itemSize = itemView.update(theme: interfaceState.theme, height: panelHeight, transition: .immediate)
+            let itemView: ItemView
+            if let current = self.itemViews[itemId] {
+                itemView = current
+            } else {
+                itemView = ItemView(context: self.context, item: item, action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.interfaceInteraction?.beginMessageSearch(.tag(item.reaction, item.file), "")
+                })
+                self.itemViews[itemId] = itemView
+                self.scrollView.addSubview(itemView)
+            }
+            
+            let itemSize = itemView.update(theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
             itemView.frame = CGRect(origin: CGPoint(x: contentSize.width, y: 0.0), size: itemSize)
             contentSize.width += itemSize.width
+        }
+        var removedIds: [MessageReaction.Reaction] = []
+        for (id, itemView) in self.itemViews {
+            if !validIds.contains(id) {
+                removedIds.append(id)
+                itemView.removeFromSuperview()
+            }
+        }
+        for id in removedIds {
+            self.itemViews.removeValue(forKey: id)
         }
         
         contentSize.width += containerInsets.right
         
-        let scrollSize = CGSize(width: width, height: contentSize.height)
+        let scrollSize = CGSize(width: params.width, height: contentSize.height)
         if self.scrollView.bounds.size != scrollSize {
             self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: -5.0), size: scrollSize)
         }
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize
         }
-        
-        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
 }

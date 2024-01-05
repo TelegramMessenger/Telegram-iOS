@@ -1,4 +1,60 @@
 public extension Api {
+    enum SecurePlainData: TypeConstructorDescription {
+        case securePlainEmail(email: String)
+        case securePlainPhone(phone: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .securePlainEmail(let email):
+                    if boxed {
+                        buffer.appendInt32(569137759)
+                    }
+                    serializeString(email, buffer: buffer, boxed: false)
+                    break
+                case .securePlainPhone(let phone):
+                    if boxed {
+                        buffer.appendInt32(2103482845)
+                    }
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .securePlainEmail(let email):
+                return ("securePlainEmail", [("email", email as Any)])
+                case .securePlainPhone(let phone):
+                return ("securePlainPhone", [("phone", phone as Any)])
+    }
+    }
+    
+        public static func parse_securePlainEmail(_ reader: BufferReader) -> SecurePlainData? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePlainData.securePlainEmail(email: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_securePlainPhone(_ reader: BufferReader) -> SecurePlainData? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SecurePlainData.securePlainPhone(phone: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum SecureRequiredType: TypeConstructorDescription {
         case secureRequiredType(flags: Int32, type: Api.SecureValueType)
         case secureRequiredTypeOneOf(types: [Api.SecureRequiredType])

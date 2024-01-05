@@ -160,7 +160,7 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
             if let _ = peer as? TelegramUser {
                 if let presence = transaction.getPeerPresence(peerId: peerId) as? TelegramUserPresence {
                     switch presence.status {
-                    case .none, .lastWeek, .lastMonth:
+                    case .none, .lastWeek, .lastMonth, .hidden:
                         return .complete()
                     case .recently:
                         break
