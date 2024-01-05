@@ -56,72 +56,129 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         }
     }
     
-    private final class ItemView: UIView {
+    private final class ItemView: HighlightTrackingButton {
         private let context: AccountContext
-        private let item: Item
         private let action: () -> Void
         
-        private let view = ComponentView<Empty>()
+        private let icon = ComponentView<Empty>()
+        private let counter = ComponentView<Empty>()
         
-        init(context: AccountContext, item: Item, action: @escaping (() -> Void)) {
+        init(context: AccountContext, action: @escaping (() -> Void)) {
             self.context = context
-            self.item = item
             self.action = action
             
             super.init(frame: CGRect())
+            
+            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.highligthedChanged = { [weak self] highlighted in
+                if let self, self.bounds.width > 0.0 {
+                    let topScale: CGFloat = (self.bounds.width - 8.0) / self.bounds.width
+                    let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
+                    
+                    if highlighted {
+                        self.layer.removeAnimation(forKey: "opacity")
+                        self.layer.removeAnimation(forKey: "sublayerTransform")
+                        self.alpha = 0.7
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+                        transition.updateTransformScale(layer: self.layer, scale: topScale)
+                    } else {
+                        self.alpha = 1.0
+                        self.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                        
+                        let transition: ContainedViewLayoutTransition = .immediate
+                        transition.updateTransformScale(layer: self.layer, scale: 1.0)
+                        
+                        self.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            
+                            self.layer.animateScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                        })
+                    }
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
             preconditionFailure()
         }
         
-        func update(theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
-            let viewSize = self.view.update(
-                transition: transition,
-                component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(HStack([
-                        AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiStatusComponent(
-                            context: self.context,
-                            animationCache: self.context.animationCache,
-                            animationRenderer: self.context.animationRenderer,
-                            content: .animation(
-                                content: .file(file: self.item.file),
-                                size: CGSize(width: 32.0, height: 32.0),
-                                placeholderColor: theme.list.mediaPlaceholderColor,
-                                themeColor: theme.list.itemPrimaryTextColor,
-                                loopMode: .forever
-                            ),
-                            size: CGSize(width: 16.0, height: 16.0),
-                            isVisibleForAnimations: false,
-                            useSharedAnimation: true,
-                            action: nil,
-                            emojiFileUpdated: nil
-                        ))),
-                        AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "\(self.item.count)", font: Font.regular(15.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
-                        )))
-                    ], spacing: 4.0)),
-                    effectAlignment: .center,
-                    minSize: CGSize(width: 0.0, height: height),
-                    contentInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0),
-                    action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.action()
-                    },
-                    isEnabled: true
+        @objc private func pressed() {
+            self.action()
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            var mappedPoint = point
+            if self.bounds.insetBy(dx: -8.0, dy: -4.0).contains(point) {
+                mappedPoint = self.bounds.center
+            }
+            return super.hitTest(mappedPoint, with: event)
+        }
+        
+        func update(item: Item, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
+            let spacing: CGFloat = 4.0
+            
+            let reactionSize = CGSize(width: 16.0, height: 16.0)
+            var reactionDisplaySize = reactionSize
+            if case .builtin = item.reaction {
+                reactionDisplaySize = CGSize(width: reactionDisplaySize.width * 2.0, height: reactionDisplaySize.height * 2.0)
+            }
+            
+            let _ = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: self.context,
+                    animationCache: self.context.animationCache,
+                    animationRenderer: self.context.animationRenderer,
+                    content: .animation(
+                        content: .file(file: item.file),
+                        size: reactionDisplaySize,
+                        placeholderColor: theme.list.mediaPlaceholderColor,
+                        themeColor: theme.list.itemPrimaryTextColor,
+                        loopMode: .forever
+                    ),
+                    isVisibleForAnimations: false,
+                    useSharedAnimation: true,
+                    action: nil,
+                    emojiFileUpdated: nil
                 )),
                 environment: {},
-                containerSize: CGSize(width: 100.0, height: 32.0)
+                containerSize: reactionDisplaySize
             )
-            if let componentView = self.view.view {
-                if componentView.superview == nil {
-                    self.addSubview(componentView)
+            
+            let counterSize = self.counter.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "\(item.count)", font: Font.regular(14.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            
+            let size = CGSize(width: reactionSize.width + spacing + counterSize.width, height: height)
+            
+            let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - reactionSize.height) * 0.5)), size: reactionSize)
+            let counterFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + spacing, y: floor((size.height - counterSize.height) * 0.5)), size: counterSize)
+            
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    iconView.isUserInteractionEnabled = false
+                    self.addSubview(iconView)
                 }
-                transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: viewSize))
+                iconView.frame = reactionDisplaySize.centered(around: iconFrame.center)
             }
-            return viewSize
+            
+            if let counterView = self.counter.view {
+                if counterView.superview == nil {
+                    counterView.isUserInteractionEnabled = false
+                    self.addSubview(counterView)
+                }
+                counterView.frame = counterFrame
+            }
+            
+            return size
         }
     }
     
@@ -171,23 +228,66 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         
         self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
         
-        self.itemsDisposable = (context.engine.stickers.savedMessageTags()
-        |> deliverOnMainQueue).start(next: { [weak self] tags, files in
+        let tagsAndFiles: Signal<([MessageReaction.Reaction: Int], [Int64: TelegramMediaFile]), NoError> = context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+        )
+        |> distinctUntilChanged
+        |> mapToSignal { tags -> Signal<([MessageReaction.Reaction: Int], [Int64: TelegramMediaFile]), NoError> in
+            var customFileIds: [Int64] = []
+            for (reaction, _) in tags {
+                switch reaction {
+                case .builtin:
+                    break
+                case let .custom(fileId):
+                    customFileIds.append(fileId)
+                }
+            }
+            
+            return context.engine.stickers.resolveInlineStickers(fileIds: customFileIds)
+            |> map { files in
+                return (tags, files)
+            }
+        }
+        
+        var isFirstUpdate = true
+        self.itemsDisposable = (combineLatest(
+            context.engine.stickers.availableReactions(),
+            tagsAndFiles
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] availableReactions, tagsAndFiles in
             guard let self else {
                 return
             }
-            self.items = tags.compactMap { tag -> Item? in
-                switch tag.reaction {
+            self.items.removeAll()
+            
+            let (tags, files) = tagsAndFiles
+            for (reaction, count) in tags {
+                switch reaction {
                 case .builtin:
-                    return nil
-                case let .custom(fileId):
-                    guard let file = files[fileId] else {
-                        return nil
+                    if let availableReactions {
+                        inner: for availableReaction in availableReactions.reactions {
+                            if availableReaction.value == reaction {
+                                if let file = availableReaction.centerAnimation {
+                                    self.items.append(Item(reaction: reaction, count: count, file: file))
+                                }
+                                break inner
+                            }
+                        }
                     }
-                    return Item(reaction: tag.reaction, count: tag.count, file: file)
+                case let .custom(fileId):
+                    if let file = files[fileId] {
+                        self.items.append(Item(reaction: reaction, count: count, file: file))
+                    }
                 }
             }
-            self.update(transition: .immediate)
+            self.items.sort(by: { lhs, rhs in
+                if lhs.count != rhs.count {
+                    return lhs.count > rhs.count
+                }
+                return lhs.reaction < rhs.reaction
+            })
+            self.update(transition: isFirstUpdate ? .immediate : .animated(duration: 0.3, curve: .easeInOut))
+            isFirstUpdate = false
         })
     }
     
@@ -216,8 +316,8 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
     private func update(params: Params, transition: ContainedViewLayoutTransition) {
         let panelHeight: CGFloat = 33.0
         
-        let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 2.0, bottom: 0.0, right: params.rightInset + 2.0)
-        let itemSpacing: CGFloat = 2.0
+        let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 14.0, bottom: 0.0, right: params.rightInset + 14.0)
+        let itemSpacing: CGFloat = 20.0
         
         var contentSize = CGSize(width: 0.0, height: panelHeight)
         contentSize.width += containerInsets.left
@@ -233,11 +333,15 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             let itemId = item.reaction
             validIds.append(itemId)
             
+            var itemTransition = transition
+            var animateIn = false
             let itemView: ItemView
             if let current = self.itemViews[itemId] {
                 itemView = current
             } else {
-                itemView = ItemView(context: self.context, item: item, action: { [weak self] in
+                itemTransition = .immediate
+                animateIn = true
+                itemView = ItemView(context: self.context, action: { [weak self] in
                     guard let self else {
                         return
                     }
@@ -247,15 +351,32 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                 self.scrollView.addSubview(itemView)
             }
             
-            let itemSize = itemView.update(theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
-            itemView.frame = CGRect(origin: CGPoint(x: contentSize.width, y: 0.0), size: itemSize)
+            let itemSize = itemView.update(item: item, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
+            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: 0.0), size: itemSize)
+            
+            itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
+            if animateIn && transition.isAnimated {
+                itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                transition.animateTransformScale(view: itemView, from: 0.001)
+            }
+            
+            itemView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+            
             contentSize.width += itemSize.width
         }
         var removedIds: [MessageReaction.Reaction] = []
         for (id, itemView) in self.itemViews {
             if !validIds.contains(id) {
                 removedIds.append(id)
-                itemView.removeFromSuperview()
+                
+                if transition.isAnimated {
+                    itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak itemView] _ in
+                        itemView?.removeFromSuperview()
+                    })
+                    transition.updateTransformScale(layer: itemView.layer, scale: 0.001)
+                } else {
+                    itemView.removeFromSuperview()
+                }
             }
         }
         for id in removedIds {

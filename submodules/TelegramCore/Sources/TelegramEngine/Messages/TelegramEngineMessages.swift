@@ -479,9 +479,9 @@ public extension TelegramEngine {
                                         maxId = max(maxId, message.id.id)
                                         return true
                                     })
-                                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, count: Int32(localCount), maxId: maxId)
+                                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, customTag: nil, count: Int32(localCount), maxId: maxId)
                                 } else {
-                                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, count: count, maxId: maxId ?? 1)
+                                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, customTag: nil, count: count, maxId: maxId ?? 1)
                                 }
                             }
                         }
@@ -691,6 +691,11 @@ public extension TelegramEngine {
         
         public func keepMessageCountersSyncrhonized(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: threadId)
+            |> ignoreValues
+        }
+        
+        public func keepMessageCountersSyncrhonized(peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+            return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: nil)
             |> ignoreValues
         }
         

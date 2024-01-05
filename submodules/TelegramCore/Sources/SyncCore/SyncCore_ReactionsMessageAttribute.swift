@@ -1,8 +1,9 @@
+import Foundation
 import Postbox
 import TelegramApi
 
 public struct MessageReaction: Equatable, PostboxCoding, Codable {
-    public enum Reaction: Hashable, Codable, PostboxCoding {
+    public enum Reaction: Hashable, Comparable, Codable, PostboxCoding {
         case builtin(String)
         case custom(Int64)
         
@@ -41,6 +42,25 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
                 encoder.encodeString(value, forKey: "v")
             case let .custom(fileId):
                 encoder.encodeInt64(fileId, forKey: "cfid")
+            }
+        }
+        
+        public static func <(lhs: Reaction, rhs: Reaction) -> Bool {
+            switch lhs {
+            case let .builtin(lhsValue):
+                switch rhs {
+                case let .builtin(rhsValue):
+                    return lhsValue < rhsValue
+                case .custom:
+                    return true
+                }
+            case let .custom(lhsValue):
+                switch rhs {
+                case .builtin:
+                    return false
+                case let .custom(rhsValue):
+                    return lhsValue < rhsValue
+                }
             }
         }
     }
@@ -145,6 +165,71 @@ extension MessageReaction.Reaction {
 }
 
 public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
+    public static func messageTag(reaction: MessageReaction.Reaction) -> MemoryBuffer {
+        let buffer = WriteBuffer()
+        var prefix: UInt8 = 0
+        buffer.write(&prefix, offset: 0, length: 1)
+        switch reaction {
+        case let .builtin(value):
+            var stringData = value.data(using: .utf8) ?? Data()
+            var length: UInt8 = UInt8(clamping: stringData.count)
+            if stringData.count > Int(length) {
+                stringData.count = Int(length)
+            }
+            var typeId: UInt8 = 0
+            buffer.write(&typeId, offset: 0, length: 1)
+            
+            buffer.write(&length, offset: 0, length: 1)
+            buffer.write(stringData)
+        case var .custom(fileId):
+            var typeId: UInt8 = 1
+            buffer.write(&typeId, offset: 0, length: 1)
+            buffer.write(&fileId, offset: 0, length: 8)
+        }
+        
+        return buffer
+    }
+    
+    public static func reactionFromMessageTag(tag: MemoryBuffer) -> MessageReaction.Reaction? {
+        if tag.length < 2 {
+            return nil
+        }
+        
+        let readBuffer = ReadBuffer(memoryBufferNoCopy: tag)
+        
+        var prefix: UInt8 = 0
+        readBuffer.read(&prefix, offset: 0, length: 1)
+        if prefix != 0 {
+            return nil
+        }
+        
+        var typeId: UInt8 = 0
+        readBuffer.read(&typeId, offset: 0, length: 1)
+        switch typeId {
+        case 0:
+            var length8: UInt8 = 0
+            readBuffer.read(&length8, offset: 0, length: 1)
+            let length = Int(length8)
+            if readBuffer.offset + length > readBuffer.length {
+                return nil
+            }
+            let data = readBuffer.readData(length: length)
+            guard let string = String(data: data, encoding: .utf8) else {
+                return nil
+            }
+            return .builtin(string)
+        case 1:
+            if readBuffer.offset + 8 > readBuffer.length {
+                return nil
+            }
+            var fileId: Int64 = 0
+            readBuffer.read(&fileId, offset: 0, length: 8)
+            return .custom(fileId)
+        default:
+            return nil
+        }
+    }
+    
     public struct RecentPeer: Equatable, PostboxCoding {
         public var value: MessageReaction.Reaction
         public var isLarge: Bool
@@ -219,6 +304,18 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
         
         return result
+    }
+    
+    public var customTags: [MemoryBuffer] {
+        if self.isTags {
+            var result: [MemoryBuffer] = []
+            for reaction in self.reactions {
+                result.append(ReactionsMessageAttribute.messageTag(reaction: reaction.value))
+            }
+            return result
+        } else {
+            return []
+        }
     }
     
     public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {

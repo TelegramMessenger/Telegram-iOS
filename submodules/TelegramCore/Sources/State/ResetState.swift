@@ -46,8 +46,8 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                     if let entry = StoredMessageHistoryThreadInfo(data.data) {
                         transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)
                     }
-                    transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: data.unreadMentionCount, maxId: data.topMessageId)
-                    transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: data.unreadReactionCount, maxId: data.topMessageId)
+                    transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: data.unreadMentionCount, maxId: data.topMessageId)
+                    transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: data.unreadReactionCount, maxId: data.topMessageId)
                 }
                 
                 transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
@@ -125,14 +125,22 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                 }
                 
                 for (peerId, summary) in fetchedChats.mentionTagSummaries {
-                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil, count: summary.count, maxId: summary.range.maxId)
                 }
                 for (peerId, summary) in fetchedChats.reactionTagSummaries {
-                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, customTag: nil, count: summary.count, maxId: summary.range.maxId)
                 }
                 
                 for (groupId, summary) in fetchedChats.folderSummaries {
                     transaction.resetPeerGroupSummary(groupId: groupId, namespace: Namespaces.Message.Cloud, summary: summary)
+                }
+                
+                let savedMessageTags = transaction.getMessageTagSummaryCustomTags(peerId: accountPeerId, threadId: nil, tagMask: [], namespace: Namespaces.Message.Cloud)
+                if !savedMessageTags.isEmpty {
+                    for tag in savedMessageTags {
+                        transaction.replaceMessageTagSummary(peerId: accountPeerId, threadId: nil, tagMask: [], namespace: Namespaces.Message.Cloud, customTag: tag, count: 0, maxId: 1)
+                    }
+                    transaction.invalidateMessageHistoryTagsSummary(peerId: accountPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, tagMask: [], customTag: savedMessageTags[0])
                 }
                 
                 transaction.reindexUnreadCounters()

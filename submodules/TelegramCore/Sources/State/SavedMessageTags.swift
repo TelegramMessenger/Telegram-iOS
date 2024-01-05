@@ -104,6 +104,13 @@ func _internal_savedMessageTags(postbox: Postbox) -> Signal<SavedMessageTags?, N
     }
 }
 
+func _internal_savedMessageTagsCacheKey() -> ItemCacheEntryId {
+    let key = ValueBoxKey(length: 8)
+    key.setInt64(0, value: 0)
+    
+    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.savedMessageTags, key: key)
+}
+
 func _internal_savedMessageTags(transaction: Transaction) -> SavedMessageTags? {
     let key = ValueBoxKey(length: 8)
     key.setInt64(0, value: 0)

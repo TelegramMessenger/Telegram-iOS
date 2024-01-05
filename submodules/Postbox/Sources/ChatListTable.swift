@@ -979,7 +979,7 @@ final class ChatListTable: Table {
                     }
                     var tagSummary: MessageHistoryTagNamespaceSummary?
                     if let summaryTag = summaryTag {
-                        tagSummary = summaryTable.get(MessageHistoryTagsSummaryKey(tag: summaryTag, peerId: peerIndex.messageIndex.id.peerId, threadId: nil, namespace: namespace))
+                        tagSummary = summaryTable.get(MessageHistoryTagsSummaryKey(tag: summaryTag, peerId: peerIndex.messageIndex.id.peerId, threadId: nil, namespace: namespace, customTag: nil))
                     }
                     var topMessageAttributes: [MessageAttribute] = []
                     if let topMessage = topMessage {

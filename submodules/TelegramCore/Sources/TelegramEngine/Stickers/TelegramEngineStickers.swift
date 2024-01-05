@@ -110,21 +110,31 @@ public extension TelegramEngine {
         }
         
         public func savedMessageTags() -> Signal<([SavedMessageTags.Tag], [Int64: TelegramMediaFile]), NoError> {
-            return self.account.postbox.transaction { transaction -> ([SavedMessageTags.Tag], [Int64: TelegramMediaFile]) in
-                guard let savedMessageTags = _internal_savedMessageTags(transaction: transaction) else {
-                    return ([], [:])
+            return self.account.postbox.combinedView(keys: [PostboxViewKey.cachedItem(_internal_savedMessageTagsCacheKey())])
+            |> mapToSignal { views -> Signal<([SavedMessageTags.Tag], [Int64: TelegramMediaFile]), NoError> in
+                guard let views = views.views[PostboxViewKey.cachedItem(_internal_savedMessageTagsCacheKey())] as? CachedItemView else {
+                    return .single(([], [:]))
                 }
-                var files: [Int64: TelegramMediaFile] = [:]
-                for tag in savedMessageTags.tags {
-                    if case let .custom(fileId) = tag.reaction {
-                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                        if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
-                            files[fileId] = file
+                guard let savedMessageTags = views.value?.get(SavedMessageTags.self) else {
+                    return .single(([], [:]))
+                }
+                return self.account.postbox.transaction { transaction -> ([SavedMessageTags.Tag], [Int64: TelegramMediaFile]) in
+                    var files: [Int64: TelegramMediaFile] = [:]
+                    for tag in savedMessageTags.tags {
+                        if case let .custom(fileId) = tag.reaction {
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                            if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                files[fileId] = file
+                            }
                         }
                     }
+                    return (savedMessageTags.tags, files)
                 }
-                return (savedMessageTags.tags, files)
             }
+        }
+        
+        public func refreshSavedMessageTags() -> Signal<Never, NoError> {
+            return managedSynchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network)
         }
         
         public func emojiSearchCategories(kind: EmojiSearchCategories.Kind) -> Signal<EmojiSearchCategories?, NoError> {

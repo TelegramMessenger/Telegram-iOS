@@ -561,6 +561,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         tags: [],
                         globalTags: [],
                         localTags: [],
+                        customTags: [],
                         forwardInfo: nil,
                         author: accountPeer,
                         text: options.messageText,

@@ -1035,14 +1035,19 @@ public final class Transaction {
         return self.postbox?.getPendingMessageAction(type: type, id: id)
     }
     
-    public func getMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace) -> MessageHistoryTagNamespaceSummary? {
+    public func getMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace, customTag: MemoryBuffer?) -> MessageHistoryTagNamespaceSummary? {
         assert(!self.disposed)
-        return self.postbox?.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tagMask, peerId: peerId, threadId: threadId, namespace: namespace))
+        return self.postbox?.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tagMask, peerId: peerId, threadId: threadId, namespace: namespace, customTag: customTag))
     }
     
-    public func replaceMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace, count: Int32, maxId: MessageId.Id) {
+    public func getMessageTagSummaryCustomTags(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace) -> [MemoryBuffer] {
         assert(!self.disposed)
-        self.postbox?.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tagMask, namespace: namespace, count: count, maxId: maxId)
+        return self.postbox!.messageHistoryTagsSummaryTable.getCustomTags(tag: tagMask, peerId: peerId, threadId: threadId, namespace: namespace)
+    }
+    
+    public func replaceMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace, customTag: MemoryBuffer?, count: Int32, maxId: MessageId.Id) {
+        assert(!self.disposed)
+        self.postbox?.replaceMessageTagSummary(peerId: peerId, threadId: threadId, tagMask: tagMask, namespace: namespace, customTag: customTag, count: count, maxId: maxId)
     }
     
     public func getPendingMessageActionsSummary(peerId: PeerId, type: PendingMessageActionType, namespace: MessageId.Namespace) -> Int32? {
@@ -1109,14 +1114,18 @@ public final class Transaction {
         return view!
     }
     
-    public func invalidateMessageHistoryTagsSummary(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags) {
+    public func invalidateMessageHistoryTagsSummary(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags, customTag: MemoryBuffer?) {
         assert(!self.disposed)
-        self.postbox?.invalidateMessageHistoryTagsSummary(peerId: peerId, threadId: threadId, namespace: namespace, tagMask: tagMask)
+        self.postbox?.invalidateMessageHistoryTagsSummary(peerId: peerId, threadId: threadId, namespace: namespace, tagMask: tagMask, customTag: customTag)
     }
     
     public func removeInvalidatedMessageHistoryTagsSummaryEntry(_ entry: InvalidatedMessageHistoryTagsSummaryEntry) {
         assert(!self.disposed)
         self.postbox?.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+    }
+    
+    public func removeInvalidatedMessageHistoryTagsSummaryEntriesWithCustomTags(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags) {
+        self.postbox?.removeInvalidatedMessageHistoryTagsSummaryEntriesWithCustomTags(peerId: peerId, threadId: threadId, namespace: namespace, tagMask: tagMask)
     }
     
     public func getRelativeUnreadChatListIndex(filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
@@ -2857,8 +2866,8 @@ final class PostboxImpl {
         return self.pendingMessageActionsTable.getAction(id: id, type: type)
     }
     
-    fileprivate func replaceMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace, count: Int32, maxId: MessageId.Id) {
-        let key = MessageHistoryTagsSummaryKey(tag: tagMask, peerId: peerId, threadId: threadId, namespace: namespace)
+    fileprivate func replaceMessageTagSummary(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace, customTag: MemoryBuffer?, count: Int32, maxId: MessageId.Id) {
+        let key = MessageHistoryTagsSummaryKey(tag: tagMask, peerId: peerId, threadId: threadId, namespace: namespace, customTag: customTag)
         self.messageHistoryTagsSummaryTable.replace(key: key, count: count, maxId: maxId, updatedSummaries: &self.currentUpdatedMessageTagSummaries)
     }
     
@@ -4025,12 +4034,16 @@ final class PostboxImpl {
         }
     }
     
-    fileprivate func invalidateMessageHistoryTagsSummary(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags) {
-        self.invalidatedMessageHistoryTagsSummaryTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: namespace, tagMask: tagMask, threadId: threadId), operations: &self.currentInvalidateMessageTagSummaries)
+    fileprivate func invalidateMessageHistoryTagsSummary(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags, customTag: MemoryBuffer?) {
+        self.invalidatedMessageHistoryTagsSummaryTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: namespace, tagMask: tagMask, threadId: threadId, customTag: customTag), operations: &self.currentInvalidateMessageTagSummaries)
     }
     
     fileprivate func removeInvalidatedMessageHistoryTagsSummaryEntry(_ entry: InvalidatedMessageHistoryTagsSummaryEntry) {
         self.invalidatedMessageHistoryTagsSummaryTable.remove(entry, operations: &self.currentInvalidateMessageTagSummaries)
+    }
+    
+    fileprivate func removeInvalidatedMessageHistoryTagsSummaryEntriesWithCustomTags(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags) {
+        self.invalidatedMessageHistoryTagsSummaryTable.removeEntriesWithCustomTags(peerId: peerId, threadId: threadId, namespace: namespace, tagMask: tagMask, operations: &self.currentInvalidateMessageTagSummaries)
     }
     
     fileprivate func getRelativeUnreadChatListIndex(currentTransaction: Transaction, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {

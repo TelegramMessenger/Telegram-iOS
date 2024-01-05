@@ -5758,8 +5758,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return .single((message, nil, 0))
                     }
                     let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: replyThreadId)
-                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Cloud)
-                    let localCountViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Local)
+                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Cloud, customTag: nil)
+                    let localCountViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Local, customTag: nil)
                     return context.account.postbox.combinedView(keys: [viewKey, countViewKey, localCountViewKey])
                     |> map { views -> (message: Message?, threadData: MessageHistoryThreadData?, messageCount: Int) in
                         guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
@@ -5791,7 +5791,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let savedMessagesPeerId {
                     let threadPeerId = savedMessagesPeerId
                     let basicPeerKey: PostboxViewKey = .basicPeer(threadPeerId)
-                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: savedMessagesPeerId.toInt64(), namespace: Namespaces.Message.Cloud)
+                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: savedMessagesPeerId.toInt64(), namespace: Namespaces.Message.Cloud, customTag: nil)
                     savedMessagesPeer = context.account.postbox.combinedView(keys: [basicPeerKey, countViewKey])
                     |> map { views -> (peer: EnginePeer?, messageCount: Int)? in
                         let peer = ((views.views[basicPeerKey] as? BasicPeerView)?.peer).flatMap(EnginePeer.init)
@@ -11408,6 +11408,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if case let .replyThread(message) = self.chatLocation, message.isForumPost {
             if self.keepMessageCountersSyncrhonizedDisposable == nil {
                 self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: message.peerId, threadId: message.threadId).startStrict()
+            }
+        } else if case .peer(self.context.account.peerId) = self.chatLocation {
+            if self.keepMessageCountersSyncrhonizedDisposable == nil {
+                self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: self.context.account.peerId).startStrict()
             }
         }
         

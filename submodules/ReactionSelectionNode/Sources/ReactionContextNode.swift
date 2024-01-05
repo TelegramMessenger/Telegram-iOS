@@ -328,6 +328,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var hasPremium: Bool?
     private var hasPremiumDisposable: Disposable?
     
+    private var allPresetReactionsAreAvailable: Bool
+    
     private var genericReactionEffectDisposable: Disposable?
     private var genericReactionEffect: String?
     
@@ -371,7 +373,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, alwaysAllowPremiumReactions: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
+    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.items = items
@@ -472,6 +474,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.alwaysAllowPremiumReactions = alwaysAllowPremiumReactions
+        self.allPresetReactionsAreAvailable = allPresetReactionsAreAvailable
         
         super.init()
         
@@ -1422,7 +1425,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             isCustom: false
                         )
                         
-                        if case .custom = reactionItem.updateMessageReaction, let hasPremium = strongSelf.hasPremium, !hasPremium {
+                        if case .locked = item.icon {
                             strongSelf.premiumReactionsSelected?(reactionItem.stillAnimation)
                         } else {
                             strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
@@ -1444,7 +1447,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         isCustom: true
                     )
                     strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
-                    if case .custom = reactionItem.updateMessageReaction, let hasPremium = strongSelf.hasPremium, !hasPremium {
+                    if case .locked = item.icon {
                         strongSelf.premiumReactionsSelected?(reactionItem.stillAnimation)
                     } else {
                         strongSelf.reactionSelected?(reactionItem.updateMessageReaction, isLongPress)
@@ -2423,7 +2426,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             } else if let reaction = self.reaction(at: point) {
                 switch reaction {
                 case let .reaction(reactionItem):
-                    if case .custom = reactionItem.updateMessageReaction, let hasPremium = self.hasPremium, !hasPremium {
+                    if case .custom = reactionItem.updateMessageReaction, let hasPremium = self.hasPremium, !hasPremium, !self.allPresetReactionsAreAvailable {
                         self.premiumReactionsSelected?(reactionItem.stillAnimation)
                     } else {
                         self.reactionSelected?(reactionItem.updateMessageReaction, false)

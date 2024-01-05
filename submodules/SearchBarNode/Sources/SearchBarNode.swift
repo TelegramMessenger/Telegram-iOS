@@ -50,12 +50,13 @@ public struct SearchBarToken {
     public let iconOffset: CGFloat?
     public let peer: (EnginePeer, AccountContext, PresentationTheme)?
     public let isTag: Bool
+    public let reaction: MessageReaction.Reaction?
     public let emojiFile: TelegramMediaFile?
     public let title: String
     public let style: Style?
     public let permanent: Bool
     
-    public init(id: AnyHashable, context: AccountContext? = nil, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, isTag: Bool = false, emojiFile: TelegramMediaFile? = nil, title: String, style: Style? = nil, permanent: Bool) {
+    public init(id: AnyHashable, context: AccountContext? = nil, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, isTag: Bool = false, reaction: MessageReaction.Reaction? = nil, emojiFile: TelegramMediaFile? = nil, title: String, style: Style? = nil, permanent: Bool) {
         self.id = id
         self.context = context
         self.icon = icon
@@ -63,6 +64,7 @@ public struct SearchBarToken {
         self.peer = peer
         self.isTag = isTag
         self.emojiFile = emojiFile
+        self.reaction = reaction
         self.title = title
         self.style = style
         self.permanent = permanent
@@ -230,7 +232,12 @@ private final class TokenNode: ASDisplayNode {
                 emojiView = ComponentView()
                 self.emojiView = emojiView
             }
-            let emojiViewSize = emojiView.update(
+            let emojiSize = CGSize(width: 14.0, height: 14.0)
+            var visibleEmojiSize = emojiSize
+            if case .builtin = self.token.reaction {
+                visibleEmojiSize = CGSize(width: visibleEmojiSize.width * 2.0, height: visibleEmojiSize.height * 2.0)
+            }
+            let _ = emojiView.update(
                 transition: .immediate,
                 component: AnyComponent(EmojiStatusComponent(
                     context: context,
@@ -238,7 +245,7 @@ private final class TokenNode: ASDisplayNode {
                     animationRenderer: context.animationRenderer,
                     content: .animation(
                         content: .file(file: emojiFile),
-                        size: CGSize(width: 32.0, height: 32.0),
+                        size: visibleEmojiSize,
                         placeholderColor: self.theme.primaryText.withMultipliedAlpha(0.2),
                         themeColor: self.theme.primaryText,
                         loopMode: .forever
@@ -249,21 +256,19 @@ private final class TokenNode: ASDisplayNode {
                     emojiFileUpdated: nil
                 )),
                 environment: {},
-                containerSize: CGSize(width: 14.0, height: 14.0)
+                containerSize: visibleEmojiSize
             )
             if let emojiComponentView = emojiView.view {
                 if emojiComponentView.superview == nil {
                     self.containerNode.view.addSubview(emojiComponentView)
                 }
-                emojiComponentView.frame = CGRect(origin: CGPoint(x: leftInset + 2.0, y: floor((height - emojiViewSize.height) * 0.5)), size: emojiViewSize)
+                let emojiFrame = CGRect(origin: CGPoint(x: leftInset + 2.0, y: floor((height - emojiSize.height) * 0.5)), size: emojiSize)
+                emojiComponentView.frame = visibleEmojiSize.centered(around: emojiFrame.center)
             }
-            emojiFileSize = emojiViewSize
+            emojiFileSize = emojiSize
         }
         if self.token.isTag {
             leftInset += 2.0
-        }
-        if let emojiFileSize {
-            leftInset += emojiFileSize.width + 7.0
         }
 
         let iconSize = self.token.icon?.size ?? CGSize()
@@ -272,8 +277,12 @@ private final class TokenNode: ASDisplayNode {
         if !iconSize.width.isZero {
             width += iconSize.width + 7.0
         }
+        if let emojiFileSize {
+            leftInset += emojiFileSize.width + 6.0
+            width += emojiFileSize.width + 6.0
+        }
         if self.token.isTag {
-            width += 19.0
+            width += 16.0
         }
         
         let size: CGSize

@@ -377,7 +377,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     }
                                     
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: apiUnreadMentionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()
@@ -419,7 +419,7 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                     }
                                     
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadReactionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: apiUnreadReactionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()
@@ -435,7 +435,7 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
     } |> switchToLatest
 }
 
-func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64) -> Signal<Void, NoError> {
+func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64?) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
@@ -444,6 +444,10 @@ func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Net
             var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
             if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
                 invalidateEntries = v.entries
+            }
+            if invalidateEntries.contains(where: { $0.key.customTag != nil }) {
+                invalidateEntries = invalidateEntries.filter({ $0.key.customTag == nil })
+                invalidateEntries.insert(InvalidatedMessageHistoryTagsSummaryEntry(key: InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: Namespaces.Message.Cloud, tagMask: [], threadId: threadId, customTag: MemoryBuffer()), version: 0))
             }
             
             let (disposeOperations, _, beginValidateOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) in
@@ -455,11 +459,29 @@ func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Net
             }
             
             for (entry, disposable) in beginValidateOperations {
-                let signal = synchronizeMessageHistoryTagSummary(postbox: postbox, network: network, entry: entry)
-                |> then(postbox.transaction { transaction -> Void in
-                    transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
-                })
-                disposable.set(signal.start())
+                if entry.key.customTag != nil {
+                    if peerId == stateManager.accountPeerId {
+                        let signal = synchronizeSavedMessageTags(postbox: postbox, network: network, peerId: peerId)
+                        |> map { _ -> Void in
+                        }
+                        |> then(postbox.transaction { transaction -> Void in
+                            transaction.removeInvalidatedMessageHistoryTagsSummaryEntriesWithCustomTags(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, tagMask: [])
+                        })
+                        disposable.set(signal.start())
+                    } else {
+                        assertionFailure()
+                        let signal = postbox.transaction { transaction -> Void in
+                            transaction.removeInvalidatedMessageHistoryTagsSummaryEntriesWithCustomTags(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, tagMask: [])
+                        }
+                        disposable.set(signal.start())
+                    }
+                } else {
+                    let signal = synchronizeMessageHistoryTagSummary(postbox: postbox, network: network, entry: entry)
+                    |> then(postbox.transaction { transaction -> Void in
+                        transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                    })
+                    disposable.set(signal.start())
+                }
             }
         })
         
@@ -494,7 +516,7 @@ private func synchronizeMessageHistoryTagSummary(postbox: Postbox, network: Netw
                     switch result {
                     case let .channelMessages(_, _, count, _, messages, _, _, _):
                         let topId: Int32 = messages.first?.id(namespace: Namespaces.Message.Cloud)?.id ?? 1
-                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: threadId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: count, maxId: topId)
+                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: threadId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: count, maxId: topId)
                     default:
                         break
                     }
@@ -505,4 +527,63 @@ private func synchronizeMessageHistoryTagSummary(postbox: Postbox, network: Netw
         }
     }
     |> switchToLatest
+}
+
+private func synchronizeSavedMessageTags(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<Never, NoError> {
+    return (network.request(Api.functions.messages.getSavedReactionTags(hash: 0))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.SavedReactionTags?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<Never, NoError> in
+        guard let result = result else {
+            return .complete()
+        }
+        
+        switch result {
+        case .savedReactionTagsNotModified:
+            return .complete()
+        case let .savedReactionTags(tags, _):
+            var customFileIds: [Int64] = []
+            var parsedTags: [SavedMessageTags.Tag] = []
+            for tag in tags {
+                switch tag {
+                case let .savedReactionTag(_, reaction, title, count):
+                    guard let reaction = MessageReaction.Reaction(apiReaction: reaction) else {
+                        continue
+                    }
+                    parsedTags.append(SavedMessageTags.Tag(
+                        reaction: reaction,
+                        title: title,
+                        count: Int(count)
+                    ))
+                    
+                    if case let .custom(fileId) = reaction {
+                        customFileIds.append(fileId)
+                    }
+                }
+            }
+            
+            let _ = customFileIds
+            
+            return postbox.transaction { transaction -> Void in
+                let previousTags = transaction.getMessageTagSummaryCustomTags(peerId: peerId, threadId: nil, tagMask: [], namespace: Namespaces.Message.Cloud)
+                
+                let topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)?.id ?? 1
+                
+                var validTags: [MemoryBuffer] = []
+                for tag in parsedTags {
+                    let customTag = ReactionsMessageAttribute.messageTag(reaction: tag.reaction)
+                    validTags.append(customTag)
+                    transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: [], namespace: Namespaces.Message.Cloud, customTag: customTag, count: Int32(tag.count), maxId: topMessageId)
+                }
+                for tag in previousTags {
+                    if !validTags.contains(tag) {
+                        transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: [], namespace: Namespaces.Message.Cloud, customTag: tag, count: 0, maxId: topMessageId)
+                    }
+                }
+            }
+            |> ignoreValues
+        }
+    })
 }

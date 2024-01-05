@@ -319,7 +319,38 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .historyTagSummaryView(tag: self.tag, peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud)
+                return .historyTagSummaryView(tag: self.tag, peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud, customTag: nil)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? MessageHistoryTagSummaryView else {
+                    preconditionFailure()
+                }
+                return view.count.flatMap(Int.init)
+            }
+        }
+        
+        public struct ReactionTagMessageCount: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public struct ItemKey: Hashable {
+                public var peerId: EnginePeer.Id
+                public var reaction: MessageReaction.Reaction
+            }
+            
+            public typealias Result = Int?
+            
+            fileprivate var peerId: EnginePeer.Id
+            fileprivate var reaction: MessageReaction.Reaction
+            public var mapKey: ItemKey {
+                return ItemKey(peerId: self.peerId, reaction: self.reaction)
+            }
+            
+            public init(peerId: EnginePeer.Id, reaction: MessageReaction.Reaction) {
+                self.peerId = peerId
+                self.reaction = reaction
+            }
+
+            var key: PostboxViewKey {
+                return .historyTagSummaryView(tag: [], peerId: self.peerId, threadId: nil, namespace: Namespaces.Message.Cloud, customTag: ReactionsMessageAttribute.messageTag(reaction: self.reaction))
             }
 
             func extract(view: PostboxView) -> Result {
@@ -354,6 +385,33 @@ public extension TelegramEngine.EngineData.Item {
                     return nil
                 }
                 return EngineMessage(message)
+            }
+        }
+        
+        public struct SavedMessageTagStats: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = [MessageReaction.Reaction: Int]
+            
+            fileprivate var peerId: EnginePeer.Id
+            
+            public init(peerId: EnginePeer.Id) {
+                self.peerId = peerId
+            }
+
+            var key: PostboxViewKey {
+                return .historyCustomTagSummariesView(peerId: self.peerId, namespace: Namespaces.Message.Cloud)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? MessageHistoryCustomTagSummariesView else {
+                    preconditionFailure()
+                }
+                var result: [MessageReaction.Reaction: Int] = [:]
+                for (key, value) in view.tags {
+                    if let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: key) {
+                        result[reaction] = value
+                    }
+                }
+                return result
             }
         }
     }

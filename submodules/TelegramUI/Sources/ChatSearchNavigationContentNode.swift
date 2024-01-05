@@ -125,7 +125,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                 let placeholderText = "Search"
                 self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
                 //TODO:localize
-                self.searchBar.tokens = [SearchBarToken(id: AnyHashable(tag), context: self.context, icon: nil, isTag: true, emojiFile: file, title: "Tag", permanent: false)]
+                self.searchBar.tokens = [SearchBarToken(id: AnyHashable(tag), context: self.context, icon: nil, isTag: true, reaction: tag, emojiFile: file, title: "Tag", permanent: false)]
             case .members:
                 self.searchBar.tokens = []
                 self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)

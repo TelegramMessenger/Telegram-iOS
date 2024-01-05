@@ -804,7 +804,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     animationFileId: animationFileId
                                 ),
                                 count: Int(reaction.count),
-                                peers: peers,
+                                peers: arguments.areReactionsTags ? [] : peers,
                                 chosenOrder: reaction.chosenOrder
                             )
                         },
