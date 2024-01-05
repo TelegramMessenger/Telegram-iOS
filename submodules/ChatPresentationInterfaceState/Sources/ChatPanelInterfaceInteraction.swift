@@ -17,6 +17,7 @@ public enum ChatLoadingMessageSubject {
 public enum ChatFinishMediaRecordingAction {
     case dismiss
     case preview
+    case pause
     case send(viewOnce: Bool)
 }
 
@@ -108,6 +109,7 @@ public final class ChatPanelInterfaceInteraction {
     public let finishMediaRecording: (ChatFinishMediaRecordingAction) -> Void
     public let stopMediaRecording: () -> Void
     public let lockMediaRecording: () -> Void
+    public let resumeMediaRecording: () -> Void
     public let deleteRecordedMedia: () -> Void
     public let sendRecordedMedia: (Bool, Bool) -> Void
     public let displayRestrictedInfo: (ChatPanelRestrictionInfoSubject, ChatPanelRestrictionInfoDisplayType) -> Void
@@ -214,6 +216,7 @@ public final class ChatPanelInterfaceInteraction {
         finishMediaRecording: @escaping (ChatFinishMediaRecordingAction) -> Void,
         stopMediaRecording: @escaping () -> Void,
         lockMediaRecording: @escaping () -> Void,
+        resumeMediaRecording: @escaping () -> Void,
         deleteRecordedMedia: @escaping () -> Void,
         sendRecordedMedia: @escaping (Bool, Bool) -> Void,
         displayRestrictedInfo: @escaping (ChatPanelRestrictionInfoSubject, ChatPanelRestrictionInfoDisplayType) -> Void,
@@ -319,6 +322,7 @@ public final class ChatPanelInterfaceInteraction {
         self.finishMediaRecording = finishMediaRecording
         self.stopMediaRecording = stopMediaRecording
         self.lockMediaRecording = lockMediaRecording
+        self.resumeMediaRecording = resumeMediaRecording
         self.deleteRecordedMedia = deleteRecordedMedia
         self.sendRecordedMedia = sendRecordedMedia
         self.displayRestrictedInfo = displayRestrictedInfo
@@ -431,6 +435,7 @@ public final class ChatPanelInterfaceInteraction {
         }, finishMediaRecording: { _ in
         }, stopMediaRecording: {
         }, lockMediaRecording: {
+        }, resumeMediaRecording: {
         }, deleteRecordedMedia: {
         }, sendRecordedMedia: { _, _ in
         }, displayRestrictedInfo: { _, _ in

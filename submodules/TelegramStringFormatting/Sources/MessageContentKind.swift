@@ -21,6 +21,8 @@ public enum MessageContentKindKey {
     case liveLocation
     case expiredImage
     case expiredVideo
+    case expiredVoiceMessage
+    case expiredVideoMessage
     case poll
     case restricted
     case dice
@@ -44,6 +46,8 @@ public enum MessageContentKind: Equatable {
     case liveLocation
     case expiredImage
     case expiredVideo
+    case expiredVoiceMessage
+    case expiredVideoMessage
     case poll(String)
     case restricted(String)
     case dice(String)
@@ -137,6 +141,18 @@ public enum MessageContentKind: Equatable {
             } else {
                 return false
             }
+        case .expiredVoiceMessage:
+            if case .expiredVoiceMessage = other {
+                return true
+            } else {
+                return false
+            }
+        case .expiredVideoMessage:
+            if case .expiredVideoMessage = other {
+                return true
+            } else {
+                return false
+            }
         case .poll:
             if case .poll = other {
                 return true
@@ -206,6 +222,10 @@ public enum MessageContentKind: Equatable {
             return .expiredImage
         case .expiredVideo:
             return .expiredVideo
+        case .expiredVoiceMessage:
+            return .expiredVoiceMessage
+        case .expiredVideoMessage:
+            return .expiredVideoMessage
         case .poll:
             return .poll
         case .restricted:
@@ -405,6 +425,10 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return (NSAttributedString(string: strings.Message_ImageExpired), true)
     case .expiredVideo:
         return (NSAttributedString(string: strings.Message_VideoExpired), true)
+    case .expiredVoiceMessage:
+        return (NSAttributedString(string: strings.Message_VoiceMessageExpired), true)
+    case .expiredVideoMessage:
+        return (NSAttributedString(string: strings.Message_VideoMessageExpired), true)
     case let .poll(text):
         return (NSAttributedString(string: "📊 \(text)"), false)
     case let .restricted(text):

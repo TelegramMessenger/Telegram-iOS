@@ -87,6 +87,8 @@
 
 - (void)_commitLocked;
 
+- (void)lockImmediately;
+
 - (void)setHidesPanelOnLock;
 - (UIView *)createLockPanelView;
 

@@ -10878,3 +10878,6 @@ Sorry for the inconvenience.";
 "Call.StatusFailed" = "Call Failed";
 "Call.StatusEnded" = "Call Ended";
 "Call.StatusMissed" = "Call Missed";
+
+"Conversation.ContactAddContact" = "ADD";
+"Conversation.ContactMessage" = "MESSAGE";

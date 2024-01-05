@@ -252,7 +252,6 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 if let audioRecorder = self.audioRecorder {
                     self.micLevelDisposable?.set(audioRecorder.micLevel.start(next: { [weak self] level in
                         Queue.mainQueue().async {
-                            //self?.recordingOverlay?.addImmediateMicLevel(CGFloat(level))
                             self?.addMicLevel(CGFloat(level))
                         }
                     }))
@@ -275,7 +274,6 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 if let videoRecordingStatus = self.videoRecordingStatus {
                     self.micLevelDisposable?.set(videoRecordingStatus.micLevel.start(next: { [weak self] level in
                         Queue.mainQueue().async {
-                            //self?.recordingOverlay?.addImmediateMicLevel(CGFloat(level))
                             self?.addMicLevel(CGFloat(level))
                         }
                     }))
@@ -411,7 +409,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 animationName = "anim_micToVideo"
         }
 
-        let _ = animationView.update(
+        let _ = self.animationView.update(
             transition: .immediate,
             component: AnyComponent(LottieComponent(
                 content: LottieComponent.AppBundleContent(name: animationName),
@@ -421,7 +419,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             containerSize: animationFrame.size
         )
 
-        if let view = animationView.view as? LottieComponent.View {
+        if let view = self.animationView.view as? LottieComponent.View {
             view.isUserInteractionEnabled = false
             if view.superview == nil {
                 self.insertSubview(view, at: 0)
@@ -535,6 +533,10 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     
     @objc private func handleStopTap() {
         micButtonInteractionStopped()
+    }
+    
+    public func lock() {
+        super._commitLocked()
     }
     
     override public func animateIn() {

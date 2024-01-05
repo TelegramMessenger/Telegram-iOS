@@ -440,7 +440,6 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 }
                 |> take(1)
                 
-
                 let product: Signal<InAppPurchaseManager.Product?, NoError> = products
                 |> map { products in
                     if let product = products.first(where: { $0.id == productIdentifier }) {
@@ -469,19 +468,12 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                         }
                     }
                 }
+                
                 completion = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil)
                 
                 let receiptData = getReceiptData() ?? Data()
-                
 #if DEBUG
-                let id = Int64.random(in: Int64.min ... Int64.max)
-                let fileResource = LocalFileMediaResource(fileId: id, size: Int64(receiptData.count), isSecretRelated: false)
-                self.engine.account.postbox.mediaBox.storeResourceData(fileResource.id, data: receiptData)
-
-                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(receiptData.count), attributes: [.FileName(fileName: "Receipt.dat")])
-                let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-
-                let _ = enqueueMessages(account: self.engine.account, peerId: self.engine.account.peerId, messages: [message]).start()
+                self.debugSaveReceipt(receiptData: receiptData)
 #endif
                 
                 self.disposableSet.set(
@@ -552,6 +544,17 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 self.onRestoreCompletion = nil
             }
         }
+    }
+    
+    private func debugSaveReceipt(receiptData: Data) {
+        let id = Int64.random(in: Int64.min ... Int64.max)
+        let fileResource = LocalFileMediaResource(fileId: id, size: Int64(receiptData.count), isSecretRelated: false)
+        self.engine.account.postbox.mediaBox.storeResourceData(fileResource.id, data: receiptData)
+
+        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(receiptData.count), attributes: [.FileName(fileName: "Receipt.dat")])
+        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+
+        let _ = enqueueMessages(account: self.engine.account, peerId: self.engine.account.peerId, messages: [message]).start()
     }
 }
 

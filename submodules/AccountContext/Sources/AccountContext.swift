@@ -1016,6 +1016,7 @@ public enum PremiumIntroSource {
     case nameColor
     case similarChannels
     case wallpapers
+    case presence
 }
 
 public enum PremiumGiftSource: Equatable {

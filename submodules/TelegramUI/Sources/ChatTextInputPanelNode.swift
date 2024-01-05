@@ -769,6 +769,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     
     private var spoilersRevealed = false
     
+    private var animatingTransition = false
+    var finishedTransitionToPreview: Bool?
+    
     private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
     
     var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
@@ -850,7 +853,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.counterTextNode = ImmediateTextNode()
         self.counterTextNode.textAlignment = .center
         
-        self.viewOnceButton = ChatRecordingViewOnceButtonNode()
+        self.viewOnceButton = ChatRecordingViewOnceButtonNode(icon: .viewOnce)
         
         super.init()
         
@@ -1292,7 +1295,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         return minimalHeight
     }
 
-    private var animatingTransition = false
     private func animateBotButtonInFromMenu(transition: ContainedViewLayoutTransition) {
         guard !self.animatingTransition else {
             return
@@ -1410,6 +1412,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         if let tooltipController = self.tooltipController, self.view.window != nil {
             tooltipController.location = .point(location, .bottom)
         }
+    }
+    
+    func requestLayout() {
+        guard let presentationInterfaceState = self.presentationInterfaceState, let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = self.validLayout else {
+            return
+        }
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
@@ -1986,7 +1995,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         var hideMicButton = false
         var audioRecordingItemsAlpha: CGFloat = 1
-        if mediaRecordingState != nil || interfaceState.recordedMediaPreview != nil {
+        if mediaRecordingState != nil || (interfaceState.recordedMediaPreview != nil && self.finishedTransitionToPreview != true) {
+            if interfaceState.recordedMediaPreview != nil {
+                self.finishedTransitionToPreview = false
+            }
+            
             audioRecordingItemsAlpha = 0
         
             let audioRecordingInfoContainerNode: ASDisplayNode
@@ -2033,7 +2046,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             
             if let mediaRecordingState = mediaRecordingState {
                 switch mediaRecordingState {
-                case let .audio(recorder, _):
+                case let .audio(recorder, isLocked):
+                    let hadAudioRecorder = self.actionButtons.micButton.audioRecorder != nil
+                    if !hadAudioRecorder, isLocked {
+                        self.actionButtons.micButton.lock()
+                    }
                     self.actionButtons.micButton.audioRecorder = recorder
                     audioRecordingTimeNode.audioRecorder = recorder
                 case let .video(status, _):
@@ -2176,6 +2193,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 audioRecordingCancelIndicator.layer.animateAlpha(from: CGFloat(audioRecordingCancelIndicator.layer.presentation()?.opacity ?? 1), to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
             }
         } else {
+            self.finishedTransitionToPreview = nil
+            
             var update = self.actionButtons.micButton.audioRecorder != nil || self.actionButtons.micButton.videoRecordingStatus != nil
             self.actionButtons.micButton.audioRecorder = nil
             self.actionButtons.micButton.videoRecordingStatus = nil
@@ -2200,13 +2219,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     
                     self?.audioRecordingDotNode = nil
                     
-                    audioRecordingDotNode.layer.animateScale(from: 1, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
-                    audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1), to: 0.0, duration: 0.15, delay: 0, removeOnCompletion: false) { [weak audioRecordingDotNode] _ in
+                    audioRecordingDotNode.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, delay: 0.0, removeOnCompletion: false)
+                    audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1), to: 0.0, duration: 0.15, delay: 0.0, removeOnCompletion: false) { [weak audioRecordingDotNode] _ in
                         audioRecordingDotNode?.removeFromSupernode()
                     }
                     
-                    self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                    self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0.0, removeOnCompletion: false)
+                    self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0.0, removeOnCompletion: false)
                 }
                 
                 if update && !self.audioRecordingDotNodeDismissed {
@@ -2634,7 +2653,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         transition.updateAlpha(node: self.viewOnceButton, alpha: viewOnceIsVisible ? 1.0 : 0.0)
         transition.updateTransformScale(node: self.viewOnceButton, scale: viewOnceIsVisible ? 1.0 : 0.01)
-        if let _ = interfaceState.renderedPeer?.peer as? TelegramUser {
+        if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.id != interfaceState.accountPeerId && user.botInfo == nil {
             self.viewOnceButton.isHidden = false
         } else {
             self.viewOnceButton.isHidden = true

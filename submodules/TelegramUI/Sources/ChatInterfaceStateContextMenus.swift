@@ -909,7 +909,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             actions.insert(.separator, at: 1)
         }
         
-        if !hasRateTranscription {
+        if !hasRateTranscription && message.minAutoremoveOrClearTimeout == nil {
             for media in message.media {
                 if let file = media as? TelegramMediaFile, let size = file.size, size < 1 * 1024 * 1024, let duration = file.duration, duration < 60, (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/ogg"] as [String]).contains(file.mimeType.lowercased()) {
                     let fileName = file.fileName ?? "Tone"

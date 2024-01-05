@@ -1588,6 +1588,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     selectedMessages: selectedMessages,
                     presentationData: chatPresentationData,
                     historyAppearsCleared: historyAppearsCleared,
+                    skipViewOnceMedia: mode != .bubbles,
                     pendingUnpinnedAllMessages: pendingUnpinnedAllMessages,
                     pendingRemovedMessages: pendingRemovedMessages,
                     associatedData: associatedData,

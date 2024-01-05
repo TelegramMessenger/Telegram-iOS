@@ -317,24 +317,31 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     CGContextSetStrokeColorWithColor(context, (self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2)).CGColor);
     CGContextSetLineWidth(context, TGScreenPixel);
     
-    CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 40.0f - TGScreenPixel, 40.0 - TGScreenPixel);
-    CGContextFillEllipseInRect(context, rect1);
-    CGContextStrokeEllipseInRect(context, rect1);
     
-    CGRect iconRect = CGRectInset(rect1, 12.0f, 12.0f);
-    CGFloat radius = 1.0f;
+    CGContextAddPath(context, [UIBezierPath bezierPathWithRoundedRect:CGRectMake(12.0, 12.0, 5.0, 14.0) cornerRadius:1.0].CGPath);
+    CGContextFillPath(context);
     
-    CGFloat minx = CGRectGetMinX(iconRect), midx = CGRectGetMidX(iconRect), maxx = CGRectGetMaxX(iconRect);
-    CGFloat miny = CGRectGetMinY(iconRect), midy = CGRectGetMidY(iconRect), maxy = CGRectGetMaxY(iconRect);
+    CGContextAddPath(context, [UIBezierPath bezierPathWithRoundedRect:CGRectMake(40.0 - 12.0 - 5.0, 12.0, 5.0, 14.0) cornerRadius:1.0].CGPath);
+    CGContextFillPath(context);
     
-    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
-    
-    CGContextMoveToPoint(context, minx, midy);
-    CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
-    CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
-    CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
-    CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
-    CGContextClosePath(context);
+//    CGRect rect1 = CGRectMake(TGScreenPixel / 2.0f, TGScreenPixel / 2.0f, 40.0f - TGScreenPixel, 40.0 - TGScreenPixel);
+//    CGContextFillEllipseInRect(context, rect1);
+//    CGContextStrokeEllipseInRect(context, rect1);
+//    
+//    CGRect iconRect = CGRectInset(rect1, 12.0f, 12.0f);
+//    CGFloat radius = 1.0f;
+//    
+//    CGFloat minx = CGRectGetMinX(iconRect), midx = CGRectGetMidX(iconRect), maxx = CGRectGetMaxX(iconRect);
+//    CGFloat miny = CGRectGetMinY(iconRect), midy = CGRectGetMidY(iconRect), maxy = CGRectGetMaxY(iconRect);
+//    
+//    CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+//    
+//    CGContextMoveToPoint(context, minx, midy);
+//    CGContextAddArcToPoint(context, minx, miny, midx, miny, radius);
+//    CGContextAddArcToPoint(context, maxx, miny, maxx, midy, radius);
+//    CGContextAddArcToPoint(context, maxx, maxy, midx, maxy, radius);
+//    CGContextAddArcToPoint(context, minx, maxy, minx, midy, radius);
+//    CGContextClosePath(context);
     
     CGContextSetFillColorWithColor(context, (self.pallete != nil ? self.pallete.buttonColor : TGAccentColor()).CGColor);
     CGContextDrawPath(context, kCGPathFill);
@@ -466,7 +473,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _outerCircleView.alpha = 0.2f;
     _decoration.alpha = 0.2;
     
-    _lockPanelWrapperView.transform = CGAffineTransformMakeTranslation(0.0f, 100.0f);
+    _lockPanelWrapperView.transform = CGAffineTransformMakeTranslation(0.0f, _locked ? 36.0 : 100.0f);
     _lockPanelWrapperView.alpha = 0.0f;
     
     _lock.transform = CGAffineTransformIdentity;
@@ -591,6 +598,32 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     return iconImage;
 }
 
+- (void)lockImmediately {
+    _lockView.lockness = 1.0;
+    [_lock updateLockness:1.0];
+    
+    UIImage *icon = TGComponentsImageNamed(@"RecordSendIcon");
+    [self setIcon:TGTintedImage(icon, _pallete != nil && !_hidesPanelOnLock ? _pallete.iconColor : [UIColor whiteColor])];
+    
+    _currentScale = 1;
+    _cancelTargetTranslation = 0;
+    
+    id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
+    if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
+        [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTargetTranslation];
+    
+    _lockPanelView.frame = CGRectMake(_lockPanelView.frame.origin.x, 40.0f, _lockPanelView.frame.size.width, 72.0f - 32.0f);
+    _lockView.transform = CGAffineTransformMakeTranslation(0.0f, -11.0f);
+    _lock.transform = CGAffineTransformMakeTranslation(0.0f, -16.0f);
+    _lockArrowView.transform = CGAffineTransformMakeTranslation(0.0f, -39.0f);
+    _lockArrowView.alpha = 0.0f;
+    
+    _stopButton.userInteractionEnabled = true;
+    [UIView animateWithDuration:0.25 delay:0.56 options:kNilOptions animations:^
+    {
+        _stopButton.alpha = 1.0f;
+    } completion:nil];
+}
 
 - (void)animateLock {
     if (!_animatedIn) {

@@ -447,6 +447,18 @@ final class ManagedAudioRecorderContext {
         }
     }
     
+    func pause() {
+        assert(self.queue.isCurrent())
+        
+        self.paused = true
+    }
+    
+    func resume() {
+        assert(self.queue.isCurrent())
+        
+        self.paused = false
+    }
+    
     func stop() {
         assert(self.queue.isCurrent())
         
@@ -488,7 +500,7 @@ final class ManagedAudioRecorderContext {
             free(buffer.mData)
         }
         
-        if !self.processSamples {
+        if !self.processSamples || self.paused {
             return
         }
         
@@ -506,7 +518,7 @@ final class ManagedAudioRecorderContext {
             var currentEncoderPacketSize = 0
             
             while currentEncoderPacketSize < encoderPacketSizeInBytes {
-                if audioBuffer.count != 0 {
+                if self.audioBuffer.count != 0 {
                     let takenBytes = min(self.audioBuffer.count, encoderPacketSizeInBytes - currentEncoderPacketSize)
                     if takenBytes != 0 {
                         self.audioBuffer.withUnsafeBytes { rawBytes -> Void in
@@ -695,6 +707,22 @@ final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.start()
+            }
+        }
+    }
+    
+    func pause() {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.pause()
+            }
+        }
+    }
+    
+    func resume() {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.resume()
             }
         }
     }
