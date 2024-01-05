@@ -815,14 +815,53 @@ private final class AdaptedCallVideoSource: VideoSource {
         }
     }
     
+    final class PixelBufferPool {
+        let width: Int
+        let height: Int
+        let pool: CVPixelBufferPool
+        
+        init?(width: Int, height: Int) {
+            self.width = width
+            self.height = height
+            
+            let bufferOptions: [String: Any] = [
+                kCVPixelBufferPoolMinimumBufferCountKey as String: 4 as NSNumber
+            ]
+            let pixelBufferOptions: [String: Any] = [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange as NSNumber,
+                kCVPixelBufferWidthKey as String: width as NSNumber,
+                kCVPixelBufferHeightKey as String: height as NSNumber,
+                kCVPixelBufferIOSurfacePropertiesKey as String: [:] as NSDictionary
+            ]
+            
+            var pool: CVPixelBufferPool?
+            CVPixelBufferPoolCreate(nil, bufferOptions as CFDictionary, pixelBufferOptions as CFDictionary, &pool)
+            guard let pool else {
+                return nil
+            }
+            self.pool = pool
+        }
+    }
+    
+    final class PixelBufferPoolState {
+        var pool: PixelBufferPool?
+    }
+    
     private static let queue = Queue(name: "AdaptedCallVideoSource")
     private var onUpdatedListeners = Bag<() -> Void>()
     private(set) var currentOutput: Output?
     
     private var textureCache: CVMetalTextureCache?
+    private var pixelBufferPoolState: QueueLocalObject<PixelBufferPoolState>
+    
     private var videoFrameDisposable: Disposable?
     
     init(videoStreamSignal: Signal<OngoingGroupCallContext.VideoFrameData, NoError>) {
+        let pixelBufferPoolState = QueueLocalObject(queue: AdaptedCallVideoSource.queue, generate: {
+            return PixelBufferPoolState()
+        })
+        self.pixelBufferPoolState = pixelBufferPoolState
+        
         CVMetalTextureCacheCreate(nil, nil, MetalEngine.shared.device, nil, &self.textureCache)
         
         self.videoFrameDisposable = (videoStreamSignal
@@ -917,47 +956,62 @@ private final class AdaptedCallVideoSource: VideoSource {
                         sourceId: sourceId
                     )
                 case let .i420(i420Buffer):
+                    guard let pixelBufferPoolState = pixelBufferPoolState.unsafeGet() else {
+                        return
+                    }
+                    
                     let width = i420Buffer.width
                     let height = i420Buffer.height
                     
-                    /*output = Output(
-                        resolution: CGSize(width: CGFloat(width), height: CGFloat(height)),
-                        textureLayout: .triPlanar(Output.TriPlanarTextureLayout(
-                            y: yTexture,
-                            uv: uvTexture
-                        )),
-                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
-                        rotationAngle: rotationAngle,
-                        followsDeviceOrientation: followsDeviceOrientation,
-                        mirrorDirection: mirrorDirection,
-                        sourceId: sourceId
-                    )*/
+                    let pool: PixelBufferPool?
+                    if let current = pixelBufferPoolState.pool, current.width == width, current.height == height {
+                        pool = current
+                    } else {
+                        pool = PixelBufferPool(width: width, height: height)
+                        pixelBufferPoolState.pool = pool
+                    }
+                    guard let pool else {
+                        return
+                    }
                     
-                    let _ = width
-                    let _ = height
-                    return
+                    let auxAttributes: [String: Any] = [kCVPixelBufferPoolAllocationThresholdKey as String: 5 as NSNumber]
+                    var pixelBuffer: CVPixelBuffer?
+                    let result = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, pool.pool, auxAttributes as CFDictionary, &pixelBuffer)
+                    if result == kCVReturnWouldExceedAllocationThreshold {
+                        print("kCVReturnWouldExceedAllocationThreshold, dropping frame")
+                        return
+                    }
+                    guard let pixelBuffer else {
+                        return
+                    }
                     
-                    /*var cvMetalTextureY: CVMetalTexture?
-                    var status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, nativeBuffer.pixelBuffer, nil, .r8Unorm, width, height, 0, &cvMetalTextureY)
+                    if !copyI420BufferToNV12Buffer(buffer: i420Buffer, pixelBuffer: pixelBuffer) {
+                        return
+                    }
+                    
+                    var cvMetalTextureY: CVMetalTexture?
+                    var status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, pixelBuffer, nil, .r8Unorm, width, height, 0, &cvMetalTextureY)
                     guard status == kCVReturnSuccess, let yTexture = CVMetalTextureGetTexture(cvMetalTextureY!) else {
                         return
                     }
                     var cvMetalTextureUV: CVMetalTexture?
-                    status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, nativeBuffer.pixelBuffer, nil, .rg8Unorm, width / 2, height / 2, 1, &cvMetalTextureUV)
+                    status = CVMetalTextureCacheCreateTextureFromImage(nil, textureCache, pixelBuffer, nil, .rg8Unorm, width / 2, height / 2, 1, &cvMetalTextureUV)
                     guard status == kCVReturnSuccess, let uvTexture = CVMetalTextureGetTexture(cvMetalTextureUV!) else {
                         return
                     }
                     
                     output = Output(
                         resolution: CGSize(width: CGFloat(yTexture.width), height: CGFloat(yTexture.height)),
-                        y: yTexture,
-                        uv: uvTexture,
-                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: nativeBuffer.pixelBuffer),
+                        textureLayout: .biPlanar(Output.BiPlanarTextureLayout(
+                            y: yTexture,
+                            uv: uvTexture
+                        )),
+                        dataBuffer: Output.NativeDataBuffer(pixelBuffer: pixelBuffer),
                         rotationAngle: rotationAngle,
                         followsDeviceOrientation: followsDeviceOrientation,
                         mirrorDirection: mirrorDirection,
                         sourceId: sourceId
-                    )*/
+                    )
                 default:
                     return
                 }
