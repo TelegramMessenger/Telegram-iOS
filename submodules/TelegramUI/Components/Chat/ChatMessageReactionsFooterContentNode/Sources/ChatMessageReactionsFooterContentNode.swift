@@ -178,7 +178,6 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 )
             },
             colors: reactionColors,
-            isTag: message.id.peerId == context.account.peerId,
             constrainedWidth: constrainedWidth
         )
         

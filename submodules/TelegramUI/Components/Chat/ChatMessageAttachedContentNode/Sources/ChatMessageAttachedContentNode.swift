@@ -657,7 +657,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 reactions: dateReactionsAndPeers.reactions,
                                 reactionPeers: dateReactionsAndPeers.peers,
                                 displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
-                                isSavedMessages: chatLocation == .peer(id: context.account.peerId),
                                 replyCount: dateReplies,
                                 isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                                 hasAutoremove: message.isSelfExpiring,

@@ -356,34 +356,27 @@ public enum ChatSearchDomain: Equatable {
     case everything
     case members
     case member(Peer)
-    case tag(String)
     
     public static func ==(lhs: ChatSearchDomain, rhs: ChatSearchDomain) -> Bool {
         switch lhs {
-        case .everything:
-            if case .everything = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .members:
-            if case .members = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .member(lhsPeer):
-            if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
-                return true
-            } else {
-                return false
-            }
-        case let .tag(tag):
-            if case .tag(tag) = rhs {
-                return true
-            } else {
-                return false
-            }
+            case .everything:
+                if case .everything = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .members:
+                if case .members = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .member(lhsPeer):
+                if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
 }
