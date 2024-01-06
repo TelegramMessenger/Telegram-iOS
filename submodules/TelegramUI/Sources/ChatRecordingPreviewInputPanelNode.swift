@@ -271,7 +271,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        if isFirstTime {
+        if isFirstTime, !self.viewOnceButton.isHidden {
             self.maybePresentViewOnceTooltip()
         }
         
