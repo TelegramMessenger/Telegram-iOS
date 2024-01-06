@@ -14,7 +14,6 @@ import ChatPresentationInterfaceState
 private let searchBarFont = Font.regular(17.0)
 
 final class ChatSearchNavigationContentNode: NavigationBarContentNode {
-    private let context: AccountContext
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let chatLocation: ChatLocation
@@ -24,8 +23,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     
     private var searchingActivityDisposable: Disposable?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {
-        self.context = context
+    init(theme: PresentationTheme, strings: PresentationStrings, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {
         self.theme = theme
         self.strings = strings
         self.chatLocation = chatLocation
@@ -35,12 +33,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         let placeholderText: String
         switch chatLocation {
         case .peer, .replyThread, .feed:
-            if chatLocation.peerId == context.account.peerId {
-                //TODO:localize
-                placeholderText = "Search messages or tags"
-            } else {
-                placeholderText = strings.Conversation_SearchPlaceholder
-            }
+            placeholderText = strings.Conversation_SearchPlaceholder
         }
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -106,34 +99,23 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationInterfaceState.theme, hasBackground: false, hasSeparator: false), strings: presentationInterfaceState.strings)
             
             switch search.domain {
-            case .everything:
-                self.searchBar.tokens = []
-                self.searchBar.prefixString = nil
-                let placeholderText: String
-                switch self.chatLocation {
-                case .peer, .replyThread, .feed:
-                    if self.chatLocation.peerId == self.context.account.peerId {
-                        //TODO:localize
-                        placeholderText = "Search messages or tags"
-                    } else {
+                case .everything:
+                    self.searchBar.tokens = []
+                    self.searchBar.prefixString = nil
+                    let placeholderText: String
+                    switch self.chatLocation {
+                    case .peer, .replyThread, .feed:
                         placeholderText = self.strings.Conversation_SearchPlaceholder
                     }
-                }
-                self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
-            case let .tag(tag):
-                //TODO:localize
-                let placeholderText = "Search"
-                self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
-                //TODO:localize
-                self.searchBar.tokens = [SearchBarToken(id: AnyHashable(tag), icon: nil, isTag: true, title: "\(tag) Tag", permanent: false)]
-            case .members:
-                self.searchBar.tokens = []
-                self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)
-                self.searchBar.placeholderString = nil
-            case let .member(peer):
-                self.searchBar.tokens = [SearchBarToken(id: peer.id, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: EnginePeer(peer).compactDisplayTitle, permanent: false)]
-                self.searchBar.prefixString = nil
-                self.searchBar.placeholderString = nil
+                    self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
+                case .members:
+                    self.searchBar.tokens = []
+                    self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)
+                    self.searchBar.placeholderString = nil
+                case let .member(peer):
+                    self.searchBar.tokens = [SearchBarToken(id: peer.id, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: EnginePeer(peer).compactDisplayTitle, permanent: false)]
+                    self.searchBar.prefixString = nil
+                    self.searchBar.placeholderString = nil
             }
             
             if self.searchBar.text != search.query {

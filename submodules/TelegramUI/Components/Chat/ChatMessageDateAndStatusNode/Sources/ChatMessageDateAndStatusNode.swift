@@ -228,7 +228,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var reactions: [MessageReaction]
         var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
         var displayAllReactionPeers: Bool
-        var isSavedMessages: Bool
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
@@ -249,7 +248,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             reactions: [MessageReaction],
             reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
             displayAllReactionPeers: Bool,
-            isSavedMessages: Bool,
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool,
@@ -269,7 +267,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.reactions = reactions
             self.reactionPeers = reactionPeers
             self.displayAllReactionPeers = displayAllReactionPeers
-            self.isSavedMessages = isSavedMessages
             self.replyCount = replyCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
@@ -747,7 +744,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     },
                     reactions: [],
                     colors: reactionColors,
-                    isTag: arguments.isSavedMessages,
                     constrainedWidth: arguments.constrainedSize.width
                 )
             case let .trailingContent(contentWidth, reactionSettings):
@@ -809,7 +805,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             )
                         },
                         colors: reactionColors,
-                        isTag: arguments.isSavedMessages,
                         constrainedWidth: arguments.constrainedSize.width
                     )
                 } else {
@@ -823,7 +818,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                         },
                         reactions: [],
                         colors: reactionColors,
-                        isTag: arguments.isSavedMessages,
                         constrainedWidth: arguments.constrainedSize.width
                     )
                 }

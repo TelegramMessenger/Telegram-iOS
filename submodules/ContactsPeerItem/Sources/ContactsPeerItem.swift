@@ -63,8 +63,8 @@ public struct ContactsPeerItemEditing: Equatable {
     }
 }
 
-public enum ContactsPeerItemPeerMode: Equatable {
-    case generalSearch(isSavedMessages: Bool)
+public enum ContactsPeerItemPeerMode {
+    case generalSearch
     case peer
 }
 
@@ -779,13 +779,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         textColor = item.presentationData.theme.list.itemPrimaryTextColor
                     }
                     if case let .user(user) = peer {
-                        if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode {
-                            if isSavedMessages {
-                                //TODO:localize
-                                titleAttributedString = NSAttributedString(string: "My Notes", font: titleBoldFont, textColor: textColor)
-                            } else {
-                                titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
-                            }
+                        if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                         } else if peer.id.isReplies {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleBoldFont, textColor: textColor)
                         } else if peer.id.isAnonymousSavedMessages {
@@ -1033,12 +1028,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 case let .peer(peer, _):
                                     if let peer = peer {
                                         var overrideImage: AvatarNodeImageOverride?
-                                        if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode {
-                                            if isSavedMessages {
-                                                overrideImage = .myNotesIcon
-                                            } else {
-                                                overrideImage = .savedMessagesIcon
-                                            }
+                                        if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
+                                            overrideImage = .savedMessagesIcon
                                         } else if peer.id.isReplies, case .generalSearch = item.peerMode {
                                             overrideImage = .repliesIcon
                                         } else if peer.id.isAnonymousSavedMessages, case .generalSearch = item.peerMode {

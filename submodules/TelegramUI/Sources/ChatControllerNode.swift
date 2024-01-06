@@ -2655,7 +2655,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 var activate = false
                 if self.searchNavigationNode == nil {
                     activate = true
-                    self.searchNavigationNode = ChatSearchNavigationContentNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
+                    self.searchNavigationNode = ChatSearchNavigationContentNode(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction)
                 }
                 self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
                 self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
