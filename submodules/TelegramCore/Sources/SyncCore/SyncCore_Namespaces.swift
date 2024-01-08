@@ -84,6 +84,7 @@ public struct Namespaces {
         public static let CloudFeaturedBackgroundIconEmoji: Int32 = 26
         public static let CloudFeaturedChannelStatusEmoji: Int32 = 27
         public static let CloudDisabledChannelStatusEmoji: Int32 = 28
+        public static let CloudDefaultTagReactions: Int32 = 29
     }
     
     public struct CachedItemCollection {
@@ -118,6 +119,7 @@ public struct Namespaces {
         public static let displayedMessageNotifications: Int8 = 32
         public static let recommendedChannels: Int8 = 33
         public static let peerColorOptions: Int8 = 34
+        public static let savedMessageTags: Int8 = 35
     }
     
     public struct UnorderedItemList {

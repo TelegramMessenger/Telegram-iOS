@@ -79,7 +79,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
                     var actionsSummaryCount: Int32?
                     
                     if let tagSummary = component.tagSummary {
-                        let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: self.peerId, threadId: item.threadId, namespace: tagSummary.namespace)
+                        let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: self.peerId, threadId: item.threadId, namespace: tagSummary.namespace, customTag: nil)
                         if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
                             tagSummaryCount = summary.count
                         }

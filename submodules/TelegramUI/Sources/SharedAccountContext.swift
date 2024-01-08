@@ -1947,6 +1947,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .wallpapers
         case .presence:
             mappedSource = .presence
+        case .readTime:
+            mappedSource = .readTime
         }
         let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -2094,9 +2096,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject) -> ViewController {
+    public func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController {
         let mappedSubject: PremiumPrivacyScreen.Subject
         let introSource: PremiumIntroSource
+        
         switch subject {
         case .presence:
             mappedSubject = .presence
@@ -2106,26 +2109,76 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             introSource = .presence
         }
         
-        var presentTooltipImpl: (() -> Void)?
+        var actionImpl: (() -> Void)?
         var openPremiumIntroImpl: (() -> Void)?
         
         let controller = PremiumPrivacyScreen(
             context: context,
             subject: mappedSubject,
             action: {
-                presentTooltipImpl?()
+                actionImpl?()
             }, openPremiumIntro: {
                 openPremiumIntroImpl?()
             }
         )
-        presentTooltipImpl = { [weak controller] in
-            guard let parentController = controller else {
+        actionImpl = { [weak controller] in
+            guard let parentController = controller, let navigationController = parentController.navigationController as? NavigationController else {
                 return
             }
+            
+            let currentPrivacy = Promise<AccountPrivacySettings>()
+            currentPrivacy.set(context.engine.privacy.requestAccountPrivacySettings())
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            parentController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Your last seen time is now visible.", timeout: 5.0, customUndoText: nil), elevatedLayout: true, action: { _ in
-                return true
-            }), in: .window(.root))
+            let tooltipText: String
+            
+            switch subject {
+            case .presence:
+                //TODO:localize
+                tooltipText = "Your last seen time is now visible."
+                
+                let _ = (currentPrivacy.get()
+                |> take(1)
+                |> mapToSignal { current in
+                    let presence = current.presence
+                    var disabledFor: [PeerId: SelectivePrivacyPeer] = [:]
+                    switch presence {
+                    case let .enableEveryone(disabledForValue), let .enableContacts(_, disabledForValue):
+                        disabledFor = disabledForValue
+                    default:
+                        break
+                    }
+                    disabledFor.removeValue(forKey: peerId)
+                    
+                    return context.engine.privacy.updateSelectiveAccountPrivacySettings(type: .presence, settings: .enableEveryone(disableFor: disabledFor))
+                }
+                |> deliverOnMainQueue).startStandalone(completed: { [weak navigationController] in
+                    let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peerId).startStandalone()
+                    
+                    if let parentController = navigationController?.viewControllers.last as? ViewController {
+                        parentController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: tooltipText, timeout: 4.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    }
+                })
+            case .readTime:
+                tooltipText = "Your read times are now visible."
+                
+                let _ = (currentPrivacy.get()
+                |> take(1)
+                |> mapToSignal { current in
+                    var settings = current.globalSettings
+                    settings.hideReadTime = false
+                    return context.engine.privacy.updateGlobalPrivacySettings(settings: settings)
+                }
+                |> deliverOnMainQueue).startStandalone(completed: { [weak navigationController] in
+                    if let parentController = navigationController?.viewControllers.last as? ViewController {
+                        parentController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: tooltipText, timeout: 4.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    }
+                })
+            }
         }
         openPremiumIntroImpl = { [weak controller] in
             guard let parentController = controller else {

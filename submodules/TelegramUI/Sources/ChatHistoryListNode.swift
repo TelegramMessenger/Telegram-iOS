@@ -2144,6 +2144,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     tags: initialMessage.tags,
                     globalTags: initialMessage.globalTags,
                     localTags: initialMessage.localTags,
+                    customTags: initialMessage.customTags,
                     forwardInfo: initialMessage.forwardInfo,
                     author: initialMessage.author,
                     text: /*"\(initialMessage.adAttribute!.opaqueId.hashValue)" + */initialMessage.text,

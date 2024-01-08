@@ -35,6 +35,7 @@ public enum PremiumIntroSource {
     case similarChannels
     case wallpapers
     case presence
+    case readTime
 }
 
 public enum PremiumGiftSource: Equatable {

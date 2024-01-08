@@ -174,6 +174,7 @@ public final class ChatListShimmerNode: ASDisplayNode {
                     tags: [],
                     globalTags: [],
                     localTags: [],
+                    customTags: [],
                     forwardInfo: nil,
                     author: peer1,
                     text: "Text",

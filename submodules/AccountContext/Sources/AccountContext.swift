@@ -356,7 +356,7 @@ public enum ChatSearchDomain: Equatable {
     case everything
     case members
     case member(Peer)
-    case tag(String)
+    case tag(MessageReaction.Reaction, TelegramMediaFile)
     
     public static func ==(lhs: ChatSearchDomain, rhs: ChatSearchDomain) -> Bool {
         switch lhs {
@@ -378,8 +378,8 @@ public enum ChatSearchDomain: Equatable {
             } else {
                 return false
             }
-        case let .tag(tag):
-            if case .tag(tag) = rhs {
+        case let .tag(tag, file):
+            if case .tag(tag, file) = rhs {
                 return true
             } else {
                 return false
@@ -952,7 +952,7 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
     func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource) -> ViewController
-    func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject) -> ViewController
+    func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     

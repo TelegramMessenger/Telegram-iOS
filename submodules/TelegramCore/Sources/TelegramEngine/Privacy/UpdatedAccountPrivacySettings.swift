@@ -20,10 +20,15 @@ func _internal_updateGlobalPrivacySettings(account: Account) -> Signal<Never, No
                 let automaticallyArchiveAndMuteNonContacts = (flags & (1 << 0)) != 0
                 let keepArchivedUnmuted = (flags & (1 << 1)) != 0
                 let keepArchivedFolders = (flags & (1 << 2)) != 0
+                let hideReadTime = (flags & (1 << 3)) != 0
+                let nonContactChatsRequirePremium = (flags & (1 << 4)) != 0
+                
                 globalSettings = GlobalPrivacySettings(
                     automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts,
                     keepArchivedUnmuted: keepArchivedUnmuted,
-                    keepArchivedFolders: keepArchivedFolders
+                    keepArchivedFolders: keepArchivedFolders,
+                    hideReadTime: hideReadTime,
+                    nonContactChatsRequirePremium: nonContactChatsRequirePremium
                 )
             }
             updateGlobalPrivacySettings(transaction: transaction, { _ in
@@ -185,10 +190,14 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
             let automaticallyArchiveAndMuteNonContacts = (flags & (1 << 0)) != 0
             let keepArchivedUnmuted = (flags & (1 << 1)) != 0
             let keepArchivedFolders = (flags & (1 << 2)) != 0
+            let hideReadTime = (flags & (1 << 3)) != 0
+            let nonContactChatsRequirePremium = (flags & (1 << 4)) != 0
             globalSettings = GlobalPrivacySettings(
                 automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts,
                 keepArchivedUnmuted: keepArchivedUnmuted,
-                keepArchivedFolders: keepArchivedFolders
+                keepArchivedFolders: keepArchivedFolders,
+                hideReadTime: hideReadTime,
+                nonContactChatsRequirePremium: nonContactChatsRequirePremium
             )
         }
         
@@ -237,6 +246,17 @@ func _internal_updateAccountAutoArchiveChats(account: Account, value: Bool) -> S
     }
 }
 
+func _internal_updateNonContactChatsRequirePremium(account: Account, value: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> GlobalPrivacySettings in
+        return fetchGlobalPrivacySettings(transaction: transaction)
+    }
+    |> mapToSignal { settings -> Signal<Never, NoError> in
+        var settings = settings
+        settings.nonContactChatsRequirePremium = value
+        return _internal_updateGlobalPrivacySettings(account: account, settings: settings)
+    }
+}
+
 func _internal_updateAccountKeepArchivedFolders(account: Account, value: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> GlobalPrivacySettings in
         return fetchGlobalPrivacySettings(transaction: transaction)
@@ -276,6 +296,13 @@ func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPri
     if settings.keepArchivedFolders {
         flags |= 1 << 2
     }
+    if settings.hideReadTime {
+        flags |= 1 << 3
+    }
+    if settings.nonContactChatsRequirePremium {
+        flags |= 1 << 4
+    }
+    
     return account.network.request(Api.functions.account.setGlobalPrivacySettings(
         settings: .globalPrivacySettings(flags: flags)
     ))

@@ -175,7 +175,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.searchResult = searchResult
         self.searchState = searchState
         
-        if case let .peer(peerId, _, _, _, _, _) = location, peerId == context.account.peerId {
+        if case let .peer(peerId, _, _, _, _, _, _) = location, peerId == context.account.peerId {
             self.mappedLocation = .savedMessagesChats
         } else {
             self.mappedLocation = .chatList(groupId: .root)

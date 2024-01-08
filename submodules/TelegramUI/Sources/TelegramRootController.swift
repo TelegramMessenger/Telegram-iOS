@@ -28,8 +28,6 @@ import ImageCompression
 import TextFormat
 import MediaEditor
 import PeerInfoScreen
-import PremiumUI
-import UndoUI
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData
@@ -221,11 +219,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-        Queue.mainQueue().after(0.1) {
-            let controller = self.context.sharedContext.makePremiumPrivacyControllerController(context: self.context, subject: .presence)
-            self.chatListController?.push(controller)
-        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {

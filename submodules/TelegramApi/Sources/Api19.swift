@@ -653,6 +653,56 @@ public extension Api {
     }
 }
 public extension Api {
+    enum SavedReactionTag: TypeConstructorDescription {
+        case savedReactionTag(flags: Int32, reaction: Api.Reaction, title: String?, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .savedReactionTag(let flags, let reaction, let title, let count):
+                    if boxed {
+                        buffer.appendInt32(-881854424)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    reaction.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedReactionTag(let flags, let reaction, let title, let count):
+                return ("savedReactionTag", [("flags", flags as Any), ("reaction", reaction as Any), ("title", title as Any), ("count", count as Any)])
+    }
+    }
+    
+        public static func parse_savedReactionTag(_ reader: BufferReader) -> SavedReactionTag? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Reaction?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Reaction
+            }
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.SavedReactionTag.savedReactionTag(flags: _1!, reaction: _2!, title: _3, count: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum SearchResultsCalendarPeriod: TypeConstructorDescription {
         case searchResultsCalendarPeriod(date: Int32, minMsgId: Int32, maxMsgId: Int32, count: Int32)
     
@@ -968,62 +1018,6 @@ public extension Api {
         }
         public static func parse_securePasswordKdfAlgoUnknown(_ reader: BufferReader) -> SecurePasswordKdfAlgo? {
             return Api.SecurePasswordKdfAlgo.securePasswordKdfAlgoUnknown
-        }
-    
-    }
-}
-public extension Api {
-    enum SecurePlainData: TypeConstructorDescription {
-        case securePlainEmail(email: String)
-        case securePlainPhone(phone: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .securePlainEmail(let email):
-                    if boxed {
-                        buffer.appendInt32(569137759)
-                    }
-                    serializeString(email, buffer: buffer, boxed: false)
-                    break
-                case .securePlainPhone(let phone):
-                    if boxed {
-                        buffer.appendInt32(2103482845)
-                    }
-                    serializeString(phone, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .securePlainEmail(let email):
-                return ("securePlainEmail", [("email", email as Any)])
-                case .securePlainPhone(let phone):
-                return ("securePlainPhone", [("phone", phone as Any)])
-    }
-    }
-    
-        public static func parse_securePlainEmail(_ reader: BufferReader) -> SecurePlainData? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePlainData.securePlainEmail(email: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_securePlainPhone(_ reader: BufferReader) -> SecurePlainData? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.SecurePlainData.securePlainPhone(phone: _1!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

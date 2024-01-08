@@ -650,6 +650,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     selectedItems: reactionItems.selectedReactionItems,
                     title: reactionItems.reactionsTitle,
                     alwaysAllowPremiumReactions: reactionItems.alwaysAllowPremiumReactions,
+                    allPresetReactionsAreAvailable: reactionItems.allPresetReactionsAreAvailable,
                     getEmojiContent: reactionItems.getEmojiContent,
                     isExpandedUpdated: { [weak self] transition in
                         guard let strongSelf = self else {

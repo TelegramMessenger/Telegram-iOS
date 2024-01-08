@@ -110,9 +110,10 @@ extension ChatControllerImpl {
                                                          
                 if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                     actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
-                    if case .peer(self.context.account.peerId) = self.presentationInterfaceState.chatLocation {
+                    if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
                         //TODO:localize
                         actions.reactionsTitle = "Tag the message with an emoji for quick access later"
+                        actions.allPresetReactionsAreAvailable = true
                     }
                     actions.selectedReactionItems = selectedReactions.reactions
                     
@@ -331,7 +332,7 @@ extension ChatControllerImpl {
                     
                     let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
                     
-                    let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    let currentReactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: self.context.account.peerId))?.reactions ?? []
                     var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
                     var removedReaction: MessageReaction.Reaction?
                     var isFirst = false
@@ -344,27 +345,21 @@ extension ChatControllerImpl {
                         isFirst = !currentReactions.contains(where: { $0.value == chosenReaction })
                     }
                     
-                    /*guard let allowedReactions = allowedReactions else {
-                        itemNode.openMessageContextMenu()
-                        return
-                    }
-                    
-                    switch allowedReactions {
-                    case let .set(set):
-                        if !messageAlreadyHasThisReaction && updatedReactions.contains(where: { !set.contains($0) }) {
-                            itemNode.openMessageContextMenu()
-                            return
-                        }
-                    case .all:
-                        break
-                    }*/
-                    
-                    if removedReaction == nil, case .custom = chosenReaction {
-                        if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
-                        } else {
+                    if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
+                        if removedReaction == nil, !topReactions.contains(where: { $0.reaction.rawValue == chosenReaction }) {
                             if !self.presentationInterfaceState.isPremium {
                                 controller?.premiumReactionsSelected?()
                                 return
+                            }
+                        }
+                    } else {
+                        if removedReaction == nil, case .custom = chosenReaction {
+                            if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info {
+                            } else {
+                                if !self.presentationInterfaceState.isPremium {
+                                    controller?.premiumReactionsSelected?()
+                                    return
+                                }
                             }
                         }
                     }

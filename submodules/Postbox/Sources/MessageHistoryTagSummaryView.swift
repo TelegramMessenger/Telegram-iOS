@@ -5,22 +5,24 @@ final class MutableMessageHistoryTagSummaryView: MutablePostboxView {
     private let peerId: PeerId
     private let threadId: Int64?
     private let namespace: MessageId.Namespace
+    private let customTag: MemoryBuffer?
     
     fileprivate var count: Int32?
     
-    init(postbox: PostboxImpl, tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace) {
+    init(postbox: PostboxImpl, tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, customTag: MemoryBuffer?) {
         self.tag = tag
         self.peerId = peerId
         self.threadId = threadId
         self.namespace = namespace
+        self.customTag = customTag
         
-        self.count = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: threadId, namespace: namespace))?.count
+        self.count = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: threadId, namespace: namespace, customTag: customTag))?.count
     }
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var hasChanges = false
         
-        if let summary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: self.tag, peerId: self.peerId, threadId: self.threadId, namespace: self.namespace)] {
+        if let summary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: self.tag, peerId: self.peerId, threadId: self.threadId, namespace: self.namespace, customTag: self.customTag)] {
             self.count = summary.count
             hasChanges = true
         }
@@ -29,13 +31,6 @@ final class MutableMessageHistoryTagSummaryView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        /*let count = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: self.tag, peerId: self.peerId, namespace: self.namespace))?.count
-        if self.count != count {
-            self.count = count
-            return true
-        } else {
-            return false
-        }*/
         return false
     }
     

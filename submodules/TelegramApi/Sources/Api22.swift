@@ -569,6 +569,7 @@ public extension Api {
         case updateRecentStickers
         case updateSavedDialogPinned(flags: Int32, peer: Api.DialogPeer)
         case updateSavedGifs
+        case updateSavedReactionTags
         case updateSavedRingtones
         case updateSentStoryReaction(peer: Api.Peer, storyId: Int32, reaction: Api.Reaction)
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
@@ -1535,6 +1536,12 @@ public extension Api {
                     }
                     
                     break
+                case .updateSavedReactionTags:
+                    if boxed {
+                        buffer.appendInt32(969307186)
+                    }
+                    
+                    break
                 case .updateSavedRingtones:
                     if boxed {
                         buffer.appendInt32(1960361625)
@@ -1897,6 +1904,8 @@ public extension Api {
                 return ("updateSavedDialogPinned", [("flags", flags as Any), ("peer", peer as Any)])
                 case .updateSavedGifs:
                 return ("updateSavedGifs", [])
+                case .updateSavedReactionTags:
+                return ("updateSavedReactionTags", [])
                 case .updateSavedRingtones:
                 return ("updateSavedRingtones", [])
                 case .updateSentStoryReaction(let peer, let storyId, let reaction):
@@ -3847,6 +3856,9 @@ public extension Api {
         }
         public static func parse_updateSavedGifs(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedGifs
+        }
+        public static func parse_updateSavedReactionTags(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateSavedReactionTags
         }
         public static func parse_updateSavedRingtones(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedRingtones

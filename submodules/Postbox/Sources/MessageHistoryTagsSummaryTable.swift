@@ -45,6 +45,15 @@ struct MessageHistoryTagsSummaryKey: Equatable, Hashable {
     let peerId: PeerId
     let threadId: Int64?
     let namespace: MessageId.Namespace
+    let customTag: MemoryBuffer?
+    
+    init(tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, customTag: MemoryBuffer?) {
+        self.tag = tag
+        self.peerId = peerId
+        self.threadId = threadId
+        self.namespace = namespace
+        self.customTag = customTag
+    }
 }
 
 private func readSummary(_ value: ReadBuffer) -> MessageHistoryTagNamespaceSummary {
@@ -91,17 +100,62 @@ class MessageHistoryTagsSummaryTable: Table {
     }
     
     private func keyShared(key: MessageHistoryTagsSummaryKey) -> ValueBoxKey {
-        if let threadId = key.threadId {
-            self.sharedThreadKey.setUInt32(0, value: key.tag.rawValue)
-            self.sharedThreadKey.setInt64(4, value: key.peerId.toInt64())
-            self.sharedThreadKey.setInt32(4 + 8, value: key.namespace)
-            self.sharedThreadKey.setInt64(4 + 8 + 4, value: threadId)
-            return self.sharedThreadKey
+        return self.keyInternal(key: key, allowShared: true)
+    }
+    
+    private func keyInternal(key: MessageHistoryTagsSummaryKey, allowShared: Bool) -> ValueBoxKey {
+        if let customTag = key.customTag {
+            if customTag.length != 10 && customTag.length != 7 {
+                assert(true)
+            }
+            
+            var keyLength = 4 + 8 + 4
+            keyLength += 8
+            keyLength += customTag.length
+            let result = ValueBoxKey(length: keyLength)
+            
+            var offset = 0
+            result.setUInt32(offset, value: key.tag.rawValue)
+            offset += 4
+            
+            result.setInt64(offset, value: key.peerId.toInt64())
+            offset += 8
+            
+            result.setInt32(offset, value: key.namespace)
+            offset += 4
+            
+            result.setInt64(offset, value: key.threadId ?? 0)
+            offset += 8
+            
+            customTag.withRawBufferPointer { buffer in
+                result.setBytes(offset, value: buffer)
+                offset += buffer.count
+            }
+            
+            return result
+        } else if let threadId = key.threadId {
+            let result: ValueBoxKey
+            if allowShared {
+                result = self.sharedThreadKey
+            } else {
+                result = ValueBoxKey(length: 4 + 8 + 4 + 8)
+            }
+            result.setUInt32(0, value: key.tag.rawValue)
+            result.setInt64(4, value: key.peerId.toInt64())
+            result.setInt32(4 + 8, value: key.namespace)
+            result.setInt64(4 + 8 + 4, value: threadId)
+            return result
         } else {
-            self.sharedSimpleKey.setUInt32(0, value: key.tag.rawValue)
-            self.sharedSimpleKey.setInt64(4, value: key.peerId.toInt64())
-            self.sharedSimpleKey.setInt32(4 + 8, value: key.namespace)
-            return self.sharedSimpleKey
+            let result: ValueBoxKey
+            if allowShared {
+                result = self.sharedSimpleKey
+            } else {
+                result = ValueBoxKey(length: 4 + 8 + 4)
+            }
+            result.setUInt32(0, value: key.tag.rawValue)
+            result.setInt64(4, value: key.peerId.toInt64())
+            result.setInt32(4 + 8, value: key.namespace)
+            return result
         }
     }
     
@@ -116,6 +170,24 @@ class MessageHistoryTagsSummaryTable: Table {
             self.cachedSummaries[key] = CachedEntry(summary: nil)
             return nil
         }
+    }
+    
+    func getCustomTags(tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace) -> [MemoryBuffer] {
+        let peerKey = self.keyInternal(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: threadId, namespace: namespace, customTag: nil), allowShared: false)
+        let prefixLength = 4 + 8 + 4 + 8
+        var result: [MemoryBuffer] = []
+        self.valueBox.range(self.table, start: peerKey.predecessor, end: peerKey.successor, keys: { key in
+            let testPeerId = key.getInt64(4)
+            assert(PeerId(testPeerId) == peerId)
+            let testNamespace = key.getInt32(4 + 8)
+            assert(testNamespace == namespace)
+            
+            if key.length > prefixLength {
+                result.append(key.getMemoryBuffer(prefixLength, length: key.length - prefixLength))
+            }
+            return true
+        }, limit: 0)
+        return result
     }
     
     private func set(_ key: MessageHistoryTagsSummaryKey, summary: MessageHistoryTagNamespaceSummary, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary]) {
@@ -134,12 +206,12 @@ class MessageHistoryTagsSummaryTable: Table {
             if !isNewlyAdded || !current.range.contains(id) {
                 self.set(key, summary: current.withAddedCount(1), updatedSummaries: &updatedSummaries)
                 if current.range.maxId == 0 {
-                    self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag, threadId: key.threadId), operations: &invalidateSummaries)
+                    self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag, threadId: key.threadId, customTag: key.customTag), operations: &invalidateSummaries)
                 }
             }
         } else {
             self.set(key, summary: MessageHistoryTagNamespaceSummary(version: 0, count: 1, range: MessageHistoryTagNamespaceCountValidityRange(maxId: 0)), updatedSummaries: &updatedSummaries)
-            self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag, threadId: key.threadId), operations: &invalidateSummaries)
+            self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag, threadId: key.threadId, customTag: key.customTag), operations: &invalidateSummaries)
         }
     }
     

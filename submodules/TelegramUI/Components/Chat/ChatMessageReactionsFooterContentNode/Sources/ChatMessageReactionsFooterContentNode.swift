@@ -178,7 +178,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 )
             },
             colors: reactionColors,
-            isTag: message.id.peerId == context.account.peerId,
+            isTag: message.areReactionsTags(accountPeerId: context.account.peerId),
             constrainedWidth: constrainedWidth
         )
         
@@ -498,7 +498,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
             }
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
+                let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)) ?? ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
                 let buttonsUpdate = buttonsNode.prepareUpdate(
                     context: item.context,
                     presentationData: item.presentationData,

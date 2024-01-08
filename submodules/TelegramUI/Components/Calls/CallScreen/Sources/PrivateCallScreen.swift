@@ -1298,7 +1298,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         }
         
-        let statusSize = self.statusView.update(state: statusState, transition: .immediate)
+        let statusSize = self.statusView.update(strings: params.state.strings, state: statusState, transition: .immediate)
         
         let titleY: CGFloat
         if currentAreControlsHidden {

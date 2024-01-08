@@ -35,12 +35,13 @@ private final class PrivacyAndSecurityControllerArguments {
     let openTwoStepVerification: (TwoStepVerificationAccessConfiguration?) -> Void
     let openActiveSessions: () -> Void
     let toggleArchiveAndMuteNonContacts: (Bool) -> Void
+    let toggleOnlyAllowPremiumNonContacts: (Bool) -> Void
     let setupAccountAutoremove: () -> Void
     let setupMessageAutoremove: () -> Void
     let openDataSettings: () -> Void
     let openEmailSettings: (String?) -> Void
     
-    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openVoiceMessagePrivacy: @escaping () -> Void, openBioPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, toggleArchiveAndMuteNonContacts: @escaping (Bool) -> Void, setupAccountAutoremove: @escaping () -> Void, setupMessageAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void, openEmailSettings: @escaping (String?) -> Void) {
+    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openVoiceMessagePrivacy: @escaping () -> Void, openBioPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, toggleArchiveAndMuteNonContacts: @escaping (Bool) -> Void, toggleOnlyAllowPremiumNonContacts: @escaping (Bool) -> Void, setupAccountAutoremove: @escaping () -> Void, setupMessageAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void, openEmailSettings: @escaping (String?) -> Void) {
         self.account = account
         self.openBlockedUsers = openBlockedUsers
         self.openLastSeenPrivacy = openLastSeenPrivacy
@@ -55,6 +56,7 @@ private final class PrivacyAndSecurityControllerArguments {
         self.openTwoStepVerification = openTwoStepVerification
         self.openActiveSessions = openActiveSessions
         self.toggleArchiveAndMuteNonContacts = toggleArchiveAndMuteNonContacts
+        self.toggleOnlyAllowPremiumNonContacts = toggleOnlyAllowPremiumNonContacts
         self.setupAccountAutoremove = setupAccountAutoremove
         self.setupMessageAutoremove = setupMessageAutoremove
         self.openDataSettings = openDataSettings
@@ -66,6 +68,7 @@ private enum PrivacyAndSecuritySection: Int32 {
     case general
     case privacy
     case autoArchive
+    case onlyAllowPremiumNonContacts
     case account
     case messageAutoremove
     case dataSettings
@@ -105,6 +108,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case autoArchiveHeader(String)
     case autoArchive(String, Bool)
     case autoArchiveInfo(String)
+    case onlyAllowPremiumNonContacts(String, Bool)
+    case onlyAllowPremiumNonContactsInfo(String)
     case accountHeader(PresentationTheme, String)
     case accountTimeout(PresentationTheme, String, String)
     case accountInfo(PresentationTheme, String)
@@ -121,6 +126,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
             return PrivacyAndSecuritySection.privacy.rawValue
         case .autoArchiveHeader, .autoArchive, .autoArchiveInfo:
             return PrivacyAndSecuritySection.autoArchive.rawValue
+        case .onlyAllowPremiumNonContacts, .onlyAllowPremiumNonContactsInfo:
+            return PrivacyAndSecuritySection.onlyAllowPremiumNonContacts.rawValue
         case .accountHeader, .accountTimeout, .accountInfo:
             return PrivacyAndSecuritySection.account.rawValue
         case .dataSettings, .dataSettingsInfo:
@@ -172,16 +179,20 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 20
             case .autoArchiveInfo:
                 return 21
-            case .accountHeader:
+            case .onlyAllowPremiumNonContacts:
                 return 22
-            case .accountTimeout:
+            case .onlyAllowPremiumNonContactsInfo:
                 return 23
-            case .accountInfo:
+            case .accountHeader:
                 return 24
-            case .dataSettings:
+            case .accountTimeout:
                 return 25
-            case .dataSettingsInfo:
+            case .accountInfo:
                 return 26
+            case .dataSettings:
+                return 27
+            case .dataSettingsInfo:
+                return 28
         }
     }
     
@@ -297,6 +308,18 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }
             case let .autoArchiveInfo(text):
                 if case .autoArchiveInfo(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .onlyAllowPremiumNonContacts(text, value):
+                if case .onlyAllowPremiumNonContacts(text, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .onlyAllowPremiumNonContactsInfo(text):
+                if case .onlyAllowPremiumNonContactsInfo(text) = rhs {
                     return true
                 } else {
                     return false
@@ -425,6 +448,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }, tag: PrivacyAndSecurityEntryTag.autoArchive)
             case let .autoArchiveInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .onlyAllowPremiumNonContacts(text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleOnlyAllowPremiumNonContacts(value)
+                }, tag: PrivacyAndSecurityEntryTag.autoArchive)
+            case let .onlyAllowPremiumNonContactsInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .accountHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .accountTimeout(_, text, value):
@@ -447,6 +476,7 @@ private struct PrivacyAndSecurityControllerState: Equatable {
     var updatingAccountTimeoutValue: Int32? = nil
     var updatingAutomaticallyArchiveAndMuteNonContacts: Bool? = nil
     var updatingMessageAutoremoveTimeoutValue: Int32? = nil
+    var updatingOnlyAllowPremiumNonContacts: Bool? = nil
 }
 
 private func countForSelectivePeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> Int {
@@ -609,6 +639,15 @@ private func privacyAndSecurityControllerEntries(
             entries.append(.autoArchive(presentationData.strings.PrivacySettings_AutoArchive, false))
         }
         entries.append(.autoArchiveInfo(presentationData.strings.PrivacySettings_AutoArchiveInfo))
+    }
+    
+    //TODO:localize
+    let onlyAllowPremiumNonContactsValue = state.updatingOnlyAllowPremiumNonContacts ?? privacySettings?.globalSettings.nonContactChatsRequirePremium ?? false
+    entries.append(.onlyAllowPremiumNonContacts("Only Allow Premium Chats", onlyAllowPremiumNonContactsValue))
+    if !onlyAllowPremiumNonContactsValue {
+        entries.append(.onlyAllowPremiumNonContactsInfo("Non-premium users are allowed to send you a message."))
+    } else {
+        entries.append(.onlyAllowPremiumNonContactsInfo("Non-premium users are not allowed to send you a message."))
     }
     
     entries.append(.accountHeader(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountTitle.uppercased()))
@@ -775,7 +814,7 @@ public func privacyAndSecurityController(
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: updated, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, bio: value.bio, globalSettings: value.globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: updated, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, bio: value.bio, globalSettings: updatedGlobalSettings ?? value.globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
                             }
                             return .complete()
                         }
@@ -1058,6 +1097,36 @@ public func privacyAndSecurityController(
             updateState { state in
                 var state = state
                 state.updatingAutomaticallyArchiveAndMuteNonContacts = nil
+                return state
+            }
+        }))
+    }, toggleOnlyAllowPremiumNonContacts: { settingValue in
+        updateState { state in
+            var state = state
+            state.updatingOnlyAllowPremiumNonContacts = settingValue
+            return state
+        }
+        let applyTimeout: Signal<Void, NoError> = privacySettingsPromise.get()
+        |> filter { $0 != nil }
+        |> take(1)
+        |> deliverOnMainQueue
+        |> mapToSignal { value -> Signal<Void, NoError> in
+            if let value = value {
+                var globalSettings = value.globalSettings
+                globalSettings.nonContactChatsRequirePremium = settingValue
+                
+                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, bio: value.bio, globalSettings: globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
+            }
+            return .complete()
+        }
+        
+        updateAutoArchiveDisposable.set((context.engine.privacy.updateNonContactChatsRequirePremium(value: settingValue)
+        |> mapToSignal { _ -> Signal<Void, NoError> in }
+        |> then(applyTimeout)
+        |> deliverOnMainQueue).start(completed: {
+            updateState { state in
+                var state = state
+                state.updatingOnlyAllowPremiumNonContacts = nil
                 return state
             }
         }))
