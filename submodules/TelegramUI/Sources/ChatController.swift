@@ -1477,7 +1477,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var removedReaction: MessageReaction.Reaction?
                     var messageAlreadyHasThisReaction = false
                     
-                    let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    let currentReactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: context.account.peerId))?.reactions ?? []
                     var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
                     
                     if let index = updatedReactions.firstIndex(where: { $0 == chosenReaction }) {
@@ -1592,7 +1592,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message, isPremium: strongSelf.presentationInterfaceState.isPremium, forceInline: false) {
                             var hideRemovedReaction: Bool = false
-                            if let reactions = mergedMessageReactions(attributes: message.attributes) {
+                            if let reactions = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
                                 for reaction in reactions.reactions {
                                     if reaction.value == removedReaction {
                                         hideRemovedReaction = reaction.count == 1
@@ -2520,8 +2520,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
-                            if savedMessages, let self {
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
+                            if savedMessages, let self, action == .info {
                                 let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     guard let self, let peer else {
@@ -5758,8 +5758,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return .single((message, nil, 0))
                     }
                     let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: replyThreadId)
-                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Cloud)
-                    let localCountViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Local)
+                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Cloud, customTag: nil)
+                    let localCountViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Local, customTag: nil)
                     return context.account.postbox.combinedView(keys: [viewKey, countViewKey, localCountViewKey])
                     |> map { views -> (message: Message?, threadData: MessageHistoryThreadData?, messageCount: Int) in
                         guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
@@ -5791,7 +5791,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let savedMessagesPeerId {
                     let threadPeerId = savedMessagesPeerId
                     let basicPeerKey: PostboxViewKey = .basicPeer(threadPeerId)
-                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: savedMessagesPeerId.toInt64(), namespace: Namespaces.Message.Cloud)
+                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: savedMessagesPeerId.toInt64(), namespace: Namespaces.Message.Cloud, customTag: nil)
                     savedMessagesPeer = context.account.postbox.combinedView(keys: [basicPeerKey, countViewKey])
                     |> map { views -> (peer: EnginePeer?, messageCount: Int)? in
                         let peer = ((views.views[basicPeerKey] as? BasicPeerView)?.peer).flatMap(EnginePeer.init)
@@ -11409,6 +11409,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if self.keepMessageCountersSyncrhonizedDisposable == nil {
                 self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: message.peerId, threadId: message.threadId).startStrict()
             }
+        } else if case .peer(self.context.account.peerId) = self.chatLocation {
+            if self.keepMessageCountersSyncrhonizedDisposable == nil {
+                self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: self.context.account.peerId).startStrict()
+            }
         }
         
         if let scheduledActivateInput = scheduledActivateInput, case .text = scheduledActivateInput {
@@ -15821,13 +15825,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             switch search.domain {
             case .everything:
-                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             case .members:
                 derivedSearchState = nil
             case let .member(peer):
-                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
-            case let .tag(tag):
-                derivedSearchState = ChatSearchState(query: "@#\(tag) " + search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, reactions: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+            case let .tag(tag, _):
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: [tag], threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             }
         }
         
@@ -15838,9 +15842,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if previousSearchState?.query != searchState.query || previousSearchState?.location != searchState.location {
                     var queryIsEmpty = false
                     if searchState.query.isEmpty {
-                        if case let .peer(_, fromId, _, _, _, _) = searchState.location {
+                        if case let .peer(_, fromId, _, reactions, _, _, _) = searchState.location {
                             if fromId == nil {
                                 queryIsEmpty = true
+                            }
+                            if let reactions, !reactions.isEmpty {
+                                queryIsEmpty = false
                             }
                         } else {
                             queryIsEmpty = true
@@ -16514,8 +16521,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
-                        if savedMessages, let self {
+                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
+                        if savedMessages, let self, action == .info {
                             let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                             |> deliverOnMainQueue).start(next: { [weak self] peer in
                                 guard let self, let peer else {
@@ -19204,6 +19211,10 @@ enum AllowedReactions {
 }
 
 func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
+    if message.id.peerId == context.account.peerId {
+        return .single(.all)
+    }
+    
     if message.containsSecretMedia {
         return .single(AllowedReactions.set(Set()))
     }
@@ -19218,7 +19229,7 @@ func peerMessageAllowedReactions(context: AccountContext, message: Message) -> S
     |> map { data, availableReactions -> AllowedReactions? in
         let (peer, allowedReactions) = data
         
-        if let effectiveReactions = message.effectiveReactions, effectiveReactions.count >= 11 {
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= 11 {
             return .set(Set(effectiveReactions.map(\.value)))
         }
         
@@ -19259,7 +19270,7 @@ func peerMessageSelectedReactions(context: AccountContext, message: Message) -> 
         var result = Set<MediaId>()
         var reactions = Set<MessageReaction.Reaction>()
         
-        if let effectiveReactions = message.effectiveReactions {
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
             for reaction in effectiveReactions {
                 if !reaction.isSelected {
                     continue

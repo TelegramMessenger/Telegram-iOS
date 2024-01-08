@@ -907,7 +907,7 @@ func selectivePrivacySettingsController(
     }
     
     //TODO:replace hideReadTimeEnabled with actual value
-    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, enableForCloseFriends: initialEnableForCloseFriends, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callP2PEnableForCloseFriends: initialCallEnableForCloseFriends, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled, hideReadTimeEnabled: globalSettings?.keepArchivedFolders, uploadedPhoto: nil)
+    let initialState = SelectivePrivacySettingsControllerState(setting: SelectivePrivacySettingType(current), enableFor: initialEnableFor, disableFor: initialDisableFor, enableForCloseFriends: initialEnableForCloseFriends, saving: false, callDataSaving: callSettings?.1.dataSaving, callP2PMode: callSettings != nil ? SelectivePrivacySettingType(callSettings!.0) : nil, callP2PEnableFor: initialCallP2PEnableFor, callP2PDisableFor: initialCallP2PDisableFor, callP2PEnableForCloseFriends: initialCallEnableForCloseFriends, callIntegrationAvailable: callIntegrationAvailable, callIntegrationEnabled: callSettings?.1.enableSystemIntegration, phoneDiscoveryEnabled: phoneDiscoveryEnabled, hideReadTimeEnabled: globalSettings?.hideReadTime, uploadedPhoto: nil)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -1314,10 +1314,8 @@ func selectivePrivacySettingsController(
             
             var updateGlobalSettingsSignal: Signal<Never, NoError> = Signal.complete()
             var updatedGlobalSettings: GlobalPrivacySettings?
-            if let updateHideReadTime = arguments.updateHideReadTime, let globalSettings {
-                //TODO:update global settings
-                let _ = updateHideReadTime
-                updatedGlobalSettings = GlobalPrivacySettings(automaticallyArchiveAndMuteNonContacts: globalSettings.automaticallyArchiveAndMuteNonContacts, keepArchivedUnmuted: globalSettings.keepArchivedUnmuted, keepArchivedFolders: globalSettings.keepArchivedFolders)
+            if let _ = arguments.updateHideReadTime, let globalSettings {
+                updatedGlobalSettings = GlobalPrivacySettings(automaticallyArchiveAndMuteNonContacts: globalSettings.automaticallyArchiveAndMuteNonContacts, keepArchivedUnmuted: globalSettings.keepArchivedUnmuted, keepArchivedFolders: globalSettings.keepArchivedFolders, hideReadTime: hideReadTimeEnabled ?? globalSettings.hideReadTime, nonContactChatsRequirePremium: globalSettings.nonContactChatsRequirePremium)
                 if let updatedGlobalSettings {
                     updateGlobalSettingsSignal = context.engine.privacy.updateGlobalPrivacySettings(settings: updatedGlobalSettings)
                 }

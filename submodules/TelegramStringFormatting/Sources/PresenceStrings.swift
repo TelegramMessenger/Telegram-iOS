@@ -216,6 +216,7 @@ public enum RelativeUserPresenceStatus {
     case offline
     case online(at: Int32)
     case lastSeen(at: Int32)
+    case hidden
     case recently
     case lastWeek
     case lastMonth
@@ -242,6 +243,8 @@ public func relativeUserPresenceStatus(_ presence: EnginePeer.Presence, relative
         return .lastWeek
     case .lastMonth:
         return .lastMonth
+    case .hidden:
+        return .hidden
     }
 }
 
@@ -537,6 +540,9 @@ public func stringAndActivityForUserPresence(strings: PresentationStrings, dateT
         return (strings.LastSeen_WithinAMonth, false)
     case .longTimeAgo:
         return (strings.LastSeen_ALongTimeAgo, false)
+    case .hidden:
+        //TODO:localize
+        return ("last seen hidden", false)
     }
 }
 
@@ -586,7 +592,7 @@ public func userPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, r
         } else {
             return Double.infinity
         }
-    case .none, .lastWeek, .lastMonth:
+    case .none, .lastWeek, .lastMonth, .hidden:
         return Double.infinity
     }
 }

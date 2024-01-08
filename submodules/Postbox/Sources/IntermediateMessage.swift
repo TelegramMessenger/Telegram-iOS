@@ -43,6 +43,7 @@ class IntermediateMessage {
     let tags: MessageTags
     let globalTags: GlobalMessageTags
     let localTags: LocalMessageTags
+    let customTags: [MemoryBuffer]
     let forwardInfo: IntermediateMessageForwardInfo?
     let authorId: PeerId?
     let text: String
@@ -54,7 +55,7 @@ class IntermediateMessage {
         return MessageIndex(id: self.id, timestamp: self.timestamp)
     }
     
-    init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, groupingKey: Int64?, groupInfo: MessageGroupInfo?, threadId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+    init(stableId: UInt32, stableVersion: UInt32, id: MessageId, globallyUniqueId: Int64?, groupingKey: Int64?, groupInfo: MessageGroupInfo?, threadId: Int64?, timestamp: Int32, flags: MessageFlags, tags: MessageTags, globalTags: GlobalMessageTags, localTags: LocalMessageTags, customTags: [MemoryBuffer], forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
         self.stableId = stableId
         self.stableVersion = stableVersion
         self.id = id
@@ -67,6 +68,7 @@ class IntermediateMessage {
         self.tags = tags
         self.globalTags = globalTags
         self.localTags = localTags
+        self.customTags = customTags
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
@@ -76,18 +78,18 @@ class IntermediateMessage {
     }
     
     func withUpdatedTimestamp(_ timestamp: Int32) -> IntermediateMessage {
-        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
+        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
     }
     
     func withUpdatedGroupingKey(_ groupingKey: Int64?) -> IntermediateMessage {
-        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
+        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
     }
     
     func withUpdatedGroupInfo(_ groupInfo: MessageGroupInfo?) -> IntermediateMessage {
-        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
+        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: self.embeddedMediaData, referencedMedia: self.referencedMedia)
     }
     
     func withUpdatedEmbeddedMedia(_ embeddedMedia: ReadBuffer) -> IntermediateMessage {
-        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: embeddedMedia, referencedMedia: self.referencedMedia)
+        return IntermediateMessage(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, authorId: self.authorId, text: self.text, attributesData: self.attributesData, embeddedMediaData: embeddedMedia, referencedMedia: self.referencedMedia)
     }
 }

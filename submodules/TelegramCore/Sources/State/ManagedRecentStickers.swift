@@ -505,3 +505,54 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
     })
     return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+
+func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudDefaultTagReactions, extractItemId: { rawId in
+        switch RecentReactionItemId(rawId).id {
+        case .builtin:
+            return 0
+        case let .custom(fileId):
+            return fileId.id
+        }
+    }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.messages.getDefaultTagReactions(hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .reactionsNotModified:
+                return .single(nil)
+            case let .reactions(_, reactions):
+                let parsedReactions = reactions.compactMap(MessageReaction.Reaction.init(apiReaction:))
+                
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedReactions.compactMap { reaction -> Int64? in
+                    switch reaction {
+                    case .builtin:
+                        return nil
+                    case let .custom(fileId):
+                        return fileId
+                    }
+                })
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for reaction in parsedReactions {
+                        let item: RecentReactionItem
+                        switch reaction {
+                        case let .builtin(value):
+                            item = RecentReactionItem(.builtin(value))
+                        case let .custom(fileId):
+                            guard let file = files[fileId] else {
+                                continue
+                            }
+                            item = RecentReactionItem(.custom(file))
+                        }
+                        if let entry = CodableEntry(item) {
+                            items.append(OrderedItemListEntry(id: item.id.rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}

@@ -59,6 +59,7 @@ public final class EmojiStatusComponent: Component {
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
     public let content: Content
+    public let size: CGSize?
     public let isVisibleForAnimations: Bool
     public let useSharedAnimation: Bool
     public let action: (() -> Void)?
@@ -69,6 +70,7 @@ public final class EmojiStatusComponent: Component {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         content: Content,
+        size: CGSize? = nil,
         isVisibleForAnimations: Bool,
         useSharedAnimation: Bool = false,
         action: (() -> Void)?,
@@ -83,6 +85,7 @@ public final class EmojiStatusComponent: Component {
             animationCache: animationCache,
             animationRenderer: animationRenderer,
             content: content,
+            size: size,
             isVisibleForAnimations: isVisibleForAnimations,
             useSharedAnimation: useSharedAnimation,
             action: action,
@@ -97,6 +100,7 @@ public final class EmojiStatusComponent: Component {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         content: Content,
+        size: CGSize? = nil,
         isVisibleForAnimations: Bool,
         useSharedAnimation: Bool = false,
         action: (() -> Void)?,
@@ -108,6 +112,7 @@ public final class EmojiStatusComponent: Component {
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.content = content
+        self.size = size
         self.isVisibleForAnimations = isVisibleForAnimations
         self.useSharedAnimation = useSharedAnimation
         self.action = action
@@ -122,6 +127,7 @@ public final class EmojiStatusComponent: Component {
             animationCache: self.animationCache,
             animationRenderer: self.animationRenderer,
             content: self.content,
+            size: self.size,
             isVisibleForAnimations: isVisibleForAnimations,
             useSharedAnimation: self.useSharedAnimation,
             action: self.action,
@@ -143,6 +149,9 @@ public final class EmojiStatusComponent: Component {
             return false
         }
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.size != rhs.size {
             return false
         }
         if lhs.isVisibleForAnimations != rhs.isVisibleForAnimations {
@@ -231,6 +240,8 @@ public final class EmojiStatusComponent: Component {
         }
         
         func update(component: EmojiStatusComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            let availableSize = component.size ?? availableSize
+            
             self.state = state
             
             var iconImage: UIImage?

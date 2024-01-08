@@ -8,6 +8,7 @@ extension ReactionsMessageAttribute {
         case let .messageReactions(flags, results, recentReactions):
             let min = (flags & (1 << 0)) != 0
             let canViewList = (flags & (1 << 2)) != 0
+            let isTags = (flags & (1 << 3)) != 0
             var reactions = results.compactMap { result -> MessageReaction? in
                 switch result {
                 case let .reactionCount(_, chosenOrder, reaction, count):
@@ -53,13 +54,13 @@ extension ReactionsMessageAttribute {
                     }
                 }
             }
-            return ReactionsMessageAttribute(canViewList: canViewList, reactions: reactions, recentPeers: parsedRecentReactions)
+            return ReactionsMessageAttribute(canViewList: canViewList, isTags: isTags, reactions: reactions, recentPeers: parsedRecentReactions)
         }
     }
 }
 
-public func mergedMessageReactionsAndPeers(accountPeer: EnginePeer?, message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
-    guard let attribute = mergedMessageReactions(attributes: message.attributes) else {
+public func mergedMessageReactionsAndPeers(accountPeerId: EnginePeer.Id, accountPeer: EnginePeer?, message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
+    guard let attribute = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: accountPeerId)) else {
         return ([], [])
     }
     
@@ -149,7 +150,7 @@ private func mergeReactions(reactions: [MessageReaction], recentPeers: [Reaction
     return (result, recentPeers)
 }
 
-public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
+public func mergedMessageReactions(attributes: [MessageAttribute], isTags: Bool) -> ReactionsMessageAttribute? {
     var current: ReactionsMessageAttribute?
     var pending: PendingReactionsMessageAttribute?
     for attribute in attributes {
@@ -169,7 +170,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
         recentPeers = updatedRecentPeers
         
         if !reactions.isEmpty {
-            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, reactions: reactions, recentPeers: recentPeers)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, isTags: current?.isTags ?? isTags, reactions: reactions, recentPeers: recentPeers)
         } else {
             return nil
         }
@@ -185,6 +186,7 @@ extension ReactionsMessageAttribute {
         switch apiReactions {
         case let .messageReactions(flags, results, recentReactions):
             let canViewList = (flags & (1 << 2)) != 0
+            let isTags = (flags & (1 << 3)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.compactMap { recentReaction -> ReactionsMessageAttribute.RecentPeer? in
@@ -206,6 +208,7 @@ extension ReactionsMessageAttribute {
             
             self.init(
                 canViewList: canViewList,
+                isTags: isTags,
                 reactions: results.compactMap { result -> MessageReaction? in
                     switch result {
                     case let .reactionCount(_, chosenOrder, reaction, count):

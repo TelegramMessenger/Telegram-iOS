@@ -4376,6 +4376,7 @@ public final class StoryItemSetContainerComponent: Component {
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         title: self.displayLikeReactions ? nil : component.strings.Story_SendReactionAsMessage,
                         alwaysAllowPremiumReactions: false,
+                        allPresetReactionsAreAvailable: false,
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
                             guard let self, let component = self.component else {
                                 preconditionFailure()

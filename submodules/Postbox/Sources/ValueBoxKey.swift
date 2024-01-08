@@ -47,6 +47,11 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
         }
     }
     
+    public func setBytes(_ offset: Int, value: UnsafeRawBufferPointer) {
+        assert(offset >= 0 && offset + value.count <= self.length)
+        memcpy(self.memory + offset, value.baseAddress!.assumingMemoryBound(to: UInt8.self), value.count)
+    }
+    
     public func setInt32(_ offset: Int, value: Int32) {
         assert(offset >= 0 && offset + 4 <= self.length)
         var bigEndianValue = Int32(bigEndian: value)
@@ -90,6 +95,13 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
             memcpy(bytes.baseAddress!.assumingMemoryBound(to: UInt8.self), self.memory + offset, length)
         }
         return value
+    }
+    
+    public func getMemoryBuffer(_ offset: Int, length: Int) -> MemoryBuffer {
+        assert(offset >= 0 && offset + length <= self.length)
+        let result = MemoryBuffer(memory: malloc(length)!, capacity: length, length: length, freeWhenDone: true)
+        memcpy(result.memory, self.memory + offset, length)
+        return result
     }
     
     public func getInt32(_ offset: Int) -> Int32 {
@@ -259,7 +271,7 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
     }
 }
 
-private func mdb_cmp_memn(_ a_memory: UnsafeMutableRawPointer, _ a_length: Int, _ b_memory: UnsafeMutableRawPointer, _ b_length: Int) -> Int
+func mdb_cmp_memn(_ a_memory: UnsafeMutableRawPointer, _ a_length: Int, _ b_memory: UnsafeMutableRawPointer, _ b_length: Int) -> Int
 {
     var diff: Int = 0
     var len_diff: Int = 0

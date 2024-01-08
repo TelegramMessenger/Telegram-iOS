@@ -137,6 +137,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
             selectedItems: Set(),
             title: nil,
             alwaysAllowPremiumReactions: false,
+            allPresetReactionsAreAvailable: false,
             getEmojiContent: { [weak self] animationCache, animationRenderer in
                 guard let self else {
                     preconditionFailure()

@@ -215,8 +215,15 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
         if let value = data["chat_read_mark_size_threshold"] as? Double {
             maxParticipantCount = Int(value)
         }
-        if let value = data["chat_read_mark_expire_period"] as? Double {
-            maxTimeout = Int(value)
+        switch peer {
+        case _ as TelegramUser:
+            if let value = data["pm_read_date_expire_period"] as? Double {
+                maxTimeout = Int(value)
+            }
+        default:
+            if let value = data["chat_read_mark_expire_period"] as? Double {
+                maxTimeout = Int(value)
+            }
         }
     }
 
@@ -237,6 +244,8 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
         if group.participantCount > maxParticipantCount {
             return false
         }
+    case _ as TelegramUser:
+        break
     default:
         return false
     }
@@ -1689,7 +1698,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         let canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, appConfig: appConfig)
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeerId: context.account.peerId, accountPeer: nil, message: message).reactions {
             reactionCount += Int(reaction.count)
         }
         if let reactionsAttribute = message.reactionsAttribute {
@@ -1712,6 +1721,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 if canViewStats {
                     hasReadReports = true
                 }
+            } else if let _ = peer as? TelegramUser {
+                reactionCount = 0
+                if canViewStats {
+                    hasReadReports = true
+                }
             } else {
                 reactionCount = 0
             }
@@ -1727,7 +1741,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
 
                 actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
-                    if reactionCount == 0, let stats = stats, stats.peers.count == 1, !"".isEmpty {
+                    if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                        if let stats, stats.peers.isEmpty {
+                            c.dismiss(completion: {
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let controller = PremiumDemoScreen(context: context, subject: .emojiStatus, action: {
+                                    let controller = PremiumIntroScreen(context: context, source: .settings)
+                                    replaceImpl?(controller)
+                                })
+                                replaceImpl = { [weak controller] c in
+                                    controller?.replace(with: c)
+                                }
+                                controllerInteraction.navigationController()?.pushViewController(controller)
+                            })
+                        }
+                    } else if reactionCount == 0, let stats = stats, stats.peers.count == 1, !"".isEmpty {
                         c.dismiss(completion: {
                             controllerInteraction.openPeer(stats.peers[0], .default, nil, .default)
                         })
@@ -2459,7 +2487,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         
         var reactionCount = 0
         var customEmojiFiles = Set<Int64>()
-        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
             
             if case let .custom(fileId) = reaction.value {
@@ -2517,7 +2545,11 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         }
 
         if let currentStats = self.currentStats {
-            self.buttonNode.isUserInteractionEnabled = !currentStats.peers.isEmpty || reactionCount != 0
+            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                self.buttonNode.isUserInteractionEnabled = currentStats.peers.isEmpty
+            } else {
+                self.buttonNode.isUserInteractionEnabled = !currentStats.peers.isEmpty || reactionCount != 0
+            }
         } else {
             self.buttonNode.isUserInteractionEnabled = reactionCount != 0
 
@@ -2557,7 +2589,11 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
     private var validLayout: (calculatedWidth: CGFloat, size: CGSize)?
 
     func updateStats(stats: MessageReadStats, transition: ContainedViewLayoutTransition) {
-        self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty || stats.reactionCount != 0
+        if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+            self.buttonNode.isUserInteractionEnabled = stats.peers.isEmpty
+        } else {
+            self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty || stats.reactionCount != 0
+        }
 
         guard let (calculatedWidth, size) = self.validLayout else {
             return
@@ -2582,7 +2618,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
         
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeerId: self.item.context.account.peerId, accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
         }
 
@@ -2590,31 +2626,47 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             reactionCount = currentStats.reactionCount
             
             if currentStats.peers.isEmpty {
-                if reactionCount != 0 {
-                    let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))
-                    self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+                if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                    //TODO:localize
+                    self.textNode.attributedText = NSAttributedString(string: "Show Read Time", font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 } else {
-                    var text = self.presentationData.strings.Conversation_ContextMenuNoViews
-                    for media in self.item.message.media {
-                        if let file = media as? TelegramMediaFile {
-                            if file.isVoice {
-                                text = self.presentationData.strings.Conversation_ContextMenuNobodyListened
-                            } else if file.isInstantVideo {
-                                text = self.presentationData.strings.Conversation_ContextMenuNobodyWatched
+                    if reactionCount != 0 {
+                        let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))
+                        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+                    } else {
+                        var text = self.presentationData.strings.Conversation_ContextMenuNoViews
+                        for media in self.item.message.media {
+                            if let file = media as? TelegramMediaFile {
+                                if file.isVoice {
+                                    text = self.presentationData.strings.Conversation_ContextMenuNobodyListened
+                                } else if file.isInstantVideo {
+                                    text = self.presentationData.strings.Conversation_ContextMenuNobodyWatched
+                                }
                             }
                         }
+                        
+                        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
                     }
-
-                    self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
                 }
-            }/* else if currentStats.peers.count == 1 {
-                if reactionCount != 0 {
-                    let text: String = self.presentationData.strings.Chat_OutgoingContextReactionCount(Int32(reactionCount))
-                    self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
-                } else {
-                    self.textNode.attributedText = NSAttributedString(string: currentStats.peers[0].displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
-                }
-            }*/ else {
+            } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser, let timestamp = currentStats.readTimestamps.first?.value {
+                let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+                    dateFormatString: { value in
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
+                    },
+                    tomorrowFormatString: { value in
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                    },
+                    todayFormatString: { value in
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                    },
+                    yesterdayFormatString: { value in
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
+                    }
+                )).string
+                
+                //TODO:localize
+                self.textNode.attributedText = NSAttributedString(string: "read \(dateText)", font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+            } else {
                 if reactionCount != 0 {
                     let text: String
                     if reactionCount >= currentStats.peers.count {
@@ -2683,7 +2735,8 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             let placeholderAvatarsContent: AnimatedAvatarSetContext.Content
 
             var avatarsPeers: [EnginePeer] = []
-            if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
+            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+            } else if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
                 for recentPeer in recentPeers {
                     if let peer = self.item.message.peers[recentPeer.peerId] {
                         if !avatarsPeers.contains(where: { $0.id == peer.id }) {
@@ -2702,7 +2755,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 }
             }
             avatarsContent = self.avatarsContext.update(peers: avatarsPeers, animated: false)
-            placeholderAvatarsContent = self.avatarsContext.updatePlaceholder(color: shimmeringForegroundColor, count: 3, animated: false)
+            
+            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                placeholderAvatarsContent = self.avatarsContext.updatePlaceholder(color: shimmeringForegroundColor, count: 0, animated: false)
+            } else {
+                placeholderAvatarsContent = self.avatarsContext.updatePlaceholder(color: shimmeringForegroundColor, count: 3, animated: false)
+            }
 
             let avatarsSize = self.avatarsNode.update(context: self.item.context, content: avatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
             self.avatarsNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - 12.0 - avatarsSize.width, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize)
@@ -2762,7 +2820,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     var isActionEnabled: Bool {
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeerId: self.item.context.account.peerId, accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
         }
         if reactionCount >= 0 {

@@ -437,7 +437,7 @@ func makeBridgeUser(_ peer: Peer?, presence: PeerPresence? = nil, cachedData: Ca
                     bridgeUser.lastSeen = -3
                 case .lastMonth:
                     bridgeUser.lastSeen = -4
-                case .none:
+                case .none, .hidden:
                     bridgeUser.lastSeen = -5
                 case let .present(statusTimestamp):
                     if statusTimestamp > timestamp {

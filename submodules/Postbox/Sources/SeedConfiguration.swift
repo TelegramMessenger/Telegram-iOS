@@ -49,7 +49,7 @@ func resolveChatListMessageTagSummaryResultCalculation(postbox: PostboxImpl, pee
     guard let calculation = calculation else {
         return nil
     }
-    let addSummary = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: calculation.addCount.tag, peerId: peerId, threadId: threadId, namespace: calculation.addCount.namespace))
+    let addSummary = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: calculation.addCount.tag, peerId: peerId, threadId: threadId, namespace: calculation.addCount.namespace, customTag: nil))
     let subtractSummary = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(peerId, calculation.subtractCount.namespace, calculation.subtractCount.type))
     let count = (addSummary?.count ?? 0) - subtractSummary
     return count > 0
