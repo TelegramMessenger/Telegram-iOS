@@ -367,7 +367,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.messageButtonNode.frame = messageButtonFrame
                             
                             let backgroundInsets = layoutConstants.text.bubbleInsets
-                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: contentWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: 94.0))
+                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: contentWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: backgroundFrame.maxY + 3.0), size: statusSizeAndApply.0)
@@ -479,7 +479,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.addButtonNode.frame.contains(point) {
-            return ChatMessageBubbleContentTapAction(content: .openMessage)
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
@@ -490,7 +490,17 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc private func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                var selectedContact: TelegramMediaContact?
+                for media in item.message.media {
+                    if let media = media as? TelegramMediaContact {
+                        selectedContact = media
+                    }
+                }
+                if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
+                    item.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), nil, .default)
+                } else {
+                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                }
             }
         }
     }

@@ -12973,12 +12973,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.push(controller)
                 
                 if justInstalled {
-                    let content: UndoOverlayContent
-//                    if bot.flags.contains(.showInSettings) {
-                    content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
-//                    } else {
-//                        content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
-//                    }
+                    let content: UndoOverlayContent = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
                     controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                 }
             }, error: { [weak self] error in
@@ -15489,13 +15484,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let updatedMessage = message
                             .withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)
                             .withUpdatedCorrelationId(correlationId)
-//                            .withUpdatedAttributes({ attributes in
-//                                var attributes = attributes
-//#if DEBUG
-//                                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
-//#endif
-//                                return attributes
-//                            })
+                            .withUpdatedAttributes({ attributes in
+                                var attributes = attributes
+#if DEBUG
+                                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
+#endif
+                                return attributes
+                            })
 
                         var usedCorrelationId = false
 

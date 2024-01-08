@@ -398,18 +398,22 @@ public func generateGradientImage(size: CGSize, scale: CGFloat = 0.0, colors: [U
     return image
 }
 
-public func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray) -> UIImage? {
+public func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray, direction: GradientImageDirection = .vertical) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         context.addEllipse(in: bounds)
         context.clip()
         
-        var locations: [CGFloat] = [0.0, 1.0]
+        var locations: [CGFloat] = []
+        for i in 0 ..< colors.count {
+            let t = CGFloat(i) / CGFloat(colors.count - 1)
+            locations.append(t)
+        }
         let colorSpace = DeviceGraphicsContextSettings.shared.colorSpace
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
         
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
+        context.drawLinearGradient(gradient, start: CGPoint(), end: direction == .horizontal ? CGPoint(x: size.width, y: 0.0) : CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     })
 }
 

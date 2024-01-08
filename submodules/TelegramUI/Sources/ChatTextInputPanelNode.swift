@@ -2164,7 +2164,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
             
             audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: audioRecordingTimeNode.frame.midY - 20), size: CGSize(width: 40.0, height: 40))
-            if animateDotAppearing {
+            if animateDotAppearing || animateCancelSlideIn {
                 audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
                 audioRecordingTimeNode.started = { [weak audioRecordingDotNode] in
                     if let audioRecordingDotNode = audioRecordingDotNode, audioRecordingDotNode.layer.animation(forKey: "recording") == nil {
@@ -2546,6 +2546,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: transition.isAnimated)
         
+        var viewOnceIsVisible = false
+        if let recordingState = interfaceState.inputTextPanelState.mediaRecordingState {
+            if case let .audio(_, isLocked) = recordingState {
+                viewOnceIsVisible = isLocked
+            } else if case let .video(_, isLocked) = recordingState {
+                viewOnceIsVisible = isLocked
+            }
+        }
+        
         if let prevInputPanelNode = self.prevInputPanelNode {
             prevInputPanelNode.frame = CGRect(origin: .zero, size: prevInputPanelNode.frame.size)
         }
@@ -2592,26 +2601,37 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             animateAlpha(for: prevPreviewInputPanelNode.waveformScubberNode)
             animateAlpha(for: prevPreviewInputPanelNode.durationLabel)
             animateAlpha(for: prevPreviewInputPanelNode.playButton)
-            
+                    
             let binNode = prevPreviewInputPanelNode.binNode
             self.animatingBinNode = binNode
             let dismissBin = { [weak self, weak prevPreviewInputPanelNode, weak binNode] in
                 if binNode?.supernode != nil {
-                    prevPreviewInputPanelNode?.deleteButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0, removeOnCompletion: false) { [weak prevPreviewInputPanelNode] _ in
+                    prevPreviewInputPanelNode?.deleteButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0.0, removeOnCompletion: false) { [weak prevPreviewInputPanelNode] _ in
                         if prevPreviewInputPanelNode?.supernode === self {
                             prevPreviewInputPanelNode?.removeFromSupernode()
                         }
                     }
-                    prevPreviewInputPanelNode?.deleteButton.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    prevPreviewInputPanelNode?.deleteButton.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, delay: 0.0, removeOnCompletion: false)
                     
-                    self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                    self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    if isRecording {
+                        self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 0, duration: 0.01, delay: 0.0, removeOnCompletion: false)
+                        self?.attachmentButton.layer.animateScale(from: 1, to: 0.3, duration: 0.01, delay: 0.0, removeOnCompletion: false)
+                    } else {
+                        self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0.0, removeOnCompletion: false)
+                        self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0.0, removeOnCompletion: false)
+                    }
                 } else if prevPreviewInputPanelNode?.supernode === self {
                    prevPreviewInputPanelNode?.removeFromSupernode()
                 }
             }
             
             if self.isMediaDeleted {
+                Queue.mainQueue().after(0.5, {
+                    self.isMediaDeleted = false
+                })
+            }
+            
+            if self.isMediaDeleted && !isRecording {
                 binNode.completion = dismissBin
                 binNode.play()
             } else {
@@ -2638,16 +2658,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
         }
                 
+        var clippingDelta: CGFloat = 0.0
+        if case let .media(_, _, focused) = interfaceState.inputMode, focused {
+            clippingDelta = -panelHeight
+        }
+        transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
+        transition.updateSublayerTransformOffset(layer: self.clippingNode.layer, offset: CGPoint(x: 0.0, y: clippingDelta))
         
         let viewOnceSize = self.viewOnceButton.update(theme: interfaceState.theme)
         let viewOnceButtonFrame = CGRect(origin: CGPoint(x: width - rightInset - 44.0 - UIScreenPixel, y: -152.0), size: viewOnceSize)
         self.viewOnceButton.bounds = CGRect(origin: .zero, size: viewOnceButtonFrame.size)
         transition.updatePosition(node: self.viewOnceButton, position: viewOnceButtonFrame.center)
         
-        var viewOnceIsVisible = false
-        if let recordingState = interfaceState.inputTextPanelState.mediaRecordingState, case let .audio(_, isLocked) = recordingState, isLocked {
-            viewOnceIsVisible = true
-        }
         if self.viewOnceButton.alpha.isZero && viewOnceIsVisible {
             self.viewOnceButton.update(isSelected: self.viewOnce, animated: false)
         }
@@ -2658,13 +2680,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         } else {
             self.viewOnceButton.isHidden = true
         }
-        
-        var clippingDelta: CGFloat = 0.0
-        if case let .media(_, _, focused) = interfaceState.inputMode, focused {
-            clippingDelta = -panelHeight
-        }
-        transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight)))
-        transition.updateSublayerTransformOffset(layer: self.clippingNode.layer, offset: CGPoint(x: 0.0, y: clippingDelta))
         
         return panelHeight
     }

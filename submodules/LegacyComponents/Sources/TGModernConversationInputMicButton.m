@@ -146,6 +146,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     
     BOOL _xFeedbackOccured;
     BOOL _yFeedbackOccured;
+    
+    bool _skipCancelUpdate;
 }
 
 @end
@@ -507,7 +509,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     [self displayLink].paused = false;
     
     if (_locked) {
+        _skipCancelUpdate = true;
         [self animateLock];
+        _skipCancelUpdate = false;
     }
 }
 
@@ -644,7 +648,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _currentScale = 1;
     _cancelTargetTranslation = 0;
     id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
-    if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
+    if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)] && !_skipCancelUpdate)
         [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTargetTranslation];
     
     _innerIconView.transform = CGAffineTransformMakeScale(0.3f, 0.3f);

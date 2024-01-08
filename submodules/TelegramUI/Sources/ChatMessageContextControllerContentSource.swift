@@ -110,6 +110,8 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
     let blurBackground: Bool = true
     let centerVertically: Bool = true
     
+    var initialAppearanceOffset: CGPoint = .zero
+    
     private let context: AccountContext
     private let presentationData: PresentationData
     private weak var chatNode: ChatControllerNode?
@@ -169,6 +171,9 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
         
         self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         
+        let isIncoming = self.message.effectivelyIncoming(self.context.account.peerId)
+        let isVideo = (self.message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile)?.isInstantVideo ?? false
+        
         var result: ContextControllerTakeViewInfo?
         var sourceNode: ContextExtractedContentContainingNode?
         var sourceRect: CGRect = .zero
@@ -181,19 +186,19 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
             }
             if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.message.stableId) {
                 sourceNode = contentNode
-                sourceRect = itemNode.frame
+                sourceRect = contentNode.view.convert(contentNode.bounds, to: chatNode.view)
+                if !isVideo {
+                    sourceRect.origin.y -= 2.0 + UIScreenPixel
+                }
             }
         }
-        
-        let isIncoming = self.message.effectivelyIncoming(self.context.account.peerId)
-        let isVideo = (self.message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile)?.isInstantVideo ?? false
         
         var tooltipSourceRect: CGRect = .zero
         
         if let sourceNode {
             var bubbleWidth: CGFloat = 0.0
             
-            if (isIncoming || "".isEmpty) && !isVideo {
+            if (isIncoming || "".isEmpty) {
                 let messageItem = self.context.sharedContext.makeChatMessagePreviewItem(
                     context: self.context,
                     messages: [self.message],
@@ -211,10 +216,12 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                     availableReactions: nil,
                     accountPeer: nil,
                     isCentered: false,
-                    isPreview: false
+                    isPreview: false,
+                    isStandalone: true
                 )
                 
-                let params = ListViewItemLayoutParams(width: chatNode.historyNode.frame.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, availableHeight: chatNode.historyNode.frame.height, isStandalone: false)
+                let width = chatNode.historyNode.frame.width
+                let params = ListViewItemLayoutParams(width: width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, availableHeight: chatNode.historyNode.frame.height, isStandalone: false)
                 var node: ListViewItemNode?
                 
                 messageItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { messageNode, apply in
@@ -223,11 +230,22 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                 })
                 
                 if let messageNode = node as? ChatMessageItemView, let copyContentNode = messageNode.getMessageContextSourceNode(stableId: self.message.stableId) {
-                    messageNode.frame.origin.y = chatNode.frame.height - sourceRect.origin.y - sourceRect.size.height
+                    let delta: CGFloat = 0.0// (width - 20.0 - messageNode.frame.height)
+                    self.initialAppearanceOffset = CGPoint(x: 0.0, y: -delta)
+                    
+                    copyContentNode.contentNode.backgroundColor = UIColor.red.withAlphaComponent(0.5)
+                    
+                    messageNode.frame.origin.y = sourceRect.origin.y// chatNode.frame.height - sourceRect.origin.y - sourceRect.size.height
                     chatNode.addSubnode(messageNode)
                     result = ContextControllerTakeViewInfo(containingItem: .node(copyContentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
                     
                     bubbleWidth = copyContentNode.contentNode.subnodes?.first?.frame.width ?? messageNode.frame.width
+                    
+                    if isVideo {
+                        messageItem.updateNode(async: { $0() }, node: { return messageNode }, params: params, previousItem: nil, nextItem: nil, animation: .System(duration: 0.4, transition: ControlledTransition(duration: 0.4, curve: .spring, interactive: false)), completion: { (layout, apply) in
+                            apply(ListViewItemApply(isOnScreen: true))
+                        })
+                    }
                 }
                 
                 self.messageNodeCopy = node as? ChatMessageItemView

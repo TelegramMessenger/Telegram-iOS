@@ -19,7 +19,7 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
     }()
     
     private let lockingView: AnimationView = {
-        guard let url = getAppBundle().url(forResource: "Lock", withExtension: "json"), let animation = Animation.filepath(url.path)
+        guard let url = getAppBundle().url(forResource: "LockPause", withExtension: "json"), let animation = Animation.filepath(url.path)
         else { return AnimationView() }
         
         let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))

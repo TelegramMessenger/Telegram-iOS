@@ -4110,8 +4110,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     func voicePlaylistItemChanged(_ previousItem: SharedMediaPlaylistItem?, _ currentItem: SharedMediaPlaylistItem?) -> Void {
         if let currentItemId = currentItem?.id as? PeerMessagesMediaPlaylistItemId {
-            let isVideo = currentItem?.playbackData?.type == .instantVideo
-            self.currentlyPlayingMessageIdPromise.set(.single((currentItemId.messageIndex, isVideo)))
+            if let source = currentItem?.playbackData?.source, case let .telegramFile(_, _, isViewOnce) = source, isViewOnce {
+                self.currentlyPlayingMessageIdPromise.set(.single(nil))
+            } else {
+                let isVideo = currentItem?.playbackData?.type == .instantVideo
+                self.currentlyPlayingMessageIdPromise.set(.single((currentItemId.messageIndex, isVideo)))
+            }
         } else {
             self.currentlyPlayingMessageIdPromise.set(.single(nil))
         }

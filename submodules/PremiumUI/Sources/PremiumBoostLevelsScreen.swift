@@ -361,8 +361,6 @@ private final class LevelSectionComponent: CombinedComponent {
     }
 }
 
-
-
 private final class LimitSheetContent: CombinedComponent {
     typealias EnvironmentType = (Empty, ScrollChildEnvironment)
     
@@ -820,8 +818,6 @@ private final class LimitSheetContent: CombinedComponent {
         }
     }
 }
-
-
 
 private final class BoostLevelsContainerComponent: CombinedComponent {
     let context: AccountContext
