@@ -28,17 +28,17 @@ public enum UserPresenceStatus: Comparable, PostboxCoding {
     private var sortKey: SortKey {
         switch self {
         case let .present(until):
-            return SortKey(major: 1, minor: until)
+            return SortKey(major: 6, minor: until)
         case .hidden:
-            return SortKey(major: 2, minor: 0)
-        case .recently:
-            return SortKey(major: 3, minor: 0)
-        case .lastWeek:
-            return SortKey(major: 4, minor: 0)
-        case .lastMonth:
             return SortKey(major: 5, minor: 0)
+        case .recently:
+            return SortKey(major: 4, minor: 0)
+        case .lastWeek:
+            return SortKey(major: 3, minor: 0)
+        case .lastMonth:
+            return SortKey(major: 2, minor: 0)
         case .none:
-            return SortKey(major: 6, minor: 0)
+            return SortKey(major: 1, minor: 0)
         }
     }
     

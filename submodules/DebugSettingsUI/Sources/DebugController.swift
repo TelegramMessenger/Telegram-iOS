@@ -83,6 +83,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetDatabase(PresentationTheme)
     case resetDatabaseAndCache(PresentationTheme)
     case resetHoles(PresentationTheme)
+    case resetTagHoles
     case reindexUnread(PresentationTheme)
     case resetCacheIndex
     case reindexCache
@@ -127,7 +128,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .callV2, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -200,50 +201,52 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 27
         case .resetHoles:
             return 28
-        case .reindexUnread:
+        case .resetTagHoles:
             return 29
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 30
-        case .reindexCache:
+        case .resetCacheIndex:
             return 31
-        case .resetBiometricsData:
+        case .reindexCache:
             return 32
-        case .optimizeDatabase:
+        case .resetBiometricsData:
             return 33
-        case .photoPreview:
+        case .optimizeDatabase:
             return 34
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 35
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 36
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 37
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 38
-        case .inlineForums:
+        case .acceleratedStickers:
             return 39
-        case .localTranscription:
+        case .inlineForums:
             return 40
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 41
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 42
-        case .logTranslationRecognition:
+        case .restorePurchases:
             return 43
-        case .resetTranslationStates:
+        case .logTranslationRecognition:
             return 44
-        case .storiesExperiment:
+        case .resetTranslationStates:
             return 45
-        case .storiesJpegExperiment:
+        case .storiesExperiment:
             return 46
-        case .playlistPlayback:
+        case .storiesJpegExperiment:
             return 47
-        case .enableQuickReactionSwitch:
+        case .playlistPlayback:
             return 48
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 49
+        case .voiceConference:
+            return 50
         case let .preferredVideoCodec(index, _, _, _):
-            return 50 + index
+            return 51 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -1096,6 +1099,19 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     controller.dismiss()
                 })
             })
+        case .resetTagHoles:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Tag Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                arguments.presentController(controller, nil)
+                let _ = (context.engine.messages.debugResetTagHoles()
+                |> deliverOnMainQueue).start(completed: {
+                    controller.dismiss()
+                })
+            })
         case .reindexUnread:
             return ItemListActionItem(presentationData: presentationData, title: "Reindex Unread Counters", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1434,6 +1450,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetDatabaseAndCache(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
+    entries.append(.resetTagHoles)
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
         entries.append(.resetCacheIndex)

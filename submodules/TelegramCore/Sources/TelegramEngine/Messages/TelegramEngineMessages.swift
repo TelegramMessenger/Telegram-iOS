@@ -682,6 +682,13 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func debugResetTagHoles() -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.resetCustomTagHoles()
+            }
+            |> ignoreValues
+        }
+        
         public func debugReindexUnreadCounters() -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.reindexUnreadCounters()

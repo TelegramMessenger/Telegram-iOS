@@ -138,14 +138,22 @@ final class HistoryViewStateValidationContexts {
     }
     
     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput?) {
-        /*#if DEBUG
-        if "".isEmpty {
+        assert(self.queue.isCurrent())
+        
+        guard let view else {
+            if self.contexts[id] != nil {
+                self.contexts.removeValue(forKey: id)
+            }
             return
         }
-        #endif*/
+        if case .customTag = view.tag {
+            if self.contexts[id] != nil {
+                self.contexts.removeValue(forKey: id)
+            }
+            return
+        }
         
-        assert(self.queue.isCurrent())
-        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.unseenReaction || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
+        guard view.tag == nil || view.tag == .tag(MessageTags.unseenPersonalMessage) || view.tag == .tag(MessageTags.unseenReaction) || view.tag == .tag(MessageTags.music) || view.tag == .tag(MessageTags.pinned) else {
             if self.contexts[id] != nil {
                 self.contexts.removeValue(forKey: id)
             }
@@ -180,7 +188,7 @@ final class HistoryViewStateValidationContexts {
             
             for entry in view.entries {
                 if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
-                    if let tag = view.tagMask {
+                    if case let .tag(tag) = view.tag {
                         if !entry.message.tags.contains(tag) {
                             continue
                         }
@@ -234,7 +242,12 @@ final class HistoryViewStateValidationContexts {
                             context.batchReferences[messageId] = batch
                         }
                         
-                        disposable.set((validateReplyThreadMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: peerId, threadMessageId: Int32(clamping: threadId), tag: view.tagMask, messageIds: messages)
+                        var tag: MessageTags?
+                        if case let .tag(value) = view.tag {
+                            tag = value
+                        }
+                        
+                        disposable.set((validateReplyThreadMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: peerId, threadMessageId: Int32(clamping: threadId), tag: tag, messageIds: messages)
                         |> deliverOn(self.queue)).start(completed: { [weak self, weak batch] in
                             if let strongSelf = self, let context = strongSelf.contexts[id], let batch = batch {
                                 var completedMessageIds: [MessageId] = []
@@ -283,7 +296,7 @@ final class HistoryViewStateValidationContexts {
             
             for entry in view.entries {
                 if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
-                    if let tag = view.tagMask {
+                    if case let .tag(tag) = view.tag {
                         if !entry.message.tags.contains(tag) {
                             continue
                         }
@@ -337,7 +350,12 @@ final class HistoryViewStateValidationContexts {
                             context.batchReferences[messageId] = batch
                         }
                         
-                        disposable.set((validateChannelMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, tag: view.tagMask, messageIds: messages, historyState: historyState)
+                        var tag: MessageTags?
+                        if case let .tag(value) = view.tag {
+                            tag = value
+                        }
+                        
+                        disposable.set((validateChannelMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, tag: tag, messageIds: messages, historyState: historyState)
                         |> deliverOn(self.queue)).start(completed: { [weak self, weak batch] in
                             if let strongSelf = self, let context = strongSelf.contexts[id], let batch = batch {
                                 var completedMessageIds: [MessageId] = []

@@ -2750,7 +2750,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height + detachedContentNodesHeight)
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
-            layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
+            layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height + 2.0
         }
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
             layoutSize.height += 1.0 + actionButtonsSizeAndApply.0.height
@@ -3790,7 +3790,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-            var reactionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
+            var reactionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? (layoutConstants.bubble.contentInsets.left + 2.0) : (layoutConstants.bubble.contentInsets.right - 2.0)), y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
             if !disablesComments && !incoming {
                 reactionButtonsFrame.origin.x = backgroundFrame.maxX - reactionButtonsSizeAndApply.0.width - layoutConstants.bubble.contentInsets.left
             }

@@ -3666,7 +3666,7 @@ func replayFinalState(
                                     case .groupCreated, .channelMigratedFromGroup:
                                         let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
                                         for (space, _) in holesAtHistoryStart {
-                                            transaction.removeHole(peerId: chatPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: space, range: 1 ... id.id)
+                                            transaction.removeHole(peerId: chatPeerId, threadId: nil, namespace: Namespaces.Message.Cloud, space: MessageHistoryHoleOperationSpace(space), range: 1 ... id.id)
                                         }
                                     case let .setChatWallpaper(wallpaper, _):
                                         if message.authorId == accountPeerId {

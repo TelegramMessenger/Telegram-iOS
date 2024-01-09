@@ -92,7 +92,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
             
             var mappedReactions = mappedReactions
             
-            let updatedReactions = mergedMessageReactions(attributes: attributes + [PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed)], isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId))?.reactions ?? []
+            let updatedReactions = mergedMessageReactions(attributes: attributes + [PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed, isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId))], isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId))?.reactions ?? []
             let updatedOutgoingReactions = updatedReactions.filter(\.isSelected)
             if updatedOutgoingReactions.count > maxCount {
                 let sortedOutgoingReactions = updatedOutgoingReactions.sorted(by: { $0.chosenOrder! < $1.chosenOrder! })
@@ -101,7 +101,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
                 })
             }
             
-            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed))
+            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed, isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId)))
             
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })

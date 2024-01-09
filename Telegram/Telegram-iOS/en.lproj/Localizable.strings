@@ -10883,6 +10883,7 @@ Sorry for the inconvenience.";
 "Call.WaitingStatusRinging" = "Ringing";
 "Call.WaitingStatusConnecting" = "Connecting";
 "Call.WaitingStatusReconnecting" = "Reconnecting";
+"Call.StatusWeakSignal" = "Weak network signal";
 
 "Conversation.ContactAddContact" = "ADD";
 "Conversation.ContactMessage" = "MESSAGE";

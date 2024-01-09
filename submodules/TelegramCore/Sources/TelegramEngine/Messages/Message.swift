@@ -12,6 +12,11 @@ public final class EngineMessage: Equatable {
     public typealias ForwardInfo = MessageForwardInfo
     public typealias CustomTag = MemoryBuffer
     
+    public enum InputTag: Hashable {
+        case tag(Tags)
+        case custom(CustomTag)
+    }
+    
     private let impl: Message
     
     public var stableId: UInt32 {

@@ -647,10 +647,10 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
                 getController: self.getController,
                 actionSelected: { result in
                     switch result {
-                    case .dismissWithoutContent/* where ContextMenuActionResult.safeStreamRecordingDismissWithoutContent == .dismissWithoutContent*/:
+                    case .dismissWithoutContent:
                         self.requestDismiss(result)
-                        
-                    default: break
+                    default:
+                        break
                     }
                 }
             )

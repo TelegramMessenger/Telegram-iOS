@@ -42,14 +42,26 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
         }
         
-        if let currentPanel = (currentPanel as? ChatSearchInputPanelNode) ?? (currentSecondaryPanel as? ChatSearchInputPanelNode) {
-            currentPanel.interfaceInteraction = interfaceInteraction
-            return (currentPanel, selectionPanel)
+        if chatPresentationInterfaceState.historyFilter != nil {
+            if let currentPanel = (currentPanel as? ChatTagSearchInputPanelNode) ?? (currentSecondaryPanel as? ChatTagSearchInputPanelNode) {
+                currentPanel.interfaceInteraction = interfaceInteraction
+                return (currentPanel, selectionPanel)
+            } else {
+                let panel = ChatTagSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
+                panel.context = context
+                panel.interfaceInteraction = interfaceInteraction
+                return (panel, selectionPanel)
+            }
         } else {
-            let panel = ChatSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
-            panel.context = context
-            panel.interfaceInteraction = interfaceInteraction
-            return (panel, selectionPanel)
+            if let currentPanel = (currentPanel as? ChatSearchInputPanelNode) ?? (currentSecondaryPanel as? ChatSearchInputPanelNode) {
+                currentPanel.interfaceInteraction = interfaceInteraction
+                return (currentPanel, selectionPanel)
+            } else {
+                let panel = ChatSearchInputPanelNode(theme: chatPresentationInterfaceState.theme)
+                panel.context = context
+                panel.interfaceInteraction = interfaceInteraction
+                return (panel, selectionPanel)
+            }
         }
     }
     

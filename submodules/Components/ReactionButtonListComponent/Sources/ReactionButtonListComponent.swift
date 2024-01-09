@@ -837,7 +837,9 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             
             if let fileId = layout.spec.component.reaction.animationFileId ?? layout.spec.component.reaction.centerAnimation?.fileId.id {
                 let animateIdle: Bool
-                if case .custom = layout.spec.component.reaction.value {
+                if layout.spec.component.isTag {
+                    animateIdle = false
+                } else if case .custom = layout.spec.component.reaction.value {
                     animateIdle = true
                 } else {
                     animateIdle = false

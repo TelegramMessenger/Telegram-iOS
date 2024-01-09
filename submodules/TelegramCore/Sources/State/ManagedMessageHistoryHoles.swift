@@ -6,9 +6,9 @@ private final class ManagedMessageHistoryHolesContext {
     private struct LocationKey: Equatable {
         var peerId: PeerId
         var threadId: Int64?
-        var space: MessageHistoryHoleSpace
+        var space: MessageHistoryHoleOperationSpace
         
-        init(peerId: PeerId, threadId: Int64?, space: MessageHistoryHoleSpace) {
+        init(peerId: PeerId, threadId: Int64?, space: MessageHistoryHoleOperationSpace) {
             self.peerId = peerId
             self.threadId = threadId
             self.space = space
