@@ -236,9 +236,15 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let videoCallsAvailable = (userFullFlags & (1 << 13)) != 0
                                         let voiceMessagesAvailable = (userFullFlags & (1 << 20)) == 0
                                         let readDatesPrivate = (userFullFlags & (1 << 30)) != 0
+                                        let premiumRequired = (userFullFlags & (1 << 29)) != 0
                                         let translationsDisabled = (userFullFlags & (1 << 23)) != 0
 
                                         var flags: CachedUserFlags = previous.flags
+                                        if premiumRequired {
+                                            flags.insert(.premiumRequired)
+                                        } else {
+                                            flags.remove(.premiumRequired)
+                                        }
                                         if readDatesPrivate {
                                             flags.insert(.readDatesPrivate)
                                         } else {
