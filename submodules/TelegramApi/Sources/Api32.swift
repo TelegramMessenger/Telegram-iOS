@@ -9752,6 +9752,25 @@ public extension Api.functions.users {
                 }
 }
 public extension Api.functions.users {
+                static func getIsPremiumRequiredToContact(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Bool]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1507677680)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(id.count))
+                    for item in id {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "users.getIsPremiumRequiredToContact", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.Bool]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.Bool]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Bool.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.users {
                 static func getUsers(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.User]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(227648840)
