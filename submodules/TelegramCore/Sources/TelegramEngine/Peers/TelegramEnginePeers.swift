@@ -1273,6 +1273,10 @@ public extension TelegramEngine {
         public func requestRecommendedChannels(peerId: EnginePeer.Id, forceUpdate: Bool = false) -> Signal<Never, NoError> {
             return _internal_requestRecommendedChannels(account: self.account, peerId: peerId, forceUpdate: forceUpdate)
         }
+        
+        public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {
+            return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
+        }
     }
 }
 
