@@ -437,8 +437,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let source: ChatHistoryListSource
     private let subject: ChatControllerSubject?
-    private let tagMask: MessageTags?
+    private var tag: HistoryViewInputTag?
     private let controllerInteraction: ChatControllerInteraction
+    private let selectedMessages: Signal<Set<MessageId>?, NoError>
+    private let messageTransitionNode: () -> ChatMessageTransitionNodeImpl?
     private let mode: ChatHistoryListMode
     
     private var enableUnreadAlignment: Bool = true
@@ -687,10 +689,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var allowDustEffect: Bool = true
     private var dustEffectLayer: DustEffectLayer?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, rotated: Bool = false, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
-        var tagMask = tagMask
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tag: HistoryViewInputTag?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, rotated: Bool = false, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
+        var tag = tag
         if case .pinnedMessages = subject {
-            tagMask = .pinned
+            tag = .tag(.pinned)
         }
         
         self.context = context
@@ -698,8 +700,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.chatLocationContextHolder = chatLocationContextHolder
         self.source = source
         self.subject = subject
-        self.tagMask = tagMask
+        self.tag = tag
         self.controllerInteraction = controllerInteraction
+        self.selectedMessages = selectedMessages
+        self.messageTransitionNode = messageTransitionNode
         self.mode = mode
         
         if let data = context.currentAppConfiguration.with({ $0 }).data {
@@ -819,10 +823,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         
         self.preloadPages = false
         
-        self.beginChatHistoryTransitions(
-            selectedMessages: selectedMessages,
-            messageTransitionNode: messageTransitionNode
-        )
+        self.beginChatHistoryTransitions(resetScrolling: false)
         
         self.beginReadHistoryManagement()
         
@@ -882,7 +883,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             if let strongSelf = self {
                 strongSelf.contentPositionChanged(offset)
                 
-                if strongSelf.tagMask == nil {
+                if strongSelf.tag == nil {
                     var atBottom = false
                     var offsetFromBottom: CGFloat?
                     switch offset {
@@ -1061,6 +1062,15 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.presentationDataDisposable?.dispose()
     }
     
+    public func updateTag(tag: HistoryViewInputTag?) {
+        if self.tag == tag {
+            return
+        }
+        self.tag = tag
+        
+        self.beginChatHistoryTransitions(resetScrolling: true)
+    }
+    
     private func beginAdMessageManagement(adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>) {
         self.adMessagesDisposable = (adMessages
         |> deliverOnMainQueue).startStrict(next: { [weak self] interPostInterval, messages in
@@ -1101,25 +1111,36 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }).strict()
     }
     
-    private func beginChatHistoryTransitions(
-        selectedMessages: Signal<Set<MessageId>?, NoError>,
-        messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?
-    ) {
+    private let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
+    private let currentViewVersion = Atomic<Int?>(value: nil)
+    private let previousView = Atomic<(ChatHistoryView, Int, Set<MessageId>?, Int)?>(value: nil)
+    private let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
+    
+    private func beginChatHistoryTransitions(resetScrolling: Bool) {
+        self.historyDisposable.set(nil)
+        
         let context = self.context
         let chatLocation = self.chatLocation
         let subject = self.subject
         let source = self.source
-        let tagMask = self.tagMask
+        let tag = self.tag
         let chatLocationContextHolder = self.chatLocationContextHolder
         let controllerInteraction = self.controllerInteraction
+        let selectedMessages = self.selectedMessages
+        let messageTransitionNode = self.messageTransitionNode
         let mode = self.mode
+        
+        var resetScrolling = resetScrolling
+        if resetScrolling {
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: historyMessageCount), id: 0)
+        }
         
         var appendMessagesFromTheSameGroup = false
         if case .pinnedMessages = subject {
             appendMessagesFromTheSameGroup = true
         }
         
-        let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
+        let fixedCombinedReadStates = self.fixedCombinedReadStates
         
         var isScheduledMessages = false
         if let subject = self.subject, case .scheduledMessages = subject {
@@ -1159,7 +1180,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             additionalData.append(.message(replyThreadMessage.effectiveTopId))
         }
 
-        let currentViewVersion = Atomic<Int?>(value: nil)
+        let currentViewVersion = self.currentViewVersion
         
         let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?, ClosedRange<Int32>?), NoError>
         var isFirstTime = true
@@ -1184,7 +1205,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     scrollPosition = nil
                 }
                 
-                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil, nil)
+                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tag: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil, nil)
             }
         } else {
             historyViewUpdate = combineLatest(queue: .mainQueue(),
@@ -1201,7 +1222,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 return true
             })
             |> mapToSignal { location, ignoreMessagesInTimestampRange in
-                return chatHistoryViewForLocation(location, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, additionalData: additionalData, orderStatistics: [])
+                return chatHistoryViewForLocation(location, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, additionalData: additionalData, orderStatistics: [])
                 |> beforeNext { viewUpdate in
                     switch viewUpdate {
                         case let .HistoryView(view, _, _, _, _, _, _):
@@ -1223,7 +1244,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
         }
         
-        let previousView = Atomic<(ChatHistoryView, Int, Set<MessageId>?, Int)?>(value: nil)
+        let previousView = self.previousView
         let automaticDownloadNetworkType = context.account.networkType
         |> map { type -> MediaAutoDownloadNetworkType in
             switch type {
@@ -1239,7 +1260,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         
         let additionalAnimatedEmojiStickers = (context as! AccountContextImpl).additionalAnimatedEmojiStickers
         
-        let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
+        let previousHistoryAppearsCleared = self.previousHistoryAppearsCleared
                 
         let updatingMedia = context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> map { value -> [MessageId: ChatUpdatingMessageMedia] in
@@ -1584,9 +1605,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     location: chatLocation,
                     view: view,
                     includeUnreadEntry: mode == .bubbles,
-                    includeEmptyEntry: mode == .bubbles && tagMask == nil,
+                    includeEmptyEntry: mode == .bubbles && tag == nil,
                     includeChatInfoEntry: mode == .bubbles,
-                    includeSearchEntry: includeSearchEntry && tagMask != nil,
+                    includeSearchEntry: includeSearchEntry && tag != nil,
                     reverse: reverse,
                     groupMessages: mode == .bubbles,
                     reverseGroupedMessages: reverseGroups,
@@ -1609,6 +1630,13 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages, allAdMessages.version))
                 let previous = previousValueAndVersion?.0
                 let previousSelectedMessages = previousValueAndVersion?.2
+                
+                if let previous {
+                    print("view entries: \(view.entries.count), previous: \(previous.originalView.entries.count)")
+                    if previous.originalView.entries.count >= 44 && view.entries.count == 1 {
+                        assert(true)
+                    }
+                }
                 
                 if let previousVersion = previousValueAndVersion?.1 {
                     assert(update.1 >= previousVersion)
@@ -1723,6 +1751,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                 }
 
+                if resetScrolling {
+                    resetScrolling = false
+                }
 
                 if let strongSelf = self, updatedScrollPosition == nil, case .InteractiveChanges = reason, case let .known(offset) = strongSelf.visibleContentOffset(), abs(offset) <= 0.9, let previous = previous {
                     var fillsScreen = true

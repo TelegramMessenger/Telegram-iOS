@@ -10,7 +10,7 @@ public enum EarliestUnseenPersonalMentionMessageResult: Equatable {
 }
 
 func _internal_earliestUnseenPersonalMentionMessage(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
-    return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: threadId), index: .lowerBound, anchorIndex: .lowerBound, count: 4, fixedCombinedReadStates: nil, tagMask: .unseenPersonalMessage, additionalData: [.peerChatState(peerId)])
+    return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: threadId), index: .lowerBound, anchorIndex: .lowerBound, count: 4, fixedCombinedReadStates: nil, tag: .tag(.unseenPersonalMessage), additionalData: [.peerChatState(peerId)])
     |> mapToSignal { view -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         if view.0.isLoading {
             return .single(.loading)
@@ -77,7 +77,7 @@ func _internal_earliestUnseenPersonalMentionMessage(account: Account, peerId: Pe
 }
 
 func _internal_earliestUnseenPersonalReactionMessage(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
-    return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: threadId), index: .lowerBound, anchorIndex: .lowerBound, count: 4, fixedCombinedReadStates: nil, tagMask: .unseenReaction, additionalData: [.peerChatState(peerId)])
+    return account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: threadId), index: .lowerBound, anchorIndex: .lowerBound, count: 4, fixedCombinedReadStates: nil, tag: .tag(.unseenReaction), additionalData: [.peerChatState(peerId)])
     |> mapToSignal { view -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         if view.0.isLoading {
             return .single(.loading)

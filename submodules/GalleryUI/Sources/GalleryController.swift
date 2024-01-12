@@ -410,12 +410,12 @@ private enum GalleryMessageHistoryView {
         }
     }
     
-    var tagMask: MessageTags? {
+    var tag: HistoryViewInputTag? {
         switch self {
         case .entries:
             return nil
         case let .view(view, _):
-            return view.tagMask
+            return view.tag
         }
     }
     
@@ -517,7 +517,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
     private var hasLeftEntries: Bool = false
     private var hasRightEntries: Bool = false
     private var loadingMore: Bool = false
-    private var tagMask: MessageTags?
+    private var tag: HistoryViewInputTag?
     private var centralEntryStableId: UInt32?
     private var configuration: GalleryConfiguration?
     
@@ -644,7 +644,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                         } else {
                             namespaces = .not(Namespaces.Message.allScheduled)
                         }
-                        return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message.index), ignoreMessagesInTimestampRange: nil, count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                        return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message.index), ignoreMessagesInTimestampRange: nil, count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: .tag(tags), appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                             let mapped = GalleryMessageHistoryView.view(view, peerIsCopyProtected)
                             return .single(mapped)
@@ -719,7 +719,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                             }
                         }
                         
-                        strongSelf.tagMask = view.tagMask
+                        strongSelf.tag = view.tag
                         
                         if invertItemOrder {
                             strongSelf.entries = entries.reversed()
@@ -1366,14 +1366,14 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                 reloadAroundIndex = strongSelf.entries.last?.index
                             }
                             let peerIsCopyProtected = strongSelf.peerIsCopyProtected
-                            if let reloadAroundIndex = reloadAroundIndex, let tagMask = strongSelf.tagMask {
+                            if let reloadAroundIndex = reloadAroundIndex, let tag = strongSelf.tag {
                                 let namespaces: MessageIdNamespaces
                                 if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                                     namespaces = .just(Namespaces.Message.allScheduled)
                                 } else {
                                     namespaces = .not(Namespaces.Message.allScheduled)
                                 }
-                                let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), ignoreMessagesInTimestampRange: nil, count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                                let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), ignoreMessagesInTimestampRange: nil, count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: tag, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
                                 |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                                     let mapped = GalleryMessageHistoryView.view(view, peerIsCopyProtected)
                                     return .single(mapped)

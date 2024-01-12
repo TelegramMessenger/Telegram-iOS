@@ -370,7 +370,7 @@ struct FetchMessageHistoryHoleResult: Equatable {
     var ids: [MessageId]
 }
 
-func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleOperationSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
     let count = min(100, rawCount)
     
     return postbox.stateView()
@@ -745,6 +745,77 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     minMaxRange = 1 ... 1
                     request = .never()
                 }
+            case let .customTag(customTag):
+                if let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: customTag) {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                    case let .range(start, end):
+                        if start.id <= end.id {
+                            offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                            addOffset = Int32(-selectedLimit)
+                            maxId = end.id
+                            minId = start.id - 1
+                            
+                            let rangeStartId = start.id
+                            let rangeEndId = min(end.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        } else {
+                            offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                            addOffset = 0
+                            maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                            minId = end.id
+                            
+                            let rangeStartId = end.id
+                            let rangeEndId = min(start.id, Int32.max - 1)
+                            if rangeStartId <= rangeEndId {
+                                minMaxRange = rangeStartId ... rangeEndId
+                            } else {
+                                minMaxRange = rangeStartId ... rangeStartId
+                                assertionFailure()
+                            }
+                        }
+                    case let .aroundId(id):
+                        offsetId = id.id
+                        addOffset = Int32(-selectedLimit / 2)
+                        maxId = Int32.max
+                        minId = 1
+                        
+                        minMaxRange = 1 ... (Int32.max - 1)
+                    }
+                    
+                    var flags: Int32 = 0
+                    var topMsgId: Int32?
+                    if let threadId = peerInput.requestThreadId(accountPeerId: accountPeerId) {
+                        flags |= (1 << 1)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
+                    var savedPeerId: Api.InputPeer?
+                    if let subPeerId = peerInput.requestSubPeerId(accountPeerId: accountPeerId), let subPeer = subPeer, subPeer.id == subPeerId {
+                        if let inputPeer = apiInputPeer(subPeer) {
+                            flags |= 1 << 2
+                            savedPeerId = inputPeer
+                        }
+                    }
+                    
+                    flags |= 1 << 3
+                    
+                    request = source.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, savedPeerId: savedPeerId, savedReaction: [reaction.apiReaction], topMsgId: topMsgId, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                } else {
+                    assertionFailure()
+                    minMaxRange = 1 ... 1
+                    request = .never()
+                }
             }
             
             return request
@@ -828,6 +899,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     } else {
                                         return id.id
                                     }
+                                case let .customTag(customTag):
+                                    if !postbox.seedConfiguration.customTagsFromAttributes(message.attributes).contains(customTag) {
+                                        return nil
+                                    } else {
+                                        return id.id
+                                    }
                                 case .everywhere:
                                     return id.id
                                 }
@@ -841,6 +918,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                 switch space {
                                 case let .tag(tag):
                                     if !message.tags.contains(tag) {
+                                        return nil
+                                    } else {
+                                        return id
+                                    }
+                                case let .customTag(customTag):
+                                    if !postbox.seedConfiguration.customTagsFromAttributes(message.attributes).contains(customTag) {
                                         return nil
                                     } else {
                                         return id
@@ -864,32 +947,32 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         } else {
                             let messageRange = ids.min()! ... ids.max()!
                             switch direction {
-                                case let .aroundId(aroundId):
-                                    filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
-                                    strictFilledIndices = IndexSet(integersIn: Int(min(aroundId.id, messageRange.lowerBound)) ... Int(max(aroundId.id, messageRange.upperBound)))
-                                    if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil {
-                                        if ids.count <= count / 2 - 1 {
-                                            filledRange = minMaxRange
-                                        }
+                            case let .aroundId(aroundId):
+                                filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
+                                strictFilledIndices = IndexSet(integersIn: Int(min(aroundId.id, messageRange.lowerBound)) ... Int(max(aroundId.id, messageRange.upperBound)))
+                                if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil {
+                                    if ids.count <= count / 2 - 1 {
+                                        filledRange = minMaxRange
                                     }
-                                case let .range(start, end):
-                                    if start.id <= end.id {
-                                        let minBound = start.id
-                                        let maxBound = messageRange.upperBound
-                                        filledRange = min(minBound, maxBound) ... max(minBound, maxBound)
-                                        
-                                        var maxStrictIndex = max(minBound, maxBound)
-                                        maxStrictIndex = min(maxStrictIndex, messageRange.upperBound)
-                                        strictFilledIndices = IndexSet(integersIn: Int(min(minBound, maxBound)) ... Int(maxStrictIndex))
-                                    } else {
-                                        let minBound = messageRange.lowerBound
-                                        let maxBound = start.id
-                                        filledRange = min(minBound, maxBound) ... max(minBound, maxBound)
-                                        
-                                        var maxStrictIndex = max(minBound, maxBound)
-                                        maxStrictIndex = min(maxStrictIndex, messageRange.upperBound)
-                                        strictFilledIndices = IndexSet(integersIn: Int(min(minBound, maxBound)) ... Int(maxStrictIndex))
-                                    }
+                                }
+                            case let .range(start, end):
+                                if start.id <= end.id {
+                                    let minBound = start.id
+                                    let maxBound = messageRange.upperBound
+                                    filledRange = min(minBound, maxBound) ... max(minBound, maxBound)
+                                    
+                                    var maxStrictIndex = max(minBound, maxBound)
+                                    maxStrictIndex = min(maxStrictIndex, messageRange.upperBound)
+                                    strictFilledIndices = IndexSet(integersIn: Int(min(minBound, maxBound)) ... Int(maxStrictIndex))
+                                } else {
+                                    let minBound = messageRange.lowerBound
+                                    let maxBound = start.id
+                                    filledRange = min(minBound, maxBound) ... max(minBound, maxBound)
+                                    
+                                    var maxStrictIndex = max(minBound, maxBound)
+                                    maxStrictIndex = min(maxStrictIndex, messageRange.upperBound)
+                                    strictFilledIndices = IndexSet(integersIn: Int(min(minBound, maxBound)) ... Int(maxStrictIndex))
+                                }
                             }
                         }
                         

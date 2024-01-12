@@ -412,6 +412,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, updateHistoryFilter: { _ in
         }, requestLayout: { _ in
         }, chatController: {
             return nil

@@ -613,7 +613,6 @@ public protocol MessageAttribute: AnyObject, PostboxCoding {
     var associatedMediaIds: [MediaId] { get }
     var automaticTimestampBasedAttribute: (UInt16, Int32)? { get }
     var associatedStoryIds: [StoryId] { get }
-    var customTags: [MemoryBuffer] { get }
 }
 
 public extension MessageAttribute {
@@ -634,10 +633,6 @@ public extension MessageAttribute {
     }
     
     var associatedStoryIds: [StoryId] {
-        return []
-    }
-    
-    var customTags: [MemoryBuffer] {
         return []
     }
 }
@@ -886,21 +881,6 @@ public struct MessageThreadKey: Hashable {
     }
 }
 
-private func customTagsFromAttributes(_ attributes: [MessageAttribute]) -> [MemoryBuffer] {
-    var result: [MemoryBuffer] = []
-    for attribute in attributes {
-        for customTag in attribute.customTags {
-            if !result.contains(customTag) {
-                result.append(customTag)
-            }
-        }
-    }
-    if !result.isEmpty {
-        result.sort()
-    }
-    return result
-}
-
 public final class StoreMessage {
     public let id: StoreMessageId
     public let timestamp: Int32
@@ -911,7 +891,6 @@ public final class StoreMessage {
     public let tags: MessageTags
     public let globalTags: GlobalMessageTags
     public let localTags: LocalMessageTags
-    public let customTags: [MemoryBuffer]
     public let forwardInfo: StoreMessageForwardInfo?
     public let authorId: PeerId?
     public let text: String
@@ -928,7 +907,6 @@ public final class StoreMessage {
         self.tags = tags
         self.globalTags = globalTags
         self.localTags = localTags
-        self.customTags = customTagsFromAttributes(attributes)
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
@@ -946,7 +924,6 @@ public final class StoreMessage {
         self.tags = tags
         self.globalTags = globalTags
         self.localTags = localTags
-        self.customTags = customTagsFromAttributes(attributes)
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
@@ -964,7 +941,6 @@ public final class StoreMessage {
         self.tags = tags
         self.globalTags = globalTags
         self.localTags = localTags
-        self.customTags = customTagsFromAttributes(attributes)
         self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text

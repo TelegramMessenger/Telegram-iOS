@@ -197,6 +197,44 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             } else {
                 return nil
             }
+        },
+        customTagsFromAttributes: { attributes in
+            var isTags = false
+            
+            for attribute in attributes {
+                if let attribute = attribute as? PendingReactionsMessageAttribute, attribute.isTags {
+                    isTags = true
+                    break
+                } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.isTags {
+                    isTags = true
+                    break
+                }
+            }
+            
+            if !isTags {
+                return []
+            }
+            
+            guard let reactions = mergedMessageReactions(attributes: attributes, isTags: isTags), !reactions.reactions.isEmpty else {
+                return []
+            }
+            
+            var result: [MemoryBuffer] = []
+            
+            for reaction in reactions.reactions {
+                if reaction.isSelected {
+                    let tag = ReactionsMessageAttribute.messageTag(reaction: reaction.value)
+                    if !result.contains(tag) {
+                        result.append(tag)
+                    }
+                }
+            }
+            
+            if !result.isEmpty {
+                result.sort()
+            }
+            
+            return result
         }
     )
 }()

@@ -356,7 +356,6 @@ public enum ChatSearchDomain: Equatable {
     case everything
     case members
     case member(Peer)
-    case tag(MessageReaction.Reaction, TelegramMediaFile)
     
     public static func ==(lhs: ChatSearchDomain, rhs: ChatSearchDomain) -> Bool {
         switch lhs {
@@ -374,12 +373,6 @@ public enum ChatSearchDomain: Equatable {
             }
         case let .member(lhsPeer):
             if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
-                return true
-            } else {
-                return false
-            }
-        case let .tag(tag, file):
-            if case .tag(tag, file) = rhs {
                 return true
             } else {
                 return false
@@ -884,7 +877,7 @@ public protocol SharedAccountContext: AnyObject {
     func openSearch(filter: ChatListSearchFilter, query: String?)
     func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?)
     func openChatMessage(_ params: OpenChatMessageParams) -> Bool
-    func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
+    func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tag: HistoryViewInputTag?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, chatLocation: ChatLocation, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
     func makePeerInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool, requestsContext: PeerInvitationImportersContext?) -> ViewController?
     func makeChannelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant) -> ViewController?
@@ -898,7 +891,7 @@ public protocol SharedAccountContext: AnyObject {
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>),
         chatLocation: ChatLocation,
         chatLocationContextHolder: Atomic<ChatLocationContextHolder?>,
-        tagMask: MessageTags?,
+        tag: HistoryViewInputTag?,
         source: ChatHistoryListSource,
         subject: ChatControllerSubject?,
         controllerInteraction: ChatControllerInteractionProtocol,

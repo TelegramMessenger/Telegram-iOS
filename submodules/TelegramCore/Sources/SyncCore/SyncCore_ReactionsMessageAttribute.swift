@@ -306,18 +306,6 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         return result
     }
     
-    public var customTags: [MemoryBuffer] {
-        if self.isTags {
-            var result: [MemoryBuffer] = []
-            for reaction in self.reactions {
-                result.append(ReactionsMessageAttribute.messageTag(reaction: reaction.value))
-            }
-            return result
-        } else {
-            return []
-        }
-    }
-    
     public init(canViewList: Bool, isTags: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
         self.canViewList = canViewList
         self.isTags = isTags
@@ -407,6 +395,7 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
     public let reactions: [PendingReaction]
     public let isLarge: Bool
     public let storeAsRecentlyUsed: Bool
+    public let isTags: Bool
     
     public var associatedPeerIds: [PeerId] {
         var peerIds: [PeerId] = []
@@ -441,11 +430,12 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         return result
     }
     
-    public init(accountPeerId: PeerId?, reactions: [PendingReaction], isLarge: Bool, storeAsRecentlyUsed: Bool) {
+    public init(accountPeerId: PeerId?, reactions: [PendingReaction], isLarge: Bool, storeAsRecentlyUsed: Bool, isTags: Bool) {
         self.accountPeerId = accountPeerId
         self.reactions = reactions
         self.isLarge = isLarge
         self.storeAsRecentlyUsed = storeAsRecentlyUsed
+        self.isTags = isTags
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -453,6 +443,7 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("reac")
         self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
         self.storeAsRecentlyUsed = decoder.decodeInt32ForKey("used", orElse: 0) != 0
+        self.isTags = decoder.decodeBoolForKey("itag", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -466,5 +457,6 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         
         encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
         encoder.encodeInt32(self.storeAsRecentlyUsed ? 1 : 0, forKey: "used")
+        encoder.encodeBool(self.isTags, forKey: "itag")
     }
 }

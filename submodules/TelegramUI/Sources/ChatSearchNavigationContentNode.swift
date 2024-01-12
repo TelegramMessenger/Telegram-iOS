@@ -112,7 +112,9 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                 let placeholderText: String
                 switch self.chatLocation {
                 case .peer, .replyThread, .feed:
-                    if self.chatLocation.peerId == self.context.account.peerId {
+                    if presentationInterfaceState.historyFilter != nil {
+                        placeholderText = self.strings.Common_Search
+                    } else if self.chatLocation.peerId == self.context.account.peerId {
                         //TODO:localize
                         placeholderText = "Search messages or tags"
                     } else {
@@ -120,12 +122,6 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                     }
                 }
                 self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
-            case let .tag(tag, file):
-                //TODO:localize
-                let placeholderText = "Search"
-                self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
-                //TODO:localize
-                self.searchBar.tokens = [SearchBarToken(id: AnyHashable(tag), context: self.context, icon: nil, isTag: true, reaction: tag, emojiFile: file, title: "Tag", permanent: false)]
             case .members:
                 self.searchBar.tokens = []
                 self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)

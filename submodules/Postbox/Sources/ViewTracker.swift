@@ -472,9 +472,14 @@ final class ViewTracker {
         var firstHolesAndTags = Set<MessageHistoryHolesViewEntry>()
         for (view, _) in self.messageHistoryViews.copyItems() {
             if let (hole, direction, count, userId) = view.firstHole() {
-                let space: MessageHistoryHoleSpace
+                let space: MessageHistoryHoleOperationSpace
                 if let tag = view.tag {
-                    space = .tag(tag)
+                    switch tag {
+                    case let .tag(value):
+                        space = .tag(value)
+                    case let .customTag(value):
+                        space = .customTag(value)
+                    }
                 } else {
                     space = .everywhere
                 }

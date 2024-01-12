@@ -203,6 +203,8 @@ public struct CachedUserFlags: OptionSet {
     
     public static let translationHidden = CachedUserFlags(rawValue: 1 << 0)
     public static let isBlockedFromStories = CachedUserFlags(rawValue: 1 << 1)
+    public static let readDatesPrivate = CachedUserFlags(rawValue: 1 << 2)
+    public static let premiumRequired = CachedUserFlags(rawValue: 1 << 3)
 }
 
 public final class EditableBotInfo: PostboxCoding, Equatable {

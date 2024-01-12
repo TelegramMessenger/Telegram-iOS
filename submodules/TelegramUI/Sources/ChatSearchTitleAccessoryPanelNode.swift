@@ -60,32 +60,36 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         private let context: AccountContext
         private let action: () -> Void
         
+        private let background: UIImageView
         private let icon = ComponentView<Empty>()
         private let counter = ComponentView<Empty>()
         
         init(context: AccountContext, action: @escaping (() -> Void)) {
+            self.background = UIImageView()
+            if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
+                self.background.image = image.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0).withRenderingMode(.alwaysTemplate)
+            }
+            
             self.context = context
             self.action = action
             
             super.init(frame: CGRect())
             
+            self.addSubview(self.background)
+            
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             
             self.highligthedChanged = { [weak self] highlighted in
                 if let self, self.bounds.width > 0.0 {
-                    let topScale: CGFloat = (self.bounds.width - 8.0) / self.bounds.width
-                    let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
+                    let topScale: CGFloat = (self.bounds.width - 1.0) / self.bounds.width
+                    let maxScale: CGFloat = (self.bounds.width + 1.0) / self.bounds.width
                     
                     if highlighted {
                         self.layer.removeAnimation(forKey: "opacity")
                         self.layer.removeAnimation(forKey: "sublayerTransform")
-                        self.alpha = 0.7
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
                         transition.updateTransformScale(layer: self.layer, scale: topScale)
                     } else {
-                        self.alpha = 1.0
-                        self.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
-                        
                         let transition: ContainedViewLayoutTransition = .immediate
                         transition.updateTransformScale(layer: self.layer, scale: 1.0)
                         
@@ -117,7 +121,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             return super.hitTest(mappedPoint, with: event)
         }
         
-        func update(item: Item, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
+        func update(item: Item, isSelected: Bool, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
             let spacing: CGFloat = 4.0
             
             let reactionSize = CGSize(width: 16.0, height: 16.0)
@@ -151,7 +155,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             let counterSize = self.counter.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "\(item.count)", font: Font.regular(14.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
+                    text: .plain(NSAttributedString(string: "\(item.count)", font: Font.regular(14.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -176,6 +180,12 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                     self.addSubview(counterView)
                 }
                 counterView.frame = counterFrame
+            }
+            
+            self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : theme.list.controlSecondaryColor
+            if let image = self.background.image {
+                let backgroundFrame = CGRect(origin: CGPoint(x: -6.0, y: floorToScreenPixels((size.height - image.size.height) * 0.5)), size: CGSize(width: size.width + 6.0 + 9.0, height: image.size.height))
+                transition.setFrame(view: self.background, frame: backgroundFrame)
             }
             
             return size
@@ -308,16 +318,16 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             self.update(params: params, transition: transition)
         }
         
-        let panelHeight: CGFloat = 33.0
+        let panelHeight: CGFloat = 39.0
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
     }
     
     private func update(params: Params, transition: ContainedViewLayoutTransition) {
-        let panelHeight: CGFloat = 33.0
+        let panelHeight: CGFloat = 39.0
         
-        let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 14.0, bottom: 0.0, right: params.rightInset + 14.0)
-        let itemSpacing: CGFloat = 20.0
+        let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
+        let itemSpacing: CGFloat = 26.0
         
         var contentSize = CGSize(width: 0.0, height: panelHeight)
         contentSize.width += containerInsets.left
@@ -341,18 +351,40 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             } else {
                 itemTransition = .immediate
                 animateIn = true
+                let reaction = item.reaction
                 itemView = ItemView(context: self.context, action: { [weak self] in
                     guard let self else {
                         return
                     }
-                    self.interfaceInteraction?.beginMessageSearch(.tag(item.reaction, item.file), "")
+                    
+                    let tag = ReactionsMessageAttribute.messageTag(reaction: reaction)
+                    
+                    self.interfaceInteraction?.updateHistoryFilter({ filter in
+                        var tags: [EngineMessage.CustomTag] = filter?.customTags ?? []
+                        if let index = tags.firstIndex(of: tag) {
+                            tags.remove(at: index)
+                        } else {
+                            tags.append(tag)
+                        }
+                        if tags.isEmpty {
+                            return nil
+                        } else {
+                            return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: filter?.isActive ?? true)
+                        }
+                    })
                 })
                 self.itemViews[itemId] = itemView
                 self.scrollView.addSubview(itemView)
             }
             
-            let itemSize = itemView.update(item: item, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
-            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: 0.0), size: itemSize)
+            var isSelected = false
+            if let historyFilter = params.interfaceState.historyFilter {
+                if historyFilter.customTags.contains(ReactionsMessageAttribute.messageTag(reaction: item.reaction)) {
+                    isSelected = true
+                }
+            }
+            let itemSize = itemView.update(item: item, isSelected: isSelected, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
+            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
             
             itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
             if animateIn && transition.isAnimated {
@@ -387,7 +419,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         
         let scrollSize = CGSize(width: params.width, height: contentSize.height)
         if self.scrollView.bounds.size != scrollSize {
-            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: -5.0), size: scrollSize)
+            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scrollSize)
         }
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize

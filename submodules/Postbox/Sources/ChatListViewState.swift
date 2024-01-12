@@ -1621,6 +1621,7 @@ struct ChatListViewState {
                             peerId: associatedMessageId.peerId,
                             namespace: associatedMessageId.namespace,
                             tag: nil,
+                            customTag: nil,
                             threadId: nil,
                             from: .absoluteUpperBound().withPeerId(associatedMessageId.peerId).withNamespace(associatedMessageId.namespace),
                             includeFrom: true,

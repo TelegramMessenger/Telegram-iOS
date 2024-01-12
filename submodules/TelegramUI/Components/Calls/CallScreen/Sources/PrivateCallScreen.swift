@@ -1347,7 +1347,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 self.weakSignalView = weakSignalView
                 self.addSubview(weakSignalView)
             }
-            let weakSignalSize = weakSignalView.update(constrainedSize: CGSize(width: params.size.width - 32.0, height: 100.0))
+            let weakSignalSize = weakSignalView.update(strings: params.state.strings, constrainedSize: CGSize(width: params.size.width - 32.0, height: 100.0))
             let weakSignalY: CGFloat
             if currentAreControlsHidden {
                 weakSignalY = params.insets.top + 2.0
