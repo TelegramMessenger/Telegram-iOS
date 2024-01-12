@@ -399,6 +399,10 @@ final class CameraOutput: NSObject {
         }
     }
     
+    var transitionImage: UIImage? {
+        return self.videoRecorder?.transitionImage
+    }
+    
     private weak var masterOutput: CameraOutput?
     func processVideoRecording(_ sampleBuffer: CMSampleBuffer, fromAdditionalOutput: Bool) {
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {

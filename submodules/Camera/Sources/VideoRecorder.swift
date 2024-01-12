@@ -35,7 +35,7 @@ private final class VideoRecorderImpl {
     private var audioInput: AVAssetWriterInput?
     
     private let ciContext: CIContext
-    private var transitionImage: UIImage?
+    fileprivate var transitionImage: UIImage?
     private var savedTransitionImage = false
     
     private var pendingAudioSampleBuffers: [CMSampleBuffer] = []
@@ -532,5 +532,9 @@ public final class VideoRecorder {
                 self.impl.appendAudioSampleBuffer(sampleBuffer)
             }
         }
+    }
+    
+    var transitionImage: UIImage? {
+        return self.impl.transitionImage
     }
 }

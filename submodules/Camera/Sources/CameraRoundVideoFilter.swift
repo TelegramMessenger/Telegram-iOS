@@ -99,6 +99,8 @@ class CameraRoundVideoFilter {
     
     private(set) var isPrepared = false
     
+    let semaphore = DispatchSemaphore(value: 1)
+    
     init(ciContext: CIContext) {
         self.ciContext = ciContext
     }
@@ -141,6 +143,8 @@ class CameraRoundVideoFilter {
     }
     
     func render(pixelBuffer: CVPixelBuffer, mirror: Bool) -> CVPixelBuffer? {
+        self.semaphore.wait()
+        
         guard let resizeFilter = self.resizeFilter, let compositeFilter = self.compositeFilter, self.isPrepared else {
             return nil
         }
@@ -176,6 +180,9 @@ class CameraRoundVideoFilter {
         }
         
         self.ciContext.render(finalImage, to: outputPixelBuffer, bounds: CGRect(origin: .zero, size: CGSize(width: 400, height: 400)), colorSpace: outputColorSpace)
+        
+        self.semaphore.signal()
+        
         return outputPixelBuffer
     }
 }

@@ -173,7 +173,10 @@ private final class CameraScreenComponent: CombinedComponent {
             super.init()
             
             self.startRecording.connect({ [weak self] _ in
-                self?.startVideoRecording(pressing: true)
+                if let self, let controller = getController() {
+                    self.startVideoRecording(pressing: !controller.scheduledLock)
+                    controller.scheduledLock = false
+                }
             })
             self.stopRecording.connect({ [weak self] _ in
                 self?.stopVideoRecording()
@@ -508,6 +511,8 @@ public class VideoMessageCameraScreen: ViewController {
         }
         var previewStatePromise = Promise<PreviewState?>()
         
+        var transitioningToPreview = false
+        
         init(controller: VideoMessageCameraScreen) {
             self.controller = controller
             self.context = controller.context
@@ -736,16 +741,12 @@ public class VideoMessageCameraScreen: ViewController {
             self.results.append(result)
             self.resultsPipe.putNext(result)
             
+            self.transitioningToPreview = false
+            
             let composition = composition(with: self.results)
             controller.updatePreviewState({ _ in
                 return PreviewState(composition: composition, trimRange: nil)
             }, transition: .spring(duration: 0.4))
-            
-//            #if DEBUG
-//            if case let .video(video) = result {
-//                self.debugSaveResult(path: video.videoPath)
-//            }
-//            #endif
         }
         
         private func debugSaveResult(path: String) {
@@ -895,7 +896,7 @@ public class VideoMessageCameraScreen: ViewController {
                     CameraScreenComponent(
                         context: self.context,
                         cameraState: self.cameraState,
-                        isPreviewing: self.previewState != nil,
+                        isPreviewing: self.previewState != nil || self.transitioningToPreview,
                         getController: { [weak self] in
                             return self?.controller
                         },
@@ -1065,29 +1066,62 @@ public class VideoMessageCameraScreen: ViewController {
         
     public func takenRecordedData() -> Signal<RecordedVideoData?, NoError> {
         let previewState = self.node.previewStatePromise.get()
-        return self.currentResults
-        |> take(1)
-        |> mapToSignal { results in
-            var totalDuration: Double = 0.0
-            for result in results {
-                if case let .video(video) = result {
-                    totalDuration += video.duration
-                }
+        let count = 12
+        
+        let initialPlaceholder: Signal<UIImage?, NoError>
+        if let firstResult = self.node.results.first {
+            if case let .video(video) = firstResult {
+                initialPlaceholder = .single(video.thumbnail)
+            } else {
+                initialPlaceholder = .single(nil)
             }
-            let composition = composition(with: results)
-            return combineLatest(
-                queue: Queue.mainQueue(),
-                videoFrames(asset: composition, count: 12),
-                previewState
-            )
-            |> map { framesAndUpdateTimestamp, previewState in
+        } else {
+            initialPlaceholder = self.camera?.transitionImage ?? .single(nil)
+        }
+        
+        let immediateResult: Signal<RecordedVideoData?, NoError> = initialPlaceholder
+        |> take(1)
+        |> mapToSignal { initialPlaceholder in
+            return videoFrames(asset: nil, count: count, initialPlaceholder: initialPlaceholder)
+            |> map { framesAndUpdateTimestamp in
                 return RecordedVideoData(
-                    duration: totalDuration,
+                    duration: 1.0,
                     frames: framesAndUpdateTimestamp.0,
                     framesUpdateTimestamp: framesAndUpdateTimestamp.1,
-                    trimRange: previewState?.trimRange
+                    trimRange: nil
                 )
             }
+        }
+        
+        return immediateResult
+        |> mapToSignal { immediateResult in
+            return .single(immediateResult)
+            |> then(
+                self.currentResults
+                |> take(1)
+                |> mapToSignal { results in
+                    var totalDuration: Double = 0.0
+                    for result in results {
+                        if case let .video(video) = result {
+                            totalDuration += video.duration
+                        }
+                    }
+                    let composition = composition(with: results)
+                    return combineLatest(
+                        queue: Queue.mainQueue(),
+                        videoFrames(asset: composition, count: count, initialTimestamp: immediateResult?.framesUpdateTimestamp),
+                        previewState
+                    )
+                    |> map { framesAndUpdateTimestamp, previewState in
+                        return RecordedVideoData(
+                            duration: totalDuration,
+                            frames: framesAndUpdateTimestamp.0,
+                            framesUpdateTimestamp: framesAndUpdateTimestamp.1,
+                            trimRange: previewState?.trimRange
+                        )
+                    }
+                }
+            )
         }
     }
     
@@ -1219,13 +1253,21 @@ public class VideoMessageCameraScreen: ViewController {
     private var waitingForNextResult = false
     public func stopVideoRecording() -> Bool {
         self.waitingForNextResult = true
+        self.node.transitioningToPreview = true
+        self.node.requestUpdateLayout(transition: .spring(duration: 0.4))
+        
         self.node.stopRecording.invoke(Void())
         
         return true
     }
-    
+
+    fileprivate var scheduledLock = false
     public func lockVideoRecording() {
-        self.updateCameraState({ $0.updatedRecording(.handsFree) }, transition: .spring(duration: 0.4))
+        if case .none = self.cameraState.recording {
+            self.scheduledLock = true
+        } else {
+            self.updateCameraState({ $0.updatedRecording(.handsFree) }, transition: .spring(duration: 0.4))
+        }
         
         self.node.maybePresentViewOnceTooltip()
     }

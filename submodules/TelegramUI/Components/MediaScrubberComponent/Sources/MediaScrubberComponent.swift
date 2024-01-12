@@ -74,6 +74,7 @@ public final class MediaScrubberComponent: Component {
     
     let context: AccountContext
     let style: Style
+    let theme: PresentationTheme
     
     let generationTimestamp: Double
 
@@ -92,6 +93,7 @@ public final class MediaScrubberComponent: Component {
     public init(
         context: AccountContext,
         style: Style,
+        theme: PresentationTheme,
         generationTimestamp: Double,
         position: Double,
         minDuration: Double,
@@ -105,6 +107,7 @@ public final class MediaScrubberComponent: Component {
     ) {
         self.context = context
         self.style = style
+        self.theme = theme
         self.generationTimestamp = generationTimestamp
         self.position = position
         self.minDuration = minDuration
@@ -119,6 +122,9 @@ public final class MediaScrubberComponent: Component {
     
     public static func ==(lhs: MediaScrubberComponent, rhs: MediaScrubberComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.generationTimestamp != rhs.generationTimestamp {
@@ -524,6 +530,7 @@ public final class MediaScrubberComponent: Component {
             self.trimView.isHollow = self.selectedTrackId != lowestVideoId || self.isAudioOnly
             let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
                 style: component.style,
+                theme: component.theme,
                 visualInsets: trimViewVisualInsets,
                 scrubberSize: CGSize(width: trackViewWidth, height: fullTrackHeight),
                 duration: mainTrimDuration,
@@ -537,6 +544,7 @@ public final class MediaScrubberComponent: Component {
             
             let (ghostLeftHandleFrame, ghostRightHandleFrame) = self.ghostTrimView.update(
                 style: component.style,
+                theme: component.theme,
                 visualInsets: .zero,
                 scrubberSize: CGSize(width: scrubberSize.width, height: collapsedTrackHeight),
                 duration: self.duration,
@@ -1300,6 +1308,7 @@ private class TrimView: UIView {
     
     func update(
         style: MediaScrubberComponent.Style,
+        theme: PresentationTheme,
         visualInsets: UIEdgeInsets,
         scrubberSize: CGSize,
         duration: Double,
@@ -1359,8 +1368,8 @@ private class TrimView: UIView {
             effectiveHandleWidth = 16.0
             fullTrackHeight = 33.0
             capsuleOffset = 8.0
-            color = UIColor(rgb: 0x3478f6)
-            highlightColor = UIColor(rgb: 0x3478f6)
+            color = theme.chat.inputPanel.panelControlAccentColor
+            highlightColor = theme.chat.inputPanel.panelControlAccentColor
             
             if isFirstTime {
                 let handleImage = generateImage(CGSize(width: effectiveHandleWidth, height: fullTrackHeight), rotatedContext: { size, context in

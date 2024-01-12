@@ -206,7 +206,7 @@ public final class AnimationNode: ASDisplayNode {
     }
     
     public func preferredSize() -> CGSize? {
-        if let animationView = animationView(), let animation = animationView.animation {
+        if let animationView = self.animationView(), let animation = animationView.animation {
             return CGSize(width: animation.size.width * self.scale, height: animation.size.height * self.scale)
         } else {
             return nil

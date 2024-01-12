@@ -1361,6 +1361,7 @@ final class MediaEditorScreenComponent: Component {
                     component: AnyComponent(MediaScrubberComponent(
                         context: component.context,
                         style: .editor,
+                        theme: environment.theme,
                         generationTimestamp: playerState.generationTimestamp,
                         position: playerState.position,
                         minDuration: minDuration,

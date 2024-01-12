@@ -304,6 +304,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                             MediaScrubberComponent(
                                 context: context,
                                 style: .videoMessage,
+                                theme: interfaceState.theme,
                                 generationTimestamp: 0,
                                 position: 0,
                                 minDuration: 1.0,

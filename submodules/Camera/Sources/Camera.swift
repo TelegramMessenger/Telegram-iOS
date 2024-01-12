@@ -604,6 +604,10 @@ private final class CameraContext {
         return self.audioLevelPipe.signal()
     }
     
+    var transitionImage: Signal<UIImage?, NoError> {
+        return .single(self.mainDeviceContext?.output.transitionImage)
+    }
+    
     @objc private func sessionInterruptionEnded(notification: NSNotification) {
     }
     
@@ -961,6 +965,20 @@ public final class Camera {
             self.queue.async {
                 if let context = self.contextRef?.takeUnretainedValue() {
                     disposable.set(context.audioLevel.start(next: { codes in
+                        subscriber.putNext(codes)
+                    }))
+                }
+            }
+            return disposable
+        }
+    }
+    
+    public var transitionImage: Signal<UIImage?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    disposable.set(context.transitionImage.start(next: { codes in
                         subscriber.putNext(codes)
                     }))
                 }
