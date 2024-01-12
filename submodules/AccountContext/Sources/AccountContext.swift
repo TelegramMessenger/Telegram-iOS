@@ -977,6 +977,8 @@ public protocol SharedAccountContext: AnyObject {
     var enablePreloads: Promise<Bool> { get }
     var hasPreloadBlockingContent: Promise<Bool> { get }
     
+    var deviceContactPhoneNumbers: Promise<Set<String>> { get }
+    
     var hasGroupCallOnScreen: Signal<Bool, NoError> { get }
     var currentGroupCallController: ViewController? { get }
     

@@ -166,6 +166,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public let enablePreloads = Promise<Bool>()
     public let hasPreloadBlockingContent = Promise<Bool>(false)
+    public let deviceContactPhoneNumbers = Promise<Set<String>>(Set())
     
     private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
     

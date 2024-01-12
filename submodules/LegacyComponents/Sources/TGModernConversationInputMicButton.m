@@ -602,33 +602,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     return iconImage;
 }
 
-- (void)lockImmediately {
-    _lockView.lockness = 1.0;
-    [_lock updateLockness:1.0];
-    
-    UIImage *icon = TGComponentsImageNamed(@"RecordSendIcon");
-    [self setIcon:TGTintedImage(icon, _pallete != nil && !_hidesPanelOnLock ? _pallete.iconColor : [UIColor whiteColor])];
-    
-    _currentScale = 1;
-    _cancelTargetTranslation = 0;
-    
-    id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
-    if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
-        [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTargetTranslation];
-    
-    _lockPanelView.frame = CGRectMake(_lockPanelView.frame.origin.x, 40.0f, _lockPanelView.frame.size.width, 72.0f - 32.0f);
-    _lockView.transform = CGAffineTransformMakeTranslation(0.0f, -11.0f);
-    _lock.transform = CGAffineTransformMakeTranslation(0.0f, -16.0f);
-    _lockArrowView.transform = CGAffineTransformMakeTranslation(0.0f, -39.0f);
-    _lockArrowView.alpha = 0.0f;
-    
-    _stopButton.userInteractionEnabled = true;
-    [UIView animateWithDuration:0.25 delay:0.56 options:kNilOptions animations:^
-    {
-        _stopButton.alpha = 1.0f;
-    } completion:nil];
-}
-
 - (void)animateLock {
     if (!_animatedIn) {
         return;

@@ -10886,3 +10886,9 @@ Sorry for the inconvenience.";
 
 "Conversation.ContactAddContact" = "ADD";
 "Conversation.ContactMessage" = "MESSAGE";
+
+"Chat.PlayOnceVideoMessageTooltip" = "This video message can only be played once.";
+"Chat.PlayOnceVideoMessageYourTooltip" = "This message will disappear once **%@** plays it once.";
+
+"Chat.TapToPlayVideoMessageOnceTooltip" = "Tap to set this message to **Play Once**";
+"Chat.PlayVideoMessageOnceTooltip" = "The recipient will be able to play it only once.";

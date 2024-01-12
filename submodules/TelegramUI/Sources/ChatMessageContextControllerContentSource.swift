@@ -230,12 +230,9 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                 })
                 
                 if let messageNode = node as? ChatMessageItemView, let copyContentNode = messageNode.getMessageContextSourceNode(stableId: self.message.stableId) {
-                    let delta: CGFloat = 0.0// (width - 20.0 - messageNode.frame.height)
-                    self.initialAppearanceOffset = CGPoint(x: 0.0, y: -delta)
+                    self.initialAppearanceOffset = CGPoint(x: 0.0, y: width - 20.0 - copyContentNode.frame.height)
                     
-                    copyContentNode.contentNode.backgroundColor = UIColor.red.withAlphaComponent(0.5)
-                    
-                    messageNode.frame.origin.y = sourceRect.origin.y// chatNode.frame.height - sourceRect.origin.y - sourceRect.size.height
+                    messageNode.frame.origin.y = sourceRect.origin.y
                     chatNode.addSubnode(messageNode)
                     result = ContextControllerTakeViewInfo(containingItem: .node(copyContentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
                     

@@ -519,7 +519,7 @@ public final class VideoRecorder {
     func markPositionChange(position: Camera.Position, time: CMTime? = nil) {
         self.impl.markPositionChange(position: position, time: time)
     }
-    
+        
     func appendSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
         guard let formatDescriptor = CMSampleBufferGetFormatDescription(sampleBuffer) else {
             return

@@ -313,6 +313,15 @@ final class CameraDevice {
         }
     }
     
+    func rampZoom(_ zoomLevel: CGFloat, rate: CGFloat) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            device.ramp(toVideoZoomFactor: zoomLevel, withRate: Float(rate))
+        }
+    }
+    
     func resetZoom(neutral: Bool = true) {
         guard let device = self.videoDevice else {
             return

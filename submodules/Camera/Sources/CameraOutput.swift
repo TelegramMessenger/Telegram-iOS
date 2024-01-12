@@ -80,6 +80,7 @@ public struct CameraCode: Equatable {
 final class CameraOutput: NSObject {
     let exclusive: Bool
     let ciContext: CIContext
+    let isVideoMessage: Bool
     
     let photoOutput = AVCapturePhotoOutput()
     let videoOutput = AVCaptureVideoDataOutput()
@@ -89,6 +90,8 @@ final class CameraOutput: NSObject {
     private var photoConnection: AVCaptureConnection?
     private var videoConnection: AVCaptureConnection?
     private var previewConnection: AVCaptureConnection?
+
+    private var roundVideoFilter: CameraRoundVideoFilter?
     
     private let queue = DispatchQueue(label: "")
     private let metadataQueue = DispatchQueue(label: "")
@@ -99,10 +102,11 @@ final class CameraOutput: NSObject {
     var processSampleBuffer: ((CMSampleBuffer, CVImageBuffer, AVCaptureConnection) -> Void)?
     var processAudioBuffer: ((CMSampleBuffer) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
-    
-    init(exclusive: Bool, ciContext: CIContext) {
+        
+    init(exclusive: Bool, ciContext: CIContext, use32BGRA: Bool = false) {
         self.exclusive = exclusive
         self.ciContext = ciContext
+        self.isVideoMessage = use32BGRA
         
         super.init()
 
@@ -111,7 +115,7 @@ final class CameraOutput: NSObject {
         }
         
         self.videoOutput.alwaysDiscardsLateVideoFrames = false
-        self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
+        self.videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey: use32BGRA ? kCVPixelFormatType_32BGRA : kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] as [String : Any]
     }
     
     deinit {
@@ -224,6 +228,7 @@ final class CameraOutput: NSObject {
         if let videoDataOutputConnection = self.videoOutput.connection(with: .video) {
             if videoDataOutputConnection.isVideoStabilizationSupported {
                 videoDataOutputConnection.preferredVideoStabilizationMode = .standard
+//                videoDataOutputConnection.preferredVideoStabilizationMode = self.isVideoMessage ? .cinematic : .standard
             }
         }
     }
@@ -282,68 +287,95 @@ final class CameraOutput: NSObject {
         return self.videoRecorder != nil
     }
     
+    enum RecorderMode {
+        case `default`
+        case roundVideo
+        case dualCamera
+    }
+    
+    private var currentMode: RecorderMode = .default
     private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
-    func startRecording(isDualCamera: Bool, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation) -> Signal<Double, NoError> {
+    func startRecording(mode: RecorderMode, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation, additionalOutput: CameraOutput? = nil) -> Signal<Double, NoError> {
         guard self.videoRecorder == nil else {
             return .complete()
         }
         
+        self.currentMode = mode
+        
         let codecType: AVVideoCodecType
-        if hasHEVCHardwareEncoder {
-            codecType = .hevc
-        } else {
+        if case .roundVideo = mode {
             codecType = .h264
+        } else {
+            if hasHEVCHardwareEncoder {
+                codecType = .hevc
+            } else {
+                codecType = .h264
+            }
         }
         
-        guard let videoSettings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
+        guard var videoSettings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
             return .complete()
         }
-        let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
         
         var dimensions: CGSize = CGSize(width: 1080, height: 1920)
-        if orientation == .landscapeLeft {
-            dimensions = CGSize(width: 1920, height: 1080)
-        } else if orientation == .landscapeRight {
+        if orientation == .landscapeLeft || orientation == .landscapeRight {
             dimensions = CGSize(width: 1920, height: 1080)
         }
+        var orientation = orientation
+        if case .roundVideo = mode {
+            videoSettings[AVVideoWidthKey] = 400
+            videoSettings[AVVideoHeightKey] = 400
+            dimensions = CGSize(width: 400, height: 400)
+            orientation = .landscapeRight
+        }
+        
+        let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
         
         let outputFileName = NSUUID().uuidString
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"
         let outputFileURL = URL(fileURLWithPath: outputFilePath)
         
-        let videoRecorder = VideoRecorder(configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings), ciContext: self.ciContext, orientation: orientation, fileUrl: outputFileURL, completion: { [weak self] result in
-            guard let self else {
-                return
-            }
-            if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
-                self.recordingCompletionPipe.putNext(
-                    .finished(
-                        main: VideoCaptureResult.Result(
-                            path: outputFilePath,
-                            thumbnail: transitionImage ?? UIImage(),
-                            isMirrored: false,
-                            dimensions: dimensions
-                        ),
-                        additional: nil,
-                        duration: duration,
-                        positionChangeTimestamps: positionChangeTimestamps.map { ($0 == .front, $1) },
-                        captureTimestamp: CACurrentMediaTime()
+        let videoRecorder = VideoRecorder(
+            configuration: VideoRecorder.Configuration(videoSettings: videoSettings, audioSettings: audioSettings),
+            ciContext: self.ciContext,
+            orientation: orientation,
+            fileUrl: outputFileURL,
+            completion: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                if case let .success(transitionImage, duration, positionChangeTimestamps) = result {
+                    self.recordingCompletionPipe.putNext(
+                        .finished(
+                            main: VideoCaptureResult.Result(
+                                path: outputFilePath,
+                                thumbnail: transitionImage ?? UIImage(),
+                                isMirrored: false,
+                                dimensions: dimensions
+                            ),
+                            additional: nil,
+                            duration: duration,
+                            positionChangeTimestamps: positionChangeTimestamps.map { ($0 == .front, $1) },
+                            captureTimestamp: CACurrentMediaTime()
+                        )
                     )
-                )
-            } else {
-                self.recordingCompletionPipe.putNext(.failed)
+                } else {
+                    self.recordingCompletionPipe.putNext(.failed)
+                }
             }
-        })
+        )
         
         videoRecorder?.start()
         self.videoRecorder = videoRecorder
         
-        if isDualCamera, let position {
+        if case .dualCamera = mode, let position {
             videoRecorder?.markPositionChange(position: position, time: .zero)
+        } else if case .roundVideo = mode {
+            additionalOutput?.masterOutput = self
         }
         
         return Signal { subscriber in
-            let timer = SwiftSignalKit.Timer(timeout: 0.1, repeat: true, completion: { [weak videoRecorder] in
+            let timer = SwiftSignalKit.Timer(timeout: 0.02, repeat: true, completion: { [weak videoRecorder] in
                 subscriber.putNext(videoRecorder?.duration ?? 0.0)
             }, queue: Queue.mainQueue())
             timer.start()
@@ -367,7 +399,86 @@ final class CameraOutput: NSObject {
         }
     }
     
+    private weak var masterOutput: CameraOutput?
+    func processVideoRecording(_ sampleBuffer: CMSampleBuffer, fromAdditionalOutput: Bool) {
+        if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
+            if case .roundVideo = self.currentMode {
+                if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, mirror: fromAdditionalOutput) {
+                    if case .front = self.currentPosition {
+                        if fromAdditionalOutput {
+                            videoRecorder.appendSampleBuffer(processedSampleBuffer)
+                        }
+                    } else {
+                        if !fromAdditionalOutput {
+                            videoRecorder.appendSampleBuffer(processedSampleBuffer)
+                        }
+                    }
+                } else {
+                    videoRecorder.appendSampleBuffer(sampleBuffer)
+                }
+            } else {
+                videoRecorder.appendSampleBuffer(sampleBuffer)
+            }
+        }
+    }
+    
+    private func processRoundVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer, mirror: Bool) -> CMSampleBuffer? {
+        guard let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer), let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer) else {
+            return nil
+        }
+        let mediaSubType = CMFormatDescriptionGetMediaSubType(formatDescription)
+        let extensions = CMFormatDescriptionGetExtensions(formatDescription) as! [String: Any]
+        
+        var updatedExtensions = extensions
+        updatedExtensions["CVBytesPerRow"] = 400 * 4
+        
+        var newFormatDescription: CMFormatDescription?
+        var status = CMVideoFormatDescriptionCreate(allocator: nil, codecType: mediaSubType, width: 400, height: 400, extensions: updatedExtensions as CFDictionary, formatDescriptionOut: &newFormatDescription)
+        guard status == noErr, let newFormatDescription else {
+            return nil
+        }
+        
+        let filter: CameraRoundVideoFilter
+        if let current = self.roundVideoFilter {
+            filter = current
+        } else {
+            filter = CameraRoundVideoFilter(ciContext: self.ciContext)
+            self.roundVideoFilter = filter
+        }
+        if !filter.isPrepared {
+            filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 3)
+        }
+        guard let newPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, mirror: mirror) else {
+            return nil
+        }
+        
+        var sampleTimingInfo: CMSampleTimingInfo = .invalid
+        CMSampleBufferGetSampleTimingInfo(sampleBuffer, at: 0, timingInfoOut: &sampleTimingInfo)
+        
+        var newSampleBuffer: CMSampleBuffer?
+        status = CMSampleBufferCreateForImageBuffer(
+            allocator: kCFAllocatorDefault,
+            imageBuffer: newPixelBuffer,
+            dataReady: true,
+            makeDataReadyCallback: nil,
+            refcon: nil,
+            formatDescription: newFormatDescription,
+            sampleTiming: &sampleTimingInfo,
+            sampleBufferOut: &newSampleBuffer
+        )
+        
+        if status == noErr, let newSampleBuffer {
+            return newSampleBuffer
+        }
+        return nil
+    }
+    
+    private var currentPosition: Camera.Position = .front
+    private var lastSwitchTimestamp: Double = 0.0
+   
     func markPositionChange(position: Camera.Position) {
+        self.currentPosition = position
+        
         if let videoRecorder = self.videoRecorder {
             videoRecorder.markPositionChange(position: position)
         }
@@ -386,8 +497,10 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
 //            self.processAudioBuffer?(sampleBuffer)
         }
         
-        if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
-            videoRecorder.appendSampleBuffer(sampleBuffer)
+        if let masterOutput = self.masterOutput {
+            masterOutput.processVideoRecording(sampleBuffer, fromAdditionalOutput: true)
+        } else {
+            self.processVideoRecording(sampleBuffer, fromAdditionalOutput: false)
         }
     }
     

@@ -1736,7 +1736,7 @@ public final class MediaEditor {
     }
 }
 
-private func videoFrames(asset: AVAsset, count: Int, mirror: Bool = false) -> Signal<([UIImage], Double), NoError> {
+public func videoFrames(asset: AVAsset, count: Int, mirror: Bool = false) -> Signal<([UIImage], Double), NoError> {
     func blurredImage(_ image: UIImage) -> UIImage? {
         guard let image = image.cgImage else {
             return nil

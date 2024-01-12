@@ -11,6 +11,7 @@ import BundleIconComponent
 import BalancedTextComponent
 import MultilineTextComponent
 import SolidRoundedButtonComponent
+import LottieComponent
 import AccountContext
 
 private final class SheetContent: CombinedComponent {
@@ -59,7 +60,7 @@ private final class SheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         
         let iconBackground = Child(Image.self)
-        let icon = Child(BundleIconComponent.self)
+        let icon = Child(LottieComponent.self)
         
         let title = Child(BalancedTextComponent.self)
         let text = Child(BalancedTextComponent.self)
@@ -106,13 +107,13 @@ private final class SheetContent: CombinedComponent {
             let peerName = "Name"
             switch component.subject {
             case .presence:
-                iconName = "Premium/PrivacyPresence"
+                iconName = "PremiumPrivacyPresence"
                 titleString = "Show Your Last Seen"
                 textString = "To see **\(peerName)'s** Last Seen time, either start showing your own Last Seen Time..."
                 buttonTitle = "Show My Last Seen to Everyone"
                 premiumString = "Subscription will let you see **\(peerName)'s** Last Seen status without showing yours."
             case .readTime:
-                iconName = "Premium/PrivacyReadTime"
+                iconName = "PremiumPrivacyRead"
                 titleString = "Show Your Read Date"
                 textString = "To see when **\(peerName)** read the message, either start showing your own read time:"
                 buttonTitle = "Show My Read Time"
@@ -162,11 +163,20 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
             )
             
+//            let icon = icon.update(
+//                component: BundleIconComponent(name: iconName, tintColor: .white),
+//                availableSize: CGSize(width: 70.0, height: 70.0),
+//                transition: .immediate
+//            )
+            
             let icon = icon.update(
-                component: BundleIconComponent(name: iconName, tintColor: .white),
-                availableSize: CGSize(width: 70.0, height: 70.0),
+                component: LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: iconName)
+                ),
+                availableSize: CGSize(width: 70, height: 70),
                 transition: .immediate
             )
+            
             context.add(icon
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
             )

@@ -1607,7 +1607,6 @@ public class CameraScreen: ViewController {
                             if case .pendingImage = value {
                                 Queue.mainQueue().async {
                                     self.mainPreviewView.isEnabled = false
-                                    
                                     self.additionalPreviewView.isEnabled = false
                                 }
                             } else {

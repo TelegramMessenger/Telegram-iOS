@@ -2054,13 +2054,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     self.actionButtons.micButton.audioRecorder = recorder
                     audioRecordingTimeNode.audioRecorder = recorder
                 case let .video(status, _):
+                    let hadVideoRecorder = self.actionButtons.micButton.videoRecordingStatus != nil
+                    if !hadVideoRecorder, isLocked {
+                        self.actionButtons.micButton.lock()
+                    }
                     switch status {
                     case let .recording(recordingStatus):
                         audioRecordingTimeNode.videoRecordingStatus = recordingStatus
                         self.actionButtons.micButton.videoRecordingStatus = recordingStatus
-                        if isLocked {
-                            audioRecordingCancelIndicator.layer.animateAlpha(from: audioRecordingCancelIndicator.alpha, to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                        }
                     case .editing:
                         audioRecordingTimeNode.videoRecordingStatus = nil
                         self.actionButtons.micButton.videoRecordingStatus = nil
@@ -2561,46 +2562,64 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         if let prevPreviewInputPanelNode = self.prevInputPanelNode as? ChatRecordingPreviewInputPanelNode {
             self.prevInputPanelNode = nil
             
-            if prevPreviewInputPanelNode.viewOnceButton.alpha > 0.0 {
-                if let snapshotView = prevPreviewInputPanelNode.viewOnceButton.view.snapshotContentTree() {
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                        snapshotView.removeFromSuperview()
-                    })
-                    snapshotView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-                    self.viewForOverlayContent?.addSubview(snapshotView)
+            if !prevPreviewInputPanelNode.viewOnceButton.isHidden {
+                self.viewOnce = prevPreviewInputPanelNode.viewOnce
+                self.viewOnceButton.update(isSelected: prevPreviewInputPanelNode.viewOnce, animated: false)
+                self.viewOnceButton.layer.animatePosition(from: prevPreviewInputPanelNode.viewOnceButton.position, to: self.viewOnceButton.position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                })
+            }
+            
+            let animateOutPreviewButton: (ASDisplayNode) -> Void = { button in
+                if button.alpha > 0.0 {
+                    if let snapshotView = button.view.snapshotContentTree() {
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                            snapshotView.removeFromSuperview()
+                        })
+                        snapshotView.layer.animateScale(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                        self.viewForOverlayContent?.addSubview(snapshotView)
+                    }
                 }
             }
             
+            animateOutPreviewButton(prevPreviewInputPanelNode.viewOnceButton)
+            animateOutPreviewButton(prevPreviewInputPanelNode.recordMoreButton)
+                        
             prevPreviewInputPanelNode.gestureRecognizer?.isEnabled = false
             prevPreviewInputPanelNode.isUserInteractionEnabled = false
             
             if self.isMediaDeleted {
-                func animatePosition(for previewSubnode: ASDisplayNode) {
-                    previewSubnode.layer.animatePosition(
-                        from: previewSubnode.position,
-                        to: CGPoint(x: leftMenuInset.isZero ? previewSubnode.position.x - 20 : leftMenuInset + previewSubnode.frame.width / 2.0, y: previewSubnode.position.y),
+                func animatePosition(for previewLayer: CALayer) {
+                    previewLayer.animatePosition(
+                        from: previewLayer.position,
+                        to: CGPoint(x: leftMenuInset.isZero ? previewLayer.position.x - 20 : leftMenuInset + previewLayer.frame.width / 2.0, y: previewLayer.position.y),
                         duration: 0.15
                     )
                 }
                 
-                animatePosition(for: prevPreviewInputPanelNode.waveformBackgroundNode)
-                animatePosition(for: prevPreviewInputPanelNode.waveformScubberNode)
-                animatePosition(for: prevPreviewInputPanelNode.durationLabel)
-                animatePosition(for: prevPreviewInputPanelNode.playButton)
+                animatePosition(for: prevPreviewInputPanelNode.waveformBackgroundNode.layer)
+                animatePosition(for: prevPreviewInputPanelNode.waveformScrubberNode.layer)
+                animatePosition(for: prevPreviewInputPanelNode.durationLabel.layer)
+                animatePosition(for: prevPreviewInputPanelNode.playButton.layer)
+                if let view = prevPreviewInputPanelNode.scrubber.view {
+                    animatePosition(for: view.layer)
+                }
             }
             
-            func animateAlpha(for previewSubnode: ASDisplayNode) {
-                previewSubnode.layer.animateAlpha(
+            func animateAlpha(for previewLayer: CALayer) {
+                previewLayer.animateAlpha(
                     from: 1.0,
                     to: 0.0,
                     duration: 0.15,
                     removeOnCompletion: false
                 )
             }
-            animateAlpha(for: prevPreviewInputPanelNode.waveformBackgroundNode)
-            animateAlpha(for: prevPreviewInputPanelNode.waveformScubberNode)
-            animateAlpha(for: prevPreviewInputPanelNode.durationLabel)
-            animateAlpha(for: prevPreviewInputPanelNode.playButton)
+            animateAlpha(for: prevPreviewInputPanelNode.waveformBackgroundNode.layer)
+            animateAlpha(for: prevPreviewInputPanelNode.waveformScrubberNode.layer)
+            animateAlpha(for: prevPreviewInputPanelNode.durationLabel.layer)
+            animateAlpha(for: prevPreviewInputPanelNode.playButton.layer)
+            if let view = prevPreviewInputPanelNode.scrubber.view {
+                animateAlpha(for: view.layer)
+            }
                     
             let binNode = prevPreviewInputPanelNode.binNode
             self.animatingBinNode = binNode
@@ -2632,6 +2651,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
             
             if self.isMediaDeleted && !isRecording {
+                self.attachmentButton.layer.animateAlpha(from: 0.0, to: 0, duration: 0.01, delay: 0.0, removeOnCompletion: false)
                 binNode.completion = dismissBin
                 binNode.play()
             } else {
