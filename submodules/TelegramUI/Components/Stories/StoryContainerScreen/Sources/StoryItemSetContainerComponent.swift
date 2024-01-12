@@ -2737,12 +2737,17 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var isUnsupported = false
-            var disabledPlaceholder: String?
-            if component.slice.peer.isService {
-                disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
+            var disabledPlaceholder: MessageInputPanelComponent.DisabledPlaceholder?
+            if component.slice.additionalPeerData.isPremiumRequiredForMessaging {
+                //TODO:localize
+                disabledPlaceholder = .premiumRequired(title: "Only Premium users can message \(component.slice.peer.compactDisplayTitle).", subtitle: "Learn more...", action: { [weak self] in
+                    self?.presentPremiumRequiredForMessaging()
+                })
+            } else if component.slice.peer.isService {
+                disabledPlaceholder = .text(component.strings.Story_FooterReplyUnavailable)
             } else if case .unsupported = component.slice.item.storyItem.media {
                 isUnsupported = true
-                disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
+                disabledPlaceholder = .text(component.strings.Story_FooterReplyUnavailable)
             }
             
             let inputPlaceholder: MessageInputPanelComponent.Placeholder
@@ -5614,6 +5619,28 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
             })
+        }
+        
+        private func presentPremiumRequiredForMessaging() {
+            guard let component = self.component else {
+                return
+            }
+
+            let controller = PremiumIntroScreen(context: component.context, source: .settings, forceDark: true)
+            self.sendMessageContext.actionSheet = controller
+            controller.wasDismissed = { [weak self, weak controller]in
+                guard let self else {
+                    return
+                }
+                
+                if self.sendMessageContext.actionSheet === controller {
+                    self.sendMessageContext.actionSheet = nil
+                }
+                self.updateIsProgressPaused()
+            }
+            
+            self.updateIsProgressPaused()
+            component.controller()?.push(controller)
         }
         
         private func presentStoriesUpgradeScreen(source: PremiumSource) {

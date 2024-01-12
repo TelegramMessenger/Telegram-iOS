@@ -412,6 +412,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, openPremiumRequiredForMessaging: {
         }, updateHistoryFilter: { _ in
         }, requestLayout: { _ in
         }, chatController: {
@@ -9345,7 +9346,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     subject: nil,
                     keepStack: .always
                 ))
-            }, openDisabledPeer: { _, _ in
+            }, openDisabledPeer: { _, _, _ in
             }, openRecentPeerOptions: { _ in
             }, openMessage: { [weak self] peer, threadId, messageId, deactivateOnAction in
                 guard let self else {

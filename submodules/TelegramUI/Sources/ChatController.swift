@@ -2257,6 +2257,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
                 
+                shareController.parentNavigationController = strongSelf.navigationController as? NavigationController
+                
                 if let message = messages.first, message.media.contains(where: { media in
                     if media is TelegramMediaContact || media is TelegramMediaPoll {
                         return true
@@ -5168,6 +5170,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     threadInfo = .single(nil)
                 }
                 
+                let hasSearchTags: Signal<Bool, NoError>
+                if case let .peer(peerId) = self.chatLocation, peerId == context.account.peerId {
+                    hasSearchTags = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+                    )
+                    |> map { tags -> Bool in
+                        return !tags.isEmpty
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSearchTags = .single(false)
+                }
+                
+                let isPremiumRequiredForMessaging: Signal<Bool, NoError>
+                if let peerId = self.chatLocation.peerId {
+                    isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
+                    |> distinctUntilChanged
+                } else {
+                    isPremiumRequiredForMessaging = .single(false)
+                }
+                
                 self.peerDisposable.set(combineLatest(
                     queue: Queue.mainQueue(),
                     peerView.get(),
@@ -5176,8 +5199,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasScheduledMessages,
                     self.reportIrrelvantGeoNoticePromise.get(),
                     displayedCountSignal,
-                    threadInfo
-                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo in
+                    threadInfo,
+                    hasSearchTags,
+                    isPremiumRequiredForMessaging
+                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, isPremiumRequiredForMessaging in
                     if let strongSelf = self {
                         if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo {
                             return
@@ -5441,6 +5466,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                                 .updatedCurrentSendAsPeerId(currentSendAsPeerId)
                                 .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                                .updatedHasSearchTags(hasSearchTags)
+                                .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
                                     
@@ -5689,15 +5716,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     onlineMemberCount = recentOnlineSignal
                 }
                 
+                let hasSearchTags: Signal<Bool, NoError>
+                if case let .peer(peerId) = self.chatLocation, peerId == context.account.peerId {
+                    hasSearchTags = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+                    )
+                    |> map { tags -> Bool in
+                        return !tags.isEmpty
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSearchTags = .single(false)
+                }
+                
+                let isPremiumRequiredForMessaging: Signal<Bool, NoError>
+                if let peerId = self.chatLocation.peerId {
+                    isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
+                    |> distinctUntilChanged
+                } else {
+                    isPremiumRequiredForMessaging = .single(false)
+                }
+                
                 self.titleDisposable.set(nil)
                 self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(),
                     peerView,
                     messageAndTopic,
                     savedMessagesPeer,
                     onlineMemberCount,
-                    hasScheduledMessages
+                    hasScheduledMessages,
+                    hasSearchTags,
+                    isPremiumRequiredForMessaging
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, isPremiumRequiredForMessaging in
                     if let strongSelf = self {
                         strongSelf.hasScheduledMessages = hasScheduledMessages
                         
@@ -5965,6 +6015,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return renderedPeer
                                 }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages).updatedCurrentSendAsPeerId(currentSendAsPeerId)
                                     .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                                    .updatedHasSearchTags(hasSearchTags)
+                                    .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         
@@ -10825,6 +10877,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             Queue.mainQueue().after(0.5) {
                 let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId).startStandalone()
             }
+        }, openPremiumRequiredForMessaging: { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = PremiumIntroScreen(context: self.context, source: .settings)
+            self.push(controller)
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return

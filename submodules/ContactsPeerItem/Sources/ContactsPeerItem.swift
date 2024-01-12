@@ -163,6 +163,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     public let peer: ContactsPeerItemPeer
     let status: ContactsPeerItemStatus
     let badge: ContactsPeerItemBadge?
+    let requiresPremiumForMessaging: Bool
     let enabled: Bool
     let selection: ContactsPeerItemSelection
     let selectionPosition: ContactsPeerItemSelectionPosition
@@ -199,6 +200,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         peer: ContactsPeerItemPeer,
         status: ContactsPeerItemStatus,
         badge: ContactsPeerItemBadge? = nil,
+        requiresPremiumForMessaging: Bool = false,
         enabled: Bool,
         selection: ContactsPeerItemSelection,
         selectionPosition: ContactsPeerItemSelectionPosition = .right,
@@ -229,6 +231,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.peer = peer
         self.status = status
         self.badge = badge
+        self.requiresPremiumForMessaging = requiresPremiumForMessaging
         self.enabled = enabled
         self.selection = selection
         self.selectionPosition = selectionPosition
@@ -399,6 +402,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let offsetContainerNode: ASDisplayNode
     private let avatarNodeContainer: ASDisplayNode
     public let avatarNode: AvatarNode
+    private var avatarBadgeBackground: UIImageView?
+    private var avatarBadge: UIImageView?
     private var avatarIconView: ComponentHostView<Empty>?
     private var avatarIconComponent: EmojiStatusComponent?
     private let titleNode: TextNode
@@ -497,6 +502,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
+        self.highlightedBackgroundNode.alpha = 0.0
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.extractedBackgroundImageNode = ASImageNode()
@@ -624,6 +630,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             default:
                 break
             }
+        }
+        
+        if let item = self.item, let avatarBadgeBackground = self.avatarBadgeBackground {
+            transition.updateTintColor(layer: avatarBadgeBackground.layer, color: item.presentationData.theme.list.itemHighlightedBackgroundColor.mixedWith(item.presentationData.theme.list.plainBackgroundColor, alpha: reallyHighlighted ? 0.0 : 1.0))
         }
         
         if reallyHighlighted {
@@ -1143,6 +1153,44 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
                             
                             strongSelf.avatarNode.frame = CGRect(origin: CGPoint(), size: avatarFrame.size)
+                            
+                            if item.requiresPremiumForMessaging {
+                                let avatarBadgeBackground: UIImageView
+                                if let current = strongSelf.avatarBadgeBackground {
+                                    avatarBadgeBackground = current
+                                } else {
+                                    avatarBadgeBackground = UIImageView()
+                                    avatarBadgeBackground.image = PresentationResourcesChatList.avatarPremiumLockBadgeBackground(item.presentationData.theme)
+                                    avatarBadgeBackground.tintColor = item.presentationData.theme.list.itemHighlightedBackgroundColor.mixedWith(item.presentationData.theme.list.plainBackgroundColor, alpha: 1.0 - strongSelf.highlightedBackgroundNode.alpha)
+                                    strongSelf.avatarBadgeBackground = avatarBadgeBackground
+                                    strongSelf.avatarNode.view.addSubview(avatarBadgeBackground)
+                                }
+                                
+                                let avatarBadge: UIImageView
+                                if let current = strongSelf.avatarBadge {
+                                    avatarBadge = current
+                                } else {
+                                    avatarBadge = UIImageView()
+                                    avatarBadge.image = PresentationResourcesChatList.avatarPremiumLockBadge(item.presentationData.theme)
+                                    strongSelf.avatarBadge = avatarBadge
+                                    strongSelf.avatarNode.view.addSubview(avatarBadge)
+                                }
+                                
+                                let badgeFrame = CGRect(origin: CGPoint(x: avatarFrame.width - 16.0, y: avatarFrame.height - 16.0), size: CGSize(width: 16.0, height: 16.0))
+                                let badgeBackgroundFrame = badgeFrame.insetBy(dx: -1.0 - UIScreenPixel, dy: -1.0 - UIScreenPixel)
+                                
+                                avatarBadgeBackground.frame = badgeBackgroundFrame
+                                avatarBadge.frame = badgeFrame
+                            } else {
+                                if let avatarBadgeBackground = strongSelf.avatarBadgeBackground {
+                                    strongSelf.avatarBadgeBackground = nil
+                                    avatarBadgeBackground.removeFromSuperview()
+                                }
+                                if let avatarBadge = strongSelf.avatarBadge {
+                                    strongSelf.avatarBadge = nil
+                                    avatarBadge.removeFromSuperview()
+                                }
+                            }
                             
                             transition.updatePosition(node: strongSelf.avatarNodeContainer, position: avatarFrame.center)
                             transition.updateBounds(node: strongSelf.avatarNodeContainer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))

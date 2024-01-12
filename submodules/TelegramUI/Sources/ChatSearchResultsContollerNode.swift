@@ -103,7 +103,8 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         forumTopicData: nil,
                         topForumTopicItems: [],
                         autoremoveTimeout: nil,
-                        storyState: nil
+                        storyState: nil,
+                        requiresPremiumForMessaging: false
                     )),
                     editing: false,
                     hasActiveRevealControls: false,
@@ -219,7 +220,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         
         let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
         }, peerSelected: { _, _, _, _ in
-        }, disabledPeerSelected: { _, _ in
+        }, disabledPeerSelected: { _, _, _ in
         }, togglePeerSelected: { _, _ in
         }, togglePeersSelection: { _, _ in
         }, additionalCategorySelected: { _ in

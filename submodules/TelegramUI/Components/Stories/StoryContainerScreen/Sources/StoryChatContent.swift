@@ -50,6 +50,8 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.currentFocusedId = initialFocusedId
             self.currentFocusedIdUpdatedPromise.set(.single(Void()))
             
+            context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
+            
             var inputKeys: [PostboxViewKey] = [
                 PostboxViewKey.basicPeer(peerId),
                 PostboxViewKey.cachedPeerData(peerId: peerId),
@@ -63,10 +65,13 @@ public final class StoryContentContextImpl: StoryContentContext {
                 context.account.postbox.combinedView(
                     keys: inputKeys
                 ),
-                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global())
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                    TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: peerId)
+                )
             )
-            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile], [Int64: EngineStoryItem.ForwardInfo], [StoryId: EngineStoryItem?]), NoError> in
-                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile], [Int64: EngineStoryItem.ForwardInfo], [StoryId: EngineStoryItem?]) in
+            |> mapToSignal { _, views, data -> Signal<(CombinedView, [PeerId: Peer], (EngineGlobalNotificationSettings, Bool), [MediaId: TelegramMediaFile], [Int64: EngineStoryItem.ForwardInfo], [StoryId: EngineStoryItem?]), NoError> in
+                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], (EngineGlobalNotificationSettings, Bool), [MediaId: TelegramMediaFile], [Int64: EngineStoryItem.ForwardInfo], [StoryId: EngineStoryItem?]) in
                     var peers: [PeerId: Peer] = [:]
                     var forwardInfoStories: [StoryId: EngineStoryItem?] = [:]
                     var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
@@ -131,10 +136,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                         }
                     }
                     
-                    return (views, peers, globalNotificationSettings, allEntityFiles, pendingForwardsInfo, forwardInfoStories)
+                    return (views, peers, data, allEntityFiles, pendingForwardsInfo, forwardInfoStories)
                 }
             }
-            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles, pendingForwardsInfo, forwardInfoStories in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, data, allEntityFiles, pendingForwardsInfo, forwardInfoStories in
                 guard let self else {
                     return
                 }
@@ -155,6 +160,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                 if let presencesView = views.views[PostboxViewKey.peerPresences(peerIds: Set([peerId]))] as? PeerPresencesView {
                     peerPresence = presencesView.presences[peerId]
                 }
+                
+                let (globalNotificationSettings, isPremiumRequiredForMessaging) = data
                 
                 for (storyId, story) in forwardInfoStories {
                     let promise: Promise<EngineStoryItem?>
@@ -185,21 +192,24 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isMuted: isMuted,
                             areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable,
                             presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                            canViewStats: false
+                            canViewStats: false,
+                            isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                         )
                     } else if let cachedChannelData = cachedPeerDataView.cachedPeerData as? CachedChannelData {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
                             isMuted: true,
                             areVoiceMessagesAvailable: true,
                             presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                            canViewStats: cachedChannelData.flags.contains(.canViewStats)
+                            canViewStats: cachedChannelData.flags.contains(.canViewStats),
+                            isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                         )
                     } else {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
                             isMuted: true,
                             areVoiceMessagesAvailable: true,
                             presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                            canViewStats: false
+                            canViewStats: false,
+                            isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                         )
                     }
                 }
@@ -208,7 +218,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isMuted: true,
                         areVoiceMessagesAvailable: true,
                         presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                        canViewStats: false
+                        canViewStats: false,
+                        isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                     )
                 }
                 let state = stateView.value?.get(Stories.PeerState.self)
@@ -1093,6 +1104,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
             }
         }
         
+        context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [storyId.peerId])
+        
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: storyId.peerId),
@@ -1100,7 +1113,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.Peer.CanViewStats(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
-                TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: storyId.peerId)
             ),
             item |> mapToSignal { item -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]), NoError> in
                 return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]) in
@@ -1165,7 +1179,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 return
             }
             
-            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings) = data
+            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging) = data
             let (item, peers, allEntityFiles, forwardInfoStories) = itemAndPeers
             
             guard let peer else {
@@ -1178,7 +1192,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 isMuted: isMuted,
                 areVoiceMessagesAvailable: areVoiceMessagesAvailable,
                 presence: presence,
-                canViewStats: canViewStats
+                canViewStats: canViewStats,
+                isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
             )
             
             for (storyId, story) in forwardInfoStories {
@@ -1347,6 +1362,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     public init(context: AccountContext, peerId: EnginePeer.Id, listContext: PeerStoryListContext, initialId: Int32?) {
         self.context = context
         
+        context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
+        
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
@@ -1354,7 +1371,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable(id: peerId),
                 TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peerId),
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
-                TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: peerId)
             ),
             listContext.state,
             self.focusedIdUpdated.get()
@@ -1364,7 +1382,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 return
             }
             
-            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings) = data
+            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging) = data
             
             guard let peer else {
                 return
@@ -1376,7 +1394,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 isMuted: isMuted,
                 areVoiceMessagesAvailable: areVoiceMessagesAvailable,
                 presence: presence,
-                canViewStats: canViewStats
+                canViewStats: canViewStats,
+                isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
             )
             
             self.listState = state
@@ -2123,6 +2142,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
             self.currentFocusedId = initialFocusedId
             self.currentFocusedIdUpdatedPromise.set(.single(Void()))
             
+            context.engine.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: [peerId])
+            
             let originalStoryId = StoryId(peerId: originalPeerId, id: originalStory.id)
             
             let inputKeys: [PostboxViewKey] = [
@@ -2135,10 +2156,13 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                 context.account.postbox.combinedView(
                     keys: inputKeys
                 ),
-                context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global())
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.NotificationSettings.Global(),
+                    TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: peerId)
+                )
             )
-            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]), NoError> in
-                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]) in
+            |> mapToSignal { _, views, data -> Signal<(CombinedView, [PeerId: Peer], (EngineGlobalNotificationSettings, Bool), [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]), NoError> in
+                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], (EngineGlobalNotificationSettings, Bool), [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]) in
                     var peers: [PeerId: Peer] = [:]
                     var forwardInfoStories: [StoryId: EngineStoryItem?] = [:]
                     var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
@@ -2180,10 +2204,10 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                         }
                     }
 
-                    return (views, peers, globalNotificationSettings, allEntityFiles, forwardInfoStories)
+                    return (views, peers, data, allEntityFiles, forwardInfoStories)
                 }
             }
-            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles, forwardInfoStories in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, data, allEntityFiles, forwardInfoStories in
                 guard let self else {
                     return
                 }
@@ -2198,6 +2222,9 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                 if let presencesView = views.views[PostboxViewKey.peerPresences(peerIds: Set([peerId]))] as? PeerPresencesView {
                     peerPresence = presencesView.presences[peerId]
                 }
+                
+                let (globalNotificationSettings, isPremiumRequiredForMessaging) = data
+                
                 for (storyId, story) in forwardInfoStories {
                     let promise: Promise<EngineStoryItem?>
                     var added = false
@@ -2229,21 +2256,24 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                             isMuted: isMuted,
                             areVoiceMessagesAvailable: cachedUserData.voiceMessagesAvailable,
                             presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                            canViewStats: false
+                            canViewStats: false,
+                            isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                         )
                     } else if let cachedChannelData = cachedPeerDataView.cachedPeerData as? CachedChannelData {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
                             isMuted: true,
                             areVoiceMessagesAvailable: true,
                             presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                            canViewStats: cachedChannelData.flags.contains(.canViewStats)
+                            canViewStats: cachedChannelData.flags.contains(.canViewStats),
+                            isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                         )
                     } else {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
                             isMuted: true,
                             areVoiceMessagesAvailable: true,
                             presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                            canViewStats: false
+                            canViewStats: false,
+                            isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                         )
                     }
                 }
@@ -2252,7 +2282,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                         isMuted: true,
                         areVoiceMessagesAvailable: true,
                         presence: peerPresence.flatMap { EnginePeer.Presence($0) },
-                        canViewStats: false
+                        canViewStats: false,
+                        isPremiumRequiredForMessaging: isPremiumRequiredForMessaging
                     )
                 }
                 

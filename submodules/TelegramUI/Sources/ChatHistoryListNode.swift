@@ -1626,13 +1626,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 let previous = previousValueAndVersion?.0
                 let previousSelectedMessages = previousValueAndVersion?.2
                 
-                if let previous {
-                    print("view entries: \(view.entries.count), previous: \(previous.originalView.entries.count)")
-                    if previous.originalView.entries.count >= 44 && view.entries.count == 1 {
-                        assert(true)
-                    }
-                }
-                
                 if let previousVersion = previousValueAndVersion?.1 {
                     assert(update.1 >= previousVersion)
                 }

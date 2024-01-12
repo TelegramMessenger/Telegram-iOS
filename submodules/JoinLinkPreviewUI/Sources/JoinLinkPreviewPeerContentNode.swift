@@ -143,7 +143,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
                     return nil
                 }
                 let node = SelectablePeerNode()
-                node.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer: peer), synchronousLoad: false)
+                node.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer: peer), requiresPremiumForMessaging: false, synchronousLoad: false)
                 node.theme = itemTheme
                 return node
             }

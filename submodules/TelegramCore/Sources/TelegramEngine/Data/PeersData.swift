@@ -1022,6 +1022,51 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct IsPremiumRequiredForMessaging: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, AnyPostboxViewDataItem {
+            public typealias Result = Bool
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
+                return [
+                    .cachedPeerData(peerId: self.id),
+                    .basicPeer(data.accountPeerId)
+                ]
+            }
+
+            func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
+                guard let basicPeerView = views[.basicPeer(data.accountPeerId)] as? BasicPeerView else {
+                    assertionFailure()
+                    return false
+                }
+                guard let view = views[.cachedPeerData(peerId: self.id)] as? CachedPeerDataView else {
+                    assertionFailure()
+                    return false
+                }
+                
+                if let peer = basicPeerView.peer, peer.isPremium {
+                    return false
+                }
+                
+                if self.id.namespace == Namespaces.Peer.CloudUser {
+                    if let cachedData = view.cachedPeerData as? CachedUserData {
+                        return cachedData.flags.contains(.premiumRequired)
+                    } else {
+                        return false
+                    }
+                } else {
+                    return false
+                }
+            }
+        }
+        
         public struct LegacyGroupParticipants: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = EnginePeerCachedInfoItem<[EngineLegacyGroupParticipant]>
 

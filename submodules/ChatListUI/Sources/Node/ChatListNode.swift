@@ -74,7 +74,7 @@ public final class ChatListNodeInteraction {
     
     let activateSearch: () -> Void
     let peerSelected: (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void
-    let disabledPeerSelected: (EnginePeer, Int64?) -> Void
+    let disabledPeerSelected: (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void
     let togglePeerSelected: (EnginePeer, Int64?) -> Void
     let togglePeersSelection: ([PeerEntry], Bool) -> Void
     let additionalCategorySelected: (Int) -> Void
@@ -126,7 +126,7 @@ public final class ChatListNodeInteraction {
         animationRenderer: MultiAnimationRenderer,
         activateSearch: @escaping () -> Void,
         peerSelected: @escaping (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void,
-        disabledPeerSelected: @escaping (EnginePeer, Int64?) -> Void,
+        disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
         togglePeerSelected: @escaping (EnginePeer, Int64?) -> Void,
         togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void,
         additionalCategorySelected: @escaping (Int) -> Void,
@@ -426,7 +426,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                         stats: storyState.stats,
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
-                                }
+                                },
+                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -451,6 +452,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             if filter.contains(.onlyWriteable) {
                                 if let peer = peer.peers[peer.peerId] {
                                     if !canSendMessagesToPeer(peer._asPeer()) {
+                                        enabled = false
+                                    }
+                                    if peerEntry.requiresPremiumForMessaging {
                                         enabled = false
                                     }
                                 } else {
@@ -598,7 +602,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 }
                             }, disabledAction: isForum && editing ? nil : { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, .generic)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -791,7 +795,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                         stats: storyState.stats,
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
-                                }
+                                },
+                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -816,6 +821,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             if filter.contains(.onlyWriteable) {
                                 if let peer = peer.peers[peer.peerId] {
                                     if !canSendMessagesToPeer(peer._asPeer()) {
+                                        enabled = false
+                                    }
+                                    if peerEntry.requiresPremiumForMessaging {
                                         enabled = false
                                     }
                                 } else {
@@ -917,7 +925,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 }
                             }, disabledAction: isForum && editing ? nil : { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, .generic)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -1137,7 +1145,7 @@ public final class ChatListNode: ListView {
     }
     
     public var peerSelected: ((EnginePeer, Int64?, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
-    public var disabledPeerSelected: ((EnginePeer, Int64?) -> Void)?
+    public var disabledPeerSelected: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)?
     public var additionalCategorySelected: ((Int) -> Void)?
     public var groupSelected: ((EngineChatList.Group) -> Void)?
     public var addContact: ((String) -> Void)?
@@ -1316,9 +1324,9 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peer, threadId, true, true, promoInfo)
             }
-        }, disabledPeerSelected: { [weak self] peer, threadId in
+        }, disabledPeerSelected: { [weak self] peer, threadId, reason in
             if let strongSelf = self, let disabledPeerSelected = strongSelf.disabledPeerSelected {
-                disabledPeerSelected(peer, threadId)
+                disabledPeerSelected(peer, threadId, reason)
             }
         }, togglePeerSelected: { [weak self] peer, _ in
             guard let strongSelf = self else {

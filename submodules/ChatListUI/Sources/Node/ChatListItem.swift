@@ -96,6 +96,7 @@ public enum ChatListItemContent {
         public var topForumTopicItems: [EngineChatList.ForumTopicData]
         public var autoremoveTimeout: Int32?
         public var storyState: StoryState?
+        public var requiresPremiumForMessaging: Bool
         
         public init(
             messages: [EngineMessage],
@@ -115,7 +116,8 @@ public enum ChatListItemContent {
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             autoremoveTimeout: Int32?,
-            storyState: StoryState?
+            storyState: StoryState?,
+            requiresPremiumForMessaging: Bool
         ) {
             self.messages = messages
             self.peer = peer
@@ -135,6 +137,7 @@ public enum ChatListItemContent {
             self.topForumTopicItems = topForumTopicItems
             self.autoremoveTimeout = autoremoveTimeout
             self.storyState = storyState
+            self.requiresPremiumForMessaging = requiresPremiumForMessaging
         }
     }
     

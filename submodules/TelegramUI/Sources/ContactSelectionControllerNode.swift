@@ -37,6 +37,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
+    var requestOpenDisabledPeerFromSearch: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     var requestMultipleAction: ((_ silent: Bool, _ scheduleTime: Int32?) -> Void)?
     var dismiss: (() -> Void)?
     var cancelSearch: (() -> Void)?
@@ -67,7 +68,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.filters = filters
         
         var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false, topPeers: false)), filters: filters, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false, topPeers: false)), filters: filters, onlyWriteable: false, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
             contextActionImpl?(peer, node, gesture, nil)
         } : nil, multipleSelection: multipleSelection)
         
@@ -223,6 +224,11 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                     strongSelf.requestOpenPeerFromSearch?(peer)
                 }
             }
+        }, openDisabledPeer: { [weak self] peer, reason in
+            guard let self else {
+                return
+            }
+            self.requestOpenDisabledPeerFromSearch?(peer, reason)
         }, contextAction: nil)
         searchContainerNode.cancel = { [weak self] in
             self?.cancelSearch?()
@@ -286,6 +292,11 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                     strongSelf.requestOpenPeerFromSearch?(peer)
                 }
             }
+        }, openDisabledPeer: { [weak self] peer, reason in
+            guard let self else {
+                return
+            }
+            self.requestOpenDisabledPeerFromSearch?(peer, reason)
         }, contextAction: nil), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
