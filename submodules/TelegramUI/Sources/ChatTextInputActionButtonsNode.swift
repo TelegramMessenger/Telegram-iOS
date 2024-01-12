@@ -47,7 +47,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         let strings = presentationInterfaceState.strings
         self.strings = strings
          
-        self.micButton = ChatTextInputMediaRecordingButton(context: context, theme: theme, strings: strings, presentController: presentController)
+        self.micButton = ChatTextInputMediaRecordingButton(context: context, theme: theme, pause: true, strings: strings, presentController: presentController)
         
         self.sendContainerNode = ASDisplayNode()
         self.sendContainerNode.layer.allowsGroupOpacity = true

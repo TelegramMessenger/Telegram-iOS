@@ -104,7 +104,7 @@ public final class MediaPreviewPanelComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
-        if lhs.mediaPreview !== rhs.mediaPreview {
+        if lhs.mediaPreview != rhs.mediaPreview {
             return false
         }
         if lhs.insets != rhs.insets {
@@ -199,7 +199,7 @@ public final class MediaPreviewPanelComponent: Component {
         }
         
         @objc private func playPauseButtonPressed() {
-            guard let component = self.component else {
+            guard let component = self.component, case let .audio(audio) = component.mediaPreview else {
                 return
             }
             
@@ -212,7 +212,7 @@ public final class MediaPreviewPanelComponent: Component {
                     postbox: component.context.account.postbox,
                     userLocation: .other,
                     userContentType: .audio,
-                    resourceReference: .standalone(resource: component.mediaPreview.resource),
+                    resourceReference: .standalone(resource: audio.resource),
                     streamable: .none,
                     video: false,
                     preferSoftwareDecoding: false,
@@ -231,8 +231,8 @@ public final class MediaPreviewPanelComponent: Component {
         }
         
         func update(component: MediaPreviewPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            if self.component == nil {
-                self.timerTextValue = textForDuration(seconds: component.mediaPreview.duration)
+            if self.component == nil, case let .audio(audio) = component.mediaPreview {
+                self.timerTextValue = textForDuration(seconds: audio.duration)
             }
             
             self.component = component
@@ -263,69 +263,71 @@ public final class MediaPreviewPanelComponent: Component {
             
             let waveformFrame = CGRect(origin: CGPoint(x: component.insets.left + 47.0, y: component.insets.top + floor((availableSize.height - component.insets.top - component.insets.bottom - 24.0) * 0.5)), size: CGSize(width: availableSize.width - component.insets.right - 47.0 - (component.insets.left + 47.0), height: 24.0))
             
-            let _ = self.waveform.update(
-                transition: transition,
-                component: AnyComponent(AudioWaveformComponent(
-                    backgroundColor: UIColor.white.withAlphaComponent(0.1),
-                    foregroundColor: UIColor.white.withAlphaComponent(1.0),
-                    shimmerColor: nil,
-                    style: .middle,
-                    samples: component.mediaPreview.waveform.samples,
-                    peak: component.mediaPreview.waveform.peak,
-                    status: self.mediaPlayerStatus.get() |> map { value -> MediaPlayerStatus in
-                        if let value {
-                            return value
-                        } else {
-                            return MediaPlayerStatus(
-                                generationTimestamp: 0.0,
-                                duration: 0.0,
-                                dimensions: CGSize(),
-                                timestamp: 0.0,
-                                baseRate: 1.0,
-                                seekId: 0,
-                                status: .paused,
-                                soundEnabled: true
-                            )
+            if case let .audio(audio) = component.mediaPreview {
+                let _ = self.waveform.update(
+                    transition: transition,
+                    component: AnyComponent(AudioWaveformComponent(
+                        backgroundColor: UIColor.white.withAlphaComponent(0.1),
+                        foregroundColor: UIColor.white.withAlphaComponent(1.0),
+                        shimmerColor: nil,
+                        style: .middle,
+                        samples: audio.waveform.samples,
+                        peak: audio.waveform.peak,
+                        status: self.mediaPlayerStatus.get() |> map { value -> MediaPlayerStatus in
+                            if let value {
+                                return value
+                            } else {
+                                return MediaPlayerStatus(
+                                    generationTimestamp: 0.0,
+                                    duration: 0.0,
+                                    dimensions: CGSize(),
+                                    timestamp: 0.0,
+                                    baseRate: 1.0,
+                                    seekId: 0,
+                                    status: .paused,
+                                    soundEnabled: true
+                                )
+                            }
+                        },
+                        isViewOnceMessage: false,
+                        seek: { [weak self] timestamp in
+                            guard let self, let mediaPlayer = self.mediaPlayer else {
+                                return
+                            }
+                            mediaPlayer.seek(timestamp: timestamp)
+                        },
+                        updateIsSeeking: { [weak self] isSeeking in
+                            guard let self, let mediaPlayer = self.mediaPlayer else {
+                                return
+                            }
+                            if isSeeking {
+                                mediaPlayer.pause()
+                            } else {
+                                mediaPlayer.play()
+                            }
                         }
-                    },
-                    isViewOnceMessage: false,
-                    seek: { [weak self] timestamp in
-                        guard let self, let mediaPlayer = self.mediaPlayer else {
-                            return
-                        }
-                        mediaPlayer.seek(timestamp: timestamp)
-                    },
-                    updateIsSeeking: { [weak self] isSeeking in
-                        guard let self, let mediaPlayer = self.mediaPlayer else {
-                            return
-                        }
-                        if isSeeking {
-                            mediaPlayer.pause()
-                        } else {
-                            mediaPlayer.play()
-                        }
-                    }
-                )),
-                environment: {},
-                containerSize: waveformFrame.size
-            )
-            let _ = self.vibrancyWaveform.update(
-                transition: transition,
-                component: AnyComponent(AudioWaveformComponent(
-                    backgroundColor: .white,
-                    foregroundColor: .white,
-                    shimmerColor: nil,
-                    style: .middle,
-                    samples: component.mediaPreview.waveform.samples,
-                    peak: component.mediaPreview.waveform.peak,
-                    status: .complete(),
-                    isViewOnceMessage: false,
-                    seek: nil,
-                    updateIsSeeking: nil
-                )),
-                environment: {},
-                containerSize: waveformFrame.size
-            )
+                    )),
+                    environment: {},
+                    containerSize: waveformFrame.size
+                )
+                let _ = self.vibrancyWaveform.update(
+                    transition: transition,
+                    component: AnyComponent(AudioWaveformComponent(
+                        backgroundColor: .white,
+                        foregroundColor: .white,
+                        shimmerColor: nil,
+                        style: .middle,
+                        samples: audio.waveform.samples,
+                        peak: audio.waveform.peak,
+                        status: .complete(),
+                        isViewOnceMessage: false,
+                        seek: nil,
+                        updateIsSeeking: nil
+                    )),
+                    environment: {},
+                    containerSize: waveformFrame.size
+                )
+            }
             
             if let waveformView = self.waveform.view as? AudioWaveformComponent.View {
                 if waveformView.superview == nil {

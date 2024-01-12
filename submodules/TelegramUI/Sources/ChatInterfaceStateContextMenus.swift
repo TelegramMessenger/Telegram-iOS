@@ -1765,14 +1765,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                         if let stats, stats.peers.isEmpty {
                             c.dismiss(completion: {
-                                var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumDemoScreen(context: context, subject: .emojiStatus, action: {
-                                    let controller = PremiumIntroScreen(context: context, source: .settings)
-                                    replaceImpl?(controller)
-                                })
-                                replaceImpl = { [weak controller] c in
-                                    controller?.replace(with: c)
-                                }
+                                let controller = context.sharedContext.makePremiumPrivacyControllerController(context: context, subject: .readTime, peerId: peer.id)
                                 controllerInteraction.navigationController()?.pushViewController(controller)
                             })
                         }

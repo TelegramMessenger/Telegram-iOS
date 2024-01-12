@@ -39,6 +39,7 @@ import VolumeSliderContextItem
 import TelegramStringFormatting
 import ForwardInfoPanelComponent
 import ContextReferenceButtonComponent
+import MediaScrubberComponent
 
 private let playbackButtonTag = GenericComponentViewTag()
 private let muteButtonTag = GenericComponentViewTag()
@@ -1359,6 +1360,8 @@ final class MediaEditorScreenComponent: Component {
                     transition: scrubberTransition,
                     component: AnyComponent(MediaScrubberComponent(
                         context: component.context,
+                        style: .editor,
+                        theme: environment.theme,
                         generationTimestamp: playerState.generationTimestamp,
                         position: playerState.position,
                         minDuration: minDuration,
@@ -6080,4 +6083,24 @@ private func setupButtonShadow(_ view: UIView, radius: CGFloat = 2.0) {
     view.layer.shadowRadius = radius
     view.layer.shadowColor = UIColor.black.cgColor
     view.layer.shadowOpacity = 0.35
+}
+
+extension MediaScrubberComponent.Track {
+    public init(_ track: MediaEditorPlayerState.Track) {
+        let content: MediaScrubberComponent.Track.Content
+        switch track.content {
+        case let .video(frames, framesUpdateTimestamp):
+            content = .video(frames: frames, framesUpdateTimestamp: framesUpdateTimestamp)
+        case let .audio(artist, title, samples, peak):
+            content = .audio(artist: artist, title: title, samples: samples, peak: peak)
+        }
+        self.init(
+            id: track.id,
+            content: content,
+            duration: track.duration,
+            trimRange: track.trimRange,
+            offset: track.offset,
+            isMain: track.isMain
+        )
+    }
 }

@@ -20,7 +20,6 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/PhotoResources",
         "//submodules/TelegramStringFormatting",
-        "//submodules/RadialStatusNode",
         "//submodules/SemanticStatusNode",
         "//submodules/FileMediaResourceStatus",
         "//submodules/CheckNode",

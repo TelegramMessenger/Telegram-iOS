@@ -148,6 +148,9 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             var textString: NSAttributedString?
             var updatedContactInfo: String?
             
+            var canMessage = false
+            var canAdd = false
+            
             var displayName: String = ""
             if let selectedContact = selectedContact {
                 if !selectedContact.firstName.isEmpty && !selectedContact.lastName.isEmpty {
@@ -159,6 +162,10 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 if displayName.isEmpty {
                     displayName = item.presentationData.strings.Message_Contact
+                }
+                
+                if selectedContact.peerId != nil {
+                    canMessage = true
                 }
                 
                 let info: String
@@ -199,6 +206,8 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                canAdd = !item.associatedData.deviceContactsNumbers.contains(selectedContact.phoneNumber)
+                    
                 updatedContactInfo = info
                 
                 titleString = NSAttributedString(string: displayName, font: titleFont, textColor: mainColor)
@@ -305,10 +314,10 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     maxContentWidth = max(maxContentWidth, statusSuggestedWidthAndContinue.0)
                 }
-                maxContentWidth = max(maxContentWidth, avatarSize.width + 7.0 + titleLayout.size.width)
-                maxContentWidth = max(maxContentWidth, avatarSize.width + 7.0 + textLayout.size.width)
+                maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + titleLayout.size.width + 7.0)
+                maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + textLayout.size.width + 7.0)
                 maxContentWidth = max(maxContentWidth, maxButtonWidth * 2.0)
-                maxContentWidth = max(maxContentWidth, 240.0)
+                maxContentWidth = max(maxContentWidth, 220.0)
                 
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
@@ -316,7 +325,19 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     let baseAvatarFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutConstants.text.bubbleInsets.top), size: avatarSize)
                     
                     let lineWidth: CGFloat = 3.0
-                    let buttonWidth = floor((boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0 - lineWidth) / 2.0)
+                    
+                    var buttonCount = 0
+                    if canMessage {
+                        buttonCount += 1
+                    }
+                    if canAdd {
+                        buttonCount += 1
+                    }
+                    var buttonWidth = floor((boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0 - lineWidth))
+                    if buttonCount > 1 {
+                        buttonWidth /= CGFloat(buttonCount)
+                    }
+                    
                     let (messageButtonSize, messageButtonApply) = messageContinueLayout(buttonWidth, 33.0)
                     let (addButtonSize, addButtonApply) = addContinueLayout(buttonWidth, 33.0)
                   
@@ -329,7 +350,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         layoutSize.height += statusSizeAndApply.0.height - 4.0
                     }
                     let messageButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth, y: layoutSize.height - 24.0 - messageButtonSize.height), size: messageButtonSize)
-                    let addButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth + buttonWidth, y: layoutSize.height - 24.0 - addButtonSize.height), size: addButtonSize)
+                    let addButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth + (canMessage ? buttonWidth : 0.0), y: layoutSize.height - 24.0 - addButtonSize.height), size: addButtonSize)
                     let avatarFrame = baseAvatarFrame.offsetBy(dx: 9.0, dy: 14.0)
                     
                     var customLetters: [String] = []
@@ -362,12 +383,14 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 1.0), size: titleLayout.size)
                             strongSelf.textNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
-                            strongSelf.addButtonNode.frame = addButtonFrame
                             
+                            strongSelf.addButtonNode.frame = addButtonFrame
+                            strongSelf.addButtonNode.isHidden = !canAdd
                             strongSelf.messageButtonNode.frame = messageButtonFrame
+                            strongSelf.messageButtonNode.isHidden = !canMessage
                             
                             let backgroundInsets = layoutConstants.text.bubbleInsets
-                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: contentWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: 94.0))
+                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: contentWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: backgroundFrame.maxY + 3.0), size: statusSizeAndApply.0)
@@ -479,7 +502,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.addButtonNode.frame.contains(point) {
-            return ChatMessageBubbleContentTapAction(content: .openMessage)
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
@@ -490,7 +513,17 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc private func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                var selectedContact: TelegramMediaContact?
+                for media in item.message.media {
+                    if let media = media as? TelegramMediaContact {
+                        selectedContact = media
+                    }
+                }
+                if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
+                    item.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), nil, .default)
+                } else {
+                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                }
             }
         }
     }

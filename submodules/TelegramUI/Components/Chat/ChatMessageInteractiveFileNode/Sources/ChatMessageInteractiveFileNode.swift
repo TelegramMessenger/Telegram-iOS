@@ -10,7 +10,6 @@ import TelegramPresentationData
 import AccountContext
 import PhotoResources
 import TelegramStringFormatting
-import RadialStatusNode
 import SemanticStatusNode
 import FileMediaResourceStatus
 import CheckNode

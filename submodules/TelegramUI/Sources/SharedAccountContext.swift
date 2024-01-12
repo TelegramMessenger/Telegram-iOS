@@ -166,6 +166,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public let enablePreloads = Promise<Bool>()
     public let hasPreloadBlockingContent = Promise<Bool>(false)
+    public let deviceContactPhoneNumbers = Promise<Set<String>>(Set())
     
     private var accountUserInterfaceInUseContexts: [AccountRecordId: AccountUserInterfaceInUseContext] = [:]
     
@@ -1675,7 +1676,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return presentAddMembersImpl(context: context, updatedPresentationData: updatedPresentationData, parentController: parentController, groupPeer: groupPeer, selectAddMemberDisposable: selectAddMemberDisposable, addMemberDisposable: addMemberDisposable)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, accountPeer: Peer?, isCentered: Bool, isPreview: Bool, isStandalone: Bool) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
@@ -1770,7 +1771,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             chatLocation = .peer(id: messages.first!.id.peerId)
         }
         
-        return ChatMessageItemImpl(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: isPreview), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: accountPeer.flatMap(EnginePeer.init), forceInlineReactions: true), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
+        return ChatMessageItemImpl(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: isPreview), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: accountPeer.flatMap(EnginePeer.init), forceInlineReactions: true, isStandalone: isStandalone), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
@@ -1947,6 +1948,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .wallpapers
         case .presence:
             mappedSource = .presence
+        case .readTime:
+            mappedSource = .readTime
         }
         let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -2090,6 +2093,101 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             controller.push(giftController)
         })
+        
+        return controller
+    }
+    
+    public func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController {
+        let mappedSubject: PremiumPrivacyScreen.Subject
+        let introSource: PremiumIntroSource
+        
+        switch subject {
+        case .presence:
+            mappedSubject = .presence
+            introSource = .presence
+        case .readTime:
+            mappedSubject = .readTime
+            introSource = .presence
+        }
+        
+        var actionImpl: (() -> Void)?
+        var openPremiumIntroImpl: (() -> Void)?
+        
+        let controller = PremiumPrivacyScreen(
+            context: context,
+            subject: mappedSubject,
+            action: {
+                actionImpl?()
+            }, openPremiumIntro: {
+                openPremiumIntroImpl?()
+            }
+        )
+        actionImpl = { [weak controller] in
+            guard let parentController = controller, let navigationController = parentController.navigationController as? NavigationController else {
+                return
+            }
+            
+            let currentPrivacy = Promise<AccountPrivacySettings>()
+            currentPrivacy.set(context.engine.privacy.requestAccountPrivacySettings())
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let tooltipText: String
+            
+            switch subject {
+            case .presence:
+                //TODO:localize
+                tooltipText = "Your last seen time is now visible."
+                
+                let _ = (currentPrivacy.get()
+                |> take(1)
+                |> mapToSignal { current in
+                    let presence = current.presence
+                    var disabledFor: [PeerId: SelectivePrivacyPeer] = [:]
+                    switch presence {
+                    case let .enableEveryone(disabledForValue), let .enableContacts(_, disabledForValue):
+                        disabledFor = disabledForValue
+                    default:
+                        break
+                    }
+                    disabledFor.removeValue(forKey: peerId)
+                    
+                    return context.engine.privacy.updateSelectiveAccountPrivacySettings(type: .presence, settings: .enableEveryone(disableFor: disabledFor))
+                }
+                |> deliverOnMainQueue).startStandalone(completed: { [weak navigationController] in
+                    let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peerId).startStandalone()
+                    
+                    if let parentController = navigationController?.viewControllers.last as? ViewController {
+                        parentController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: tooltipText, timeout: 4.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    }
+                })
+            case .readTime:
+                tooltipText = "Your read times are now visible."
+                
+                let _ = (currentPrivacy.get()
+                |> take(1)
+                |> mapToSignal { current in
+                    var settings = current.globalSettings
+                    settings.hideReadTime = false
+                    return context.engine.privacy.updateGlobalPrivacySettings(settings: settings)
+                }
+                |> deliverOnMainQueue).startStandalone(completed: { [weak navigationController] in
+                    if let parentController = navigationController?.viewControllers.last as? ViewController {
+                        parentController.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: tooltipText, timeout: 4.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                            return true
+                        }), in: .window(.root))
+                    }
+                })
+            }
+        }
+        openPremiumIntroImpl = { [weak controller] in
+            guard let parentController = controller else {
+                return
+            }
+            let controller = context.sharedContext.makePremiumIntroController(context: context, source: introSource, forceDark: false, dismissed: nil)
+            parentController.push(controller)
+        }
         
         return controller
     }

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -146,34 +147,87 @@ public struct ChatSearchData: Equatable {
     }
 }
 
-public final class ChatRecordedMediaPreview: Equatable {
-    public let resource: TelegramMediaResource
-    public let fileSize: Int32
-    public let duration: Int32
-    public let waveform: AudioWaveform
-    
-    public init(resource: TelegramMediaResource, duration: Int32, fileSize: Int32, waveform: AudioWaveform) {
-        self.resource = resource
-        self.duration = duration
-        self.fileSize = fileSize
-        self.waveform = waveform
+public enum ChatRecordedMediaPreview: Equatable {
+    public class Audio: Equatable {
+        public let resource: TelegramMediaResource
+        public let fileSize: Int32
+        public let duration: Int32
+        public let waveform: AudioWaveform
+        
+        public init(
+            resource: TelegramMediaResource,
+            fileSize: Int32,
+            duration: Int32,
+            waveform: AudioWaveform
+        ) {
+            self.resource = resource
+            self.fileSize = fileSize
+            self.duration = duration
+            self.waveform = waveform
+        }
+        
+        public static func ==(lhs: Audio, rhs: Audio) -> Bool {
+            if !lhs.resource.isEqual(to: rhs.resource) {
+                return false
+            }
+            if lhs.duration != rhs.duration {
+                return false
+            }
+            if lhs.fileSize != rhs.fileSize {
+                return false
+            }
+            if lhs.waveform != rhs.waveform {
+                return false
+            }
+            return true
+        }
     }
     
-    public static func ==(lhs: ChatRecordedMediaPreview, rhs: ChatRecordedMediaPreview) -> Bool {
-        if !lhs.resource.isEqual(to: rhs.resource) {
-            return false
+    public class Video: Equatable {
+        public class Control {
+            public let updateTrimRange: (Double, Double, Bool, Bool) -> Void
+            
+            public init(updateTrimRange: @escaping (Double, Double, Bool, Bool) -> Void) {
+                self.updateTrimRange = updateTrimRange
+            }
         }
-        if lhs.duration != rhs.duration {
-            return false
+        
+        public let duration: Int32
+        public let frames: [UIImage]
+        public let framesUpdateTimestamp: Double
+        public let trimRange: Range<Double>?
+        public let control: Control
+        
+        public init(
+            duration: Int32,
+            frames: [UIImage],
+            framesUpdateTimestamp: Double,
+            trimRange: Range<Double>?,
+            control: Control
+        ) {
+            self.duration = duration
+            self.frames = frames
+            self.framesUpdateTimestamp = framesUpdateTimestamp
+            self.trimRange = trimRange
+            self.control = control
         }
-        if lhs.fileSize != rhs.fileSize {
-            return false
+        
+        public static func ==(lhs: Video, rhs: Video) -> Bool {
+            if lhs.duration != rhs.duration {
+                return false
+            }
+            if lhs.framesUpdateTimestamp != rhs.framesUpdateTimestamp {
+                return false
+            }
+            if lhs.trimRange != rhs.trimRange {
+                return false
+            }
+            return true
         }
-        if lhs.waveform != rhs.waveform {
-            return false
-        }
-        return true
     }
+    
+    case audio(Audio)
+    case video(Video)
 }
 
 public struct ChatContactStatus: Equatable {

@@ -192,6 +192,9 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
                 }
             }
             
+            let isViewOnceMessage = item.message.minAutoremoveOrClearTimeout == viewOnceTimeout
+            let forceIsPlaying = isViewOnceMessage && didSetupFileNode
+            
             var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                 incoming = false
@@ -200,19 +203,19 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
             let statusType: ChatMessageDateAndStatusType?
             switch preparePosition {
             case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
-                    if incoming {
-                        statusType = .BubbleIncoming
+                if incoming {
+                    statusType = .BubbleIncoming
+                } else {
+                    if item.message.flags.contains(.Failed) {
+                        statusType = .BubbleOutgoing(.Failed)
+                    } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
+                        statusType = .BubbleOutgoing(.Sending)
                     } else {
-                        if item.message.flags.contains(.Failed) {
-                            statusType = .BubbleOutgoing(.Failed)
-                        } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
-                            statusType = .BubbleOutgoing(.Sending)
-                        } else {
-                            statusType = .BubbleOutgoing(.Sent(read: item.read))
-                        }
+                        statusType = .BubbleOutgoing(.Sent(read: item.read))
                     }
-                default:
-                    statusType = nil
+                }
+            default:
+                statusType = nil
             }
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)
@@ -256,7 +259,7 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
             let normalDisplaySize = layoutConstants.instantVideo.dimensions
             var displaySize = normalDisplaySize
             let maximumDisplaySize = CGSize(width: min(404, constrainedSize.width - 2.0), height: min(404, constrainedSize.width - 2.0))
-            if item.associatedData.currentlyPlayingMessageId == item.message.index {
+            if (item.associatedData.currentlyPlayingMessageId == item.message.index || forceIsPlaying) && (!isViewOnceMessage || item.associatedData.isStandalone) {
                 isPlaying = true
                 if !isExpanded {
                     displaySize = maximumDisplaySize

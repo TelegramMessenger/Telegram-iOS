@@ -16,6 +16,8 @@ public final class PlainButtonComponent: Component {
     public let contentInsets: UIEdgeInsets
     public let action: () -> Void
     public let isEnabled: Bool
+    public let animateAlpha: Bool
+    public let tag: AnyObject?
     
     public init(
         content: AnyComponent<Empty>,
@@ -23,7 +25,9 @@ public final class PlainButtonComponent: Component {
         minSize: CGSize? = nil,
         contentInsets: UIEdgeInsets = UIEdgeInsets(),
         action: @escaping () -> Void,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        animateAlpha: Bool = true,
+        tag : AnyObject? = nil
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
@@ -31,8 +35,10 @@ public final class PlainButtonComponent: Component {
         self.contentInsets = contentInsets
         self.action = action
         self.isEnabled = isEnabled
+        self.animateAlpha = animateAlpha
+        self.tag = tag
     }
-
+    
     public static func ==(lhs: PlainButtonComponent, rhs: PlainButtonComponent) -> Bool {
         if lhs.content != rhs.content {
             return false
@@ -49,10 +55,26 @@ public final class PlainButtonComponent: Component {
         if lhs.isEnabled != rhs.isEnabled {
             return false
         }
+        if lhs.animateAlpha != rhs.animateAlpha {
+            return false
+        }
+        if lhs.tag !== rhs.tag {
+            return false
+        }
         return true
     }
 
-    public final class View: HighlightTrackingButton {
+    public final class View: HighlightTrackingButton, ComponentTaggedView {
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
         private var component: PlainButtonComponent?
         private weak var componentState: EmptyComponentState?
 
@@ -73,18 +95,25 @@ public final class PlainButtonComponent: Component {
             
             self.highligthedChanged = { [weak self] highlighted in
                 if let self, self.bounds.width > 0.0 {
+                    let animateAlpha = self.component?.animateAlpha ?? true
+                    
                     let topScale: CGFloat = (self.bounds.width - 8.0) / self.bounds.width
                     let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
                     
                     if highlighted {
                         self.contentContainer.layer.removeAnimation(forKey: "opacity")
                         self.contentContainer.layer.removeAnimation(forKey: "sublayerTransform")
-                        self.contentContainer.alpha = 0.7
+                        
+                        if animateAlpha {
+                            self.contentContainer.alpha = 0.7
+                        }
                         let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                         transition.setScale(layer: self.contentContainer.layer, scale: topScale)
                     } else {
-                        self.contentContainer.alpha = 1.0
-                        self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                        if animateAlpha {
+                            self.contentContainer.alpha = 1.0
+                            self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                        }
                         
                         let transition = Transition(animation: .none)
                         transition.setScale(layer: self.contentContainer.layer, scale: 1.0)

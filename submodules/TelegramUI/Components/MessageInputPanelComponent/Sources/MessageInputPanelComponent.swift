@@ -351,7 +351,7 @@ public final class MessageInputPanelComponent: Component {
         if lhs.wasRecordingDismissed != rhs.wasRecordingDismissed {
             return false
         }
-        if lhs.recordedAudioPreview !== rhs.recordedAudioPreview {
+        if lhs.recordedAudioPreview != rhs.recordedAudioPreview {
             return false
         }
         if lhs.hasRecordedVideoPreview != rhs.hasRecordedVideoPreview {

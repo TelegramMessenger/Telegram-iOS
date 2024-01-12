@@ -651,10 +651,10 @@ private final class CameraScreenComponent: CombinedComponent {
             
             let startRecording = {
                 self.resultDisposable.set((camera.startRecording()
-                |> deliverOnMainQueue).start(next: { [weak self] duration in
+                |> deliverOnMainQueue).start(next: { [weak self] recordingData in
                     if let self, let controller = self.getController() {
-                        controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
-                        if duration > 59.0 {
+                        controller.updateCameraState({ $0.updatedDuration(recordingData.duration) }, transition: .easeInOut(duration: 0.1))
+                        if recordingData.duration > 59.0 {
                             self.stopVideoRecording()
                         }
                     }
@@ -1607,7 +1607,6 @@ public class CameraScreen: ViewController {
                             if case .pendingImage = value {
                                 Queue.mainQueue().async {
                                     self.mainPreviewView.isEnabled = false
-                                    
                                     self.additionalPreviewView.isEnabled = false
                                 }
                             } else {
