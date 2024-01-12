@@ -25,6 +25,7 @@ import MediaEditor
 import MediaResources
 import LocalMediaResources
 import ImageCompression
+import LegacyMediaPickerUI
 
 struct CameraState: Equatable {
     enum Recording: Equatable {
@@ -59,6 +60,7 @@ struct CameraState: Equatable {
 struct PreviewState: Equatable {
     let composition: AVComposition
     let trimRange: Range<Double>?
+    let isMuted: Bool
 }
 
 enum CameraScreenTransition {
@@ -75,6 +77,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let context: AccountContext
     let cameraState: CameraState
     let isPreviewing: Bool
+    let isMuted: Bool
     let getController: () -> VideoMessageCameraScreen?
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
@@ -86,6 +89,7 @@ private final class CameraScreenComponent: CombinedComponent {
         context: AccountContext,
         cameraState: CameraState,
         isPreviewing: Bool,
+        isMuted: Bool,
         getController: @escaping () -> VideoMessageCameraScreen?,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
@@ -96,6 +100,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.context = context
         self.cameraState = cameraState
         self.isPreviewing = isPreviewing
+        self.isMuted = isMuted
         self.getController = getController
         self.present = present
         self.push = push
@@ -112,6 +117,9 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.isPreviewing != rhs.isPreviewing {
+            return false
+        }
+        if lhs.isMuted != rhs.isMuted {
             return false
         }
         return true
@@ -224,17 +232,20 @@ private final class CameraScreenComponent: CombinedComponent {
             controller.node.dismissAllTooltips()
             controller.updateCameraState({ $0.updatedRecording(pressing ? .holding : .handsFree).updatedDuration(initialDuration) }, transition: .spring(duration: 0.4))
             
-            let isFirstTime = !controller.node.cameraIsActive
+            let isFirstRecording = initialDuration.isZero
             controller.node.resumeCameraCapture()
             
-            controller.node.withReadyCamera(isFirstTime: isFirstTime) {
+            controller.node.withReadyCamera(isFirstTime: !controller.node.cameraIsActive) {
                 self.resultDisposable.set((camera.startRecording()
-                |> deliverOnMainQueue).start(next: { [weak self] duration in
-                    let duration = initialDuration + duration
+                |> deliverOnMainQueue).start(next: { [weak self] recordingData in
+                    let duration = initialDuration + recordingData.duration
                     if let self, let controller = self.getController() {
                         controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
-                        if duration > 59.0 {
+                        if recordingData.duration > 59.0 {
                             self.stopVideoRecording()
+                        }
+                        if isFirstRecording {
+                            controller.node.setupLiveUpload(filePath: recordingData.filePath)
                         }
                     }
                 }))
@@ -457,6 +468,10 @@ public class VideoMessageCameraScreen: ViewController {
         fileprivate var camera: Camera?
         private let updateState: ActionSlot<CameraState>
         
+        fileprivate var liveUploadInterface: LegacyLiveUploadInterface?
+        private var currentLiveUploadPath: String?
+        fileprivate var currentLiveUploadData: LegacyLiveUploadInterfaceResult?
+        
         fileprivate let backgroundView: UIVisualEffectView
         fileprivate let containerView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
@@ -491,7 +506,7 @@ public class VideoMessageCameraScreen: ViewController {
         fileprivate let startRecording = ActionSlot<Void>()
         fileprivate let stopRecording = ActionSlot<Void>()
         private let completion = ActionSlot<VideoMessageCameraScreen.CaptureResult>()
-        
+                
         var cameraState: CameraState {
             didSet {
                 if self.cameraState.isViewOnceEnabled != oldValue.isViewOnceEnabled {
@@ -507,6 +522,7 @@ public class VideoMessageCameraScreen: ViewController {
         var previewState: PreviewState? {
             didSet {
                 self.previewStatePromise.set(.single(self.previewState))
+                self.resultPreviewView?.isMuted = self.previewState?.isMuted ?? true
             }
         }
         var previewStatePromise = Promise<PreviewState?>()
@@ -554,7 +570,7 @@ public class VideoMessageCameraScreen: ViewController {
             )
             
             self.previewState = nil
-                        
+            
             super.init()
             
             self.backgroundColor = .clear
@@ -603,6 +619,17 @@ public class VideoMessageCameraScreen: ViewController {
                     f()
                 }
             }
+        }
+        
+        func setupLiveUpload(filePath: String) {
+            guard let controller = self.controller, controller.allowLiveUpload, self.liveUploadInterface == nil else {
+                return
+            }
+            let liveUploadInterface = LegacyLiveUploadInterface(context: self.context)
+            Queue.mainQueue().after(1.5, {
+                liveUploadInterface.setup(withFileURL: URL(fileURLWithPath: filePath))
+            })
+            self.liveUploadInterface = liveUploadInterface
         }
         
         override func didLoad() {
@@ -736,6 +763,14 @@ public class VideoMessageCameraScreen: ViewController {
                 return
             }
             
+            if self.results.isEmpty {
+                if let liveUploadData = self.liveUploadInterface?.fileUpdated(true) as? LegacyLiveUploadInterfaceResult {
+                    self.currentLiveUploadData = liveUploadData
+                }
+            } else {
+                self.currentLiveUploadData = nil
+            }
+            
             self.pauseCameraCapture()
             
             self.results.append(result)
@@ -745,7 +780,7 @@ public class VideoMessageCameraScreen: ViewController {
             
             let composition = composition(with: self.results)
             controller.updatePreviewState({ _ in
-                return PreviewState(composition: composition, trimRange: nil)
+                return PreviewState(composition: composition, trimRange: nil, isMuted: true)
             }, transition: .spring(duration: 0.4))
         }
         
@@ -837,14 +872,30 @@ public class VideoMessageCameraScreen: ViewController {
         }
         
         func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool) {
+            guard let controller = self.controller else {
+                return
+            }
             self.resultPreviewView?.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
-            self.controller?.updatePreviewState({ state in
+            controller.updatePreviewState({ state in
                 if let state {
-                    return PreviewState(composition: state.composition, trimRange: start..<end)
+                    return PreviewState(composition: state.composition, trimRange: start..<end, isMuted: state.isMuted)
                 } else {
                     return nil
                 }
             }, transition: .immediate)
+        }
+        
+        @objc func resultTapped() {
+            guard let controller = self.controller else {
+                return
+            }
+            controller.updatePreviewState({ state in
+                if let state {
+                    return PreviewState(composition: state.composition, trimRange: state.trimRange, isMuted: !state.isMuted)
+                } else {
+                    return nil
+                }
+            }, transition: .easeInOut(duration: 0.2))
         }
         
         func requestUpdateLayout(transition: Transition) {
@@ -888,7 +939,7 @@ public class VideoMessageCameraScreen: ViewController {
                 self.didAppear()
             }
 
-            let backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: layout.size.height - controller.inputPanelFrame.height - layout.intrinsicInsets.bottom))
+            let backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: controller.inputPanelFrame.minY))
             
             let componentSize = self.componentHost.update(
                 transition: transition,
@@ -897,6 +948,7 @@ public class VideoMessageCameraScreen: ViewController {
                         context: self.context,
                         cameraState: self.cameraState,
                         isPreviewing: self.previewState != nil || self.transitioningToPreview,
+                        isMuted: self.previewState?.isMuted ?? true,
                         getController: { [weak self] in
                             return self?.controller
                         },
@@ -933,8 +985,9 @@ public class VideoMessageCameraScreen: ViewController {
             transition.setPosition(view: self.containerView, position: backgroundFrame.center)
             transition.setBounds(view: self.containerView, bounds: CGRect(origin: .zero, size: backgroundFrame.size))
                         
+            let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0)
             let previewSide = min(369.0, layout.size.width - 24.0)
-            let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(90.0, layout.size.height * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+            let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
             
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
@@ -964,10 +1017,22 @@ public class VideoMessageCameraScreen: ViewController {
                     resultPreviewView = current
                 } else {
                     resultPreviewView = ResultPreviewView(composition: previewState.composition)
+                    resultPreviewView.onLoop = { [weak self] in
+                        if let self, let controller = self.controller {
+                            controller.updatePreviewState({ state in
+                                if let state {
+                                    return PreviewState(composition: state.composition, trimRange: state.trimRange, isMuted: true)
+                                }
+                                return nil
+                            }, transition: .easeInOut(duration: 0.2))
+                        }
+                    }
                     self.previewContainerView.addSubview(resultPreviewView)
                     
                     self.resultPreviewView = resultPreviewView
                     resultPreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    
+                    resultPreviewView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.resultTapped)))
                 }
                 resultPreviewView.frame = previewInnerFrame
             } else if let resultPreviewView = self.resultPreviewView {
@@ -988,8 +1053,9 @@ public class VideoMessageCameraScreen: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let inputPanelFrame: CGRect
-
-    fileprivate let completion: (EnqueueMessage) -> Void
+    fileprivate var allowLiveUpload: Bool
+    
+    fileprivate let completion: (EnqueueMessage?) -> Void
     
     private var audioSessionDisposable: Disposable?
     
@@ -1129,11 +1195,13 @@ public class VideoMessageCameraScreen: ViewController {
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         inputPanelFrame: CGRect,
-        completion: @escaping (EnqueueMessage) -> Void
+        allowLiveUpload: Bool,
+        completion: @escaping (EnqueueMessage?) -> Void
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.inputPanelFrame = inputPanelFrame
+        self.allowLiveUpload = allowLiveUpload
         self.completion = completion
         
         self.recordingStatus = RecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())
@@ -1166,6 +1234,11 @@ public class VideoMessageCameraScreen: ViewController {
     }
         
     public func sendVideoRecording() {
+        if case .none = self.cameraState.recording, self.node.results.isEmpty {
+            self.completion(nil)
+            return
+        }
+        
         if case .none = self.cameraState.recording {
         } else {
             self.waitingForNextResult = true
@@ -1181,7 +1254,8 @@ public class VideoMessageCameraScreen: ViewController {
 
             var videoPaths: [String] = []
             var duration: Double = 0.0
-
+            
+            var hasAdjustments = results.count > 1
             for result in results {
                 if case let .video(video) = result {
                     videoPaths.append(video.videoPath)
@@ -1192,14 +1266,16 @@ public class VideoMessageCameraScreen: ViewController {
             let finalDuration: Double
             if let trimRange = self.node.previewState?.trimRange {
                 finalDuration = trimRange.upperBound - trimRange.lowerBound
+                if finalDuration != duration {
+                    hasAdjustments = true
+                }
             } else {
                 finalDuration = duration
             }
             
-            var resourceAdjustments: VideoMediaResourceAdjustments? = nil
-            
             let values = MediaEditorValues(peerId: self.context.account.peerId, originalDimensions: PixelDimensions(width: 400, height: 400), cropOffset: .zero, cropRect: CGRect(origin: .zero, size: CGSize(width: 400.0, height: 400.0)), cropScale: 1.0, cropRotation: 0.0, cropMirroring: false, cropOrientation: nil, gradientColors: nil, videoTrimRange: self.node.previewState?.trimRange, videoIsMuted: false, videoIsFullHd: false, videoIsMirrored: false, videoVolume: nil, additionalVideoPath: nil, additionalVideoIsDual: false, additionalVideoPosition: nil, additionalVideoScale: nil, additionalVideoRotation: nil, additionalVideoPositionChanges: [], additionalVideoTrimRange: nil, additionalVideoOffset: nil, additionalVideoVolume: nil, nightTheme: false, drawing: nil, entities: [], toolValues: [:], audioTrack: nil, audioTrackTrimRange: nil, audioTrackOffset: nil, audioTrackVolume: nil, audioTrackSamples: nil, qualityPreset: .videoMessage)
             
+            var resourceAdjustments: VideoMediaResourceAdjustments? = nil
             if let valuesData = try? JSONEncoder().encode(values) {
                 let data = MemoryBuffer(data: valuesData)
                 let digest = MemoryBuffer(data: data.md5Digest())
@@ -1207,7 +1283,18 @@ public class VideoMessageCameraScreen: ViewController {
             }
  
             let resource: TelegramMediaResource
-            resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), paths: videoPaths, adjustments: resourceAdjustments)
+            let liveUploadData: LegacyLiveUploadInterfaceResult?
+            if let current = self.node.currentLiveUploadData {
+                liveUploadData = current
+            } else {
+                liveUploadData = self.node.liveUploadInterface?.fileUpdated(true) as? LegacyLiveUploadInterfaceResult
+            }
+            if !hasAdjustments, let liveUploadData, let data = try? Data(contentsOf: URL(fileURLWithPath: video.videoPath)) {
+                resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+            } else {
+                resource = LocalFileVideoMediaResource(randomId: Int64.random(in: Int64.min ... Int64.max), paths: videoPaths, adjustments: resourceAdjustments)
+            }
             
             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                         

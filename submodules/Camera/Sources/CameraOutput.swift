@@ -295,7 +295,7 @@ final class CameraOutput: NSObject {
     
     private var currentMode: RecorderMode = .default
     private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
-    func startRecording(mode: RecorderMode, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation, additionalOutput: CameraOutput? = nil) -> Signal<Double, NoError> {
+    func startRecording(mode: RecorderMode, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation, additionalOutput: CameraOutput? = nil) -> Signal<CameraRecordingData, NoError> {
         guard self.videoRecorder == nil else {
             return .complete()
         }
@@ -376,7 +376,8 @@ final class CameraOutput: NSObject {
         
         return Signal { subscriber in
             let timer = SwiftSignalKit.Timer(timeout: 0.02, repeat: true, completion: { [weak videoRecorder] in
-                subscriber.putNext(videoRecorder?.duration ?? 0.0)
+                let recordingData = CameraRecordingData(duration: videoRecorder?.duration ?? 0.0, filePath: outputFilePath)
+                subscriber.putNext(recordingData)
             }, queue: Queue.mainQueue())
             timer.start()
             

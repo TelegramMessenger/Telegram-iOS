@@ -20,6 +20,13 @@ final class ResultPreviewView: UIView {
         }
     }
     
+    var onLoop: () -> Void = {}
+    var isMuted = true {
+        didSet {
+            self.player.isMuted = self.isMuted
+        }
+    }
+    
     init(composition: AVComposition) {
         self.composition = composition
         
@@ -42,6 +49,8 @@ final class ResultPreviewView: UIView {
             }
             self.player.pause()
             self.seek(to: start, andPlay: true)
+            
+            self.onLoop()
         })
         
         self.player.play()

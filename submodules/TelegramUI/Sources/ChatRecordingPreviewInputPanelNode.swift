@@ -354,12 +354,17 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: 2 - UIScreenPixel), size: CGSize(width: 44.0, height: 44)))
         self.binNode.frame = self.deleteButton.bounds
         
+        var viewOnceOffset: CGFloat = 0.0
+        if interfaceState.interfaceState.replyMessageSubject != nil {
+            viewOnceOffset = -35.0
+        }
+        
         let viewOnceSize = self.viewOnceButton.update(theme: interfaceState.theme)
-        let viewOnceButtonFrame = CGRect(origin: CGPoint(x: width - rightInset - 44.0 - UIScreenPixel, y: -64.0 - 53.0), size: viewOnceSize)
+        let viewOnceButtonFrame = CGRect(origin: CGPoint(x: width - rightInset - 44.0 - UIScreenPixel, y: -64.0 - 53.0 + viewOnceOffset), size: viewOnceSize)
         transition.updateFrame(node: self.viewOnceButton, frame: viewOnceButtonFrame)
         
         let recordMoreSize = self.recordMoreButton.update(theme: interfaceState.theme)
-        let recordMoreButtonFrame = CGRect(origin: CGPoint(x: width - rightInset - 44.0 - UIScreenPixel, y: -64.0), size: recordMoreSize)
+        let recordMoreButtonFrame = CGRect(origin: CGPoint(x: width - rightInset - 44.0 - UIScreenPixel, y: -64.0 + viewOnceOffset), size: recordMoreSize)
         transition.updateFrame(node: self.recordMoreButton, frame: recordMoreButtonFrame)
         
         var isScheduledMessages = false
@@ -479,6 +484,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func deletePressed() {
+        self.viewOnce = false
         self.tooltipController?.dismiss()
         
         self.mediaPlayer?.pause()

@@ -37,6 +37,7 @@ swift_library(
         "//submodules/TelegramNotices",
         "//submodules/DeviceAccess",
         "//submodules/TelegramUI/Components/MediaEditor",
+        "//submodules/LegacyMediaPickerUI",
     ],
     visibility = [
         "//visibility:public",

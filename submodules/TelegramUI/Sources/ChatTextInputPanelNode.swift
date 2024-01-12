@@ -591,6 +591,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     private var extendedSearchLayout = false
     
     var isMediaDeleted: Bool = false
+    private var recordingPaused = false
     
     private let inputMenu: TextInputMenu
     
@@ -2163,9 +2164,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 self.animatingBinNode = nil
             }
             
+            var resumingRecording = false
             animateDotAppearing = transition.isAnimated && !hideInfo
-            if let mediaRecordingState = mediaRecordingState, case .waitingForPreview = mediaRecordingState {
-                animateDotAppearing = false
+            if let mediaRecordingState = mediaRecordingState {
+                if case .waitingForPreview = mediaRecordingState {
+                    self.recordingPaused = true
+                    animateDotAppearing = false
+                } else {
+                    if self.recordingPaused {
+                        self.recordingPaused = false
+                        resumingRecording = true
+                        
+                        if (audioRecordingDotNode.layer.animationKeys() ?? []).isEmpty {
+                            animateDotAppearing = true
+                        }
+                    }
+                }
             }
         
             audioRecordingDotNode.bounds = CGRect(origin: .zero, size: dotFrame.size)
@@ -2174,21 +2188,30 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             if animateDotAppearing {
                 Queue.mainQueue().justDispatch {
                     audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
-                }
-                audioRecordingTimeNode.started = { [weak audioRecordingDotNode] in
-                    if let audioRecordingDotNode = audioRecordingDotNode, audioRecordingDotNode.layer.animation(forKey: "recording") == nil {
-                        audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 0), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
-                            if finished {
-                                let animation = CAKeyframeAnimation(keyPath: "opacity")
-                                animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
-                                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-                                animation.duration = 0.5
-                                animation.autoreverses = true
-                                animation.repeatCount = Float.infinity
-                                
-                                audioRecordingDotNode?.layer.add(animation, forKey: "recording")
-                            }
-                        })
+                
+                    let animateDot = { [weak audioRecordingDotNode] in
+                        if let audioRecordingDotNode, audioRecordingDotNode.layer.animation(forKey: "recording") == nil {
+                            audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 0), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
+                                if finished {
+                                    let animation = CAKeyframeAnimation(keyPath: "opacity")
+                                    animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+                                    animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                                    animation.duration = 0.5
+                                    animation.autoreverses = true
+                                    animation.repeatCount = Float.infinity
+                                    
+                                    audioRecordingDotNode?.layer.add(animation, forKey: "recording")
+                                }
+                            })
+                        }
+                    }
+                    
+                    if resumingRecording {
+                        animateDot()
+                    } else {
+                        audioRecordingTimeNode.started = {
+                            animateDot()
+                        }
                     }
                 }
                 self.attachmentButton.layer.animateAlpha(from: CGFloat(self.attachmentButton.layer.presentation()?.opacity ?? 1), to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)

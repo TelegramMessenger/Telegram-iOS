@@ -505,7 +505,7 @@ private final class CameraContext {
         }
     }
     
-    public func startRecording() -> Signal<Double, NoError> {
+    public func startRecording() -> Signal<CameraRecordingData, NoError> {
         guard let mainDeviceContext = self.mainDeviceContext else {
             return .complete()
         }
@@ -779,7 +779,7 @@ public final class Camera {
         }
     }
     
-    public func startRecording() -> Signal<Double, NoError> {
+    public func startRecording() -> Signal<CameraRecordingData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
@@ -1023,4 +1023,9 @@ public final class CameraHolder {
         self.camera = camera
         self.previewView = previewView
     }
+}
+
+public struct CameraRecordingData {
+    public let duration: Double
+    public let filePath: String
 }
