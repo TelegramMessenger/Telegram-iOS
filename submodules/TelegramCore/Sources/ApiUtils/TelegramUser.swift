@@ -70,7 +70,7 @@ extension TelegramUser {
             if (flags2 & (1 << 2)) != 0 {
                 userFlags.insert(.isCloseFriend)
             }
-            if (flags2 & (1 << 6)) != 0 {
+            if (flags2 & (1 << 10)) != 0 {
                 userFlags.insert(.requirePremium)
             }
             var storiesHidden: Bool?
