@@ -90,7 +90,9 @@ class CameraRoundVideoFilter {
     private let ciContext: CIContext
     
     private var resizeFilter: CIFilter?
+    private var overlayFilter: CIFilter?
     private var compositeFilter: CIFilter?
+    private var borderFilter: CIFilter?
     
     private var outputColorSpace: CGColorSpace?
     private var outputPixelBufferPool: CVPixelBufferPool?
@@ -98,8 +100,6 @@ class CameraRoundVideoFilter {
     private(set) var inputFormatDescription: CMFormatDescription?
     
     private(set) var isPrepared = false
-    
-    let semaphore = DispatchSemaphore(value: 1)
     
     init(ciContext: CIContext) {
         self.ciContext = ciContext
@@ -125,32 +125,39 @@ class CameraRoundVideoFilter {
         })!
                 
         self.resizeFilter = CIFilter(name: "CILanczosScaleTransform")
-        
+        self.overlayFilter = CIFilter(name: "CIColorMatrix")
         self.compositeFilter = CIFilter(name: "CISourceOverCompositing")
-        self.compositeFilter?.setValue(CIImage(image: circleImage), forKey: kCIInputImageKey)
+        
+        self.borderFilter = CIFilter(name: "CISourceOverCompositing")
+        self.borderFilter?.setValue(CIImage(image: circleImage), forKey: kCIInputImageKey)
         
         self.isPrepared = true
     }
     
     func reset() {
         self.resizeFilter = nil
+        self.overlayFilter = nil
         self.compositeFilter = nil
+        self.borderFilter = nil
         self.outputColorSpace = nil
         self.outputPixelBufferPool = nil
         self.outputFormatDescription = nil
         self.inputFormatDescription = nil
         self.isPrepared = false
+        self.lastMainSourceImage = nil
+        self.lastAdditionalSourceImage = nil
     }
     
-    func render(pixelBuffer: CVPixelBuffer, mirror: Bool) -> CVPixelBuffer? {
-        self.semaphore.wait()
-        
-        guard let resizeFilter = self.resizeFilter, let compositeFilter = self.compositeFilter, self.isPrepared else {
+    private var lastMainSourceImage: CIImage?
+    private var lastAdditionalSourceImage: CIImage?
+    
+    func render(pixelBuffer: CVPixelBuffer, additional: Bool, transitionFactor: CGFloat) -> CVPixelBuffer? {
+        guard let resizeFilter = self.resizeFilter, let overlayFilter = self.overlayFilter, let compositeFilter = self.compositeFilter, let borderFilter = self.borderFilter, self.isPrepared else {
             return nil
         }
         
         var sourceImage = CIImage(cvImageBuffer: pixelBuffer)
-        sourceImage = sourceImage.oriented(mirror ? .leftMirrored : .right)
+        sourceImage = sourceImage.oriented(additional ? .leftMirrored : .right)
         let scale = 400.0 / min(sourceImage.extent.width, sourceImage.extent.height)
         
         resizeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
@@ -161,16 +168,44 @@ class CameraRoundVideoFilter {
         } else {
             sourceImage = sourceImage.transformed(by: CGAffineTransformMakeScale(scale, scale), highQualityDownsample: true)
         }
-        
         sourceImage = sourceImage.transformed(by: CGAffineTransformMakeTranslation(0.0, -(sourceImage.extent.height - sourceImage.extent.width) / 2.0))
-        
         sourceImage = sourceImage.cropped(to: CGRect(x: 0.0, y: 0.0, width: sourceImage.extent.width, height: sourceImage.extent.width))
         
-        compositeFilter.setValue(sourceImage, forKey: kCIInputBackgroundImageKey)
+        if additional {
+            self.lastAdditionalSourceImage = sourceImage
+        } else {
+            self.lastMainSourceImage = sourceImage
+        }
         
-        let finalImage = compositeFilter.outputImage
+        var effectiveSourceImage: CIImage
+        if transitionFactor == 0.0 {
+            effectiveSourceImage = !additional ? sourceImage : (self.lastMainSourceImage ?? sourceImage)
+        } else if transitionFactor == 1.0 {
+            effectiveSourceImage = additional ? sourceImage : (self.lastAdditionalSourceImage ?? sourceImage)
+        } else {
+            if let mainSourceImage = self.lastMainSourceImage, let additionalSourceImage = self.lastAdditionalSourceImage {
+                let overlayRgba: [CGFloat] = [0, 0, 0, transitionFactor]
+                let alphaVector: CIVector = CIVector(values: overlayRgba, count: 4)
+                overlayFilter.setValue(additionalSourceImage, forKey: kCIInputImageKey)
+                overlayFilter.setValue(alphaVector, forKey: "inputAVector")
+                
+                compositeFilter.setValue(mainSourceImage, forKey: kCIInputBackgroundImageKey)
+                compositeFilter.setValue(overlayFilter.outputImage, forKey: kCIInputImageKey)
+                effectiveSourceImage = compositeFilter.outputImage ?? sourceImage
+            } else {
+                effectiveSourceImage = sourceImage
+            }
+        }
+        
+        borderFilter.setValue(effectiveSourceImage, forKey: kCIInputBackgroundImageKey)
+        
+        let finalImage = borderFilter.outputImage
         guard let finalImage else {
             return nil
+        }
+        
+        if finalImage.extent.width != 400 {
+            print("wtf: \(finalImage)")
         }
         
         var pbuf: CVPixelBuffer?
@@ -180,8 +215,6 @@ class CameraRoundVideoFilter {
         }
         
         self.ciContext.render(finalImage, to: outputPixelBuffer, bounds: CGRect(origin: .zero, size: CGSize(width: 400, height: 400)), colorSpace: outputColorSpace)
-        
-        self.semaphore.signal()
         
         return outputPixelBuffer
     }

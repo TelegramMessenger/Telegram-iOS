@@ -484,7 +484,6 @@ public class VideoMessageCameraScreen: ViewController {
         private var resultPreviewView: ResultPreviewView?
              
         private var cameraStateDisposable: Disposable?
-        private var changingPositionDisposable: Disposable?
                 
         private let idleTimerExtensionDisposable = MetaDisposable()
         
@@ -603,7 +602,6 @@ public class VideoMessageCameraScreen: ViewController {
         
         deinit {
             self.cameraStateDisposable?.dispose()
-            self.changingPositionDisposable?.dispose()
             self.idleTimerExtensionDisposable.dispose()
         }
         
@@ -668,13 +666,6 @@ public class VideoMessageCameraScreen: ViewController {
                 }
                 self.cameraState = self.cameraState.updatedPosition(position)
                 self.requestUpdateLayout(transition: .easeInOut(duration: 0.2))
-            })
-            
-            self.changingPositionDisposable = (camera.modeChange
-            |> deliverOnMainQueue).start(next: { [weak self] modeChange in
-                if let self {
-                   let _ = self
-                }
             })
             
             camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
@@ -799,8 +790,15 @@ public class VideoMessageCameraScreen: ViewController {
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
-            if let controller = self.controller, point.y > self.frame.height - controller.inputPanelFrame.height - 34.0 {
-                return nil
+            if let controller = self.controller, let layout = self.validLayout {
+                if point.y > layout.size.height - controller.inputPanelFrame.height - 34.0 {
+                    if layout.metrics.isTablet {
+                        if point.x < layout.size.width * 0.33 {
+                            return result
+                        }
+                    }
+                    return nil
+                }
             }
             return result
         }
@@ -987,8 +985,12 @@ public class VideoMessageCameraScreen: ViewController {
                         
             let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0)
             let previewSide = min(369.0, layout.size.width - 24.0)
-            let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
-            
+            let previewFrame: CGRect
+            if layout.metrics.isTablet {
+                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+            } else {
+                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+            }
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
             }
