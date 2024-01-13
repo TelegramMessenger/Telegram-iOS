@@ -2698,7 +2698,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 )).string
                 
                 //TODO:localize
-                self.textNode.attributedText = NSAttributedString(string: "read \(dateText)", font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                self.textNode.attributedText = NSAttributedString(string: "\(self.presentationData.strings.Conversation_ChecksTooltip_Read.lowercased()) \(dateText)", font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
             } else {
                 if reactionCount != 0 {
                     let text: String
