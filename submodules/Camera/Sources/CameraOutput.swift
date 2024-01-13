@@ -302,6 +302,7 @@ final class CameraOutput: NSObject {
         }
         
         self.currentMode = mode
+        self.lastSampleTimestamp = nil
         
         let codecType: AVVideoCodecType
         if case .roundVideo = mode {
@@ -407,6 +408,7 @@ final class CameraOutput: NSObject {
     
     private weak var masterOutput: CameraOutput?
     
+    private var lastSampleTimestamp: CMTime?
     func processVideoRecording(_ sampleBuffer: CMSampleBuffer, fromAdditionalOutput: Bool) {
         guard let formatDescriptor = CMSampleBufferGetFormatDescription(sampleBuffer) else {
             return
@@ -430,8 +432,14 @@ final class CameraOutput: NSObject {
                     }
                 }
                 if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
-                    if (transitionFactor == 1.0 && fromAdditionalOutput) || (transitionFactor == 0.0 && !fromAdditionalOutput) || (transitionFactor > 0.0 && transitionFactor < 1.0) {
-                        videoRecorder.appendSampleBuffer(processedSampleBuffer)
+                    let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
+                    if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
+                        
+                    } else {
+                        if (transitionFactor == 1.0 && fromAdditionalOutput) || (transitionFactor == 0.0 && !fromAdditionalOutput) || (transitionFactor > 0.0 && transitionFactor < 1.0) {
+                            videoRecorder.appendSampleBuffer(processedSampleBuffer)
+                            self.lastSampleTimestamp = presentationTime
+                        }
                     }
                 } else {
                     videoRecorder.appendSampleBuffer(sampleBuffer)

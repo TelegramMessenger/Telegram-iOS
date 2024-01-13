@@ -492,10 +492,11 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func sendPressed() {
-        self.viewOnce = false
         self.tooltipController?.dismiss()
         
         self.interfaceInteraction?.sendRecordedMedia(false, self.viewOnce)
+        
+        self.viewOnce = false
     }
     
     private weak var tooltipController: TooltipScreen?

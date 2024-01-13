@@ -15381,8 +15381,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let controller = VideoMessageCameraScreen(
                     context: self.context,
                     updatedPresentationData: self.updatedPresentationData,
+                    peerId: peerId,
                     inputPanelFrame: currentInputPanelFrame,
-                    allowLiveUpload: peerId.namespace != Namespaces.Peer.SecretChat,
                     completion: { [weak self] message in
                         guard let self, let videoController = self.videoRecorderValue else {
                             return
@@ -15574,7 +15574,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self.recorderDataDisposable.set((videoRecorderValue.takenRecordedData()
                         |> deliverOnMainQueue).startStrict(next: { [weak self] data in
                             if let strongSelf = self, let data = data {
-                                if data.duration < 0.5 {
+                                if data.duration < 1.0 {
                                     strongSelf.recorderFeedback?.error()
                                     strongSelf.recorderFeedback = nil
                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {

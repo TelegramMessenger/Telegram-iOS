@@ -121,7 +121,7 @@ class CameraRoundVideoFilter {
             context.setFillColor(UIColor.white.cgColor)
             context.fill(bounds)
             context.setBlendMode(.clear)
-            context.fillEllipse(in: bounds)
+            context.fillEllipse(in: bounds.insetBy(dx: -2.0, dy: -2.0))
         })!
                 
         self.resizeFilter = CIFilter(name: "CILanczosScaleTransform")
