@@ -230,7 +230,9 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                 })
                 
                 if let messageNode = node as? ChatMessageItemView, let copyContentNode = messageNode.getMessageContextSourceNode(stableId: self.message.stableId) {
-                    self.initialAppearanceOffset = CGPoint(x: 0.0, y: width - 20.0 - copyContentNode.frame.height)
+                    if isVideo {
+                        self.initialAppearanceOffset = CGPoint(x: 0.0, y: width - 20.0 - copyContentNode.frame.height)
+                    }
                     
                     messageNode.frame.origin.y = sourceRect.origin.y
                     chatNode.addSubnode(messageNode)
@@ -250,7 +252,8 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                 result = ContextControllerTakeViewInfo(containingItem: .node(sourceNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
             
-            tooltipSourceRect = CGRect(x: isIncoming ? 22.0 : chatNode.frame.width - bubbleWidth + 10.0, y: floorToScreenPixels((chatNode.frame.height - 75.0) / 2.0) - 43.0, width: 44.0, height: 44.0)
+            let mappedParentRect = chatNode.view.convert(chatNode.bounds, to: nil)
+            tooltipSourceRect = CGRect(x: mappedParentRect.minX + (isIncoming ? 22.0 : chatNode.frame.width - bubbleWidth + 10.0), y: floorToScreenPixels((chatNode.frame.height - 75.0) / 2.0) - 43.0, width: 44.0, height: 44.0)
         }
         
         if !isVideo {
@@ -340,7 +343,7 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
         
         if let messageNodeCopy = self.messageNodeCopy, let sourceView = messageNodeCopy.supernode?.view, let contentNode = messageNodeCopy.getMessageContextSourceNode(stableId: nil)?.contentNode, let parentNode = contentNode.supernode?.supernode?.supernode {
             let dustEffectLayer = DustEffectLayer()
-            dustEffectLayer.position = sourceView.bounds.center
+            dustEffectLayer.position = sourceView.bounds.center.offsetBy(dx: (parentNode.frame.width - messageNodeCopy.frame.width), dy: 0.0)
             dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: sourceView.bounds.size)
             dustEffectLayer.zPosition = 10.0
             parentNode.layer.addSublayer(dustEffectLayer)
@@ -348,7 +351,7 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
             guard let (image, subFrame) = messageNodeCopy.makeContentSnapshot() else {
                 return nil
             }
-            var itemFrame = subFrame //messageNodeCopy.layer.convert(subFrame, to: dustEffectLayer)
+            var itemFrame = subFrame
             itemFrame.origin.y = floorToScreenPixels((sourceView.frame.height - subFrame.height) / 2.0)
             dustEffectLayer.addItem(frame: itemFrame, image: image)
             messageNodeCopy.removeFromSupernode()

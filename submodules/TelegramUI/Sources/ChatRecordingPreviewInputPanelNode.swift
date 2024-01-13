@@ -549,7 +549,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         )
         self.tooltipController = tooltipController
         
-        parentController.present(tooltipController, in: .window(.root))
+        parentController.present(tooltipController, in: .current)
     }
     
     @objc func waveformPressed() {
