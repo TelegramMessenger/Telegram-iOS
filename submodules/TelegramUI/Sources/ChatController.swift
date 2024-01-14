@@ -6195,19 +6195,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let videoRecorder = videoRecorder {
                         strongSelf.recorderFeedback?.impact(.light)
                         
-                        videoRecorder.onDismiss = { [weak self] isCancelled in
-                            self?.chatDisplayNode.updateRecordedMediaDeleted(isCancelled)
-                            self?.beginMediaRecordingRequestId += 1
-                            self?.lockMediaRecordingRequestId = nil
-                            self?.videoRecorder.set(.single(nil))
-                        }
                         videoRecorder.onStop = {
                             if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                    $0.updatedInputTextPanelState { panelState in
-                                        return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
-                                    }
-                                })
+                                strongSelf.dismissMediaRecorder(.pause)
                             }
                         }
                         strongSelf.present(videoRecorder, in: .window(.root))
@@ -15617,12 +15607,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }))
-                        
-//                        self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-//                            $0.updatedInputTextPanelState { panelState in
-//                                return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
-//                            }
-//                        })
                     }
                 default:
                     self.recorderDataDisposable.set(nil)
