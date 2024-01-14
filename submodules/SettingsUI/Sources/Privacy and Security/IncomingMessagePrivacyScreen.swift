@@ -78,14 +78,13 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
         let arguments = arguments as! IncomingMessagePrivacyScreenArguments
         switch self {
         case .header:
-            //TODO:localize
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "WHO CAN SEND ME MESSAGES?", sectionId: self.section)
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.Privacy_Messages_SectionTitle, sectionId: self.section)
         case let .optionEverybody(value):
-            return ItemListCheckboxItem(presentationData: presentationData, title: "Everybody", style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            return ItemListCheckboxItem(presentationData: presentationData, title: presentationData.strings.Privacy_Messages_ValueEveryone, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.updateValue(false)
             })
         case let .optionPremium(value, isEnabled):
-            return ItemListCheckboxItem(presentationData: presentationData, icon: isEnabled ? nil : generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: presentationData.theme.list.itemSecondaryTextColor), iconPlacement: .check, title: "My Contacts and Premium Users", style: .left, checked: isEnabled && value, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            return ItemListCheckboxItem(presentationData: presentationData, icon: isEnabled ? nil : generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: presentationData.theme.list.itemSecondaryTextColor), iconPlacement: .check, title: presentationData.strings.Privacy_Messages_ValueContactsAndPremium, style: .left, checked: isEnabled && value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 if isEnabled {
                     arguments.updateValue(true)
                 } else {
@@ -93,11 +92,9 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
                 }
             })
         case .footer:
-            //TODO:localize
-            return ItemListTextItem(presentationData: presentationData, text: .plain("You can restrict incoming messages to only contacts and Premium users."), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(presentationData.strings.Privacy_Messages_SectionFooter), sectionId: self.section)
         case .info:
-            //TODO:localize
-            return ItemListTextItem(presentationData: presentationData, text: .markdown("[What is Telegram Premium?]()"), sectionId: self.section, linkAction: { _ in
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.Privacy_Messages_PremiumInfoFooter), sectionId: self.section, linkAction: { _ in
                 arguments.infoLinkAction()
             })
         }
@@ -155,7 +152,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: Bool, u
         },
         disabledValuePressed: {
             let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
-            presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: "Premium Required", text: "Subscribe to **Telegram Premium** to select this option", customUndoText: "Add", timeout: nil, linkAction: { _ in
+            presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: presentationData.strings.Privacy_Messages_PremiumToast_Title, text: presentationData.strings.Privacy_Messages_PremiumToast_Text, customUndoText: presentationData.strings.Privacy_Messages_PremiumToast_Action, timeout: nil, linkAction: { _ in
             }), elevatedLayout: false, action: { action in
                 if case .undo = action {
                     let controller = PremiumIntroScreen(context: context, source: .settings)
@@ -180,8 +177,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: Bool, u
     |> map { presentationData, accountPeer, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let rightNavigationButton: ItemListNavigationButton? = nil
         
-        //TODO:localize
-        let title: ItemListControllerTitle = .text("Messages")
+        let title: ItemListControllerTitle = .text(presentationData.strings.Privacy_Messages_Title)
         
         let entries: [GlobalAutoremoveEntry] = incomingMessagePrivacyScreenEntries(presentationData: presentationData, state: state, isPremium: accountPeer?.isPremium ?? false)
         

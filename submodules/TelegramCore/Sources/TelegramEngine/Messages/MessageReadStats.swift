@@ -27,7 +27,8 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
         }
         
         if id.peerId.namespace == Namespaces.Peer.CloudUser {
-            return account.network.request(Api.functions.messages.getOutboxReadDate(peer: inputPeer, msgId: id.id))
+            return .single(nil)
+            /*return account.network.request(Api.functions.messages.getOutboxReadDate(peer: inputPeer, msgId: id.id))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.OutboxReadDate?, NoError> in
                 return .single(nil)
@@ -40,7 +41,7 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
                 case let .outboxReadDate(date):
                     return MessageReadStats(reactionCount: 0, peers: [EnginePeer(peer)], readTimestamps: [peer.id: date])
                 }
-            }
+            }*/
         } else {
             let readPeers: Signal<[(Int64, Int32)]?, NoError> = account.network.request(Api.functions.messages.getMessageReadParticipants(peer: inputPeer, msgId: id.id))
             |> map { result -> [(Int64, Int32)]? in

@@ -2135,8 +2135,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             switch subject {
             case .presence:
-                //TODO:localize
-                tooltipText = "Your last seen time is now visible."
+                tooltipText = presentationData.strings.Settings_Privacy_LastSeenRevealedToast
                 
                 let _ = (currentPrivacy.get()
                 |> take(1)
@@ -2163,7 +2162,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                 })
             case .readTime:
-                tooltipText = "Your read times are now visible."
+                tooltipText = presentationData.strings.Settings_Privacy_MessageReadTimeRevealedToast
                 
                 let _ = (currentPrivacy.get()
                 |> take(1)

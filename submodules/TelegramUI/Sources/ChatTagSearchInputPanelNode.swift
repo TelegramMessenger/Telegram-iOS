@@ -91,12 +91,11 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             height = 45.0
         }
         
-        //TODO:localize
         let buttonTitle: String
         if let historyFilter = params.interfaceState.historyFilter, historyFilter.isActive {
-            buttonTitle = "Show Other Messages"
+            buttonTitle = params.interfaceState.strings.Chat_TagSearchShowMessages
         } else {
-            buttonTitle = "Hide Other Messages"
+            buttonTitle = params.interfaceState.strings.Chat_TagSearchHideMessages
         }
 
         let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)

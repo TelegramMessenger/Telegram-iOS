@@ -99,42 +99,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum OutboxReadDate: TypeConstructorDescription {
-        case outboxReadDate(date: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .outboxReadDate(let date):
-                    if boxed {
-                        buffer.appendInt32(1001931436)
-                    }
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .outboxReadDate(let date):
-                return ("outboxReadDate", [("date", date as Any)])
-    }
-    }
-    
-        public static func parse_outboxReadDate(_ reader: BufferReader) -> OutboxReadDate? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.OutboxReadDate.outboxReadDate(date: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum Page: TypeConstructorDescription {
         case page(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document], views: Int32?)
     

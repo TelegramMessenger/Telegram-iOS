@@ -62,14 +62,13 @@ extension ChatControllerImpl {
                 case .generic:
                     controller.present(textAlertController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 case .premiumRequired:
-                    //TODO:localize
                     controller.forEachController { c in
                         if let c = c as? UndoOverlayController {
                             c.dismiss()
                         }
                         return true
                     }
-                    controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: "**\(peer.compactDisplayTitle)** only accepts messages from contacts and **Premium** users.", customUndoText: "View", timeout: nil, linkAction: { _ in
+                    controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
                     }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak controller] action in
                         guard let self, let controller else {
                             return false

@@ -252,8 +252,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     segments = [.text(0, NSAttributedString(string: customTitle, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                 } else if peerView.peerId == self.context.account.peerId {
                                     if peerView.isSavedMessages {
-                                        //TODO:localize
-                                        segments = [.text(0, NSAttributedString(string: "My Notes", font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                        segments = [.text(0, NSAttributedString(string: self.strings.Conversation_MyNotes, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     } else {
                                         segments = [.text(0, NSAttributedString(string: self.strings.Conversation_SavedMessages, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }

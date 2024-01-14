@@ -35,9 +35,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         let placeholderText: String
         switch chatLocation {
         case .peer, .replyThread, .feed:
-            if chatLocation.peerId == context.account.peerId {
-                //TODO:localize
-                placeholderText = "Search messages or tags"
+            if chatLocation.peerId == context.account.peerId, !"".isEmpty {
+                placeholderText = strings.Chat_SearchTagsPlaceholder
             } else {
                 placeholderText = strings.Conversation_SearchPlaceholder
             }
@@ -114,9 +113,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                 case .peer, .replyThread, .feed:
                     if presentationInterfaceState.historyFilter != nil {
                         placeholderText = self.strings.Common_Search
-                    } else if self.chatLocation.peerId == self.context.account.peerId {
-                        //TODO:localize
-                        placeholderText = "Search messages or tags"
+                    } else if self.chatLocation.peerId == self.context.account.peerId, !"".isEmpty {
+                        placeholderText = self.strings.Chat_SearchTagsPlaceholder
                     } else {
                         placeholderText = self.strings.Conversation_SearchPlaceholder
                     }

@@ -2310,8 +2310,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
                     } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         if case .savedMessagesChats = item.chatListLocation {
-                            //TODO:localize
-                            titleAttributedString = NSAttributedString(string: "My Notes", font: titleFont, textColor: theme.titleColor)
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_MyNotes, font: titleFont, textColor: theme.titleColor)
                         } else {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
                         }

@@ -1446,8 +1446,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 if let query {
                     foundLocalPeers = context.engine.messages.searchLocalSavedMessagesPeers(query: query.lowercased(), indexNameMapping: [
                         context.account.peerId: [
-                            PeerIndexNameRepresentation.title(title: "my notes", addressNames: []),
-                            //TODO:localize
+                            PeerIndexNameRepresentation.title(title: presentationData.strings.DialogList_MyNotes.lowercased(), addressNames: []),
                             PeerIndexNameRepresentation.title(title: "my notes".lowercased(), addressNames: [])
                         ],
                         PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2666000)): [
