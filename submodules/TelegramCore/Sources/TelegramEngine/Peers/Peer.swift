@@ -24,18 +24,15 @@ public enum EnginePeer: Equatable {
             }
             
             case present(until: Int32)
-            case hidden
-            case recently
-            case lastWeek
-            case lastMonth
+            case recently(isHidden: Bool)
+            case lastWeek(isHidden: Bool)
+            case lastMonth(isHidden: Bool)
             case longTimeAgo
             
             private var sortKey: SortKey {
                 switch self {
                 case let .present(until):
                     return SortKey(major: 6, minor: until)
-                case .hidden:
-                    return SortKey(major: 5, minor: 0)
                 case .recently:
                     return SortKey(major: 4, minor: 0)
                 case .lastWeek:
@@ -365,16 +362,14 @@ public extension EnginePeer.Presence {
             switch presence.status {
             case .none:
                 mappedStatus = .longTimeAgo
-            case .hidden:
-                mappedStatus = .hidden
             case let .present(until):
                 mappedStatus = .present(until: until)
-            case .recently:
-                mappedStatus = .recently
-            case .lastWeek:
-                mappedStatus = .lastWeek
-            case .lastMonth:
-                mappedStatus = .lastMonth
+            case let .recently(isHidden):
+                mappedStatus = .recently(isHidden: isHidden)
+            case let .lastWeek(isHidden):
+                mappedStatus = .lastWeek(isHidden: isHidden)
+            case let .lastMonth(isHidden):
+                mappedStatus = .lastMonth(isHidden: isHidden)
             }
 
             self.init(status: mappedStatus, lastActivity: presence.lastActivity)
@@ -386,18 +381,16 @@ public extension EnginePeer.Presence {
     func _asPresence() -> TelegramUserPresence {
         let mappedStatus: UserPresenceStatus
         switch self.status {
-        case .hidden:
-            mappedStatus = .hidden
         case .longTimeAgo:
             mappedStatus = .none
         case let .present(until):
             mappedStatus = .present(until: until)
-        case .recently:
-            mappedStatus = .recently
-        case .lastWeek:
-            mappedStatus = .lastWeek
-        case .lastMonth:
-            mappedStatus = .lastMonth
+        case let .recently(isHidden):
+            mappedStatus = .recently(isHidden: isHidden)
+        case let .lastWeek(isHidden):
+            mappedStatus = .lastWeek(isHidden: isHidden)
+        case let .lastMonth(isHidden):
+            mappedStatus = .lastMonth(isHidden: isHidden)
         }
         return TelegramUserPresence(status: mappedStatus, lastActivity: self.lastActivity)
     }

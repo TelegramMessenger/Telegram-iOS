@@ -10893,3 +10893,5 @@ Sorry for the inconvenience.";
 
 "Chat.TapToPlayVideoMessageOnceTooltip" = "Tap to set this message to **Play Once**";
 "Chat.PlayVideoMessageOnceTooltip" = "The recipient will be able to play it only once.";
+
+"PeerInfo.HiddenStatusBadge" = "when?";

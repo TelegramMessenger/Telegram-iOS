@@ -19,18 +19,15 @@ public enum UserPresenceStatus: Comparable, PostboxCoding {
     }
     
     case none
-    case hidden
     case present(until: Int32)
-    case recently
-    case lastWeek
-    case lastMonth
+    case recently(isHidden: Bool)
+    case lastWeek(isHidden: Bool)
+    case lastMonth(isHidden: Bool)
     
     private var sortKey: SortKey {
         switch self {
         case let .present(until):
             return SortKey(major: 6, minor: until)
-        case .hidden:
-            return SortKey(major: 5, minor: 0)
         case .recently:
             return SortKey(major: 4, minor: 0)
         case .lastWeek:
@@ -53,13 +50,11 @@ public enum UserPresenceStatus: Comparable, PostboxCoding {
         case 1:
             self = .present(until: decoder.decodeInt32ForKey("t", orElse: 0))
         case 2:
-            self = .recently
+            self = .recently(isHidden: decoder.decodeBoolForKey("h", orElse: false))
         case 3:
-            self = .lastWeek
+            self = .lastWeek(isHidden: decoder.decodeBoolForKey("h", orElse: false))
         case 4:
-            self = .lastMonth
-        case 5:
-            self = .hidden
+            self = .lastMonth(isHidden: decoder.decodeBoolForKey("h", orElse: false))
         default:
             self = .none
         }
@@ -72,14 +67,15 @@ public enum UserPresenceStatus: Comparable, PostboxCoding {
         case let .present(timestamp):
             encoder.encodeInt32(1, forKey: "v")
             encoder.encodeInt32(timestamp, forKey: "t")
-        case .recently:
+        case let .recently(isHidden):
             encoder.encodeInt32(2, forKey: "v")
-        case .lastWeek:
+            encoder.encodeBool(isHidden, forKey: "h")
+        case let .lastWeek(isHidden):
             encoder.encodeInt32(3, forKey: "v")
-        case .lastMonth:
+            encoder.encodeBool(isHidden, forKey: "h")
+        case let .lastMonth(isHidden):
             encoder.encodeInt32(4, forKey: "v")
-        case .hidden:
-            encoder.encodeInt32(5, forKey: "v")
+            encoder.encodeBool(isHidden, forKey: "h")
         }
     }
 }

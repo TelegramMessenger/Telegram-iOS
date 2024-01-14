@@ -728,8 +728,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (text, isActivity) = stringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: EnginePeer.Presence(presence), relativeTo: Int32(timestamp), expanded: true)
                             var isHiddenStatus = false
-                            if case .hidden = presence.status {
-                                isHiddenStatus = true
+                            switch presence.status {
+                            case .recently(let isHidden), .lastWeek(let isHidden), .lastMonth(let isHidden):
+                                isHiddenStatus = isHidden
+                            default:
+                                break
                             }
                             return PeerInfoStatusData(text: text, isActivity: isActivity, isHiddenStatus: isHiddenStatus, key: nil)
                         } else {

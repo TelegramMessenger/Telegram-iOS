@@ -28,7 +28,7 @@ private func suggestedUserPresenceStringRefreshTimeout(_ presence: EnginePeer.Pr
         } else {
             return Double.infinity
         }
-    case .longTimeAgo, .lastWeek, .lastMonth, .hidden:
+    case .longTimeAgo, .lastWeek, .lastMonth:
         return Double.infinity
     }
 }
