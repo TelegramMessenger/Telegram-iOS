@@ -592,10 +592,8 @@ private func privacyAndSecurityControllerEntries(
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
         if !isPremiumDisabled {
             entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages), !isPremium))
-            entries.append(.messagePrivacy(privacySettings.globalSettings.nonContactChatsRequirePremium))
+            //entries.append(.messagePrivacy(privacySettings.globalSettings.nonContactChatsRequirePremium))
         }
-        
-        //entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
     } else {
         entries.append(.phoneNumberPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_PhoneNumber, presentationData.strings.Channel_NotificationLoading))
         entries.append(.lastSeenPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_LastSeen, presentationData.strings.Channel_NotificationLoading))

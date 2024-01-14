@@ -846,7 +846,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.publicPhotoInfo(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_PublicPhotoInfo))
     }
     
-    if case .presence = kind, let peer {
+    /*if case .presence = kind, let peer {
         entries.append(.hideReadTime(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTime, state.hideReadTimeEnabled == true))
         entries.append(.hideReadTimeInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimeFooter))
         
@@ -854,7 +854,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
             entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
         }
-    }
+    }*/
     
     return entries
 }
