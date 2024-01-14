@@ -1778,8 +1778,15 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if !self.animatedFadeIn {
             self.animatedFadeIn = true
             self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.18)
+
             if let durationNode = self.durationNode {
                 durationNode.layer.animateAlpha(from: 0.0, to: durationNode.alpha, duration: 0.15, delay: 0.18)
+            }
+            if let durationBackgroundNode = self.durationBackgroundNode {
+                durationBackgroundNode.layer.animateAlpha(from: 0.0, to: durationBackgroundNode.alpha, duration: 0.15, delay: 0.18)
+            }
+            if let audioTranscriptionButton = self.audioTranscriptionButton {
+                audioTranscriptionButton.layer.animateAlpha(from: 0.0, to: audioTranscriptionButton.alpha, duration: 0.15, delay: 0.18)
             }
         }
     }

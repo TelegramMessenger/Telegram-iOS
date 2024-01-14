@@ -1022,6 +1022,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return rects
     }
     
+    public func animateInstantVideoFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageInstantVideoBubbleContentNode {
+                snapshotView.frame = contentNode.interactiveVideoNode.view.convert(snapshotView.frame, from: self.view)
+                contentNode.interactiveVideoNode.animateFromSnapshot(snapshotView: snapshotView, transition: transition)
+                return
+            }
+        }
+    }
+    
     override public func didLoad() {
         super.didLoad()
         

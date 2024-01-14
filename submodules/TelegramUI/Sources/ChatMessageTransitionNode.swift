@@ -635,7 +635,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             case let .videoMessage(videoMessage):
                 let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNodeImpl.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNodeImpl.verticalAnimationCurve))
 
-                if let itemNode = self.itemNode as? ChatMessageInstantVideoItemNode {
+                if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
                     itemNode.cancelInsertionAnimations()
 
                     self.contextSourceNode.isExtractedToContextPreview = true
@@ -659,7 +659,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                         strongSelf.endAnimation()
                     })
 
-                    itemNode.animateFromSnapshot(snapshotView: videoMessage.view, transition: combinedTransition)
+                    itemNode.animateInstantVideoFromSnapshot(snapshotView: videoMessage.view, transition: combinedTransition)
                 }
             case let .mediaInput(mediaInput):
                 if let snapshotView = mediaInput.extractSnapshot() {
