@@ -310,6 +310,8 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         
         let viewOnceButton = Child(PlainButtonComponent.self)
         let recordMoreButton = Child(PlainButtonComponent.self)
+        
+        let muteIcon = Child(ZStack<Empty>.self)
                         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -450,6 +452,35 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                 )
                 context.add(recordMoreButton
                     .position(CGPoint(x: availableSize.width - recordMoreButton.size.width / 2.0 - 2.0 - UIScreenPixel, y: availableSize.height - recordMoreButton.size.height / 2.0 - 22.0))
+                    .appear(.default(scale: true, alpha: true))
+                    .disappear(.default(scale: true, alpha: true))
+                )
+            }
+            
+            if component.isPreviewing && component.isMuted {
+                let muteIcon = muteIcon.update(
+                    component: ZStack([
+                        AnyComponentWithIdentity(
+                            id: "background",
+                            component: AnyComponent(
+                                RoundedRectangle(color: UIColor(rgb: 0x000000, alpha: 0.3), cornerRadius: 24.0)
+                            )
+                        ),
+                        AnyComponentWithIdentity(
+                            id: "icon",
+                            component: AnyComponent(
+                                BundleIconComponent(
+                                    name: "Chat/Message/InstantVideoMute",
+                                    tintColor: .white
+                                )
+                            )
+                        )
+                    ]),
+                    availableSize: CGSize(width: 24.0, height: 24.0),
+                    transition: context.transition
+                )
+                context.add(muteIcon
+                    .position(CGPoint(x: component.previewFrame.midX, y: component.previewFrame.maxY - 24.0))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
@@ -1466,7 +1497,7 @@ public class VideoMessageCameraScreen: ViewController {
     }
 
     public func hideVideoSnapshot() {
-        self.node.previewContainerView.alpha = 0.02
+        self.node.previewContainerView.isHidden = true
     }
     
     public func updateTrimRange(start: Double, end: Double, updatedEnd: Bool, apply: Bool) {
