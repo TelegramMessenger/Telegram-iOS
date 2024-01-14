@@ -689,6 +689,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
+            if strongSelf.presentRecordedVoiceMessageDiscardAlert(action: action, performAction: false) {
+                return false
+            }
+            
             return true
         }
         
@@ -741,6 +745,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if (file.isVoice || file.isInstantVideo) && message.minAutoremoveOrClearTimeout == viewOnceTimeout {
                             strongSelf.openViewOnceMediaMessage(message)
+                            return false
+                        }
+                    } else if file.isVideo {
+                        if !displayVoiceMessageDiscardAlert() {
                             return false
                         }
                     }
@@ -17345,6 +17353,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             alertAction?()
             Queue.mainQueue().after(delay ? 0.2 : 0.0) {
                 self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Conversation_DiscardVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardVoiceMessageAction, action: { [weak self] in
+                    self?.stopMediaRecorder()
+                    Queue.mainQueue().after(0.1) {
+                        action()
+                    }
+                })]), in: .window(.root))
+            }
+            
+            return true
+        } else if performAction {
+            action()
+        }
+        return false
+    }
+    
+    func presentRecordedVoiceMessageDiscardAlert(action: @escaping () -> Void = {}, alertAction: (() -> Void)? = nil, delay: Bool = false, performAction: Bool = true) -> Bool {
+        if let _ = self.presentationInterfaceState.recordedMediaPreview {
+            alertAction?()
+            Queue.mainQueue().after(delay ? 0.2 : 0.0) {
+                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Conversation_DiscardRecordedVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardRecordedVoiceMessageAction, action: { [weak self] in
                     self?.stopMediaRecorder()
                     Queue.mainQueue().after(0.1) {
                         action()

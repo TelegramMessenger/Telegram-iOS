@@ -415,9 +415,14 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             prevTextInputPanelNode.viewOnceButton.isHidden = true
             prevTextInputPanelNode.viewOnce = false
             
+            self.recordMoreButton.isEnabled = false
             self.viewOnceButton.layer.animatePosition(from: prevTextInputPanelNode.viewOnceButton.position, to: self.viewOnceButton.position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
                 prevTextInputPanelNode.viewOnceButton.isHidden = false
                 prevTextInputPanelNode.viewOnceButton.update(isSelected: false, animated: false)
+                
+                Queue.mainQueue().after(0.3) {
+                    self.recordMoreButton.isEnabled = true
+                }
             })
             
             self.recordMoreButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

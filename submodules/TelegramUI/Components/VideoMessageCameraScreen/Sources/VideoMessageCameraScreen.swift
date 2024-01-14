@@ -1219,7 +1219,7 @@ public class VideoMessageCameraScreen: ViewController {
         self.updatedPresentationData = updatedPresentationData
         self.inputPanelFrame = inputPanelFrame
         self.allowLiveUpload = peerId.namespace != Namespaces.Peer.SecretChat
-        self.viewOnceAvailable = peerId.namespace == Namespaces.Peer.CloudUser
+        self.viewOnceAvailable = peerId.namespace == Namespaces.Peer.CloudUser && peerId != context.account.peerId
         self.completion = completion
         
         self.recordingStatus = RecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())

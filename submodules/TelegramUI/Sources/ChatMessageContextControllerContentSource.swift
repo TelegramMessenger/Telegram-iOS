@@ -169,6 +169,7 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
             return nil
         }
         
+        let context = self.context
         self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
         
         let isIncoming = self.message.effectivelyIncoming(self.context.account.peerId)
@@ -196,6 +197,7 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
         var tooltipSourceRect: CGRect = .zero
         
         if let sourceNode {
+            let videoWidth = min(404.0, chatNode.frame.width - 2.0)
             var bubbleWidth: CGFloat = 0.0
             
             if (isIncoming || "".isEmpty) {
@@ -231,7 +233,7 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
                 
                 if let messageNode = node as? ChatMessageItemView, let copyContentNode = messageNode.getMessageContextSourceNode(stableId: self.message.stableId) {
                     if isVideo {
-                        self.initialAppearanceOffset = CGPoint(x: 0.0, y: width - 20.0 - copyContentNode.frame.height)
+                        self.initialAppearanceOffset = CGPoint(x: 0.0, y: min(videoWidth, width - 20.0) - copyContentNode.frame.height)
                     }
                     
                     messageNode.frame.origin.y = sourceRect.origin.y
@@ -253,79 +255,99 @@ final class ChatViewOnceMessageContextExtractedContentSource: ContextExtractedCo
             }
             
             let mappedParentRect = chatNode.view.convert(chatNode.bounds, to: nil)
-            tooltipSourceRect = CGRect(x: mappedParentRect.minX + (isIncoming ? 22.0 : chatNode.frame.width - bubbleWidth + 10.0), y: floorToScreenPixels((chatNode.frame.height - 75.0) / 2.0) - 43.0, width: 44.0, height: 44.0)
+            if isVideo {
+                tooltipSourceRect = CGRect(x: mappedParentRect.minX + (isIncoming ? videoWidth / 2.0 : chatNode.frame.width - videoWidth / 2.0), y: floorToScreenPixels((chatNode.frame.height - videoWidth) / 2.0) + 8.0, width: 0.0, height: 0.0)
+            } else {
+                tooltipSourceRect = CGRect(x: mappedParentRect.minX + (isIncoming ? 22.0 : chatNode.frame.width - bubbleWidth + 10.0), y: floorToScreenPixels((chatNode.frame.height - 75.0) / 2.0) - 43.0, width: 44.0, height: 44.0)
+            }
         }
         
-        if !isVideo {
-            let displayTooltip = { [weak self] in
-                guard let self else {
-                    return
-                }
-                let absoluteFrame = tooltipSourceRect
-                let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY), size: CGSize())
-                
-                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                var tooltipText: String?
-                if isIncoming {
+        let displayTooltip = { [weak self] in
+            guard let self else {
+                return
+            }
+            let absoluteFrame = tooltipSourceRect
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY), size: CGSize())
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            var tooltipText: String?
+            if isIncoming {
+                if isVideo {
+                    tooltipText = presentationData.strings.Chat_PlayOnceVideoMessageTooltip
+                } else {
                     tooltipText = presentationData.strings.Chat_PlayOnceVoiceMessageTooltip
-                } else if let peer = self.message.peers[self.message.id.peerId] {
-                    let peerName = EnginePeer(peer).compactDisplayTitle
-                    tooltipText = presentationData.strings.Chat_PlayOnceVoiceMessageYourTooltip(peerName).string
                 }
-                
-                if let tooltipText {
-                    let tooltipController = TooltipScreen(
-                        account: self.context.account,
-                        sharedContext: self.context.sharedContext,
-                        text: .markdown(text: tooltipText),
-                        balancedTextLayout: true,
-                        constrainWidth: 240.0,
-                        style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
-                        arrowStyle: .small,
-                        icon: nil,
-                        location: .point(location, .bottom),
-                        displayDuration: .custom(3.0),
-                        inset: 8.0,
-                        cornerRadius: 11.0,
-                        shouldDismissOnTouch: { _, _ in
-                            return .ignore
-                        }
-                    )
-                    self.tooltipController = tooltipController
-                    self.present(tooltipController)
+            } else if let peer = self.message.peers[self.message.id.peerId] {
+                let peerName = EnginePeer(peer).compactDisplayTitle
+                if isVideo {
+                    tooltipText = presentationData.strings.Chat_PlayOnceVideoMessageYourTooltip(peerName).string
+                } else {
+                    tooltipText = presentationData.strings.Chat_PlayOnceVoiceMessageYourTooltip(peerName).string
                 }
             }
             
-            if isIncoming {
-                let _ = (ApplicationSpecificNotice.getIncomingVoiceMessagePlayOnceTip(accountManager: self.context.sharedContext.accountManager)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
-                    guard let self else {
-                        return
+            if let tooltipText {
+                let tooltipController = TooltipScreen(
+                    account: self.context.account,
+                    sharedContext: self.context.sharedContext,
+                    text: .markdown(text: tooltipText),
+                    balancedTextLayout: true,
+                    constrainWidth: 240.0,
+                    style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+                    arrowStyle: .small,
+                    icon: nil,
+                    location: .point(location, .bottom),
+                    displayDuration: .custom(3.0),
+                    inset: 8.0,
+                    cornerRadius: 11.0,
+                    shouldDismissOnTouch: { _, _ in
+                        return .ignore
                     }
-                    if counter >= 2 {
-                        return
-                    }
-                    Queue.mainQueue().after(0.3) {
-                        displayTooltip()
-                    }
-                    let _ = ApplicationSpecificNotice.incrementIncomingVoiceMessagePlayOnceTip(accountManager: self.context.sharedContext.accountManager).startStandalone()
-                })
-            } else {
-                let _ = (ApplicationSpecificNotice.getOutgoingVoiceMessagePlayOnceTip(accountManager: self.context.sharedContext.accountManager)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
-                    guard let self else {
-                        return
-                    }
-                    if counter >= 2 {
-                        return
-                    }
-                    Queue.mainQueue().after(0.3) {
-                        displayTooltip()
-                    }
-                    let _ = ApplicationSpecificNotice.incrementOutgoingVoiceMessagePlayOnceTip(accountManager: self.context.sharedContext.accountManager).startStandalone()
-                })
+                )
+                self.tooltipController = tooltipController
+                self.present(tooltipController)
             }
         }
+        
+        let tooltipStateSignal: Signal<Int32, NoError>
+        let updateTooltipState: () -> Void
+        if isVideo {
+            if isIncoming {
+                tooltipStateSignal = ApplicationSpecificNotice.getIncomingVideoMessagePlayOnceTip(accountManager: context.sharedContext.accountManager)
+                updateTooltipState = {
+                    let _ = ApplicationSpecificNotice.incrementIncomingVideoMessagePlayOnceTip(accountManager: context.sharedContext.accountManager).startStandalone()
+                }
+            } else {
+                tooltipStateSignal = ApplicationSpecificNotice.getOutgoingVideoMessagePlayOnceTip(accountManager: context.sharedContext.accountManager)
+                updateTooltipState = {
+                    let _ = ApplicationSpecificNotice.incrementOutgoingVideoMessagePlayOnceTip(accountManager: context.sharedContext.accountManager).startStandalone()
+                }
+            }
+        } else {
+            if isIncoming {
+                tooltipStateSignal = ApplicationSpecificNotice.getIncomingVoiceMessagePlayOnceTip(accountManager: context.sharedContext.accountManager)
+                updateTooltipState = {
+                    let _ = ApplicationSpecificNotice.incrementIncomingVoiceMessagePlayOnceTip(accountManager: context.sharedContext.accountManager).startStandalone()
+                }
+            } else {
+                tooltipStateSignal = ApplicationSpecificNotice.getOutgoingVoiceMessagePlayOnceTip(accountManager: context.sharedContext.accountManager)
+                updateTooltipState = {
+                    let _ = ApplicationSpecificNotice.incrementOutgoingVoiceMessagePlayOnceTip(accountManager: context.sharedContext.accountManager).startStandalone()
+                }
+            }
+        }
+        
+        let _ = (tooltipStateSignal
+        |> deliverOnMainQueue).startStandalone(next: { counter in
+            if counter >= 2 {
+                return
+            }
+            Queue.mainQueue().after(0.3) {
+                displayTooltip()
+            }
+            updateTooltipState()
+        })
+        
         return result
     }
     
