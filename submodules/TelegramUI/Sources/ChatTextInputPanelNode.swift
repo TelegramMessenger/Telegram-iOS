@@ -972,7 +972,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         interfaceInteraction.finishMediaRecording(.dismiss)
                     }
                 } else {
-                    interfaceInteraction.finishMediaRecording(.dismiss)
+//                    interfaceInteraction.finishMediaRecording(.dismiss)
                 }
                 strongSelf.viewOnce = false
                 strongSelf.tooltipController?.dismiss()

@@ -417,32 +417,40 @@ final class CameraOutput: NSObject {
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
             if case .roundVideo = self.currentMode, type == kCMMediaType_Video {
-                var transitionFactor: CGFloat = 0.0
-                let currentTimestamp = CACurrentMediaTime()
-                let duration: Double = 0.2
-                if case .front = self.currentPosition {
-                    transitionFactor = 1.0
-                    if self.lastSwitchTimestamp > 0.0, currentTimestamp - self.lastSwitchTimestamp < duration {
-                        transitionFactor = max(0.0, (currentTimestamp - self.lastSwitchTimestamp) / duration)
-                    }
-                } else {
-                    transitionFactor = 0.0
-                    if self.lastSwitchTimestamp > 0.0, currentTimestamp - self.lastSwitchTimestamp < duration {
-                        transitionFactor = 1.0 - max(0.0, (currentTimestamp - self.lastSwitchTimestamp) / duration)
-                    }
-                }
-                if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
-                    let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
-                    if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
-                        
+                if !self.exclusive {
+                    var transitionFactor: CGFloat = 0.0
+                    let currentTimestamp = CACurrentMediaTime()
+                    let duration: Double = 0.2
+                    if case .front = self.currentPosition {
+                        transitionFactor = 1.0
+                        if self.lastSwitchTimestamp > 0.0, currentTimestamp - self.lastSwitchTimestamp < duration {
+                            transitionFactor = max(0.0, (currentTimestamp - self.lastSwitchTimestamp) / duration)
+                        }
                     } else {
-                        if (transitionFactor == 1.0 && fromAdditionalOutput) || (transitionFactor == 0.0 && !fromAdditionalOutput) || (transitionFactor > 0.0 && transitionFactor < 1.0) {
-                            videoRecorder.appendSampleBuffer(processedSampleBuffer)
-                            self.lastSampleTimestamp = presentationTime
+                        transitionFactor = 0.0
+                        if self.lastSwitchTimestamp > 0.0, currentTimestamp - self.lastSwitchTimestamp < duration {
+                            transitionFactor = 1.0 - max(0.0, (currentTimestamp - self.lastSwitchTimestamp) / duration)
                         }
                     }
+                    if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
+                        let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
+                        if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
+                            
+                        } else {
+                            if (transitionFactor == 1.0 && fromAdditionalOutput) || (transitionFactor == 0.0 && !fromAdditionalOutput) || (transitionFactor > 0.0 && transitionFactor < 1.0) {
+                                videoRecorder.appendSampleBuffer(processedSampleBuffer)
+                                self.lastSampleTimestamp = presentationTime
+                            }
+                        }
+                    } else {
+                        videoRecorder.appendSampleBuffer(sampleBuffer)
+                    }
                 } else {
-                    videoRecorder.appendSampleBuffer(sampleBuffer)
+                    if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: self.currentPosition == .front, transitionFactor: self.currentPosition == .front ? 1.0 : 0.0) {
+                        videoRecorder.appendSampleBuffer(processedSampleBuffer)
+                    } else {
+                        videoRecorder.appendSampleBuffer(sampleBuffer)
+                    }
                 }
             } else {
                 videoRecorder.appendSampleBuffer(sampleBuffer)

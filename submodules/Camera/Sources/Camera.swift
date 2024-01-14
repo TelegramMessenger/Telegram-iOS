@@ -57,17 +57,17 @@ final class CameraDeviceContext {
         self.output = CameraOutput(exclusive: exclusive, ciContext: ciContext, use32BGRA: use32BGRA)
     }
     
-    func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false, preferLowerFramerate: Bool = false) {
+    func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false, preferLowerFramerate: Bool = false, switchAudio: Bool = true) {
         guard let session = self.session else {
             return
         }
         
         self.previewView = previewView
         
-        self.device.configure(for: session, position: position, dual: !exclusive || additional)
+        self.device.configure(for: session, position: position, dual: !self.exclusive || self.additional, switchAudio: switchAudio)
         self.device.configureDeviceFormat(maxDimensions: self.maxDimensions(additional: self.additional, preferWide: preferWide), maxFramerate: self.preferredMaxFrameRate(useLower: preferLowerFramerate))
-        self.input.configure(for: session, device: self.device, audio: audio)
-        self.output.configure(for: session, device: self.device, input: self.input, previewView: previewView, audio: audio, photo: photo, metadata: metadata)
+        self.input.configure(for: session, device: self.device, audio: audio && switchAudio)
+        self.output.configure(for: session, device: self.device, input: self.input, previewView: previewView, audio: audio && switchAudio, photo: photo, metadata: metadata)
         
         self.output.configureVideoStabilization()
         
@@ -260,7 +260,14 @@ private final class CameraContext {
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
-                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide, preferLowerFramerate: self.initialConfiguration.preferLowerFramerate)
+                let isRoundVideo = self.initialConfiguration.isRoundVideo
+                let preferWide = self.initialConfiguration.preferWide || (self.positionValue == .front && isRoundVideo)
+                let preferLowerFramerate = self.initialConfiguration.preferLowerFramerate || isRoundVideo
+                
+                mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: preferWide, preferLowerFramerate: preferLowerFramerate, switchAudio: !isRoundVideo)
+                if isRoundVideo {
+                    mainDeviceContext.output.markPositionChange(position: targetPosition)
+                }
                 
                 self.queue.after(0.5) {
                     self.modeChange = .none
@@ -277,7 +284,10 @@ private final class CameraContext {
             self.positionValue = position
             self.modeChange = .position
             
-            self.mainDeviceContext?.configure(position: position, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
+            let preferWide = self.initialConfiguration.preferWide || (self.positionValue == .front && self.initialConfiguration.isRoundVideo)
+            let preferLowerFramerate = self.initialConfiguration.preferLowerFramerate || self.initialConfiguration.isRoundVideo
+            
+            self.mainDeviceContext?.configure(position: position, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: preferWide, preferLowerFramerate: preferLowerFramerate)
                         
             self.queue.after(0.5) {
                 self.modeChange = .none
@@ -342,8 +352,11 @@ private final class CameraContext {
                 self.additionalDeviceContext?.invalidate()
                 self.additionalDeviceContext = nil
                 
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false, ciContext: self.ciContext, use32BGRA: false)
-                self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: self.initialConfiguration.preferWide, preferLowerFramerate: self.initialConfiguration.preferLowerFramerate)
+                let preferWide = self.initialConfiguration.preferWide || (self.positionValue == .front && self.initialConfiguration.isRoundVideo)
+                let preferLowerFramerate = self.initialConfiguration.preferLowerFramerate || self.initialConfiguration.isRoundVideo
+                
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false, ciContext: self.ciContext, use32BGRA: self.initialConfiguration.isRoundVideo)
+                self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: preferWide, preferLowerFramerate: preferLowerFramerate)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self, let mainDeviceContext = self.mainDeviceContext else {
