@@ -5920,6 +5920,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 peerId: savedMessagesPeerId,
                                 peer: savedMessagesPeer?.peer?._asPeer(),
                                 isContact: true,
+                                isSavedMessages: true,
                                 notificationSettings: nil,
                                 peerPresences: [:],
                                 cachedData: nil
@@ -5930,7 +5931,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             let imageOverride: AvatarNodeImageOverride?
                             if strongSelf.context.account.peerId == savedMessagesPeerId {
-                                imageOverride = .savedMessagesIcon
+                                imageOverride = .myNotesIcon
                             } else if savedMessagesPeerId.isReplies {
                                 imageOverride = .repliesIcon
                             } else if savedMessagesPeerId.isAnonymousSavedMessages {
@@ -9274,12 +9275,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state.updatedSearch(ChatSearchData(query: "", domain: .members, domainSuggestionContext: .none, resultsState: nil))
                     } else if let search = state.search {
                         switch search.domain {
-                            case .everything:
-                                return state
-                            case .members:
-                                return state.updatedSearch(ChatSearchData(query: "", domain: .everything, domainSuggestionContext: .none, resultsState: nil))
-                            case .member:
-                                return state.updatedSearch(ChatSearchData(query: "", domain: .members, domainSuggestionContext: .none, resultsState: nil))
+                        case .everything:
+                            return state
+                        case .tag:
+                            return state.updatedSearch(ChatSearchData(query: "", domain: .everything, domainSuggestionContext: .none, resultsState: nil))
+                        case .members:
+                            return state.updatedSearch(ChatSearchData(query: "", domain: .everything, domainSuggestionContext: .none, resultsState: nil))
+                        case .member:
+                            return state.updatedSearch(ChatSearchData(query: "", domain: .members, domainSuggestionContext: .none, resultsState: nil))
                         }
                     } else {
                         return state
@@ -15792,12 +15795,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 break
             }
             switch search.domain {
-                case .everything:
-                    derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
-                case .members:
-                    derivedSearchState = nil
-                case let .member(peer):
-                    derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+            case .everything:
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+            case .members:
+                derivedSearchState = nil
+            case let .member(peer):
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: peer.id, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+            case let .tag(tag):
+                derivedSearchState = ChatSearchState(query: "@#\(tag) " + search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             }
         }
         

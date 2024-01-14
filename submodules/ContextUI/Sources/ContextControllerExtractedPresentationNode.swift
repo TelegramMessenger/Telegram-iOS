@@ -381,7 +381,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 //TODO:
             }
             
-            return self.scrollNode.hitTest(self.view.convert(point, to: self.scrollNode.view), with: event)
+            if let result = self.scrollNode.hitTest(self.view.convert(point, to: self.scrollNode.view), with: event) {
+                if let reactionContextNode = self.reactionContextNode, reactionContextNode.isExpanded {
+                    if result === self.actionsContainerNode.view {
+                        return self.dismissTapNode.view
+                    }
+                }
+                return result
+            }
+            
+            return nil
         } else {
             return nil
         }
@@ -639,6 +648,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     presentationData: presentationData,
                     items: reactionItems.reactionItems,
                     selectedItems: reactionItems.selectedReactionItems,
+                    title: reactionItems.reactionsTitle,
                     alwaysAllowPremiumReactions: reactionItems.alwaysAllowPremiumReactions,
                     getEmojiContent: reactionItems.getEmojiContent,
                     isExpandedUpdated: { [weak self] transition in

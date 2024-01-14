@@ -213,7 +213,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     status = .custom(string: text, multiline: false, isActive: false, icon: nil)
                 }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch : .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch(isSavedMessages: false) : .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
                     interaction.openPeer(peer, .generic)
                 }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction, storyStats: storyStats, openStories: { peer, sourceNode in
                     if case let .peer(peerValue, _) = peer, let peerValue {

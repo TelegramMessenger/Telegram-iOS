@@ -132,6 +132,7 @@ public class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNod
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
+                        isSavedMessages: item.chatLocation.peerId == item.context.account.peerId,
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
