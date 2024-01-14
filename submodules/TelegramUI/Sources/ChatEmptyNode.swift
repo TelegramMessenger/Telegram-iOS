@@ -978,7 +978,7 @@ final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNod
             peerTitle = " "
         }
         
-        let text = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).text
+        let text = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).string
         let textSize = self.text.update(
             transition: .immediate,
             component: AnyComponent(BalancedTextComponent(

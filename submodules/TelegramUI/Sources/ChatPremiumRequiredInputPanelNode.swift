@@ -99,7 +99,7 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
         }
         
         let buttonTitle: String = params.interfaceState.strings.Chat_MessagingRestrictedPlaceholder(peerTitle).string
-        let buttonSubtitle: String = params.interfaceState.strings.Chat_MessagingRestrictedAction
+        let buttonSubtitle: String = params.interfaceState.strings.Chat_MessagingRestrictedPlaceholderAction
 
         let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)
         let buttonSize = self.button.update(

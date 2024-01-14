@@ -577,7 +577,7 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
                     }
                     return true
                 }
-                controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).text, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
+                controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
                 }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak selfController, weak controller] action in
                     guard let selfController, let controller else {
                         return false

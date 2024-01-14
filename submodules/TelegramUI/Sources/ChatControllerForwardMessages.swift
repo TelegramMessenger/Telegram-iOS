@@ -68,7 +68,7 @@ extension ChatControllerImpl {
                         }
                         return true
                     }
-                    controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle), customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
+                    controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
                     }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak controller] action in
                         guard let self, let controller else {
                             return false
