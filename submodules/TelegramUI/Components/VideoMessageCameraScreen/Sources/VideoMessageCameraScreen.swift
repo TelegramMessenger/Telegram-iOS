@@ -79,6 +79,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
     let previewFrame: CGRect
     let isPreviewing: Bool
     let isMuted: Bool
+    let totalDuration: Double
     let getController: () -> VideoMessageCameraScreen?
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
@@ -92,6 +93,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         previewFrame: CGRect,
         isPreviewing: Bool,
         isMuted: Bool,
+        totalDuration: Double,
         getController: @escaping () -> VideoMessageCameraScreen?,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
@@ -104,6 +106,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         self.previewFrame = previewFrame
         self.isPreviewing = isPreviewing
         self.isMuted = isMuted
+        self.totalDuration = totalDuration
         self.getController = getController
         self.present = present
         self.push = push
@@ -126,6 +129,9 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.isMuted != rhs.isMuted {
+            return false
+        }
+        if lhs.totalDuration != rhs.totalDuration {
             return false
         }
         return true
@@ -327,9 +333,12 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             var showRecordMore = false
             if component.isPreviewing {
                 showViewOnce = true
-                showRecordMore = true
-                
-                viewOnceOffset = 67.0
+                if component.totalDuration < 59.0 {
+                    showRecordMore = true
+                    viewOnceOffset = 67.0
+                } else {
+                    viewOnceOffset = 14.0
+                }
             } else if case .handsFree = component.cameraState.recording {
                 showViewOnce = true
             }
@@ -1038,7 +1047,10 @@ public class VideoMessageCameraScreen: ViewController {
                 self.didAppear()
             }
 
-            let backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: controller.inputPanelFrame.minY))
+            var backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: controller.inputPanelFrame.minY))
+            if backgroundFrame.maxY < layout.size.height - 100.0 && (layout.inputHeight ?? 0.0).isZero {
+                backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: layout.size.height - layout.intrinsicInsets.bottom - controller.inputPanelFrame.height))
+            }
                         
             transition.setPosition(view: self.backgroundView, position: backgroundFrame.center)
             transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: .zero, size: backgroundFrame.size))
@@ -1084,6 +1096,7 @@ public class VideoMessageCameraScreen: ViewController {
                         previewFrame: previewFrame,
                         isPreviewing: self.previewState != nil || self.transitioningToPreview,
                         isMuted: self.previewState?.isMuted ?? true,
+                        totalDuration: self.previewState?.composition.duration.seconds ?? 0.0,
                         getController: { [weak self] in
                             return self?.controller
                         },

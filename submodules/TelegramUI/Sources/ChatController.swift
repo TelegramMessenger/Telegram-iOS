@@ -15342,7 +15342,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func deactivateRaiseGesture() {
         self.raiseToListenActivateRecordingTimer?.invalidate()
         self.raiseToListenActivateRecordingTimer = nil
-        self.dismissMediaRecorder(.preview)
+        self.dismissMediaRecorder(.pause)
     }
     
     func requestAudioRecorder(beginWithTone: Bool) {
@@ -15671,6 +15671,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.videoRecorder.set(.single(nil))
         }
         
+        self.recorderDataDisposable.set(nil)
         self.chatDisplayNode.updateRecordedMediaDeleted(true)
         self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
             $0.updatedRecordedMediaPreview(nil)
