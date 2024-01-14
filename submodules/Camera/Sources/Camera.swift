@@ -74,12 +74,12 @@ final class CameraDeviceContext {
         self.device.resetZoom(neutral: self.exclusive || !self.additional)
     }
     
-    func invalidate() {
+    func invalidate(switchAudio: Bool = true) {
         guard let session = self.session else {
             return
         }
-        self.output.invalidate(for: session)
-        self.input.invalidate(for: session)
+        self.output.invalidate(for: session, switchAudio: switchAudio)
+        self.input.invalidate(for: session, switchAudio: switchAudio)
     }
     
     private func maxDimensions(additional: Bool, preferWide: Bool) -> CMVideoDimensions {
@@ -248,7 +248,8 @@ private final class CameraContext {
             mainDeviceContext.output.markPositionChange(position: targetPosition)
         } else {
             self.configure {
-                self.mainDeviceContext?.invalidate()
+                let isRoundVideo = self.initialConfiguration.isRoundVideo
+                self.mainDeviceContext?.invalidate(switchAudio: !isRoundVideo)
                 
                 let targetPosition: Camera.Position
                 if case .back = mainDeviceContext.device.position {
@@ -260,8 +261,8 @@ private final class CameraContext {
                 self._positionPromise.set(targetPosition)
                 self.modeChange = .position
                 
-                let isRoundVideo = self.initialConfiguration.isRoundVideo
-                let preferWide = self.initialConfiguration.preferWide || (self.positionValue == .front && isRoundVideo)
+                
+                let preferWide = self.initialConfiguration.preferWide || isRoundVideo
                 let preferLowerFramerate = self.initialConfiguration.preferLowerFramerate || isRoundVideo
                 
                 mainDeviceContext.configure(position: targetPosition, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: preferWide, preferLowerFramerate: preferLowerFramerate, switchAudio: !isRoundVideo)
@@ -352,7 +353,7 @@ private final class CameraContext {
                 self.additionalDeviceContext?.invalidate()
                 self.additionalDeviceContext = nil
                 
-                let preferWide = self.initialConfiguration.preferWide || (self.positionValue == .front && self.initialConfiguration.isRoundVideo)
+                let preferWide = self.initialConfiguration.preferWide || self.initialConfiguration.isRoundVideo
                 let preferLowerFramerate = self.initialConfiguration.preferLowerFramerate || self.initialConfiguration.isRoundVideo
                 
                 self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false, ciContext: self.ciContext, use32BGRA: self.initialConfiguration.isRoundVideo)

@@ -3729,6 +3729,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
             return false
         }
+        if self.chatPresentationInterfaceState.recordedMediaPreview != nil {
+            return false
+        }
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             if inputPanelNode.isFocused {
                 return false

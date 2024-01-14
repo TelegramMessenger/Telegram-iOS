@@ -21,6 +21,29 @@ private extension UIInterfaceOrientation {
    }
 }
 
+private class SimpleCapturePreviewLayer: AVCaptureVideoPreviewLayer {
+    public var didEnterHierarchy: (() -> Void)?
+    public var didExitHierarchy: (() -> Void)?
+    
+    override open func action(forKey event: String) -> CAAction? {
+        if event == kCAOnOrderIn {
+            self.didEnterHierarchy?()
+        } else if event == kCAOnOrderOut {
+            self.didExitHierarchy?()
+        }
+        return nullAction
+    }
+    
+    override public init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+
 public class CameraSimplePreviewView: UIView {
     func updateOrientation() {
         guard self.videoPreviewLayer.connection?.isVideoOrientationSupported == true else {
@@ -72,11 +95,16 @@ public class CameraSimplePreviewView: UIView {
     private var previewingDisposable: Disposable?
     private let placeholderView = UIImageView()
     
-    public init(frame: CGRect, main: Bool) {
+    public init(frame: CGRect, main: Bool, roundVideo: Bool = false) {
         super.init(frame: frame)
         
-        self.videoPreviewLayer.videoGravity = main ? .resizeAspectFill : .resizeAspect
-        self.placeholderView.contentMode =  main ? .scaleAspectFill : .scaleAspectFit
+        if roundVideo {
+            self.videoPreviewLayer.videoGravity = .resizeAspectFill
+            self.placeholderView.contentMode =  .scaleAspectFill
+        } else {
+            self.videoPreviewLayer.videoGravity = main ? .resizeAspectFill : .resizeAspect
+            self.placeholderView.contentMode =  main ? .scaleAspectFill : .scaleAspectFit
+        }
         
         self.addSubview(self.placeholderView)
     }
@@ -567,35 +595,29 @@ public class CameraPreviewView: MTKView {
         var scaleX: CGFloat
         var scaleY: CGFloat
         
-        // Rotate the layer into screen orientation.
         switch UIDevice.current.orientation {
         case .portraitUpsideDown:
             rotation = 180
             scaleX = videoPreviewRect.width / captureDeviceResolution.width
             scaleY = videoPreviewRect.height / captureDeviceResolution.height
-            
         case .landscapeLeft:
             rotation = 90
             scaleX = videoPreviewRect.height / captureDeviceResolution.width
             scaleY = scaleX
-            
         case .landscapeRight:
             rotation = -90
             scaleX = videoPreviewRect.height / captureDeviceResolution.width
             scaleY = scaleX
-            
         default:
             rotation = 0
             scaleX = videoPreviewRect.width / captureDeviceResolution.width
             scaleY = videoPreviewRect.height / captureDeviceResolution.height
         }
         
-        // Scale and mirror the image to ensure upright presentation.
         let affineTransform = CGAffineTransform(rotationAngle: radiansForDegrees(rotation))
             .scaledBy(x: scaleX, y: -scaleY)
         overlayLayer.setAffineTransform(affineTransform)
         
-        // Cover entire screen UI.
         let rootLayerBounds = self.bounds
         overlayLayer.position = CGPoint(x: rootLayerBounds.midX, y: rootLayerBounds.midY)
     }

@@ -190,7 +190,7 @@ final class CameraOutput: NSObject {
         }
     }
         
-    func invalidate(for session: CameraSession) {
+    func invalidate(for session: CameraSession, switchAudio: Bool = true) {
         if #available(iOS 13.0, *) {
             if let previewConnection = self.previewConnection {
                 if session.session.connections.contains(where: { $0 === previewConnection }) {
@@ -214,7 +214,7 @@ final class CameraOutput: NSObject {
         if session.session.outputs.contains(where: { $0 === self.videoOutput }) {
             session.session.removeOutput(self.videoOutput)
         }
-        if session.session.outputs.contains(where: { $0 === self.audioOutput }) {
+        if switchAudio, session.session.outputs.contains(where: { $0 === self.audioOutput }) {
             session.session.removeOutput(self.audioOutput)
         }
         if session.session.outputs.contains(where: { $0 === self.photoOutput }) {
@@ -409,6 +409,14 @@ final class CameraOutput: NSObject {
     private weak var masterOutput: CameraOutput?
     
     private var lastSampleTimestamp: CMTime?
+    
+    private var needsCrossfadeTransition = false
+    private var crossfadeTransitionStart: Double = 0.0
+    
+    private var needsSwitchSampleOffset = false
+    private var lastAudioSampleTime: CMTime?
+    private var videoSwitchSampleTimeOffset: CMTime?
+    
     func processVideoRecording(_ sampleBuffer: CMSampleBuffer, fromAdditionalOutput: Bool) {
         guard let formatDescriptor = CMSampleBufferGetFormatDescription(sampleBuffer) else {
             return
@@ -417,10 +425,10 @@ final class CameraOutput: NSObject {
         
         if let videoRecorder = self.videoRecorder, videoRecorder.isRecording {
             if case .roundVideo = self.currentMode, type == kCMMediaType_Video {
+                let currentTimestamp = CACurrentMediaTime()
+                let duration: Double = 0.2
                 if !self.exclusive {
                     var transitionFactor: CGFloat = 0.0
-                    let currentTimestamp = CACurrentMediaTime()
-                    let duration: Double = 0.2
                     if case .front = self.currentPosition {
                         transitionFactor = 1.0
                         if self.lastSwitchTimestamp > 0.0, currentTimestamp - self.lastSwitchTimestamp < duration {
@@ -446,13 +454,51 @@ final class CameraOutput: NSObject {
                         videoRecorder.appendSampleBuffer(sampleBuffer)
                     }
                 } else {
-                    if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: self.currentPosition == .front, transitionFactor: self.currentPosition == .front ? 1.0 : 0.0) {
+                    var additional = self.currentPosition == .front
+                    var transitionFactor = self.currentPosition == .front ? 1.0 : 0.0
+                    if self.lastSwitchTimestamp > 0.0 {
+                        if self.needsCrossfadeTransition {
+                            self.needsCrossfadeTransition = false
+                            self.crossfadeTransitionStart = currentTimestamp + 0.03
+                            self.needsSwitchSampleOffset = true
+                        }
+                        if self.crossfadeTransitionStart > 0.0, currentTimestamp - self.crossfadeTransitionStart < duration {
+                            if case .front = self.currentPosition {
+                                transitionFactor = max(0.0, (currentTimestamp - self.crossfadeTransitionStart) / duration)
+                            } else {
+                                transitionFactor = 1.0 - max(0.0, (currentTimestamp - self.crossfadeTransitionStart) / duration)
+                            }
+                        } else if currentTimestamp - self.lastSwitchTimestamp < 0.05 {
+                            additional = !additional
+                            transitionFactor = 1.0 - transitionFactor
+                            self.needsCrossfadeTransition = true
+                        }
+                    }
+                    if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: additional, transitionFactor: transitionFactor) {
                         videoRecorder.appendSampleBuffer(processedSampleBuffer)
                     } else {
                         videoRecorder.appendSampleBuffer(sampleBuffer)
                     }
                 }
             } else {
+                if type == kCMMediaType_Audio {
+                    if self.needsSwitchSampleOffset {
+                        self.needsSwitchSampleOffset = false
+                        
+                        if let lastAudioSampleTime = self.lastAudioSampleTime {
+                            let videoSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                            let offset = videoSampleTime - lastAudioSampleTime
+                            if let current = self.videoSwitchSampleTimeOffset {
+                                self.videoSwitchSampleTimeOffset = current + offset
+                            } else {
+                                self.videoSwitchSampleTimeOffset = offset
+                            }
+                            self.lastAudioSampleTime = nil
+                        }
+                    }
+                    
+                    self.lastAudioSampleTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer) + CMSampleBufferGetDuration(sampleBuffer)
+                }
                 videoRecorder.appendSampleBuffer(sampleBuffer)
             }
         }
@@ -493,6 +539,11 @@ final class CameraOutput: NSObject {
         
         var sampleTimingInfo: CMSampleTimingInfo = .invalid
         CMSampleBufferGetSampleTimingInfo(sampleBuffer, at: 0, timingInfoOut: &sampleTimingInfo)
+        
+        if let videoSwitchSampleTimeOffset = self.videoSwitchSampleTimeOffset {
+            sampleTimingInfo.decodeTimeStamp = sampleTimingInfo.decodeTimeStamp - videoSwitchSampleTimeOffset
+            sampleTimingInfo.presentationTimeStamp = sampleTimingInfo.presentationTimeStamp - videoSwitchSampleTimeOffset
+        }
         
         var newSampleBuffer: CMSampleBuffer?
         status = CMSampleBufferCreateForImageBuffer(

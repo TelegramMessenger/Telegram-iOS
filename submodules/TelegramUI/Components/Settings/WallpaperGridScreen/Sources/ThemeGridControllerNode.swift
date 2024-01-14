@@ -329,7 +329,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
             if let strongSelf = self, !strongSelf.currentState.editing {
                 let entries = previousEntries.with { $0 }
                 if let entries = entries, !entries.isEmpty {
-                    let wallpapers = entries.map { $0.wallpaper }.filter { !$0.isColorOrGradient }
+                    var wallpapers = entries.map { $0.wallpaper }
+                    if case .peer = mode {
+                        wallpapers = wallpapers.filter { !$0.isColorOrGradient }
+                    }
                     
                     var options = WallpaperPresentationOptions()
                     if wallpaper == strongSelf.presentationData.chatWallpaper, let settings = wallpaper.settings {
@@ -575,7 +578,14 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 transition.updateFrame(node: strongSelf.bottomBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height), size: CGSize(width: layout.size.width, height: 500.0)))
                 transition.updateFrame(node: strongSelf.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
                 
-                let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
+                let sideInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                var listInsets = layout.safeInsets
+                if layout.size.width >= 375.0 {
+                    listInsets.left = sideInset
+                    listInsets.right = sideInset
+                }
+                
+                let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right, availableHeight: layout.size.height)
                 
                 let makeResetLayout = strongSelf.resetItemNode.asyncLayout()
                 let makeResetDescriptionLayout = strongSelf.resetDescriptionItemNode.asyncLayout()
@@ -588,8 +598,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 transition.updateFrame(node: strongSelf.resetItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height + 35.0), size: resetLayout.contentSize))
                 transition.updateFrame(node: strongSelf.resetDescriptionItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: gridLayout.contentSize.height + 35.0 + resetLayout.contentSize.height), size: resetDescriptionLayout.contentSize))
                 
-                let sideInset = strongSelf.leftOverlayNode.frame.maxX
-                strongSelf.maskNode.frame = CGRect(origin: CGPoint(x: sideInset, y: strongSelf.separatorNode.frame.minY + UIScreenPixel + 4.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: gridLayout.contentSize.height + 6.0))
+                let maskSideInset = strongSelf.leftOverlayNode.frame.maxX
+                strongSelf.maskNode.frame = CGRect(origin: CGPoint(x: maskSideInset, y: strongSelf.separatorNode.frame.minY + UIScreenPixel + 4.0), size: CGSize(width: layout.size.width - sideInset * 2.0, height: gridLayout.contentSize.height + 6.0))
             }
         }
     }
@@ -934,7 +944,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let (resetDescriptionLayout, _) = makeResetDescriptionLayout(self.resetDescriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
     
         if !isChannel {
-            insets.bottom += buttonHeight + 35.0 + resetDescriptionLayout.contentSize.height + 32.0
+            listInsets.bottom += buttonHeight + 35.0 + resetDescriptionLayout.contentSize.height + 32.0
         }
         
         self.gridNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)

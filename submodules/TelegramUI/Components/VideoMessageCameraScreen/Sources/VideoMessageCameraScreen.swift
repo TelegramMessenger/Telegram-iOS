@@ -609,11 +609,11 @@ public class VideoMessageCameraScreen: ViewController {
             self.previewContainerView = UIView()
             self.previewContainerView.clipsToBounds = true
                         
-            let isDualCameraEnabled = Camera.isDualCameraSupported //!"".isEmpty //
+            let isDualCameraEnabled = Camera.isDualCameraSupported
             let isFrontPosition = "".isEmpty
             
-            self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true)
-            self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false)
+            self.mainPreviewView = CameraSimplePreviewView(frame: .zero, main: true, roundVideo: true)
+            self.additionalPreviewView = CameraSimplePreviewView(frame: .zero, main: false, roundVideo: true)
             
             self.progressView = RecordingProgressView(frame: .zero)
             
@@ -746,6 +746,11 @@ public class VideoMessageCameraScreen: ViewController {
                     return
                 }
                 self.cameraState = self.cameraState.updatedPosition(position)
+                
+                if !self.cameraState.isDualCameraEnabled {
+                    self.animatePositionChange()
+                }
+                
                 self.requestUpdateLayout(transition: .easeInOut(duration: 0.2))
             })
             
@@ -807,6 +812,31 @@ public class VideoMessageCameraScreen: ViewController {
             self.previewContainerView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         }
         
+        private func animatePositionChange() {
+            if let snapshotView = self.mainPreviewView.snapshotView(afterScreenUpdates: false) {
+                self.previewContainerView.insertSubview(snapshotView, belowSubview: self.progressView)
+                self.previewSnapshotView = snapshotView
+                
+                let action = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    UIView.animate(withDuration: 0.2, animations: {
+                        self.previewSnapshotView?.alpha = 0.0
+                    }, completion: { _ in
+                        self.previewSnapshotView?.removeFromSuperview()
+                        self.previewSnapshotView = nil
+                    })
+                }
+                
+                Queue.mainQueue().after(1.0) {
+                    action()
+                }
+                
+                self.requestUpdateLayout(transition: .immediate)
+            }
+        }
+        
         func pauseCameraCapture() {
             self.mainPreviewView.isEnabled = false
             self.additionalPreviewView.isEnabled = false
@@ -850,10 +880,10 @@ public class VideoMessageCameraScreen: ViewController {
                         action()
                     })
                 } else {
-                   Queue.mainQueue().after(1.0) {
-                       action()
-                   }
-               }
+                    Queue.mainQueue().after(1.0) {
+                        action()
+                    }
+                }
                 
                 self.cameraIsActive = true
                 self.requestUpdateLayout(transition: .immediate)
@@ -1084,21 +1114,37 @@ public class VideoMessageCameraScreen: ViewController {
             }
             transition.setCornerRadius(layer: self.previewContainerView.layer, cornerRadius: previewSide / 2.0)
                         
-            let previewInnerFrame = CGRect(origin: .zero, size: previewFrame.size)
+            let previewBounds = CGRect(origin: .zero, size: previewFrame.size)
+           
+            let previewInnerSize: CGSize
+            let additionalPreviewInnerSize: CGSize
             
-            let additionalPreviewSize = CGSize(width: previewFrame.size.width, height: previewFrame.size.width / 3.0 * 4.0)
-            let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((previewFrame.height - additionalPreviewSize.height) / 2.0)), size: additionalPreviewSize)
-            self.mainPreviewView.frame = previewInnerFrame
-            self.additionalPreviewView.frame = additionalPreviewInnerFrame
+            if self.cameraState.isDualCameraEnabled {
+                previewInnerSize = CGSize(width: previewFrame.size.width, height: previewFrame.size.width / 9.0 * 16.0)
+                additionalPreviewInnerSize = CGSize(width: previewFrame.size.width, height: previewFrame.size.width / 3.0 * 4.0)
+            } else {
+                previewInnerSize = CGSize(width: previewFrame.size.width, height: previewFrame.size.width / 3.0 * 4.0)
+                additionalPreviewInnerSize = CGSize(width: previewFrame.size.width, height: previewFrame.size.width / 3.0 * 4.0)
+            }
             
-            self.progressView.frame = previewInnerFrame
+            let previewInnerFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((previewFrame.height - previewInnerSize.height) / 2.0)), size: previewInnerSize)
+            
+            let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((previewFrame.height - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
+            if self.cameraState.isDualCameraEnabled {
+                self.mainPreviewView.frame = previewInnerFrame
+                self.additionalPreviewView.frame = additionalPreviewInnerFrame
+            } else {
+                self.mainPreviewView.frame = self.cameraState.position == .front ? additionalPreviewInnerFrame : previewInnerFrame
+            }
+            
+            self.progressView.frame = previewBounds
             self.progressView.value = CGFloat(self.cameraState.duration / 60.0)
             
             transition.setAlpha(view: self.additionalPreviewView, alpha: self.cameraState.position == .front ? 1.0 : 0.0)
             
-            self.previewBlurView.frame = previewInnerFrame
-            self.previewSnapshotView?.frame = previewInnerFrame
-            self.loadingView.update(size: previewInnerFrame.size, transition: .immediate)
+            self.previewBlurView.frame = previewBounds
+            self.previewSnapshotView?.center = previewBounds.center
+            self.loadingView.update(size: previewBounds.size, transition: .immediate)
             
             let componentSize = self.componentHost.update(
                 transition: transition,
@@ -1168,7 +1214,7 @@ public class VideoMessageCameraScreen: ViewController {
                     
                     resultPreviewView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.resultTapped)))
                 }
-                resultPreviewView.frame = previewInnerFrame
+                resultPreviewView.frame = previewBounds
             } else if let resultPreviewView = self.resultPreviewView {
                 self.resultPreviewView = nil
                 resultPreviewView.removeFromSuperview()
