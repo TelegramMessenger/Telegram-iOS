@@ -1217,8 +1217,7 @@ public final class ShareController: ViewController {
                 }
                 return true
             }
-            //TODO:localize
-            self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: "**\(peer.compactDisplayTitle)** only accepts messages from contacts and **Premium** users.", customUndoText: (self.environment is ShareControllerAppEnvironment) ? "View" : nil, timeout: nil, linkAction: { _ in
+            self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: (self.environment is ShareControllerAppEnvironment) ? presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action : nil, timeout: nil, linkAction: { _ in
             }), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
                 guard let self, let parentNavigationController = self.parentNavigationController, let context = self.currentContext as? ShareControllerAppAccountContext else {
                     return false

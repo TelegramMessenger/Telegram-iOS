@@ -378,14 +378,13 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             case .generic:
                 break
             case .premiumRequired:
-                //TODO:localize
                 self.forEachController { c in
                     if let c = c as? UndoOverlayController {
                         c.dismiss()
                     }
                     return true
                 }
-                self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: "**\(peer.compactDisplayTitle)** only accepts messages from contacts and **Premium** users.", customUndoText: "View", timeout: nil, linkAction: { _ in
+                self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
                 }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                     guard let self else {
                         return false

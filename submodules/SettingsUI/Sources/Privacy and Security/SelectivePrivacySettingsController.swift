@@ -847,13 +847,12 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     }
     
     if case .presence = kind, let peer {
-        //TODO:localize
-        entries.append(.hideReadTime(presentationData.theme, "Hide Read Time", state.hideReadTimeEnabled == true))
-        entries.append(.hideReadTimeInfo(presentationData.theme, "Do not show the time when you read a message to people you hid your last seen from. If you turn this on, their read time will also be hidden from you.\nThis does not affect group chats."))
+        entries.append(.hideReadTime(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTime, state.hideReadTimeEnabled == true))
+        entries.append(.hideReadTimeInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimeFooter))
         
         if !peer.isPremium {
-            entries.append(.subscribeToPremium(presentationData.theme, "Subscribe to Telegram Premium"))
-            entries.append(.subscribeToPremiumInfo(presentationData.theme, "It you subscribe to Telegram Premium, you will still see other users' last seen and read time even if you hid yours from them (unless they specifically restricted it)."))
+            entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
+            entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
         }
     }
     

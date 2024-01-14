@@ -2739,8 +2739,7 @@ public final class StoryItemSetContainerComponent: Component {
             var isUnsupported = false
             var disabledPlaceholder: MessageInputPanelComponent.DisabledPlaceholder?
             if component.slice.additionalPeerData.isPremiumRequiredForMessaging {
-                //TODO:localize
-                disabledPlaceholder = .premiumRequired(title: "Only Premium users can message \(component.slice.peer.compactDisplayTitle).", subtitle: "Learn more...", action: { [weak self] in
+                disabledPlaceholder = .premiumRequired(title: component.strings.Story_MessagingRestrictedPlaceholder(component.slice.peer.compactDisplayTitle).string, subtitle: component.strings.Story_MessagingRestrictedPlaceholderAction, action: { [weak self] in
                     self?.presentPremiumRequiredForMessaging()
                 })
             } else if component.slice.peer.isService {

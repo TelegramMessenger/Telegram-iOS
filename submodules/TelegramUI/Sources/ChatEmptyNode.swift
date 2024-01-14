@@ -978,8 +978,7 @@ final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNod
             peerTitle = " "
         }
         
-        //TODO:localize
-        let text = "Subscribe to **Premium**\nto message **\(peerTitle)**."
+        let text = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).text
         let textSize = self.text.update(
             transition: .immediate,
             component: AnyComponent(BalancedTextComponent(
@@ -998,11 +997,10 @@ final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatEmptyNod
             containerSize: CGSize(width: maxWidth - sideInset * 2.0, height: 500.0)
         )
         
-        //TODO:localize
         let buttonTitleSize = self.buttonTitle.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: "Add Premium", font: Font.semibold(15.0), textColor: serviceColor.primaryText))
+                text: .plain(NSAttributedString(string: interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Action, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
             )),
             environment: {},
             containerSize: CGSize(width: 200.0, height: 100.0)

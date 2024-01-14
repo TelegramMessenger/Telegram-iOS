@@ -3,7 +3,8 @@ import Postbox
 import TelegramApi
 
 internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {
-    return account.postbox.transaction { transaction -> ([Api.InputUser], [PeerId]) in
+    return .single([])
+    /*return account.postbox.transaction { transaction -> ([Api.InputUser], [PeerId]) in
         var inputUsers: [Api.InputUser] = []
         var premiumRequired:[EnginePeer.Id] = []
         for id in peerIds {
@@ -52,5 +53,5 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
         }
         
         
-    }
+    }*/
 }

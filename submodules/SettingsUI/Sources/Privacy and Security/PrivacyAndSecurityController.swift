@@ -395,8 +395,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openVoiceMessagePrivacy()
                 })
             case let .messagePrivacy(value):
-                //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, title: "Messages", label: !value ? "Everybody" : "Contacts and Premium", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.Settings_Privacy_Messages, label: !value ? presentationData.strings.Settings_Privacy_Messages_ValueEveryone : presentationData.strings.Settings_Privacy_Messages_ValueContactsAndPremium, sectionId: self.section, style: .blocks, action: {
                     arguments.openMessagePrivacy()
                 })
             case let .bioPrivacy(_, text, value):

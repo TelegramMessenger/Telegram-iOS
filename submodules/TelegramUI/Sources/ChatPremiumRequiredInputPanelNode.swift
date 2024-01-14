@@ -98,9 +98,8 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
             peerTitle = " "
         }
         
-        //TODO:localize
-        let buttonTitle: String = "Only Premium users can message \(peerTitle)."
-        let buttonSubtitle: String = "Learn more..."
+        let buttonTitle: String = params.interfaceState.strings.Chat_MessagingRestrictedPlaceholder(peerTitle).string
+        let buttonSubtitle: String = params.interfaceState.strings.Chat_MessagingRestrictedAction
 
         let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)
         let buttonSize = self.button.update(

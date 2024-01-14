@@ -791,8 +791,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     if case let .user(user) = peer {
                         if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode {
                             if isSavedMessages {
-                                //TODO:localize
-                                titleAttributedString = NSAttributedString(string: "My Notes", font: titleBoldFont, textColor: textColor)
+                                titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_MyNotes, font: titleBoldFont, textColor: textColor)
                             } else {
                                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                             }

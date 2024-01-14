@@ -3770,44 +3770,6 @@ public extension Api.functions.contacts {
                     })
                 }
 }
-public extension Api.functions.feed {
-                static func getFeed(flags: Int32, filterId: Int32, offsetPosition: Api.FeedPosition?, addOffset: Int32, limit: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.FeedMessages>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(2121717715)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(filterId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {offsetPosition!.serialize(buffer, true)}
-                    serializeInt32(addOffset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {maxPosition!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {minPosition!.serialize(buffer, true)}
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "feed.getFeed", parameters: [("flags", String(describing: flags)), ("filterId", String(describing: filterId)), ("offsetPosition", String(describing: offsetPosition)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxPosition", String(describing: maxPosition)), ("minPosition", String(describing: minPosition)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.feed.FeedMessages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.feed.FeedMessages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.feed.FeedMessages
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.feed {
-                static func readFeed(filterId: Int32, maxPosition: Api.FeedPosition) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1271479809)
-                    serializeInt32(filterId, buffer: buffer, boxed: false)
-                    maxPosition.serialize(buffer, true)
-                    return (FunctionDescription(name: "feed.readFeed", parameters: [("filterId", String(describing: filterId)), ("maxPosition", String(describing: maxPosition))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-}
 public extension Api.functions.folders {
                 static func editPeerFolders(folderPeers: [Api.InputFolderPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
@@ -5688,22 +5650,6 @@ public extension Api.functions.messages {
                         var result: Api.ChatOnlines?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.ChatOnlines
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.messages {
-                static func getOutboxReadDate(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OutboxReadDate>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1941176739)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getOutboxReadDate", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.OutboxReadDate? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.OutboxReadDate?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.OutboxReadDate
                         }
                         return result
                     })
@@ -9746,25 +9692,6 @@ public extension Api.functions.users {
                         var result: Api.users.UserFull?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.users.UserFull
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.users {
-                static func getIsPremiumRequiredToContact(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Bool]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1507677680)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(id.count))
-                    for item in id {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription(name: "users.getIsPremiumRequiredToContact", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.Bool]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Api.Bool]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Bool.self)
                         }
                         return result
                     })

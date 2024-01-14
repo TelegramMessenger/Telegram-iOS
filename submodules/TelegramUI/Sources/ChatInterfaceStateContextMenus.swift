@@ -2655,8 +2655,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             
             if currentStats.peers.isEmpty {
                 if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-                    //TODO:localize
-                    let text = NSAttributedString(string: "read", font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                    let text = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadAvailablePrefix, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
                     if self.textNode.attributedText != text {
                         animatePositions = false
                     }
@@ -2697,8 +2696,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                     }
                 )).string
                 
-                //TODO:localize
-                self.textNode.attributedText = NSAttributedString(string: "\(self.presentationData.strings.Conversation_ChecksTooltip_Read.lowercased()) \(dateText)", font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadFormat(dateText).string, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
             } else {
                 if reactionCount != 0 {
                     let text: String
@@ -2753,8 +2751,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 self.addSubnode(badgeText)
             }
             
-            //TODO:localize
-            badgeText.attributedText = NSAttributedString(string: "show when", font: Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 11.0 / 17.0), textColor: self.presentationData.theme.contextMenu.primaryColor)
+            badgeText.attributedText = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadAvailableBadge, font: Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 11.0 / 17.0), textColor: self.presentationData.theme.contextMenu.primaryColor)
             
             badgeTextSize = badgeText.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset - iconSize.width - 4.0 - textSize.width - 12.0, height: 100.0))
         } else {
