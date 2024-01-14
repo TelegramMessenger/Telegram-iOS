@@ -556,8 +556,6 @@ public final class MediaScrubberComponent: Component {
                 transition: transition
             )
             
-            let _ = leftHandleFrame
-            let _ = rightHandleFrame
             let _ = ghostLeftHandleFrame
             let _ = ghostRightHandleFrame
             
@@ -585,12 +583,15 @@ public final class MediaScrubberComponent: Component {
             transition.setFrame(view: self.ghostTrimView, frame: ghostTrimViewFrame)
             transition.setAlpha(view: self.ghostTrimView, alpha: ghostTrimVisible ? 0.75 : 0.0)
             
-//            var containerLeftEdge = leftHandleFrame.maxX
-//            var containerRightEdge = rightHandleFrame.minX
-//            if self.isAudioSelected && component.duration > 0.0 {
-//                containerLeftEdge = ghostLeftHandleFrame.maxX
-//                containerRightEdge = ghostRightHandleFrame.minX
-//            }
+            if case .videoMessage = component.style {
+                for (_ , trackView) in self.trackViews {
+                    trackView.updateOpaqueEdges(
+                        left: leftHandleFrame.minX,
+                        right: rightHandleFrame.maxX,
+                        transition: transition
+                    )
+                }
+            }
             
             let isDraggingTracks = self.trackViews.values.contains(where: { $0.isDragging })
             let isCursorHidden = isDraggingTracks || self.trimView.isPanningTrimHandle || self.ghostTrimView.isPanningTrimHandle
@@ -738,7 +739,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     }
     
     @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (track, _, _) = self.params else {
+        guard let (track, _, _, _) = self.params else {
             return
         }
         self.onSelection(track.id)
@@ -787,8 +788,41 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     private var params: (
         track: MediaScrubberComponent.Track,
         isSelected: Bool,
+        availableSize: CGSize,
         duration: Double
     )?
+    
+    private var leftOpaqueEdge: CGFloat?
+    private var rightOpaqueEdge: CGFloat?
+    func updateOpaqueEdges(
+        left: CGFloat,
+        right: CGFloat,
+        transition: Transition
+    ) {
+        self.leftOpaqueEdge = left
+        self.rightOpaqueEdge = right
+        
+        if let params = self.params {
+            self.updateThumbnailContainers(
+                scrubberSize: CGSize(width: params.availableSize.width, height: 33.0),
+                availableSize: params.availableSize,
+                transition: transition
+            )
+        }
+    }
+    
+    private func updateThumbnailContainers(
+        scrubberSize: CGSize,
+        availableSize: CGSize,
+        transition: Transition
+    ) {
+        let containerLeftEdge: CGFloat = self.leftOpaqueEdge ?? 0.0
+        let containerRightEdge: CGFloat = self.rightOpaqueEdge ?? availableSize.width
+        
+        transition.setFrame(view: self.videoTransparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: scrubberSize.width, height: scrubberSize.height)))
+        transition.setFrame(view: self.videoOpaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+        transition.setBounds(view: self.videoOpaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+    }
     
     func update(
         context: AccountContext,
@@ -800,7 +834,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         transition: Transition
     ) -> CGSize {
         let previousParams = self.params
-        self.params = (track, isSelected, duration)
+        self.params = (track, isSelected, availableSize, duration)
         
         let fullTrackHeight: CGFloat
         let framesCornerRadius: CGFloat
@@ -968,13 +1002,12 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                     }
                 }
             }
-            
-            let containerLeftEdge: CGFloat = 0.0
-            let containerRightEdge: CGFloat = availableSize.width
-            
-            transition.setFrame(view: self.videoTransparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: scrubberSize.width, height: scrubberSize.height)))
-            transition.setFrame(view: self.videoOpaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
-            transition.setBounds(view: self.videoOpaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+                        
+            self.updateThumbnailContainers(
+                scrubberSize: scrubberSize,
+                availableSize: availableSize,
+                transition: transition
+            )
             
             var frameAspectRatio = 0.66
             if let image = frames.first, image.size.height > 0.0 {

@@ -71,7 +71,7 @@ enum CameraScreenTransition {
 
 private let viewOnceButtonTag = GenericComponentViewTag()
 
-private final class CameraScreenComponent: CombinedComponent {
+private final class VideoMessageCameraScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
@@ -109,7 +109,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.completion = completion
     }
     
-    static func ==(lhs: CameraScreenComponent, rhs: CameraScreenComponent) -> Bool {
+    static func ==(lhs: VideoMessageCameraScreenComponent, rhs: VideoMessageCameraScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -184,6 +184,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 if let self, let controller = getController() {
                     self.startVideoRecording(pressing: !controller.scheduledLock)
                     controller.scheduledLock = false
+                    if controller.recordingStartTime == nil {
+                        controller.recordingStartTime = CACurrentMediaTime()
+                    }
                 }
             })
             self.stopRecording.connect({ [weak self] _ in
@@ -241,7 +244,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     let duration = initialDuration + recordingData.duration
                     if let self, let controller = self.getController() {
                         controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
-                        if recordingData.duration > 59.0 {
+                        if duration > 59.0 {
                             self.stopVideoRecording()
                         }
                         if isFirstRecording {
@@ -321,6 +324,10 @@ private final class CameraScreenComponent: CombinedComponent {
                 viewOnceOffset = 67.0
             } else if case .handsFree = component.cameraState.recording {
                 showViewOnce = true
+            }
+            
+            if let controller = component.getController(), !controller.viewOnceAvailable {
+                showViewOnce = false
             }
             
             if !component.isPreviewing {
@@ -484,7 +491,6 @@ public class VideoMessageCameraScreen: ViewController {
         private var resultPreviewView: ResultPreviewView?
              
         private var cameraStateDisposable: Disposable?
-        private var changingPositionDisposable: Disposable?
                 
         private let idleTimerExtensionDisposable = MetaDisposable()
         
@@ -603,7 +609,6 @@ public class VideoMessageCameraScreen: ViewController {
         
         deinit {
             self.cameraStateDisposable?.dispose()
-            self.changingPositionDisposable?.dispose()
             self.idleTimerExtensionDisposable.dispose()
         }
         
@@ -668,13 +673,6 @@ public class VideoMessageCameraScreen: ViewController {
                 }
                 self.cameraState = self.cameraState.updatedPosition(position)
                 self.requestUpdateLayout(transition: .easeInOut(duration: 0.2))
-            })
-            
-            self.changingPositionDisposable = (camera.modeChange
-            |> deliverOnMainQueue).start(next: { [weak self] modeChange in
-                if let self {
-                   let _ = self
-                }
             })
             
             camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
@@ -799,8 +797,15 @@ public class VideoMessageCameraScreen: ViewController {
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
             let result = super.hitTest(point, with: event)
-            if let controller = self.controller, point.y > self.frame.height - controller.inputPanelFrame.height - 34.0 {
-                return nil
+            if let controller = self.controller, let layout = self.validLayout {
+                if point.y > layout.size.height - controller.inputPanelFrame.height - 34.0 {
+                    if layout.metrics.isTablet {
+                        if point.x < layout.size.width * 0.33 {
+                            return result
+                        }
+                    }
+                    return nil
+                }
             }
             return result
         }
@@ -944,7 +949,7 @@ public class VideoMessageCameraScreen: ViewController {
             let componentSize = self.componentHost.update(
                 transition: transition,
                 component: AnyComponent(
-                    CameraScreenComponent(
+                    VideoMessageCameraScreenComponent(
                         context: self.context,
                         cameraState: self.cameraState,
                         isPreviewing: self.previewState != nil || self.transitioningToPreview,
@@ -987,8 +992,12 @@ public class VideoMessageCameraScreen: ViewController {
                         
             let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0)
             let previewSide = min(369.0, layout.size.width - 24.0)
-            let previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
-            
+            let previewFrame: CGRect
+            if layout.metrics.isTablet {
+                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.2 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+            } else {
+                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+            }
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
             }
@@ -1054,6 +1063,7 @@ public class VideoMessageCameraScreen: ViewController {
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let inputPanelFrame: CGRect
     fileprivate var allowLiveUpload: Bool
+    fileprivate var viewOnceAvailable: Bool
     
     fileprivate let completion: (EnqueueMessage?) -> Void
     
@@ -1145,13 +1155,20 @@ public class VideoMessageCameraScreen: ViewController {
             initialPlaceholder = self.camera?.transitionImage ?? .single(nil)
         }
         
+        var approximateDuration: Double
+        if let recordingStartTime = self.recordingStartTime {
+            approximateDuration = CACurrentMediaTime() - recordingStartTime
+        } else {
+            approximateDuration = 1.0
+        }
+        
         let immediateResult: Signal<RecordedVideoData?, NoError> = initialPlaceholder
         |> take(1)
         |> mapToSignal { initialPlaceholder in
             return videoFrames(asset: nil, count: count, initialPlaceholder: initialPlaceholder)
             |> map { framesAndUpdateTimestamp in
                 return RecordedVideoData(
-                    duration: 1.0,
+                    duration: approximateDuration,
                     frames: framesAndUpdateTimestamp.0,
                     framesUpdateTimestamp: framesAndUpdateTimestamp.1,
                     trimRange: nil
@@ -1194,14 +1211,15 @@ public class VideoMessageCameraScreen: ViewController {
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
+        peerId: EnginePeer.Id,
         inputPanelFrame: CGRect,
-        allowLiveUpload: Bool,
         completion: @escaping (EnqueueMessage?) -> Void
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.inputPanelFrame = inputPanelFrame
-        self.allowLiveUpload = allowLiveUpload
+        self.allowLiveUpload = peerId.namespace != Namespaces.Peer.SecretChat
+        self.viewOnceAvailable = peerId.namespace == Namespaces.Peer.CloudUser && peerId != context.account.peerId
         self.completion = completion
         
         self.recordingStatus = RecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())
@@ -1261,6 +1279,11 @@ public class VideoMessageCameraScreen: ViewController {
                     videoPaths.append(video.videoPath)
                     duration += video.duration
                 }
+            }
+            
+            if duration < 1.0 {
+                self.completion(nil)
+                return
             }
             
             let finalDuration: Double
@@ -1348,6 +1371,7 @@ public class VideoMessageCameraScreen: ViewController {
         return true
     }
 
+    fileprivate var recordingStartTime: Double?
     fileprivate var scheduledLock = false
     public func lockVideoRecording() {
         if case .none = self.cameraState.recording {

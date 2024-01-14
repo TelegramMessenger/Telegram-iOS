@@ -2776,7 +2776,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         )
         self.tooltipController = tooltipController
         
-        parentController.present(tooltipController, in: .window(.root))
+        parentController.present(tooltipController, in: .current)
     }
     
     override func canHandleTransition(from prevInputPanelNode: ChatInputPanelNode?) -> Bool {

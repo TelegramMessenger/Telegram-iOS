@@ -10895,3 +10895,6 @@ Sorry for the inconvenience.";
 "Chat.PlayVideoMessageOnceTooltip" = "The recipient will be able to play it only once.";
 
 "PeerInfo.HiddenStatusBadge" = "when?";
+
+"Conversation.DiscardRecordedVoiceMessageDescription" = "Are you sure you want to discard\nyour voice message?";
+"Conversation.DiscardRecordedVoiceMessageAction" = "Discard";
