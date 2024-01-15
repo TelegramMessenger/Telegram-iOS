@@ -443,7 +443,7 @@ public final class SemanticStatusNode: ASControlNode {
         self.setNeedsDisplay()
     }
     
-    public func transitionToState(_ state: SemanticStatusNodeState, animated: Bool = true, synchronous: Bool = false, completion: @escaping () -> Void = {}) {
+    public func transitionToState(_ state: SemanticStatusNodeState, animated: Bool = true, synchronous: Bool = false, cutout: CGRect? = nil, updateCutout: Bool = false, completion: @escaping () -> Void = {}) {
         var animated = animated
         if !self.hasState {
             self.hasState = true
@@ -452,13 +452,18 @@ public final class SemanticStatusNode: ASControlNode {
         if self.state != state || self.appearanceContext.cutout != cutout {
             self.state = state
             let previousStateContext = self.stateContext
+            let previousAppearanceContext = updateCutout ? self.appearanceContext : nil
+            
             self.stateContext = self.state.context(current: self.stateContext)
             self.stateContext.requestUpdate = { [weak self] in
                 self?.setNeedsDisplay()
             }
+            if updateCutout {
+                self.appearanceContext = self.appearanceContext.withUpdatedCutout(cutout)
+            }
             
-            if animated && previousStateContext !== self.stateContext {
-                self.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: previousStateContext, previousAppearanceContext: nil, completion: completion)
+            if animated && (previousStateContext !== self.stateContext || (updateCutout && previousAppearanceContext?.cutout != cutout)) {
+                self.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: previousStateContext, previousAppearanceContext: previousAppearanceContext, completion: completion)
             } else {
                 completion()
             }
@@ -513,7 +518,7 @@ public final class SemanticStatusNode: ASControlNode {
             return
         }
         
-        if let transitionAppearanceState = parameters.transitionState?.appearanceState {
+        if let transitionAppearanceState = parameters.transitionState?.appearanceState, transitionAppearanceState.background.alpha == 1.0 {
             transitionAppearanceState.drawBackground(context: context, size: bounds.size)
         }
         parameters.appearanceState.drawBackground(context: context, size: bounds.size)

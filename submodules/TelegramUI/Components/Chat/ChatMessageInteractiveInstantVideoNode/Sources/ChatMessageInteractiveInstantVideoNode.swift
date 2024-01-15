@@ -1347,16 +1347,6 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if item.presentationData.isPreview {
             state = .play
         }
-        if let statusNode = self.statusNode {
-            if state == .none {
-                self.statusNode = nil
-            }
-            statusNode.transitionToState(state, completion: { [weak statusNode] in
-                if state == .none {
-                    statusNode?.removeFromSupernode()
-                }
-            })
-        }
         
         let streamingProgressDiameter: CGFloat = 20.0
         let streamingCacheStatusFrame = CGRect(origin: statusFrame.origin.offsetBy(dx: 37.0, dy: 37.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
@@ -1374,8 +1364,6 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 streamingStatusNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
                 streamingStatusNode.layer.animateAlpha(from: 0.1, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
             }
-        } else if let streamingStatusNode = self.streamingStatusNode {
-            streamingStatusNode.backgroundNodeColor = item.presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor
         }
         
         if let streamingStatusNode = self.streamingStatusNode {
@@ -1399,9 +1387,21 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
         
-        if let statusNode = self.statusNode, streamingState != .none {
-            let cutoutFrame = streamingCacheStatusFrame.offsetBy(dx: -statusFrame.minX, dy: -statusFrame.minY).insetBy(dx: -2.0 + UIScreenPixel, dy: -2.0 + UIScreenPixel)
-            statusNode.setCutout(cutoutFrame, animated: true)
+        if let statusNode = self.statusNode {
+            if state == .none {
+                self.statusNode = nil
+            }
+            
+            var cutoutFrame: CGRect?
+            if streamingState != .none {
+                cutoutFrame = streamingCacheStatusFrame.offsetBy(dx: -statusFrame.minX, dy: -statusFrame.minY).insetBy(dx: -2.0 + UIScreenPixel, dy: -2.0 + UIScreenPixel)
+            }
+            
+            statusNode.transitionToState(state, animated: true, cutout: cutoutFrame, updateCutout: true, completion: { [weak statusNode] in
+                if state == .none {
+                    statusNode?.removeFromSupernode()
+                }
+            })
         }
         
         if case .playbackStatus = status.mediaStatus, !isViewOnceMessage || item.associatedData.isStandalone {

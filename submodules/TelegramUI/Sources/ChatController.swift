@@ -15707,6 +15707,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch recordedMediaPreview {
         case let .audio(audio):
+            self.audioRecorder.set(.single(nil))
+            
             var isScheduledMessages = false
             if case .scheduledMessages = self.presentationInterfaceState.subject {
                 isScheduledMessages = true
