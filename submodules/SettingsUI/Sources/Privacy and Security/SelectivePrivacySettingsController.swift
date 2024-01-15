@@ -58,7 +58,6 @@ private final class SelectivePrivacySettingsControllerArguments {
     let setPublicPhoto: (() -> Void)?
     let removePublicPhoto: (() -> Void)?
     let updateHideReadTime: ((Bool) -> Void)?
-    let updateHideReadTimeDisabled: (() -> Void)?
     let openPremiumIntro: () -> Void
     
     init(
@@ -72,7 +71,6 @@ private final class SelectivePrivacySettingsControllerArguments {
         setPublicPhoto: (() -> Void)?,
         removePublicPhoto: (() -> Void)?,
         updateHideReadTime: ((Bool) -> Void)?,
-        updateHideReadTimeDisabled: (() -> Void)?,
         openPremiumIntro: @escaping () -> Void
     ) {
         self.context = context
@@ -85,7 +83,6 @@ private final class SelectivePrivacySettingsControllerArguments {
         self.setPublicPhoto = setPublicPhoto
         self.removePublicPhoto = removePublicPhoto
         self.updateHideReadTime = updateHideReadTime
-        self.updateHideReadTimeDisabled = updateHideReadTimeDisabled
         self.openPremiumIntro = openPremiumIntro
     }
 }
@@ -541,8 +538,6 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
             case let .hideReadTime(_, text, enabled, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateHideReadTime?(value)
-                }, activatedWhileDisabled: {
-                    arguments.updateHideReadTimeDisabled?()
                 })
             case let .hideReadTimeInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -855,16 +850,22 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         let isEnabled: Bool
         switch state.setting {
         case .everybody:
-            isEnabled = false
+            if !state.disableFor.isEmpty {
+                isEnabled = true
+            } else {
+                isEnabled = false
+            }
         default:
             isEnabled = true
         }
-        entries.append(.hideReadTime(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTime, isEnabled,  isEnabled && state.hideReadTimeEnabled == true))
-        entries.append(.hideReadTimeInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimeFooter))
-        
-        if !peer.isPremium {
-            entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
-            entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
+        if isEnabled {
+            entries.append(.hideReadTime(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTime, isEnabled,  isEnabled && state.hideReadTimeEnabled == true))
+            entries.append(.hideReadTimeInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimeFooter))
+            
+            if !peer.isPremium {
+                entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
+                entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
+            }
         }
     }
     
@@ -1176,10 +1177,6 @@ func selectivePrivacySettingsController(
         updateState { state in
             return state.withUpdatedHideReadTimeEnabled(value)
         }
-    }, updateHideReadTimeDisabled: {
-        HapticFeedback().error()
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PrivacyInfo_ShowReadTime_AlwaysToast_Text, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, openPremiumIntro: {
         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
         pushControllerImpl?(controller, true)

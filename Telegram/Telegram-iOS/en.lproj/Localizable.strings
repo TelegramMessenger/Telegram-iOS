@@ -10917,7 +10917,7 @@ Sorry for the inconvenience.";
 "Settings.Privacy.Messages.ValueContactsAndPremium" = "Contacts and Premium";
 
 "Settings.Privacy.ReadTime" = "Hide Read Time";
-"Settings.Privacy.ReadTimeFooter" = "Do not show the time when you read a message to people you hid your last seen from. If you turn this on, their read time will also be hidden from you.\nThis does not affect group chats.";
+"Settings.Privacy.ReadTimeFooter" = "Hide the time when you read messages from people who can't see your last seen. If you turn this on, their read time will also be hidden from you.\nThis setting does not affect group chats.";
 
 "Settings.Privacy.LastSeenRevealedToast" = "Your last seen time is now visible.";
 "Settings.Privacy.MessageReadTimeRevealedToast" = "Your read times are now visible.";
