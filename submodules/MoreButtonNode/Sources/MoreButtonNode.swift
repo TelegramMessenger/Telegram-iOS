@@ -145,7 +145,10 @@ public final class MoreButtonNode: ASDisplayNode {
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let animationSize = CGSize(width: 30.0, height: 30.0)
         let inset: CGFloat = 0.0
-        self.iconNode.frame = CGRect(origin: CGPoint(x: inset + 6.0, y: floor((constrainedSize.height - animationSize.height) / 2.0) + 1.0), size: animationSize)
+        let iconFrame = CGRect(origin: CGPoint(x: inset + 6.0, y: floor((constrainedSize.height - animationSize.height) / 2.0) + 1.0), size: animationSize)
+        
+        self.iconNode.position = iconFrame.center
+        self.iconNode.bounds = CGRect(origin: .zero, size: iconFrame.size)
         
         let size = CGSize(width: animationSize.width + inset * 2.0, height: constrainedSize.height)
         let bounds = CGRect(origin: CGPoint(), size: size)

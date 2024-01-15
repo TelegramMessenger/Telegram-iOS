@@ -307,7 +307,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let (messageButtonWidth, messageContinueLayout) = makeMessageButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Conversation_ContactMessage.uppercased(), mainColor, false, false)
-                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Conversation_ContactAddContact.uppercased(), mainColor, false, false)
+                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, nil, false, !canMessage && !canAdd ? item.presentationData.strings.Conversation_ViewContactDetails.uppercased() : item.presentationData.strings.Conversation_ContactAddContact.uppercased(), mainColor, false, false)
                 
                 let maxButtonWidth = max(messageButtonWidth, addButtonWidth)
                 var maxContentWidth: CGFloat = avatarSize.width + 7.0
@@ -326,11 +326,8 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let lineWidth: CGFloat = 3.0
                     
-                    var buttonCount = 0
+                    var buttonCount = 1
                     if canMessage {
-                        buttonCount += 1
-                    }
-                    if canAdd {
                         buttonCount += 1
                     }
                     var buttonWidth = floor((boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0 - lineWidth))
@@ -385,7 +382,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
                             
                             strongSelf.addButtonNode.frame = addButtonFrame
-                            strongSelf.addButtonNode.isHidden = !canAdd
+                            strongSelf.addButtonNode.isHidden = !canAdd && canMessage
                             strongSelf.messageButtonNode.frame = messageButtonFrame
                             strongSelf.messageButtonNode.isHidden = !canMessage
                             
