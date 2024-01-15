@@ -2,6 +2,8 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
+import TelegramCore
 import Markdown
 import TextFormat
 import TelegramPresentationData
@@ -18,19 +20,23 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peerId: EnginePeer.Id
     let subject: PremiumPrivacyScreen.Subject
     
     let action: () -> Void
     let openPremiumIntro: () -> Void
     let dismiss: () -> Void
     
-    init(context: AccountContext,
-         subject: PremiumPrivacyScreen.Subject,
-         action: @escaping () -> Void,
-         openPremiumIntro: @escaping () -> Void,
-         dismiss: @escaping () -> Void
+    init(
+        context: AccountContext,
+        peerId: EnginePeer.Id,
+        subject: PremiumPrivacyScreen.Subject,
+        action: @escaping () -> Void,
+        openPremiumIntro: @escaping () -> Void,
+        dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.peerId = peerId
         self.subject = subject
         self.action = action
         self.openPremiumIntro = openPremiumIntro
@@ -50,10 +56,42 @@ private final class SheetContent: CombinedComponent {
     final class State: ComponentState {
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedIconImage: UIImage?
+        
+        let playOnce =  ActionSlot<Void>()
+        private var didPlayAnimation = false
+        
+        private var disposable: Disposable?
+        
+        private(set) var peer: EnginePeer?
+        
+        init(context: AccountContext, peerId: EnginePeer.Id) {
+            super.init()
+            
+            self.disposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                self.peer = peer
+                self.updated()
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+        
+        func playAnimationIfNeeded() {
+            guard !self.didPlayAnimation else {
+                return
+            }
+            self.didPlayAnimation = true
+            self.playOnce.invoke(Void())
+        }
     }
     
     func makeState() -> State {
-        return State()
+        return State(context: self.context, peerId: self.peerId)
     }
     
     static var body: Body {
@@ -101,23 +139,23 @@ private final class SheetContent: CombinedComponent {
             let buttonTitle: String
             let premiumString: String
             
-            let premiumTitleString = "Upgrade to Premium"
-            let premiumButtonTitle = "Subscribe to Telegram Premium"
+            let premiumTitleString = strings.PrivacyInfo_UpgradeToPremium_Title
+            let premiumButtonTitle = strings.PrivacyInfo_UpgradeToPremium_ButtonTitle
             
-            let peerName = "Name"
+            let peerName = state.peer?.compactDisplayTitle ?? ""
             switch component.subject {
             case .presence:
                 iconName = "PremiumPrivacyPresence"
-                titleString = "Show Your Last Seen"
-                textString = "To see **\(peerName)'s** Last Seen time, either start showing your own Last Seen Time..."
-                buttonTitle = "Show My Last Seen to Everyone"
-                premiumString = "Subscription will let you see **\(peerName)'s** Last Seen status without showing yours."
+                titleString = strings.PrivacyInfo_ShowLastSeen_Title
+                textString = strings.PrivacyInfo_ShowLastSeen_Text(peerName).string
+                buttonTitle = strings.PrivacyInfo_ShowLastSeen_ButtonTitle
+                premiumString = strings.PrivacyInfo_ShowLastSeen_PremiumInfo(peerName).string
             case .readTime:
                 iconName = "PremiumPrivacyRead"
-                titleString = "Show Your Read Date"
-                textString = "To see when **\(peerName)** read the message, either start showing your own read time:"
-                buttonTitle = "Show My Read Time"
-                premiumString = "Subscription will let you see **\(peerName)'s** read time without showing yours."
+                titleString = strings.PrivacyInfo_ShowReadTime_Title
+                textString = strings.PrivacyInfo_ShowReadTime_Text(peerName).string
+                buttonTitle = strings.PrivacyInfo_ShowReadTime_ButtonTitle
+                premiumString = strings.PrivacyInfo_ShowReadTime_PremiumInfo(peerName).string
             }
             
             let spacing: CGFloat = 8.0
@@ -163,15 +201,10 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
             )
             
-//            let icon = icon.update(
-//                component: BundleIconComponent(name: iconName, tintColor: .white),
-//                availableSize: CGSize(width: 70.0, height: 70.0),
-//                transition: .immediate
-//            )
-            
             let icon = icon.update(
                 component: LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: iconName)
+                    content: LottieComponent.AppBundleContent(name: iconName),
+                    playOnce: state.playOnce
                 ),
                 availableSize: CGSize(width: 70, height: 70),
                 transition: .immediate
@@ -343,6 +376,8 @@ private final class SheetContent: CombinedComponent {
                 
             contentSize.height += environment.safeInsets.bottom
             
+            state.playAnimationIfNeeded()
+            
             return contentSize
         }
     }
@@ -352,17 +387,20 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let peerId: EnginePeer.Id
     let subject: PremiumPrivacyScreen.Subject
     let action: () -> Void
     let openPremiumIntro: () -> Void
     
     init(
         context: AccountContext,
+        peerId: EnginePeer.Id,
         subject: PremiumPrivacyScreen.Subject,
         action: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void
     ) {
         self.context = context
+        self.peerId = peerId
         self.subject = subject
         self.action = action
         self.openPremiumIntro = openPremiumIntro
@@ -370,6 +408,9 @@ private final class SheetContainerComponent: CombinedComponent {
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.peerId != rhs.peerId {
             return false
         }
         if lhs.subject != rhs.subject {
@@ -393,6 +434,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        peerId: context.component.peerId,
                         subject: context.component.subject,
                         action: context.component.action,
                         openPremiumIntro: context.component.openPremiumIntro,
@@ -468,17 +510,20 @@ public class PremiumPrivacyScreen: ViewControllerComponentContainer {
     }
     
     private let context: AccountContext
+    private let peerId: EnginePeer.Id
     private let subject: PremiumPrivacyScreen.Subject
     private var action: (() -> Void)?
     private var openPremiumIntro: (() -> Void)?
         
     public init(
         context: AccountContext,
-        subject: PremiumPrivacyScreen.Subject, 
+        peerId: EnginePeer.Id,
+        subject: PremiumPrivacyScreen.Subject,
         action: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void
     ) {
         self.context = context
+        self.peerId = peerId
         self.subject = subject
         self.action = action
         self.openPremiumIntro = openPremiumIntro
@@ -487,6 +532,7 @@ public class PremiumPrivacyScreen: ViewControllerComponentContainer {
             context: context,
             component: SheetContainerComponent(
                 context: context,
+                peerId: peerId,
                 subject: subject,
                 action: action,
                 openPremiumIntro: openPremiumIntro

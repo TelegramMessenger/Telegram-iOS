@@ -10950,3 +10950,16 @@ Sorry for the inconvenience.";
 
 "Chat.TagSearchShowMessages" = "Show Other Messages";
 "Chat.TagSearchHideMessages" = "Hide Other Messages";
+
+"PrivacyInfo.UpgradeToPremium.Title" = "Upgrade to Premium";
+"PrivacyInfo.UpgradeToPremium.ButtonTitle" = "Subscribe to Telegram Premium";
+
+"PrivacyInfo.ShowLastSeen.Title" = "Show Your Last Seen";
+"PrivacyInfo.ShowLastSeen.Text" = "To see **%@'s** Last Seen time, either start showing your own Last Seen Time...";
+"PrivacyInfo.ShowLastSeen.ButtonTitle" = "Show My Last Seen to Everyone";
+"PrivacyInfo.ShowLastSeen.PremiumInfo" = "Subscription will let you see **%@'s** Last Seen status without showing yours.";
+
+"PrivacyInfo.ShowReadTime.Title" = "Show Your Read Time";
+"PrivacyInfo.ShowReadTime.Text" = "To see when **%@** read the message, either start showing your own read time:";
+"PrivacyInfo.ShowReadTime.ButtonTitle" = "Show My Read Time";
+"PrivacyInfo.ShowReadTime.PremiumInfo" = "Subscription will let you see **%@'s** read time without showing yours.";
