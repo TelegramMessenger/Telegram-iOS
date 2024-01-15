@@ -2959,7 +2959,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let context = UIGraphicsGetCurrentContext()!
         
         context.translateBy(x: -self.imageNode.frame.minX, y: -self.imageNode.frame.minY)
-        self.view.layer.render(in: context)
+        self.contextSourceNode.contentNode.view.layer.render(in: context)
         
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()

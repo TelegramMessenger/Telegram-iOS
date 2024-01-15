@@ -10937,7 +10937,7 @@ Sorry for the inconvenience.";
 "Chat.ReactionContextMenu.RemoveTag" = "Remove Tag";
 
 "Chat.EmptyStateMessagingRestrictedToPremium.Text" = "Subscribe to **Premium**\nto message **%@**.";
-"Chat.EmptyStateMessagingRestrictedToPremium.Action" = "Add Premium";
+"Chat.EmptyStateMessagingRestrictedToPremium.Action" = "Get Premium";
 
 "Chat.ContextMenuReadDate.ReadAvailablePrefix" = "read";
 "Chat.ContextMenuReadDate.ReadAvailableBadge" = "show when";
