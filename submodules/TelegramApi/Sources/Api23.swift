@@ -801,11 +801,11 @@ public extension Api {
 public extension Api {
     enum UserStatus: TypeConstructorDescription {
         case userStatusEmpty
-        case userStatusLastMonth
-        case userStatusLastWeek
+        case userStatusLastMonth(flags: Int32)
+        case userStatusLastWeek(flags: Int32)
         case userStatusOffline(wasOnline: Int32)
         case userStatusOnline(expires: Int32)
-        case userStatusRecently
+        case userStatusRecently(flags: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -815,17 +815,17 @@ public extension Api {
                     }
                     
                     break
-                case .userStatusLastMonth:
+                case .userStatusLastMonth(let flags):
                     if boxed {
-                        buffer.appendInt32(2011940674)
+                        buffer.appendInt32(1703516023)
                     }
-                    
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     break
-                case .userStatusLastWeek:
+                case .userStatusLastWeek(let flags):
                     if boxed {
-                        buffer.appendInt32(129960444)
+                        buffer.appendInt32(1410997530)
                     }
-                    
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     break
                 case .userStatusOffline(let wasOnline):
                     if boxed {
@@ -839,11 +839,11 @@ public extension Api {
                     }
                     serializeInt32(expires, buffer: buffer, boxed: false)
                     break
-                case .userStatusRecently:
+                case .userStatusRecently(let flags):
                     if boxed {
-                        buffer.appendInt32(-496024847)
+                        buffer.appendInt32(2065268168)
                     }
-                    
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -852,16 +852,16 @@ public extension Api {
         switch self {
                 case .userStatusEmpty:
                 return ("userStatusEmpty", [])
-                case .userStatusLastMonth:
-                return ("userStatusLastMonth", [])
-                case .userStatusLastWeek:
-                return ("userStatusLastWeek", [])
+                case .userStatusLastMonth(let flags):
+                return ("userStatusLastMonth", [("flags", flags as Any)])
+                case .userStatusLastWeek(let flags):
+                return ("userStatusLastWeek", [("flags", flags as Any)])
                 case .userStatusOffline(let wasOnline):
                 return ("userStatusOffline", [("wasOnline", wasOnline as Any)])
                 case .userStatusOnline(let expires):
                 return ("userStatusOnline", [("expires", expires as Any)])
-                case .userStatusRecently:
-                return ("userStatusRecently", [])
+                case .userStatusRecently(let flags):
+                return ("userStatusRecently", [("flags", flags as Any)])
     }
     }
     
@@ -869,10 +869,26 @@ public extension Api {
             return Api.UserStatus.userStatusEmpty
         }
         public static func parse_userStatusLastMonth(_ reader: BufferReader) -> UserStatus? {
-            return Api.UserStatus.userStatusLastMonth
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.UserStatus.userStatusLastMonth(flags: _1!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_userStatusLastWeek(_ reader: BufferReader) -> UserStatus? {
-            return Api.UserStatus.userStatusLastWeek
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.UserStatus.userStatusLastWeek(flags: _1!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_userStatusOffline(_ reader: BufferReader) -> UserStatus? {
             var _1: Int32?
@@ -897,7 +913,15 @@ public extension Api {
             }
         }
         public static func parse_userStatusRecently(_ reader: BufferReader) -> UserStatus? {
-            return Api.UserStatus.userStatusRecently
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.UserStatus.userStatusRecently(flags: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

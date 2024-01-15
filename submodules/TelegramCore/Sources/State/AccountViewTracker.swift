@@ -1388,7 +1388,7 @@ public final class AccountViewTracker {
     }
     
     private func internalRefreshCanSendMessagesStatsForPeerIds(peerIds: [PeerId]) {
-        /*self.queue.async {
+        self.queue.async {
             var addedPeerIds: [PeerId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for peerId in peerIds {
@@ -1472,7 +1472,7 @@ public final class AccountViewTracker {
                     self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
                 }
             }
-        }*/
+        }
     }
     
     public func updateMarkAllMentionsSeen(peerId: PeerId, threadId: Int64?) {
@@ -2326,9 +2326,6 @@ public final class AccountViewTracker {
                     }
                 }
                 var reactionCount: Int32 = 0
-                /*if let view = views.views[pendingReactionsKey] as? PendingMessageActionsSummaryView {
-                    reactionCount -= view.count
-                }*/
                 if let view = views.views[summaryReactionsKey] as? MessageHistoryTagSummaryView {
                     if let unseenCount = view.count {
                         reactionCount += unseenCount
