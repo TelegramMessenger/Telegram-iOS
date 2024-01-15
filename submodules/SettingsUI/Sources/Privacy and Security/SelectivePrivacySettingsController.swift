@@ -1177,6 +1177,7 @@ func selectivePrivacySettingsController(
             return state.withUpdatedHideReadTimeEnabled(value)
         }
     }, updateHideReadTimeDisabled: {
+        HapticFeedback().error()
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PrivacyInfo_ShowReadTime_AlwaysToast_Text, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
     }, openPremiumIntro: {
