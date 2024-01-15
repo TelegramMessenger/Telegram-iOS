@@ -1617,7 +1617,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         
         let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, requestPeerType: nil, location: effectiveLocation, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, threadId, dismissSearch)
-        }, openDisabledPeer: { _, _ in
+        }, openDisabledPeer: { _, _, _ in
         }, openRecentPeerOptions: { [weak self] peer in
             self?.requestOpenRecentPeerOptions?(peer)
         }, openMessage: { [weak self] peer, threadId, messageId, deactivateOnAction in

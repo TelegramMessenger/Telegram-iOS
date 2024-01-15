@@ -12,7 +12,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
         return nil
     }
-    if let search = chatPresentationInterfaceState.search {
+    if let search = chatPresentationInterfaceState.search, chatPresentationInterfaceState.hasSearchTags {
         if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId, case .everything = search.domain {
             if let currentPanel = currentPanel as? ChatSearchTitleAccessoryPanelNode {
                 return currentPanel

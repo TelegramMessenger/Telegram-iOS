@@ -19,8 +19,7 @@ extension ChatControllerImpl {
         if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
             var items: [ContextMenuItem] = []
             
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Fiter by Tag", icon: { _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { _ in
                 return nil
             }, action: { [weak self] _, a in
                 guard let self else {
@@ -35,7 +34,7 @@ extension ChatControllerImpl {
                 
                 a(.default)
             })))
-            items.append(.action(ContextMenuActionItem(text: "Remove Tag", textColor: .destructive, icon: { _ in
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { _ in
                 return nil
             }, action: { [weak self] _, a in
                 a(.dismissWithoutContent)

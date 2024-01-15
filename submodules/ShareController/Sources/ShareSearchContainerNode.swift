@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
+import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -35,13 +36,13 @@ private enum ShareSearchRecentEntryStableId: Hashable {
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
     case topPeers(PresentationTheme, PresentationStrings)
-    case peer(index: Int, theme: PresentationTheme, peer: EnginePeer, associatedPeer: EnginePeer?, presence: EnginePeer.Presence?, PresentationStrings)
+    case peer(index: Int, theme: PresentationTheme, peer: EnginePeer, associatedPeer: EnginePeer?, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, strings: PresentationStrings)
     
     var stableId: ShareSearchRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, _, peer, _, _, _):
+            case let .peer(_, _, peer, _, _, _, _):
                 return .peerId(peer.id)
         }
     }
@@ -60,8 +61,8 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsStrings):
-                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsAssociatedPeer == rhsAssociatedPeer && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence {
+            case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsRequiresPremiumForMessaging, lhsStrings):
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsRequiresPremiumForMessaging, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsAssociatedPeer == rhsAssociatedPeer && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging {
                     return true
                 } else {
                     return false
@@ -73,11 +74,11 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -87,13 +88,13 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         switch self {
         case let .topPeers(theme, strings):
             return ShareControllerRecentPeersGridItem(environment: environment, context: context, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
-        case let .peer(_, theme, peer, associatedPeer, presence, strings):
+        case let .peer(_, theme, peer, associatedPeer, presence, requiresPremiumForMessaging, strings):
             var peers: [EnginePeer.Id: EnginePeer] = [peer.id: peer]
             if let associatedPeer = associatedPeer {
                 peers[associatedPeer.id] = associatedPeer
             }
             let peer = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
-            return ShareControllerPeerGridItem(environment: environment, context: context, theme: theme, strings: strings, item: .peer(peer: peer, presence: presence, topicId: nil, threadData: nil), controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+            return ShareControllerPeerGridItem(environment: environment, context: context, theme: theme, strings: strings, item: .peer(peer: peer, presence: presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: requiresPremiumForMessaging), controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -102,6 +103,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
     let peer: EngineRenderedPeer?
     let presence: EnginePeer.Presence?
+    let requiresPremiumForMessaging: Bool
     let theme: PresentationTheme
     let strings: PresentationStrings
     
@@ -120,6 +122,12 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.presence != rhs.presence {
+            return false
+        }
+        if lhs.requiresPremiumForMessaging != rhs.requiresPremiumForMessaging {
+            return false
+        }
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -133,7 +141,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     func item(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
 //        let item: ShareControllerPeerGridItem.ShareItem
 //        item = self.peer.flatMap { .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil) }
-        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil) }), controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: self.requiresPremiumForMessaging) }), controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -199,7 +207,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let searchQuery = ValuePromise<String>("", ignoreRepeated: true)
     private let searchDisposable = MetaDisposable()
     
-    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [EngineRenderedPeer]) {
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction, recentPeers recentPeerList: [(peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool)]) {
         self.environment = environment
         self.context = context
         self.theme = theme
@@ -260,8 +268,65 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     }
                 )
                 
-                return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
-                |> map { accountPeer, foundLocalPeers, foundRemotePeers -> ([ShareSearchPeerEntry]?, Bool) in
+                struct FoundPeers {
+                    var foundLocalPeers: [RenderedPeer]
+                    var foundRemotePeers: ([FoundPeer], [FoundPeer], Bool)
+                }
+                
+                let foundPeers = Promise<FoundPeers>()
+                foundPeers.set(combineLatest(
+                    foundLocalPeers,
+                    foundRemotePeers
+                )
+               |> map { foundLocalPeers, foundRemotePeers -> FoundPeers in
+                    return FoundPeers(
+                        foundLocalPeers: foundLocalPeers,
+                        foundRemotePeers: foundRemotePeers
+                    )
+                })
+                
+                let peerRequiresPremiumForMessaging: Signal<[EnginePeer.Id: Bool], NoError>
+                peerRequiresPremiumForMessaging = foundPeers.get()
+                |> map { foundPeers -> Set<EnginePeer.Id> in
+                    var result = Set<EnginePeer.Id>()
+                    
+                    for peer in foundPeers.foundLocalPeers {
+                        if let user = peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                            result.insert(user.id)
+                        }
+                    }
+                    
+                    for peer in foundPeers.foundRemotePeers.0 {
+                        if let user = peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                            result.insert(user.id)
+                        }
+                    }
+                    for peer in foundPeers.foundRemotePeers.1 {
+                        if let user = peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                            result.insert(user.id)
+                        }
+                    }
+                    
+                    return result
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { peerIds -> Signal<[EnginePeer.Id: Bool], NoError> in
+                    if let context = context as? ShareControllerAppAccountContext {
+                        context.context.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: Array(peerIds))
+                    }
+                    
+                    return context.engineData.subscribe(
+                        EngineDataMap(
+                            peerIds.map(TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.init(id:))
+                        )
+                    )
+                }
+                
+                return combineLatest(accountPeer, foundPeers.get(), peerRequiresPremiumForMessaging)
+                |> map { accountPeer, foundPeers, peerRequiresPremiumForMessaging -> ([ShareSearchPeerEntry]?, Bool) in
+                    let foundLocalPeers = foundPeers.foundLocalPeers
+                    let foundRemotePeers = foundPeers.foundRemotePeers
+                    
                     var entries: [ShareSearchPeerEntry] = []
                     var index: Int32 = 0
                     
@@ -271,7 +336,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                         if !existingPeerIds.contains(accountPeer.id) {
                             existingPeerIds.insert(accountPeer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, theme: theme, strings: strings))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings))
                             index += 1
                         }
                     }
@@ -280,7 +345,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
                             if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(renderedPeer.peerId)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -290,7 +355,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if foundRemotePeers.2 {
                         isPlaceholder = true
                         for _ in 0 ..< 4 {
-                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, theme: theme, strings: strings))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings))
                             index += 1
                         }
                     } else {
@@ -298,7 +363,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -307,7 +372,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, theme: theme, strings: strings))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings))
                                 index += 1
                             }
                         }
@@ -370,9 +435,9 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 recentItemList.append(.topPeers(theme, strings))
             }
             var index = 0
-            for peer in recentPeerList {
+            for (peer, requiresPremiumForMessaging) in recentPeerList {
                 if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer._asPeer()) {
-                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer._asPeer().associatedPeerId.flatMap { peer.peers[$0] }, presence: nil, strings))
+                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer._asPeer().associatedPeerId.flatMap { peer.peers[$0] }, presence: nil, requiresPremiumForMessaging: requiresPremiumForMessaging, strings: strings))
                     index += 1
                 }
             }
@@ -476,7 +541,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 switch $0 {
                     case .topPeers:
                         return false
-                    case let .peer(_, _, peer, _, _, _):
+                    case let .peer(_, _, peer, _, _, _, _):
                         return peer.id == ensurePeerVisibleOnLayout
                 }
             }) {

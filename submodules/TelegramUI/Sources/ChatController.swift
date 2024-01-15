@@ -120,6 +120,7 @@ import PeerInfoScreen
 import MediaEditorScreen
 import WallpaperGalleryScreen
 import WallpaperGridScreen
+import VideoMessageCameraScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -347,9 +348,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var audioRecorderDisposable: Disposable?
     var audioRecorderStatusDisposable: Disposable?
     
-    var videoRecorderValue: InstantVideoController?
-    var videoRecorder = Promise<InstantVideoController?>()
+    var videoRecorderValue: VideoMessageCameraScreen?
+    var videoRecorder = Promise<VideoMessageCameraScreen?>()
     var videoRecorderDisposable: Disposable?
+    
+    var recorderDataDisposable = MetaDisposable()
     
     var buttonKeyboardMessageDisposable: Disposable?
     var cachedDataDisposable: Disposable?
@@ -680,9 +683,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return true
             }
             
+            if let _ = strongSelf.videoRecorderValue {
+                return false
+            }
+            
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             if strongSelf.presentVoiceMessageDiscardAlert(action: action, performAction: false) {
+                return false
+            }
+            
+            if strongSelf.presentRecordedVoiceMessageDiscardAlert(action: action, performAction: false) {
                 return false
             }
             
@@ -738,6 +749,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if (file.isVoice || file.isInstantVideo) && message.minAutoremoveOrClearTimeout == viewOnceTimeout {
                             strongSelf.openViewOnceMediaMessage(message)
+                            return false
+                        }
+                    } else if file.isVideo {
+                        if !displayVoiceMessageDiscardAlert() {
                             return false
                         }
                     }
@@ -2256,6 +2271,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
+                
+                shareController.parentNavigationController = strongSelf.navigationController as? NavigationController
                 
                 if let message = messages.first, message.media.contains(where: { media in
                     if media is TelegramMediaContact || media is TelegramMediaPoll {
@@ -5168,6 +5185,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     threadInfo = .single(nil)
                 }
                 
+                let hasSearchTags: Signal<Bool, NoError>
+                if case let .peer(peerId) = self.chatLocation, peerId == context.account.peerId {
+                    hasSearchTags = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+                    )
+                    |> map { tags -> Bool in
+                        return !tags.isEmpty
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSearchTags = .single(false)
+                }
+                
+                let isPremiumRequiredForMessaging: Signal<Bool, NoError>
+                if let peerId = self.chatLocation.peerId {
+                    isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
+                    |> distinctUntilChanged
+                } else {
+                    isPremiumRequiredForMessaging = .single(false)
+                }
+                
                 self.peerDisposable.set(combineLatest(
                     queue: Queue.mainQueue(),
                     peerView.get(),
@@ -5176,10 +5214,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasScheduledMessages,
                     self.reportIrrelvantGeoNoticePromise.get(),
                     displayedCountSignal,
-                    threadInfo
-                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo in
+                    threadInfo,
+                    hasSearchTags,
+                    isPremiumRequiredForMessaging
+                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, isPremiumRequiredForMessaging in
                     if let strongSelf = self {
-                        if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo {
+                        if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging {
                             return
                         }
                         
@@ -5400,6 +5440,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }
+                        if strongSelf.presentationInterfaceState.search != nil && strongSelf.presentationInterfaceState.hasSearchTags {
+                            didDisplayActionsPanel = true
+                        }
                         
                         var displayActionsPanel = false
                         if let contactStatus = contactStatus, !contactStatus.isEmpty, let peerStatusSettings = contactStatus.peerStatusSettings {
@@ -5416,6 +5459,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     displayActionsPanel = true
                                 }
                             }
+                        }
+                        if strongSelf.presentationInterfaceState.search != nil && hasSearchTags {
+                            displayActionsPanel = true
                         }
                         
                         if displayActionsPanel != didDisplayActionsPanel {
@@ -5441,6 +5487,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                                 .updatedCurrentSendAsPeerId(currentSendAsPeerId)
                                 .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                                .updatedHasSearchTags(hasSearchTags)
+                                .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
                                     
@@ -5689,15 +5737,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     onlineMemberCount = recentOnlineSignal
                 }
                 
+                let hasSearchTags: Signal<Bool, NoError>
+                if case let .peer(peerId) = self.chatLocation, peerId == context.account.peerId {
+                    hasSearchTags = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+                    )
+                    |> map { tags -> Bool in
+                        return !tags.isEmpty
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSearchTags = .single(false)
+                }
+                
+                let isPremiumRequiredForMessaging: Signal<Bool, NoError>
+                if let peerId = self.chatLocation.peerId {
+                    isPremiumRequiredForMessaging = context.engine.peers.subscribeIsPremiumRequiredForMessaging(id: peerId)
+                    |> distinctUntilChanged
+                } else {
+                    isPremiumRequiredForMessaging = .single(false)
+                }
+                
                 self.titleDisposable.set(nil)
                 self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(),
                     peerView,
                     messageAndTopic,
                     savedMessagesPeer,
                     onlineMemberCount,
-                    hasScheduledMessages
+                    hasScheduledMessages,
+                    hasSearchTags,
+                    isPremiumRequiredForMessaging
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, isPremiumRequiredForMessaging in
                     if let strongSelf = self {
                         strongSelf.hasScheduledMessages = hasScheduledMessages
                         
@@ -5965,6 +6036,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return renderedPeer
                                 }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages).updatedCurrentSendAsPeerId(currentSendAsPeerId)
                                     .updatedCopyProtectionEnabled(copyProtectionEnabled)
+                                    .updatedHasSearchTags(hasSearchTags)
+                                    .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         
@@ -6119,7 +6192,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         $0.updatedInputTextPanelState { panelState in
                             if let videoRecorder = videoRecorder {
                                 if panelState.mediaRecordingState == nil {
-                                    return panelState.withUpdatedMediaRecordingState(.video(status: .recording(videoRecorder.audioStatus), isLocked: strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId))
+                                    let recordingStatus = videoRecorder.recordingStatus
+                                    return panelState.withUpdatedMediaRecordingState(.video(status: .recording(InstantVideoControllerRecordingStatus(micLevel: recordingStatus.micLevel, duration: recordingStatus.duration)), isLocked: strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId))
                                 }
                             } else {
                                 return panelState.withUpdatedMediaRecordingState(nil)
@@ -6131,31 +6205,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let videoRecorder = videoRecorder {
                         strongSelf.recorderFeedback?.impact(.light)
                         
-                        videoRecorder.onDismiss = { [weak self] isCancelled in
-                            self?.chatDisplayNode.updateRecordedMediaDeleted(isCancelled)
-                            self?.beginMediaRecordingRequestId += 1
-                            self?.lockMediaRecordingRequestId = nil
-                            self?.videoRecorder.set(.single(nil))
-                        }
                         videoRecorder.onStop = {
                             if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                    $0.updatedInputTextPanelState { panelState in
-                                        return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
-                                    }
-                                })
+                                strongSelf.dismissMediaRecorder(.pause)
                             }
                         }
                         strongSelf.present(videoRecorder, in: .window(.root))
                         
                         if strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId {
-                            videoRecorder.lockVideo()
+                            videoRecorder.lockVideoRecording()
                         }
                     }
                     strongSelf.updateDownButtonVisibility()
                     
                     if let previousVideoRecorderValue = previousVideoRecorderValue {
-                        previousVideoRecorderValue.dismissVideo()
+                        previousVideoRecorderValue.discardVideo()
                     }
                 }
             }
@@ -6597,6 +6661,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.stickerSettingsDisposable?.dispose()
             self.searchQuerySuggestionState?.1.dispose()
             self.preloadSavedMessagesChatsDisposable?.dispose()
+            self.recorderDataDisposable.dispose()
         }
         deallocate()
     }
@@ -10825,6 +10890,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             Queue.mainQueue().after(0.5) {
                 let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId).startStandalone()
             }
+        }, openPremiumRequiredForMessaging: { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = PremiumIntroScreen(context: self.context, source: .settings)
+            self.push(controller)
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return
@@ -12815,12 +12886,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.push(controller)
                 
                 if justInstalled {
-                    let content: UndoOverlayContent
-//                    if bot.flags.contains(.showInSettings) {
-                    content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
-//                    } else {
-//                        content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
-//                    }
+                    let content: UndoOverlayContent = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
                     controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                 }
             }, error: { [weak self] error in
@@ -15286,7 +15352,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func deactivateRaiseGesture() {
         self.raiseToListenActivateRecordingTimer?.invalidate()
         self.raiseToListenActivateRecordingTimer = nil
-        self.dismissMediaRecorder(.preview)
+        self.dismissMediaRecorder(.pause)
     }
     
     func requestAudioRecorder(beginWithTone: Bool) {
@@ -15318,68 +15384,79 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isScheduledMessages = true
                 }
                 
-                self.videoRecorder.set(.single(legacyInstantVideoController(theme: self.presentationData.theme, forStory: false, panelFrame: self.view.convert(currentInputPanelFrame, to: nil), context: self.context, peerId: peerId, slowmodeState: !isScheduledMessages ? self.presentationInterfaceState.slowmodeState : nil, hasSchedule: !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat, send: { [weak self] videoController, message in
-                    if let strongSelf = self {
-                        guard let message = message else {
-                            strongSelf.videoRecorder.set(.single(nil))
+                var isBot = false
+                if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                    isBot = true
+                }
+                
+                let controller = VideoMessageCameraScreen(
+                    context: self.context,
+                    updatedPresentationData: self.updatedPresentationData,
+                    allowLiveUpload: peerId.namespace != Namespaces.Peer.SecretChat,
+                    viewOnceAvailable: !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot,
+                    inputPanelFrame: currentInputPanelFrame,
+                    completion: { [weak self] message, silentPosting, scheduleTime in
+                        guard let self, let videoController = self.videoRecorderValue else {
                             return
                         }
-
-                        let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-                        let correlationId = Int64.random(in: 0 ..< Int64.max)
                         
-                        let updatedMessage = message
+                        guard var message else {
+                            self.recorderFeedback?.error()
+                            self.recorderFeedback = nil
+                            self.videoRecorder.set(.single(nil))
+                            return
+                        }
+                        
+                        let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
+                        let correlationId = Int64.random(in: 0 ..< Int64.max)
+                        message = message
                             .withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)
                             .withUpdatedCorrelationId(correlationId)
-//                            .withUpdatedAttributes({ attributes in
-//                                var attributes = attributes
-//#if DEBUG
-//                                attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
-//#endif
-//                                return attributes
-//                            })
-
+                        
                         var usedCorrelationId = false
-
-                        if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
+                        if scheduleTime == nil, self.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
                             usedCorrelationId = true
-                            strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNodeImpl.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController] in
+                            self.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNodeImpl.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController, weak self] in
                                 videoController?.hideVideoSnapshot()
-                                guard let strongSelf = self else {
+                                guard let self else {
                                     return
                                 }
-                                strongSelf.videoRecorder.set(.single(nil))
+                                self.videoRecorder.set(.single(nil))
                             })
                         } else {
-                            strongSelf.videoRecorder.set(.single(nil))
+                            self.videoRecorder.set(.single(nil))
                         }
-
-                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                            if let strongSelf = self {
-                                strongSelf.chatDisplayNode.collapseInput()
+                        
+                        self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                            if let self {
+                                self.chatDisplayNode.collapseInput()
                                 
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
+                                self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                    $0.updatedRecordedMediaPreview(nil).updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
                                 })
                             }
                         }, usedCorrelationId ? correlationId : nil)
-
-                        strongSelf.sendMessages([updatedMessage])
+                        
+                        let messages = [message]
+                        let transformedMessages: [EnqueueMessage]
+                        if let silentPosting {
+                            transformedMessages = self.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                        } else if let scheduleTime {
+                            transformedMessages = self.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
+                        } else {
+                            transformedMessages = self.transformEnqueueMessages(messages)
+                        }
+                        
+                        self.sendMessages(transformedMessages)
                     }
-                }, displaySlowmodeTooltip: { [weak self] view, rect in
-                    self?.interfaceInteraction?.displaySlowmodeTooltip(view, rect)
-                }, presentSchedulePicker: { [weak self] done in
-                    if let strongSelf = self {
-                        strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
-                            if let strongSelf = self {
-                                done(time)
-                                if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
-                                    strongSelf.openScheduledMessages()
-                                }
-                            }
-                        })
+                )
+                controller.onResume = { [weak self] in
+                    guard let self else {
+                        return
                     }
-                })))
+                    self.resumeMediaRecorder()
+                }
+                self.videoRecorder.set(.single(controller))
             }
         }
     }
@@ -15405,6 +15482,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             switch updatedAction {
             case .dismiss:
+                self.recorderDataDisposable.set(nil)
                 self.chatDisplayNode.updateRecordedMediaDeleted(true)
                 self.audioRecorder.set(.single(nil))
             case .preview, .pause:
@@ -15416,8 +15494,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return panelState.withUpdatedMediaRecordingState(.waitingForPreview)
                     }
                 })
-                let _ = (audioRecorderValue.takenRecordedData()
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] data in
+                self.recorderDataDisposable.set((audioRecorderValue.takenRecordedData()
+                |> deliverOnMainQueue).startStrict(next: { [weak self] data in
                     if let strongSelf = self, let data = data {
                         if data.duration < 0.5 {
                             strongSelf.recorderFeedback?.error()
@@ -15427,25 +15505,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return panelState.withUpdatedMediaRecordingState(nil)
                                 }
                             })
+                            strongSelf.recorderDataDisposable.set(nil)
                         } else if let waveform = data.waveform {
                             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(data.compressedData.count))
                             
                             strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                $0.updatedRecordedMediaPreview(ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5))).updatedInputTextPanelState { panelState in
+                                $0.updatedRecordedMediaPreview(.audio(ChatRecordedMediaPreview.Audio(resource: resource, fileSize: Int32(data.compressedData.count), duration: Int32(data.duration), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))).updatedInputTextPanelState { panelState in
                                     return panelState.withUpdatedMediaRecordingState(nil)
                                 }
                             })
                             strongSelf.recorderFeedback = nil
                             strongSelf.updateDownButtonVisibility()
+                            strongSelf.recorderDataDisposable.set(nil)
                         }
                     }
-                })
+                }))
             case let .send(viewOnce):
                 self.chatDisplayNode.updateRecordedMediaDeleted(false)
-                let _ = (audioRecorderValue.takenRecordedData()
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] data in
+                self.recorderDataDisposable.set((audioRecorderValue.takenRecordedData()
+                |> deliverOnMainQueue).startStrict(next: { [weak self] data in
                     if let strongSelf = self, let data = data {
                         if data.duration < 0.5 {
                             strongSelf.recorderFeedback?.error()
@@ -15493,25 +15573,66 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             strongSelf.recorderFeedback?.tap()
                             strongSelf.recorderFeedback = nil
+                            strongSelf.recorderDataDisposable.set(nil)
                         }
                     }
-                })
+                }))
             }
         } else if let videoRecorderValue = self.videoRecorderValue {
             if case .send = updatedAction {
                 self.chatDisplayNode.updateRecordedMediaDeleted(false)
-                videoRecorderValue.completeVideo()
+                videoRecorderValue.sendVideoRecording()
+                self.recorderDataDisposable.set(nil)
             } else {
                 if case .dismiss = updatedAction {
                     self.chatDisplayNode.updateRecordedMediaDeleted(true)
+                    self.recorderDataDisposable.set(nil)
                 }
-                if case .preview = updatedAction, videoRecorderValue.stopVideo() {
-                    self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                        $0.updatedInputTextPanelState { panelState in
-                            return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
-                        }
-                    })
-                } else {
+                
+                switch updatedAction {
+                case .preview, .pause:
+                    if videoRecorderValue.stopVideoRecording() {
+                        self.recorderDataDisposable.set((videoRecorderValue.takenRecordedData()
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] data in
+                            if let strongSelf = self, let data = data {
+                                if data.duration < 1.0 {
+                                    strongSelf.recorderFeedback?.error()
+                                    strongSelf.recorderFeedback = nil
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                    strongSelf.recorderDataDisposable.set(nil)
+                                    strongSelf.videoRecorder.set(.single(nil))
+                                } else {
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        $0.updatedRecordedMediaPreview(.video(
+                                            ChatRecordedMediaPreview.Video(
+                                                duration: Int32(data.duration),
+                                                frames: data.frames,
+                                                framesUpdateTimestamp: data.framesUpdateTimestamp,
+                                                trimRange: data.trimRange,
+                                                control: ChatRecordedMediaPreview.Video.Control(
+                                                    updateTrimRange: { [weak self] start, end, updatedEnd, apply in
+                                                        if let self, let videoRecorderValue = self.videoRecorderValue {
+                                                            videoRecorderValue.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+                                                        }
+                                                    }
+                                                )
+                                            )
+                                        )).updatedInputTextPanelState { panelState in
+                                            return panelState.withUpdatedMediaRecordingState(nil)
+                                        }
+                                    })
+                                    strongSelf.recorderFeedback = nil
+                                    strongSelf.updateDownButtonVisibility()
+                                }
+                            }
+                        }))
+                    }
+                default:
+                    self.recorderDataDisposable.set(nil)
                     self.videoRecorder.set(.single(nil))
                 }
             }
@@ -15526,13 +15647,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 audioRecorderValue.stop()
                 self.audioRecorder.set(.single(nil))
             }
-        } else if let videoRecorderValue = self.videoRecorderValue {
-            if videoRecorderValue.stopVideo() {
-                self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                    $0.updatedInputTextPanelState { panelState in
-                        return panelState.withUpdatedMediaRecordingState(.video(status: .editing, isLocked: false))
-                    }
-                })
+        } else if let _ = self.videoRecorderValue {
+            if let _ = self.presentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                self.dismissMediaRecorder(pause ? .pause : .preview)
             } else {
                 self.videoRecorder.set(.single(nil))
             }
@@ -15540,12 +15657,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func resumeMediaRecorder() {
+        self.context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
+        
         if let audioRecorderValue = self.audioRecorderValue {
             audioRecorderValue.resume()
             
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                 $0.updatedInputTextPanelState { panelState in
                     return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorderValue, isLocked: true))
+                }.updatedRecordedMediaPreview(nil)
+            })
+        } else if let videoRecorderValue = self.videoRecorderValue {
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                $0.updatedInputTextPanelState { panelState in
+                    let recordingStatus = videoRecorderValue.recordingStatus
+                    return panelState.withUpdatedMediaRecordingState(.video(status: .recording(InstantVideoControllerRecordingStatus(micLevel: recordingStatus.micLevel, duration: recordingStatus.duration)), isLocked: true))
                 }.updatedRecordedMediaPreview(nil)
             })
         }
@@ -15560,10 +15686,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        self.videoRecorderValue?.lockVideo()
+        self.videoRecorderValue?.lockVideoRecording()
     }
     
     func deleteMediaRecording() {
+        if let _ = self.audioRecorderValue {
+            self.audioRecorder.set(.single(nil))
+        } else if let _ = self.videoRecorderValue {
+            self.videoRecorder.set(.single(nil))
+        }
+        
+        self.recorderDataDisposable.set(nil)
         self.chatDisplayNode.updateRecordedMediaDeleted(true)
         self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
             $0.updatedRecordedMediaPreview(nil)
@@ -15574,7 +15707,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         
-        if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
+        guard let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview else {
+            return
+        }
+        
+        switch recordedMediaPreview {
+        case let .audio(audio):
+            self.audioRecorder.set(.single(nil))
+            
             var isScheduledMessages = false
             if case .scheduledMessages = self.presentationInterfaceState.subject {
                 isScheduledMessages = true
@@ -15587,7 +15727,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let waveformBuffer = recordedMediaPreview.waveform.makeBitstream()
+            let waveformBuffer = audio.waveform.makeBitstream()
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
@@ -15606,7 +15746,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: viewOnceTimeout, countdownBeginTime: nil))
             }
             
-            let messages: [EnqueueMessage] = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+            let messages: [EnqueueMessage] = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: audio.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(audio.fileSize), attributes: [.Audio(isVoice: true, duration: Int(audio.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: self.chatLocation.threadId, replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
             
             let transformedMessages: [EnqueueMessage]
             if let silentPosting = silentPosting {
@@ -15629,6 +15769,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
             
             donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, intentContext: .chat, peerIds: [peerId])
+        case .video:
+            self.videoRecorderValue?.sendVideoRecording(silentPosting: silentPosting, scheduleTime: scheduleTime)
         }
     }
     
@@ -17223,6 +17365,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             alertAction?()
             Queue.mainQueue().after(delay ? 0.2 : 0.0) {
                 self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Conversation_DiscardVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardVoiceMessageAction, action: { [weak self] in
+                    self?.stopMediaRecorder()
+                    Queue.mainQueue().after(0.1) {
+                        action()
+                    }
+                })]), in: .window(.root))
+            }
+            
+            return true
+        } else if performAction {
+            action()
+        }
+        return false
+    }
+    
+    func presentRecordedVoiceMessageDiscardAlert(action: @escaping () -> Void = {}, alertAction: (() -> Void)? = nil, delay: Bool = false, performAction: Bool = true) -> Bool {
+        if let _ = self.presentationInterfaceState.recordedMediaPreview {
+            alertAction?()
+            Queue.mainQueue().after(delay ? 0.2 : 0.0) {
+                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Conversation_DiscardRecordedVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardRecordedVoiceMessageAction, action: { [weak self] in
                     self?.stopMediaRecorder()
                     Queue.mainQueue().after(0.1) {
                         action()

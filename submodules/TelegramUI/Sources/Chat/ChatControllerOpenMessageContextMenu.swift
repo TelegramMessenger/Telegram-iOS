@@ -111,8 +111,7 @@ extension ChatControllerImpl {
                 if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                     actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
                     if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
-                        //TODO:localize
-                        actions.reactionsTitle = "Tag the message with an emoji for quick access later"
+                        actions.reactionsTitle = presentationData.strings.Chat_ContextMenuTagsTitle
                         actions.allPresetReactionsAreAvailable = true
                     }
                     actions.selectedReactionItems = selectedReactions.reactions

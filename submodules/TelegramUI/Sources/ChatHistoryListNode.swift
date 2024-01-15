@@ -331,7 +331,8 @@ private func extractAssociatedData(
     maxReadStoryId: Int32?,
     recommendedChannels: RecommendedChannels?,
     audioTranscriptionTrial: AudioTranscription.TrialState,
-    chatThemes: [TelegramTheme]
+    chatThemes: [TelegramTheme],
+    deviceContactsNumbers: Set<String>
 ) -> ChatMessageItemAssociatedData {
     var automaticDownloadPeerId: EnginePeer.Id?
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
@@ -386,7 +387,7 @@ private func extractAssociatedData(
         automaticDownloadPeerId = message.peerId
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadPeerId: automaticDownloadPeerId, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers)
 }
 
 private extension ChatHistoryLocationInput {
@@ -1413,6 +1414,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         
         let chatThemes = self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager)
         
+        let deviceContactsNumbers = self.context.sharedContext.deviceContactPhoneNumbers.get()
+        |> distinctUntilChanged
+        
         let messageViewQueue = Queue.mainQueue()
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
@@ -1434,8 +1438,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             maxReadStoryId,
             recommendedChannels,
             audioTranscriptionTrial,
-            chatThemes
-        ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes in
+            chatThemes,
+            deviceContactsNumbers
+        ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
             
             func applyHole() {
@@ -1594,7 +1599,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     translateToLanguage = languageCode
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageIdAndType?.0, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots, translateToLanguage: translateToLanguage, maxReadStoryId: maxReadStoryId, recommendedChannels: recommendedChannels, audioTranscriptionTrial: audioTranscriptionTrial, chatThemes: chatThemes, deviceContactsNumbers: deviceContactsNumbers)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,
@@ -1625,13 +1630,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages, allAdMessages.version))
                 let previous = previousValueAndVersion?.0
                 let previousSelectedMessages = previousValueAndVersion?.2
-                
-                if let previous {
-                    print("view entries: \(view.entries.count), previous: \(previous.originalView.entries.count)")
-                    if previous.originalView.entries.count >= 44 && view.entries.count == 1 {
-                        assert(true)
-                    }
-                }
                 
                 if let previousVersion = previousValueAndVersion?.1 {
                     assert(update.1 >= previousVersion)
@@ -4142,8 +4140,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     
     func voicePlaylistItemChanged(_ previousItem: SharedMediaPlaylistItem?, _ currentItem: SharedMediaPlaylistItem?) -> Void {
         if let currentItemId = currentItem?.id as? PeerMessagesMediaPlaylistItemId {
-            let isVideo = currentItem?.playbackData?.type == .instantVideo
-            self.currentlyPlayingMessageIdPromise.set(.single((currentItemId.messageIndex, isVideo)))
+            if let source = currentItem?.playbackData?.source, case let .telegramFile(_, _, isViewOnce) = source, isViewOnce {
+                self.currentlyPlayingMessageIdPromise.set(.single(nil))
+            } else {
+                let isVideo = currentItem?.playbackData?.type == .instantVideo
+                self.currentlyPlayingMessageIdPromise.set(.single((currentItemId.messageIndex, isVideo)))
+            }
         } else {
             self.currentlyPlayingMessageIdPromise.set(.single(nil))
         }

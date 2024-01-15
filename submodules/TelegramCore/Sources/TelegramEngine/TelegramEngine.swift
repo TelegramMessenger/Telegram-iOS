@@ -73,7 +73,7 @@ public final class TelegramEngine {
     }()
 
     public lazy var data: EngineData = {
-        return EngineData(postbox: self.account.postbox)
+        return EngineData(accountPeerId: self.account.peerId, postbox: self.account.postbox)
     }()
 
     public lazy var orderedLists: OrderedLists = {

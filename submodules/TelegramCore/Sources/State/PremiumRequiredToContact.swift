@@ -50,7 +50,5 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
         } else {
             return .single(premiumRequired)
         }
-        
-        
     }
 }

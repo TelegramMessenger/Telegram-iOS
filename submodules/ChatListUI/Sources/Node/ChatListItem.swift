@@ -96,6 +96,7 @@ public enum ChatListItemContent {
         public var topForumTopicItems: [EngineChatList.ForumTopicData]
         public var autoremoveTimeout: Int32?
         public var storyState: StoryState?
+        public var requiresPremiumForMessaging: Bool
         
         public init(
             messages: [EngineMessage],
@@ -115,7 +116,8 @@ public enum ChatListItemContent {
             forumTopicData: EngineChatList.ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             autoremoveTimeout: Int32?,
-            storyState: StoryState?
+            storyState: StoryState?,
+            requiresPremiumForMessaging: Bool
         ) {
             self.messages = messages
             self.peer = peer
@@ -135,6 +137,7 @@ public enum ChatListItemContent {
             self.topForumTopicItems = topForumTopicItems
             self.autoremoveTimeout = autoremoveTimeout
             self.storyState = storyState
+            self.requiresPremiumForMessaging = requiresPremiumForMessaging
         }
     }
     
@@ -2307,8 +2310,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
                     } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         if case .savedMessagesChats = item.chatListLocation {
-                            //TODO:localize
-                            titleAttributedString = NSAttributedString(string: "My Notes", font: titleFont, textColor: theme.titleColor)
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_MyNotes, font: titleFont, textColor: theme.titleColor)
                         } else {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
                         }

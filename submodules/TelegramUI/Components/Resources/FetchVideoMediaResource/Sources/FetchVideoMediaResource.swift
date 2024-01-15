@@ -481,17 +481,46 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         
-        var filteredPath = resource.path
-        if filteredPath.hasPrefix("file://") {
-            filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
+        let filteredPaths = resource.paths.map { path in
+            if path.hasPrefix("file://") {
+                return path.replacingOccurrences(of: "file://", with: "")
+            } else {
+                return path
+            }
         }
+        let filteredPath = filteredPaths.first ?? ""
         
         let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
         let qualityPreset = MediaQualityPreset(preset: defaultPreset)
         
         let isImage = filteredPath.contains(".jpg")
         var isStory = false
-        let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
+        let avAsset: AVAsset?
+        
+        if isImage {
+            avAsset = nil
+        } else if filteredPaths.count > 1 {
+            let composition = AVMutableComposition()
+            var currentTime = CMTime.zero
+            
+            for path in filteredPaths {
+                let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+                let duration = asset.duration
+                do {
+                    try composition.insertTimeRange(
+                        CMTimeRangeMake(start: .zero, duration: duration),
+                        of: asset,
+                        at: currentTime
+                    )
+                    currentTime = CMTimeAdd(currentTime, duration)
+                } catch {
+                }
+            }
+            avAsset = composition
+        } else {
+            avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
+        }
+        
         var adjustments: TGVideoEditAdjustments?
         var mediaEditorValues: MediaEditorValues?
         if let videoAdjustments = resource.adjustments {
@@ -500,26 +529,34 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                 if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
                     mediaEditorValues = values
                 }
-            } else if let dict = legacy_unarchiveDeprecated(data: videoAdjustments.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
-                if alwaysUseModernPipeline && !isImage {
-                    mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
-                } else {
-                    adjustments = legacyAdjustments
+            } else {
+                if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
+                    mediaEditorValues = values
+                } else if let dict = legacy_unarchiveDeprecated(data: videoAdjustments.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+                    if alwaysUseModernPipeline && !isImage {
+                        mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
+                    } else {
+                        adjustments = legacyAdjustments
+                    }
                 }
             }
         }
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
         let updatedSize = Atomic<Int64>(value: 0)
         if let mediaEditorValues {
-            let duration: Double = avAsset.duration.seconds
-            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
+            let duration: Double
             let subject: MediaEditorVideoExport.Subject
             if isImage, let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
+                duration = 5.0
                 subject = .image(image: image)
-            } else {
+            } else if let avAsset {
+                duration = avAsset.duration.seconds
                 subject = .video(asset: avAsset, isStory: isStory)
+            } else {
+                return EmptyDisposable
             }
             
+            let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
             let videoExport = MediaEditorVideoExport(postbox: postbox, subject: subject, configuration: configuration, outputPath: tempFile.path)
             videoExport.start()
             

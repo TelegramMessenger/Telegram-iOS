@@ -24,7 +24,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private let forumPeerId: EnginePeer.Id?
     private let selectForumThreads: Bool
     
-    private let attemptSelection: ((EnginePeer, Int64?) -> Void)?
+    private let attemptSelection: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)?
     private let createNewGroup: (() -> Void)?
     
     public var inProgress: Bool = false {
@@ -289,9 +289,9 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             }
         }
         
-        self.peerSelectionNode.requestOpenDisabledPeer = { [weak self] peer, threadId in
+        self.peerSelectionNode.requestOpenDisabledPeer = { [weak self] peer, threadId, reason in
             if let strongSelf = self {
-                strongSelf.attemptSelection?(peer, threadId)
+                strongSelf.attemptSelection?(peer, threadId, reason)
             }
         }
         

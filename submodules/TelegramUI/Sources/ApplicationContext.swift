@@ -29,6 +29,7 @@ import AuthorizationUI
 import ChatListUI
 import StoryContainerScreen
 import ChatMessageNotificationItem
+import PhoneNumberFormat
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -725,7 +726,7 @@ final class AuthorizedApplicationContext {
         })
        
         let importableContacts = self.context.sharedContext.contactDataManager?.importable() ?? .single([:])
-        self.context.account.importableContacts.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings])
+        let optionalImportableContacts = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings])
         |> mapToSignal { preferences -> Signal<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData], NoError> in
             let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? .defaultSettings
             if settings.synchronizeContacts {
@@ -733,6 +734,11 @@ final class AuthorizedApplicationContext {
             } else {
                 return .single([:])
             }
+        }
+        self.context.account.importableContacts.set(optionalImportableContacts)
+        self.context.sharedContext.deviceContactPhoneNumbers.set(optionalImportableContacts
+        |> map { contacts in
+            return Set(contacts.keys.map { cleanPhoneNumber($0.rawValue) })
         })
         
         let previousTheme = Atomic<PresentationTheme?>(value: nil)

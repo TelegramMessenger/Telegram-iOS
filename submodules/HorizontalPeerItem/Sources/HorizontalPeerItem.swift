@@ -144,7 +144,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
         self.addSubnode(self.badgeBackgroundNode)
         self.addSubnode(self.badgeTextNode)
         self.addSubnode(self.onlineNode)
-        self.peerNode.toggleSelection = { [weak self] in
+        self.peerNode.toggleSelection = { [weak self] _ in
             if let item = self?.item {
                 item.action(item.peer)
             }
@@ -228,7 +228,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                     } else {
                         strongSelf.peerNode.compact = false
                     }
-                    strongSelf.peerNode.setup(accountPeerId: item.accountPeerId, postbox: item.postbox, network: item.network, energyUsageSettings: item.energyUsageSettings, contentSettings: item.contentSettings, animationCache: item.animationCache, animationRenderer: item.animationRenderer, resolveInlineStickers: item.resolveInlineStickers, theme: item.theme, strings: item.strings, peer: EngineRenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: synchronousLoads)
+                    strongSelf.peerNode.setup(accountPeerId: item.accountPeerId, postbox: item.postbox, network: item.network, energyUsageSettings: item.energyUsageSettings, contentSettings: item.contentSettings, animationCache: item.animationCache, animationRenderer: item.animationRenderer, resolveInlineStickers: item.resolveInlineStickers, theme: item.theme, strings: item.strings, peer: EngineRenderedPeer(peer: item.peer), requiresPremiumForMessaging: false, numberOfLines: 1, synchronousLoad: synchronousLoads)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     

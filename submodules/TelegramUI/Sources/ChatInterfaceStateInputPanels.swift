@@ -106,6 +106,18 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
     }
     
+    if chatPresentationInterfaceState.isPremiumRequiredForMessaging {
+        if let currentPanel = (currentPanel as? ChatPremiumRequiredInputPanelNode) ?? (currentSecondaryPanel as? ChatPremiumRequiredInputPanelNode) {
+            currentPanel.interfaceInteraction = interfaceInteraction
+            return (currentPanel, nil)
+        } else {
+            let panel = ChatPremiumRequiredInputPanelNode(theme: chatPresentationInterfaceState.theme)
+            panel.context = context
+            panel.interfaceInteraction = interfaceInteraction
+            return (panel, nil)
+        }
+    }
+    
     if chatPresentationInterfaceState.peerIsBlocked, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo == nil {
         if let currentPanel = (currentPanel as? ChatUnblockInputPanelNode) ?? (currentSecondaryPanel as? ChatUnblockInputPanelNode) {
             currentPanel.interfaceInteraction = interfaceInteraction

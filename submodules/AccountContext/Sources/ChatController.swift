@@ -53,6 +53,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let recommendedChannels: RecommendedChannels?
     public let audioTranscriptionTrial: AudioTranscription.TrialState
     public let chatThemes: [TelegramTheme]
+    public let deviceContactsNumbers: Set<String>
+    public let isStandalone: Bool
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -79,7 +81,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
         maxReadStoryId: Int32? = nil,
         recommendedChannels: RecommendedChannels? = nil,
         audioTranscriptionTrial: AudioTranscription.TrialState = .defaultValue,
-        chatThemes: [TelegramTheme] = []
+        chatThemes: [TelegramTheme] = [],
+        deviceContactsNumbers: Set<String> = Set(),
+        isStandalone: Bool = false
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -106,6 +110,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.recommendedChannels = recommendedChannels
         self.audioTranscriptionTrial = audioTranscriptionTrial
         self.chatThemes = chatThemes
+        self.deviceContactsNumbers = deviceContactsNumbers
+        self.isStandalone = isStandalone
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -179,6 +185,12 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.chatThemes != rhs.chatThemes {
+            return false
+        }
+        if lhs.deviceContactsNumbers != rhs.deviceContactsNumbers {
+            return false
+        }
+        if lhs.isStandalone != rhs.isStandalone {
             return false
         }
         return true

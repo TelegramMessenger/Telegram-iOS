@@ -1736,7 +1736,7 @@ public final class MediaEditor {
     }
 }
 
-private func videoFrames(asset: AVAsset, count: Int, mirror: Bool = false) -> Signal<([UIImage], Double), NoError> {
+public func videoFrames(asset: AVAsset?, count: Int, initialPlaceholder: UIImage? = nil, initialTimestamp: Double? = nil, mirror: Bool = false) -> Signal<([UIImage], Double), NoError> {
     func blurredImage(_ image: UIImage) -> UIImage? {
         guard let image = image.cgImage else {
             return nil
@@ -1769,55 +1769,82 @@ private func videoFrames(asset: AVAsset, count: Int, mirror: Bool = false) -> Si
     guard count > 0 else {
         return .complete()
     }
-    let scale = UIScreen.main.scale
-    let imageGenerator = AVAssetImageGenerator(asset: asset)
-    imageGenerator.maximumSize = CGSize(width: 48.0 * scale, height: 36.0 * scale)
-    imageGenerator.appliesPreferredTrackTransform = true
-    imageGenerator.requestedTimeToleranceBefore = .zero
-    imageGenerator.requestedTimeToleranceAfter = .zero
-            
+   
+   
     var firstFrame: UIImage
-    if let cgImage = try? imageGenerator.copyCGImage(at: .zero, actualTime: nil) {
-        firstFrame = UIImage(cgImage: cgImage)
-        if let blurred = blurredImage(firstFrame) {
+
+    var imageGenerator: AVAssetImageGenerator?
+    if let asset {
+        let scale = UIScreen.main.scale
+        
+        imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator?.maximumSize = CGSize(width: 48.0 * scale, height: 36.0 * scale)
+        imageGenerator?.appliesPreferredTrackTransform = true
+        imageGenerator?.requestedTimeToleranceBefore = .zero
+        imageGenerator?.requestedTimeToleranceAfter = .zero
+    }
+    
+    if var initialPlaceholder {
+        initialPlaceholder = generateScaledImage(image: initialPlaceholder, size: initialPlaceholder.size.aspectFitted(CGSize(width: 144.0, height: 144.0)), scale: 1.0)!
+        if let blurred = blurredImage(initialPlaceholder) {
             firstFrame = blurred
+        } else {
+            firstFrame = initialPlaceholder
+        }
+    } else if let imageGenerator {
+        if let cgImage = try? imageGenerator.copyCGImage(at: .zero, actualTime: nil) {
+            firstFrame = UIImage(cgImage: cgImage)
+            if let blurred = blurredImage(firstFrame) {
+                firstFrame = blurred
+            }
+        } else {
+            firstFrame = generateSingleColorImage(size: CGSize(width: 24.0, height: 36.0), color: .black)!
         }
     } else {
         firstFrame = generateSingleColorImage(size: CGSize(width: 24.0, height: 36.0), color: .black)!
     }
-    return Signal { subscriber in
-        subscriber.putNext((Array(repeating: firstFrame, count: count), CACurrentMediaTime()))
-        
-        var timestamps: [NSValue] = []
-        let duration = asset.duration.seconds
-        let interval = duration / Double(count)
-        for i in 0 ..< count {
-            timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(1000))))
-        }
-        
-        var updatedFrames: [UIImage] = []
-        imageGenerator.generateCGImagesAsynchronously(forTimes: timestamps) { _, image, _, _, _ in
-            if let image {
-                updatedFrames.append(UIImage(cgImage: image, scale: 1.0, orientation: mirror ? .upMirrored : .up))
-                if updatedFrames.count == count {
-                    subscriber.putNext((updatedFrames, CACurrentMediaTime()))
-                    subscriber.putCompletion()
-                } else {
-                    var tempFrames = updatedFrames
-                    for _ in 0 ..< count - updatedFrames.count {
-                        tempFrames.append(firstFrame)
+    
+    if let asset {
+        return Signal { subscriber in
+            subscriber.putNext((Array(repeating: firstFrame, count: count), initialTimestamp ?? CACurrentMediaTime()))
+            
+            var timestamps: [NSValue] = []
+            let duration = asset.duration.seconds
+            let interval = duration / Double(count)
+            for i in 0 ..< count {
+                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(1000))))
+            }
+            
+            var updatedFrames: [UIImage] = []
+            imageGenerator?.generateCGImagesAsynchronously(forTimes: timestamps) { _, image, _, _, _ in
+                if let image {
+                    updatedFrames.append(UIImage(cgImage: image, scale: 1.0, orientation: mirror ? .upMirrored : .up))
+                    if updatedFrames.count == count {
+                        subscriber.putNext((updatedFrames, CACurrentMediaTime()))
+                        subscriber.putCompletion()
+                    } else {
+                        var tempFrames = updatedFrames
+                        for _ in 0 ..< count - updatedFrames.count {
+                            tempFrames.append(firstFrame)
+                        }
+                        subscriber.putNext((tempFrames, CACurrentMediaTime()))
                     }
-                    subscriber.putNext((tempFrames, CACurrentMediaTime()))
-                }
-            } else {
-                if let previous = updatedFrames.last {
-                    updatedFrames.append(previous)
+                } else {
+                    if let previous = updatedFrames.last {
+                        updatedFrames.append(previous)
+                    }
                 }
             }
+            
+            return ActionDisposable {
+                imageGenerator?.cancelAllCGImageGeneration()
+            }
         }
-        
-        return ActionDisposable {
-            imageGenerator.cancelAllCGImageGeneration()
+    } else {
+        var frames: [UIImage] = []
+        for _ in 0 ..< count {
+            frames.append(firstFrame)
         }
+        return .single((frames, CACurrentMediaTime()))
     }
 }

@@ -147,12 +147,12 @@ public final class EntityVideoRecorder {
         
         self.start = CACurrentMediaTime()
         self.recordingDisposable.set((self.camera.startRecording()
-        |> deliverOnMainQueue).startStrict(next: { [weak self] duration in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] recordingData in
             guard let self else {
                 return
             }
-            self.durationPromise.set(duration)
-            if duration >= self.maxDuration {
+            self.durationPromise.set(recordingData.duration)
+            if recordingData.duration >= self.maxDuration {
                 let onAutomaticStop = self.onAutomaticStop
                 self.stopRecording(save: true, completion: {
                     onAutomaticStop()

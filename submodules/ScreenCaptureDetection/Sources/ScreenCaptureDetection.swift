@@ -96,6 +96,10 @@ public final class ScreenCaptureDetectionManager {
                 guard let strongSelf = self else {
                     return
                 }
+                var value = value
+#if DEBUG
+                value = false
+#endif          
                 strongSelf.isRecordingActive = value
                 if value {
                     if strongSelf.screenRecordingCheckTimer == nil {

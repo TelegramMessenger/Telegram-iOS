@@ -35,7 +35,7 @@ private final class VideoRecorderImpl {
     private var audioInput: AVAssetWriterInput?
     
     private let ciContext: CIContext
-    private var transitionImage: UIImage?
+    fileprivate var transitionImage: UIImage?
     private var savedTransitionImage = false
     
     private var pendingAudioSampleBuffers: [CMSampleBuffer] = []
@@ -146,7 +146,7 @@ private final class VideoRecorderImpl {
             }
             
             if failed {
-                print("error")
+                print("append video error")
                 return
             }
                         
@@ -256,7 +256,7 @@ private final class VideoRecorderImpl {
             }
 
             if failed {
-                print("error")
+                print("append audio error")
                 return
             }
                                     
@@ -519,7 +519,7 @@ public final class VideoRecorder {
     func markPositionChange(position: Camera.Position, time: CMTime? = nil) {
         self.impl.markPositionChange(position: position, time: time)
     }
-    
+        
     func appendSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
         guard let formatDescriptor = CMSampleBufferGetFormatDescription(sampleBuffer) else {
             return
@@ -532,5 +532,9 @@ public final class VideoRecorder {
                 self.impl.appendAudioSampleBuffer(sampleBuffer)
             }
         }
+    }
+    
+    var transitionImage: UIImage? {
+        return self.impl.transitionImage
     }
 }

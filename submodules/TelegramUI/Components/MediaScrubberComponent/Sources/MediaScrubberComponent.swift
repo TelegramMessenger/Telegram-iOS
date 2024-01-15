@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import ComponentFlow
 import SwiftSignalKit
-import ViewControllerComponent
 import ComponentDisplayAdapters
 import TelegramPresentationData
 import AccountContext
@@ -17,17 +16,16 @@ private let trackHeight: CGFloat = 39.0
 private let collapsedTrackHeight: CGFloat = 26.0
 private let trackSpacing: CGFloat = 4.0
 private let borderHeight: CGFloat = 1.0 + UIScreenPixel
-private let frameWidth: CGFloat = 24.0
 
-final class MediaScrubberComponent: Component {
-    typealias EnvironmentType = Empty
+public final class MediaScrubberComponent: Component {
+    public typealias EnvironmentType = Empty
     
-    struct Track: Equatable {
-        enum Content: Equatable {
+    public struct Track: Equatable {
+        public enum Content: Equatable {
             case video(frames: [UIImage], framesUpdateTimestamp: Double)
             case audio(artist: String?, title: String?, samples: Data?, peak: Int32)
             
-            static func ==(lhs: Content, rhs: Content) -> Bool {
+            public static func ==(lhs: Content, rhs: Content) -> Bool {
                 switch lhs {
                 case let .video(_, framesUpdateTimestamp):
                     if case .video(_, framesUpdateTimestamp) = rhs {
@@ -45,29 +43,39 @@ final class MediaScrubberComponent: Component {
             }
         }
         
-        let id: Int32
-        let content: Content
-        let duration: Double
-        let trimRange: Range<Double>?
-        let offset: Double?
-        let isMain: Bool
-        
-        init(_ track: MediaEditorPlayerState.Track) {
-            self.id = track.id
-            switch track.content {
-            case let .video(frames, framesUpdateTimestamp):
-                self.content = .video(frames: frames, framesUpdateTimestamp: framesUpdateTimestamp)
-            case let .audio(artist, title, samples, peak):
-                self.content = .audio(artist: artist, title: title, samples: samples, peak: peak)
-            }
-            self.duration = track.duration
-            self.trimRange = track.trimRange
-            self.offset = track.offset
-            self.isMain = track.isMain
+        public let id: Int32
+        public let content: Content
+        public let duration: Double
+        public let trimRange: Range<Double>?
+        public let offset: Double?
+        public let isMain: Bool
+                
+        public init(
+            id: Int32,
+            content: Content,
+            duration: Double,
+            trimRange: Range<Double>?,
+            offset: Double?,
+            isMain: Bool
+        ) {
+            self.id = id
+            self.content = content
+            self.duration = duration
+            self.trimRange = trimRange
+            self.offset = offset
+            self.isMain = isMain
         }
     }
     
+    public enum Style {
+        case editor
+        case videoMessage
+    }
+    
     let context: AccountContext
+    let style: Style
+    let theme: PresentationTheme
+    
     let generationTimestamp: Double
 
     let position: Double
@@ -77,13 +85,15 @@ final class MediaScrubberComponent: Component {
     
     let tracks: [Track]
     
-    let positionUpdated: (Double, Bool) -> Void    
+    let positionUpdated: (Double, Bool) -> Void
     let trackTrimUpdated: (Int32, Double, Double, Bool, Bool) -> Void
     let trackOffsetUpdated: (Int32, Double, Bool) -> Void
     let trackLongPressed: (Int32, UIView) -> Void
     
-    init(
+    public init(
         context: AccountContext,
+        style: Style,
+        theme: PresentationTheme,
         generationTimestamp: Double,
         position: Double,
         minDuration: Double,
@@ -96,6 +106,8 @@ final class MediaScrubberComponent: Component {
         trackLongPressed: @escaping (Int32, UIView) -> Void
     ) {
         self.context = context
+        self.style = style
+        self.theme = theme
         self.generationTimestamp = generationTimestamp
         self.position = position
         self.minDuration = minDuration
@@ -108,8 +120,11 @@ final class MediaScrubberComponent: Component {
         self.trackLongPressed = trackLongPressed
     }
     
-    static func ==(lhs: MediaScrubberComponent, rhs: MediaScrubberComponent) -> Bool {
+    public static func ==(lhs: MediaScrubberComponent, rhs: MediaScrubberComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
             return false
         }
         if lhs.generationTimestamp != rhs.generationTimestamp {
@@ -133,7 +148,7 @@ final class MediaScrubberComponent: Component {
         return true
     }
     
-    final class View: UIView, UIGestureRecognizerDelegate {
+    public final class View: UIView, UIGestureRecognizerDelegate {
         private var trackViews: [Int32: TrackView] = [:]
         private let trimView: TrimView
         private let ghostTrimView: TrimView
@@ -260,7 +275,7 @@ final class MediaScrubberComponent: Component {
             guard let component = self.component, let firstTrack = component.tracks.first else {
                 return 0.0
             }
-            return firstTrack.trimRange?.upperBound ?? min(firstTrack.duration, storyMaxVideoDuration)
+            return firstTrack.trimRange?.upperBound ?? min(firstTrack.duration, component.maxDuration)
         }
         
         private var mainAudioTrackOffset: Double? {
@@ -364,10 +379,17 @@ final class MediaScrubberComponent: Component {
             self.cursorView.frame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: updatedPosition, duration: self.trimDuration)
         }
                 
-        func update(component: MediaScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        public func update(component: MediaScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
             self.component = component
             self.state = state
+            
+            switch component.style {
+            case .editor:
+                self.cursorView.isHidden = false
+            case .videoMessage:
+                self.cursorView.isHidden = true
+            }
             
             var totalHeight: CGFloat = 0.0
             var trackLayout: [Int32: (CGRect, Transition, Bool)] = [:]
@@ -427,6 +449,7 @@ final class MediaScrubberComponent: Component {
                 
                 let trackSize = trackView.update(
                     context: component.context,
+                    style: component.style,
                     track: track,
                     isSelected: id == self.selectedTrackId,
                     availableSize: availableSize,
@@ -495,12 +518,21 @@ final class MediaScrubberComponent: Component {
                 }
             }
 
-            let scrubberSize = CGSize(width: availableSize.width, height: trackHeight)
+            let fullTrackHeight: CGFloat
+            switch component.style {
+            case .editor:
+                fullTrackHeight = trackHeight
+            case .videoMessage:
+                fullTrackHeight = 33.0
+            }
+            let scrubberSize = CGSize(width: availableSize.width, height: fullTrackHeight)
             
             self.trimView.isHollow = self.selectedTrackId != lowestVideoId || self.isAudioOnly
             let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
+                style: component.style,
+                theme: component.theme,
                 visualInsets: trimViewVisualInsets,
-                scrubberSize: CGSize(width: trackViewWidth, height: trackHeight),
+                scrubberSize: CGSize(width: trackViewWidth, height: fullTrackHeight),
                 duration: mainTrimDuration,
                 startPosition: startPosition,
                 endPosition: endPosition,
@@ -511,6 +543,8 @@ final class MediaScrubberComponent: Component {
             )
             
             let (ghostLeftHandleFrame, ghostRightHandleFrame) = self.ghostTrimView.update(
+                style: component.style,
+                theme: component.theme,
                 visualInsets: .zero,
                 scrubberSize: CGSize(width: scrubberSize.width, height: collapsedTrackHeight),
                 duration: self.duration,
@@ -522,8 +556,6 @@ final class MediaScrubberComponent: Component {
                 transition: transition
             )
             
-            let _ = leftHandleFrame
-            let _ = rightHandleFrame
             let _ = ghostLeftHandleFrame
             let _ = ghostRightHandleFrame
             
@@ -551,12 +583,15 @@ final class MediaScrubberComponent: Component {
             transition.setFrame(view: self.ghostTrimView, frame: ghostTrimViewFrame)
             transition.setAlpha(view: self.ghostTrimView, alpha: ghostTrimVisible ? 0.75 : 0.0)
             
-//            var containerLeftEdge = leftHandleFrame.maxX
-//            var containerRightEdge = rightHandleFrame.minX
-//            if self.isAudioSelected && component.duration > 0.0 {
-//                containerLeftEdge = ghostLeftHandleFrame.maxX
-//                containerRightEdge = ghostRightHandleFrame.minX
-//            }
+            if case .videoMessage = component.style {
+                for (_ , trackView) in self.trackViews {
+                    trackView.updateOpaqueEdges(
+                        left: leftHandleFrame.minX,
+                        right: rightHandleFrame.maxX,
+                        transition: transition
+                    )
+                }
+            }
             
             let isDraggingTracks = self.trackViews.values.contains(where: { $0.isDragging })
             let isCursorHidden = isDraggingTracks || self.trimView.isPanningTrimHandle || self.ghostTrimView.isPanningTrimHandle
@@ -591,7 +626,7 @@ final class MediaScrubberComponent: Component {
             return CGSize(width: availableSize.width, height: totalHeight)
         }
         
-        override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             let hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
             return self.bounds.inset(by: hitTestSlop).contains(point)
         }
@@ -683,11 +718,9 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         self.videoTransparentFramesContainer.alpha = 0.5
         self.videoTransparentFramesContainer.clipsToBounds = true
-        self.videoTransparentFramesContainer.layer.cornerRadius = 9.0
         self.videoTransparentFramesContainer.isUserInteractionEnabled = false
         
         self.videoOpaqueFramesContainer.clipsToBounds = true
-        self.videoOpaqueFramesContainer.layer.cornerRadius = 9.0
         self.videoOpaqueFramesContainer.isUserInteractionEnabled = false
         
         self.addSubview(self.clippingView)
@@ -706,7 +739,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     }
     
     @objc private func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (track, _, _) = self.params else {
+        guard let (track, _, _, _) = self.params else {
             return
         }
         self.onSelection(track.id)
@@ -755,11 +788,45 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
     private var params: (
         track: MediaScrubberComponent.Track,
         isSelected: Bool,
+        availableSize: CGSize,
         duration: Double
     )?
     
+    private var leftOpaqueEdge: CGFloat?
+    private var rightOpaqueEdge: CGFloat?
+    func updateOpaqueEdges(
+        left: CGFloat,
+        right: CGFloat,
+        transition: Transition
+    ) {
+        self.leftOpaqueEdge = left
+        self.rightOpaqueEdge = right
+        
+        if let params = self.params {
+            self.updateThumbnailContainers(
+                scrubberSize: CGSize(width: params.availableSize.width, height: 33.0),
+                availableSize: params.availableSize,
+                transition: transition
+            )
+        }
+    }
+    
+    private func updateThumbnailContainers(
+        scrubberSize: CGSize,
+        availableSize: CGSize,
+        transition: Transition
+    ) {
+        let containerLeftEdge: CGFloat = self.leftOpaqueEdge ?? 0.0
+        let containerRightEdge: CGFloat = self.rightOpaqueEdge ?? availableSize.width
+        
+        transition.setFrame(view: self.videoTransparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: scrubberSize.width, height: scrubberSize.height)))
+        transition.setFrame(view: self.videoOpaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+        transition.setBounds(view: self.videoOpaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+    }
+    
     func update(
         context: AccountContext,
+        style: MediaScrubberComponent.Style,
         track: MediaScrubberComponent.Track,
         isSelected: Bool,
         availableSize: CGSize,
@@ -767,9 +834,22 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         transition: Transition
     ) -> CGSize {
         let previousParams = self.params
-        self.params = (track, isSelected, duration)
+        self.params = (track, isSelected, availableSize, duration)
         
-        let scrubberSize = CGSize(width: availableSize.width, height: isSelected ? trackHeight : collapsedTrackHeight)
+        let fullTrackHeight: CGFloat
+        let framesCornerRadius: CGFloat
+        switch style {
+        case .editor:
+            fullTrackHeight = trackHeight
+            framesCornerRadius = 9.0
+        case .videoMessage:
+            fullTrackHeight = 33.0
+            framesCornerRadius = fullTrackHeight / 2.0
+        }
+        self.videoTransparentFramesContainer.layer.cornerRadius = framesCornerRadius
+        self.videoOpaqueFramesContainer.layer.cornerRadius = framesCornerRadius
+        
+        let scrubberSize = CGSize(width: availableSize.width, height: isSelected ? fullTrackHeight : collapsedTrackHeight)
         
         var screenSpanDuration = duration
         if track.isAudio && track.isMain {
@@ -891,11 +971,18 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                         transparentFrameLayer = VideoFrameLayer()
                         transparentFrameLayer.masksToBounds = true
                         transparentFrameLayer.contentsGravity = .resizeAspectFill
+                        if case .videoMessage = style {
+                            transparentFrameLayer.contentsRect = CGRect(origin: .zero, size: CGSize(width: 1.0, height: 1.0)).insetBy(dx: 0.15, dy: 0.15)
+                        }
                         self.videoTransparentFramesContainer.layer.addSublayer(transparentFrameLayer)
                         self.videoTransparentFrameLayers.append(transparentFrameLayer)
+                        
                         opaqueFrameLayer = VideoFrameLayer()
                         opaqueFrameLayer.masksToBounds = true
                         opaqueFrameLayer.contentsGravity = .resizeAspectFill
+                        if case .videoMessage = style {
+                            opaqueFrameLayer.contentsRect = CGRect(origin: .zero, size: CGSize(width: 1.0, height: 1.0)).insetBy(dx: 0.15, dy: 0.15)
+                        }
                         self.videoOpaqueFramesContainer.layer.addSublayer(opaqueFrameLayer)
                         self.videoOpaqueFrameLayers.append(opaqueFrameLayer)
                     } else {
@@ -915,19 +1002,18 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                     }
                 }
             }
-            
-            let containerLeftEdge: CGFloat = 0.0
-            let containerRightEdge: CGFloat = availableSize.width
-            
-            transition.setFrame(view: self.videoTransparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: scrubberSize.width, height: scrubberSize.height)))
-            transition.setFrame(view: self.videoOpaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
-            transition.setBounds(view: self.videoOpaqueFramesContainer, bounds: CGRect(origin: CGPoint(x: containerLeftEdge, y: 0.0), size: CGSize(width: containerRightEdge - containerLeftEdge, height: scrubberSize.height)))
+                        
+            self.updateThumbnailContainers(
+                scrubberSize: scrubberSize,
+                availableSize: availableSize,
+                transition: transition
+            )
             
             var frameAspectRatio = 0.66
             if let image = frames.first, image.size.height > 0.0 {
                 frameAspectRatio = max(0.66, image.size.width / image.size.height)
             }
-            let frameSize = CGSize(width: trackHeight * frameAspectRatio, height: trackHeight)
+            let frameSize = CGSize(width: fullTrackHeight * frameAspectRatio, height: fullTrackHeight)
             var frameOffset: CGFloat = 0.0
             for i in 0 ..< frames.count {
                 if i < self.videoTransparentFrameLayers.count {
@@ -1052,7 +1138,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: containerFrame.width, height: trackHeight)
+                containerSize: CGSize(width: containerFrame.width, height: fullTrackHeight)
             )
             if let view = self.audioWaveform.view as? AudioWaveformComponent.View {
                 if view.superview == nil {
@@ -1090,54 +1176,29 @@ private class TrimView: UIView {
     override init(frame: CGRect) {
         super.init(frame: .zero)
         
-        let height = trackHeight
-        let handleImage = generateImage(CGSize(width: handleWidth, height: height), rotatedContext: { size, context in
-            context.clear(CGRect(origin: .zero, size: size))
-            context.setFillColor(UIColor.white.cgColor)
-            
-            let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: 9.0)
-            context.addPath(path.cgPath)
-            context.fillPath()
-            
-            context.setBlendMode(.clear)
-            let innerPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: handleWidth - 3.0, y: borderHeight), size: CGSize(width: handleWidth, height: size.height - borderHeight * 2.0)), cornerRadius: 2.0)
-            context.addPath(innerPath.cgPath)
-            context.fillPath()
-        })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
-        
         self.zoneView.image = UIImage()
         self.zoneView.isUserInteractionEnabled = true
         self.zoneView.hitTestSlop = UIEdgeInsets(top: -8.0, left: 0.0, bottom: -8.0, right: 0.0)
         
-        self.leftHandleView.image = handleImage
         self.leftHandleView.isUserInteractionEnabled = true
         self.leftHandleView.tintColor = .white
         self.leftHandleView.contentMode = .scaleToFill
         self.leftHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
         
-        self.rightHandleView.image = handleImage
         self.rightHandleView.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
         self.rightHandleView.isUserInteractionEnabled = true
         self.rightHandleView.tintColor = .white
         self.rightHandleView.contentMode = .scaleToFill
         self.rightHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
         
-        self.borderView.image = generateImage(CGSize(width: 1.0, height: height), rotatedContext: { size, context in
-            context.clear(CGRect(origin: .zero, size: size))
-            context.setFillColor(UIColor.white.cgColor)
-            context.fill(CGRect(origin: .zero, size: CGSize(width: size.width, height: borderHeight)))
-            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - borderHeight), size: CGSize(width: size.width, height: height)))
-        })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
         self.borderView.tintColor = .white
         self.borderView.isUserInteractionEnabled = false
         
         self.leftCapsuleView.clipsToBounds = true
         self.leftCapsuleView.layer.cornerRadius = 1.0
-        self.leftCapsuleView.backgroundColor = UIColor(rgb: 0x343436)
         
         self.rightCapsuleView.clipsToBounds = true
         self.rightCapsuleView.layer.cornerRadius = 1.0
-        self.rightCapsuleView.backgroundColor = UIColor(rgb: 0x343436)
         
         self.addSubview(self.zoneView)
         self.addSubview(self.leftHandleView)
@@ -1279,6 +1340,8 @@ private class TrimView: UIView {
     )?
     
     func update(
+        style: MediaScrubberComponent.Style,
+        theme: PresentationTheme,
         visualInsets: UIEdgeInsets,
         scrubberSize: CGSize,
         duration: Double,
@@ -1288,34 +1351,101 @@ private class TrimView: UIView {
         minDuration: Double,
         maxDuration: Double,
         transition: Transition
-    ) -> (leftHandleFrame: CGRect, rightHandleFrame: CGRect)
-    {
+    ) -> (leftHandleFrame: CGRect, rightHandleFrame: CGRect) {
+        let isFirstTime = self.params == nil
         self.params = (scrubberSize, duration, startPosition, endPosition, position, minDuration, maxDuration)
         
-        let trimColor = self.isPanningTrimHandle ? UIColor(rgb: 0xf8d74a) : .white
+        let effectiveHandleWidth: CGFloat
+        let fullTrackHeight: CGFloat
+        let capsuleOffset: CGFloat
+        let color: UIColor
+        let highlightColor: UIColor
+        
+        switch style {
+        case .editor:
+            effectiveHandleWidth = handleWidth
+            fullTrackHeight = trackHeight
+            capsuleOffset = 5.0 - UIScreenPixel
+            color = .white
+            highlightColor = UIColor(rgb: 0xf8d74a)
+            
+            if isFirstTime {
+                self.borderView.image = generateImage(CGSize(width: 1.0, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    context.fill(CGRect(origin: .zero, size: CGSize(width: size.width, height: borderHeight)))
+                    context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - borderHeight), size: CGSize(width: size.width, height: fullTrackHeight)))
+                })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
+                
+                let handleImage = generateImage(CGSize(width: handleWidth, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    
+                    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: 9.0)
+                    context.addPath(path.cgPath)
+                    context.fillPath()
+                    
+                    context.setBlendMode(.clear)
+                    let innerPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: handleWidth - 3.0, y: borderHeight), size: CGSize(width: handleWidth, height: size.height - borderHeight * 2.0)), cornerRadius: 2.0)
+                    context.addPath(innerPath.cgPath)
+                    context.fillPath()
+                })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
+                
+                self.leftHandleView.image = handleImage
+                self.rightHandleView.image = handleImage
+                
+                self.leftCapsuleView.backgroundColor = UIColor(rgb: 0x343436)
+                self.rightCapsuleView.backgroundColor = UIColor(rgb: 0x343436)
+            }
+        case .videoMessage:
+            effectiveHandleWidth = 16.0
+            fullTrackHeight = 33.0
+            capsuleOffset = 8.0
+            color = theme.chat.inputPanel.panelControlAccentColor
+            highlightColor = theme.chat.inputPanel.panelControlAccentColor
+            
+            if isFirstTime {
+                let handleImage = generateImage(CGSize(width: effectiveHandleWidth, height: fullTrackHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: .zero, size: size))
+                    context.setFillColor(UIColor.white.cgColor)
+                    
+                    let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width * 2.0, height: size.height)), cornerRadius: 16.5)
+                    context.addPath(path.cgPath)
+                    context.fillPath()
+                })?.withRenderingMode(.alwaysTemplate)
+                
+                self.leftHandleView.image = handleImage
+                self.rightHandleView.image = handleImage
+                
+                self.leftCapsuleView.backgroundColor = .white
+                self.rightCapsuleView.backgroundColor = .white
+            }
+        }
+        
+        let trimColor = self.isPanningTrimHandle ? highlightColor : color
         transition.setTintColor(view: self.leftHandleView, color: trimColor)
         transition.setTintColor(view: self.rightHandleView, color: trimColor)
         transition.setTintColor(view: self.borderView, color: trimColor)
         
         let totalWidth = scrubberSize.width
-        let totalRange = totalWidth - handleWidth
+        let totalRange = totalWidth - effectiveHandleWidth
         let leftHandlePositionFraction = duration > 0.0 ? startPosition / duration : 0.0
-        let leftHandlePosition = floorToScreenPixels(handleWidth / 2.0 + totalRange * leftHandlePositionFraction)
+        let leftHandlePosition = floorToScreenPixels(effectiveHandleWidth / 2.0 + totalRange * leftHandlePositionFraction)
         
-        var leftHandleFrame = CGRect(origin: CGPoint(x: leftHandlePosition - handleWidth / 2.0, y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
+        var leftHandleFrame = CGRect(origin: CGPoint(x: leftHandlePosition - effectiveHandleWidth / 2.0, y: 0.0), size: CGSize(width: effectiveHandleWidth, height: scrubberSize.height))
         leftHandleFrame.origin.x = max(leftHandleFrame.origin.x, visualInsets.left)
         transition.setFrame(view: self.leftHandleView, frame: leftHandleFrame)
 
         let rightHandlePositionFraction = duration > 0.0 ? endPosition / duration : 1.0
-        let rightHandlePosition = floorToScreenPixels(handleWidth / 2.0 + totalRange * rightHandlePositionFraction)
+        let rightHandlePosition = floorToScreenPixels(effectiveHandleWidth / 2.0 + totalRange * rightHandlePositionFraction)
         
-        var rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - handleWidth / 2.0), y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
-        rightHandleFrame.origin.x = min(rightHandleFrame.origin.x, totalWidth - visualInsets.right - handleWidth)
+        var rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - effectiveHandleWidth / 2.0), y: 0.0), size: CGSize(width: effectiveHandleWidth, height: scrubberSize.height))
+        rightHandleFrame.origin.x = min(rightHandleFrame.origin.x, totalWidth - visualInsets.right - effectiveHandleWidth)
         transition.setFrame(view: self.rightHandleView, frame: rightHandleFrame)
         
         let capsuleSize = CGSize(width: 2.0, height: 11.0)
-        transition.setFrame(view: self.leftCapsuleView, frame: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: floorToScreenPixels((leftHandleFrame.height - capsuleSize.height) / 2.0)), size: capsuleSize))
-        transition.setFrame(view: self.rightCapsuleView, frame: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: floorToScreenPixels((leftHandleFrame.height - capsuleSize.height) / 2.0)), size: capsuleSize))
+        transition.setFrame(view: self.leftCapsuleView, frame: CGRect(origin: CGPoint(x: capsuleOffset, y: floorToScreenPixels((leftHandleFrame.height - capsuleSize.height) / 2.0)), size: capsuleSize))
+        transition.setFrame(view: self.rightCapsuleView, frame: CGRect(origin: CGPoint(x: capsuleOffset, y: floorToScreenPixels((leftHandleFrame.height - capsuleSize.height) / 2.0)), size: capsuleSize))
         
         let zoneFrame = CGRect(x: leftHandleFrame.maxX, y: 0.0, width: rightHandleFrame.minX - leftHandleFrame.maxX, height: scrubberSize.height)
         transition.setFrame(view: self.zoneView, frame: zoneFrame)
@@ -1345,7 +1475,7 @@ private class VideoFrameLayer: SimpleShapeLayer {
     
     override func layoutSublayers() {
         super.layoutSublayers()
-        
+                
         if self.stripeLayer.superlayer == nil {
             self.stripeLayer.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3).cgColor
             self.addSublayer(self.stripeLayer)

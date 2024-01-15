@@ -426,4 +426,66 @@ public struct PresentationResourcesChatList {
             return generateTintedImage(image: UIImage(bundleImageName: isActive ? "Chat List/StatusIconAutoremoveOn" : "Chat List/StatusIconAutoremoveOff"), color: isActive ? theme.list.itemAccentColor : theme.list.itemSecondaryTextColor)
         })
     }
+    
+    public static func avatarPremiumLockBadgeBackground(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.avatarPremiumLockBadgeBackground.rawValue, { theme in
+            return generateFilledCircleImage(diameter: 17.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+    public static func avatarPremiumLockBadge(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.avatarPremiumLockBadge.rawValue, { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.addPath(CGPath(ellipseIn: CGRect(origin: CGPoint(), size: size), transform: nil))
+                context.clip()
+                
+                var locations: [CGFloat] = [0.0, 1.0]
+                let colors: [CGColor] = [UIColor(rgb: 0x9981FF).cgColor, UIColor(rgb: 0xBA6DE9).cgColor]
+                
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+                
+                context.resetClip()
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/StatusLockIcon"), color: .white), let cgImage = image.cgImage {
+                    let imageSize = image.size.fitted(CGSize(width: 8.0, height: 8.0))
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize))
+                }
+            })
+        })
+    }
+    
+    public static func shareAvatarPremiumLockBadgeBackground(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.shareAvatarPremiumLockBadgeBackground.rawValue, { theme in
+            return generateFilledCircleImage(diameter: 22.0, color: .white)?.withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+    public static func shareAvatarPremiumLockBadge(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.shareAvatarPremiumLockBadge.rawValue, { theme in
+            return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.addPath(CGPath(ellipseIn: CGRect(origin: CGPoint(), size: size), transform: nil))
+                context.clip()
+                
+                var locations: [CGFloat] = [0.0, 1.0]
+                let colors: [CGColor] = [UIColor(rgb: 0x9981FF).cgColor, UIColor(rgb: 0xBA6DE9).cgColor]
+                
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+                
+                context.resetClip()
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/StatusLockIcon"), color: .white), let cgImage = image.cgImage {
+                    let imageSize = image.size.fitted(CGSize(width: 14.0, height: 14.0))
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize))
+                }
+            })
+        })
+    }
 }

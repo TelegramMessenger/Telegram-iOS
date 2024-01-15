@@ -2142,6 +2142,7 @@ public enum ContextActionsHorizontalAlignment {
 }
 
 public protocol ContextExtractedContentSource: AnyObject {
+    var initialAppearanceOffset: CGPoint { get }
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
@@ -2155,6 +2156,10 @@ public protocol ContextExtractedContentSource: AnyObject {
 }
 
 public extension ContextExtractedContentSource {
+    var initialAppearanceOffset: CGPoint {
+        return .zero
+    }
+    
     var centerVertically: Bool {
         return false
     }

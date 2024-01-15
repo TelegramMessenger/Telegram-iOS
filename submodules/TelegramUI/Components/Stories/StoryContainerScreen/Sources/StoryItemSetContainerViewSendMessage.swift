@@ -571,12 +571,12 @@ final class StoryItemSetContainerSendMessage {
             
             let controller = component.controller() as? StoryContainerScreen
             
-            if let recordedAudioPreview = self.recordedAudioPreview {
+            if let recordedAudioPreview = self.recordedAudioPreview, case let .audio(audio) = recordedAudioPreview {
                 self.recordedAudioPreview = nil
                 
-                let waveformBuffer = recordedAudioPreview.waveform.makeBitstream()
+                let waveformBuffer = audio.waveform.makeBitstream()
                 
-                let messages: [EnqueueMessage] = [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: recordedAudioPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(recordedAudioPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedAudioPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: nil, replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+                let messages: [EnqueueMessage] = [.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: audio.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int64(audio.fileSize), attributes: [.Audio(isVoice: true, duration: Int(audio.duration), title: nil, performer: nil, waveform: waveformBuffer)])), threadId: nil, replyToMessageId: nil, replyToStoryId: focusedStoryId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
                 
                 let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: messages).start()
                 
@@ -939,7 +939,7 @@ final class StoryItemSetContainerSendMessage {
                     let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max), size: Int64(data.compressedData.count))
                     
                     component.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
-                    self.recordedAudioPreview = ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5))
+                    self.recordedAudioPreview = .audio(ChatRecordedMediaPreview.Audio(resource: resource, fileSize: Int32(data.compressedData.count), duration: Int32(data.duration), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))
                     view.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
                 }
             })

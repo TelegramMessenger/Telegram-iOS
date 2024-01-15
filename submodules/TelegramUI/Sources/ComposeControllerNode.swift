@@ -23,6 +23,7 @@ final class ComposeControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((PeerId) -> Void)?
+    var requestOpenDisabledPeerFromSearch: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     
     var openCreateNewGroup: (() -> Void)?
     var openCreateNewSecretChat: (() -> Void)?
@@ -51,7 +52,7 @@ final class ComposeControllerNode: ASDisplayNode {
             ContactListAdditionalOption(title: self.presentationData.strings.Compose_NewChannel, icon: .generic(UIImage(bundleImageName: "Contact List/CreateChannelActionIcon")!), action: {
                 openCreateNewChannelImpl?()
             })
-        ], includeChatList: false, topPeers: false)), displayPermissionPlaceholder: false)
+        ], includeChatList: false, topPeers: false)), onlyWriteable: false, displayPermissionPlaceholder: false)
         
         super.init()
         
@@ -123,6 +124,11 @@ final class ComposeControllerNode: ASDisplayNode {
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch, case let .peer(peer, _, _) = peer {
                 requestOpenPeerFromSearch(peer.id)
             }
+        }, openDisabledPeer: { [weak self] peer, reason in
+            guard let self else {
+                return
+            }
+            self.requestOpenDisabledPeerFromSearch?(peer, reason)
         }, contextAction: nil), cancel: { [weak self] in
             self?.requestDeactivateSearch?()
         })

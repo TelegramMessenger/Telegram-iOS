@@ -333,6 +333,7 @@ public final class MessageInputActionButtonComponent: Component {
                         context: component.context,
                         theme: defaultDarkPresentationTheme,
                         useDarkTheme: true,
+                        pause: false,
                         strings: component.strings,
                         presentController: component.presentController
                     )

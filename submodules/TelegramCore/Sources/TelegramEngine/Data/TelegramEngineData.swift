@@ -12,9 +12,9 @@ public protocol TelegramEngineMapKeyDataItem {
 }
 
 protocol AnyPostboxViewDataItem {
-    var keys: [PostboxViewKey] { get }
+    func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey]
 
-    func _extract(views: [PostboxViewKey: PostboxView]) -> Any
+    func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any
 }
 
 protocol PostboxViewDataItem: TelegramEngineDataItem, AnyPostboxViewDataItem {
@@ -24,11 +24,11 @@ protocol PostboxViewDataItem: TelegramEngineDataItem, AnyPostboxViewDataItem {
 }
 
 extension PostboxViewDataItem {
-    var keys: [PostboxViewKey] {
+    func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
         return [self.key]
     }
 
-    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+    func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
         return self.extract(view: views[self.key]!)
     }
 }
@@ -42,21 +42,21 @@ public final class EngineDataMap<Item: TelegramEngineDataItem & TelegramEngineMa
         self.items = items
     }
 
-    var keys: [PostboxViewKey] {
+    func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
         var keys = Set<PostboxViewKey>()
         for item in self.items {
-            for key in (item as! AnyPostboxViewDataItem).keys {
+            for key in (item as! AnyPostboxViewDataItem).keys(data: data) {
                 keys.insert(key)
             }
         }
         return Array(keys)
     }
 
-    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+    func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
         var result: [Item.Key: Item.Result] = [:]
 
         for item in self.items {
-            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(data: data, views: views)
             result[item.mapKey] = (itemResult as! Item.Result)
         }
 
@@ -73,21 +73,21 @@ public final class EngineDataList<Item: TelegramEngineDataItem & TelegramEngineM
         self.items = items
     }
 
-    var keys: [PostboxViewKey] {
+    func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
         var keys = Set<PostboxViewKey>()
         for item in self.items {
-            for key in (item as! AnyPostboxViewDataItem).keys {
+            for key in (item as! AnyPostboxViewDataItem).keys(data: data) {
                 keys.insert(key)
             }
         }
         return Array(keys)
     }
 
-    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+    func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
         var result: [Item.Result] = []
 
         for item in self.items {
-            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(data: data, views: views)
             result.append(itemResult as! Item.Result)
         }
 
@@ -104,21 +104,21 @@ public final class EngineDataOptional<Item: TelegramEngineDataItem>: TelegramEng
         self.item = item
     }
 
-    var keys: [PostboxViewKey] {
+    func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
         var keys = Set<PostboxViewKey>()
         if let item = self.item {
-            for key in (item as! AnyPostboxViewDataItem).keys {
+            for key in (item as! AnyPostboxViewDataItem).keys(data: data) {
                 keys.insert(key)
             }
         }
         return Array(keys)
     }
 
-    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+    func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
         var result: Item.Result?
 
         if let item = self.item {
-            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(data: data, views: views)
             result = (itemResult as! Item.Result)
         }
 
@@ -131,16 +131,18 @@ public extension TelegramEngine {
         public struct Item {
         }
 
+        let accountPeerId: PeerId
         private let postbox: Postbox
 
-        public init(postbox: Postbox) {
+        public init(accountPeerId: PeerId, postbox: Postbox) {
+            self.accountPeerId = accountPeerId
             self.postbox = postbox
         }
 
         private func _subscribe(items: [AnyPostboxViewDataItem]) -> Signal<[Any], NoError> {
             var keys = Set<PostboxViewKey>()
             for item in items {
-                for key in item.keys {
+                for key in item.keys(data: self) {
                     keys.insert(key)
                 }
             }
@@ -149,7 +151,7 @@ public extension TelegramEngine {
                 var results: [Any] = []
 
                 for item in items {
-                    results.append(item._extract(views: views.views))
+                    results.append(item._extract(data: self, views: views.views))
                 }
 
                 return results

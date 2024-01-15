@@ -20,6 +20,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",
         "//submodules/RadialStatusNode",
+        "//submodules/SemanticStatusNode",
         "//submodules/PhotoResources",
         "//submodules/TelegramUniversalVideoContent",
         "//submodules/FileMediaResourceStatus",

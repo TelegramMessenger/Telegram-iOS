@@ -651,10 +651,10 @@ private final class CameraScreenComponent: CombinedComponent {
             
             let startRecording = {
                 self.resultDisposable.set((camera.startRecording()
-                |> deliverOnMainQueue).start(next: { [weak self] duration in
+                |> deliverOnMainQueue).start(next: { [weak self] recordingData in
                     if let self, let controller = self.getController() {
-                        controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
-                        if duration > 59.0 {
+                        controller.updateCameraState({ $0.updatedDuration(recordingData.duration) }, transition: .easeInOut(duration: 0.1))
+                        if recordingData.duration > 59.0 {
                             self.stopVideoRecording()
                         }
                     }
@@ -1607,7 +1607,6 @@ public class CameraScreen: ViewController {
                             if case .pendingImage = value {
                                 Queue.mainQueue().async {
                                     self.mainPreviewView.isEnabled = false
-                                    
                                     self.additionalPreviewView.isEnabled = false
                                 }
                             } else {
@@ -1984,6 +1983,8 @@ public class CameraScreen: ViewController {
             self.requestUpdateLayout(hasAppeared: self.hasAppeared, transition: .immediate)
             CATransaction.commit()
             
+            self.animatingDualCameraPositionSwitch = true
+            
             self.additionalPreviewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.additionalPreviewContainerView.layer.animateScale(from: 0.01, to: 1.0, duration: duration, timingFunction: timingFunction)
                         
@@ -2010,7 +2011,6 @@ public class CameraScreen: ViewController {
                 timingFunction: timingFunction
             )
             
-            self.animatingDualCameraPositionSwitch = true
             self.mainPreviewContainerView.layer.animateBounds(
                 from: CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.mainPreviewContainerView.bounds.height - self.mainPreviewContainerView.bounds.width) / 2.0)), size: CGSize(width: self.mainPreviewContainerView.bounds.width, height: self.mainPreviewContainerView.bounds.width)),
                 to: self.mainPreviewContainerView.bounds,
@@ -2534,11 +2534,13 @@ public class CameraScreen: ViewController {
     
             let additionalPreviewFrame = CGRect(origin: CGPoint(x: origin.x - circleSide / 2.0, y: origin.y - circleSide / 2.0), size: CGSize(width: circleSide, height: circleSide))
             
-            transition.setPosition(view: self.additionalPreviewContainerView, position: additionalPreviewFrame.center)
-            transition.setBounds(view: self.additionalPreviewContainerView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
-            self.additionalPreviewContainerView.layer.cornerRadius = additionalPreviewFrame.width / 2.0
+            if !self.animatingDualCameraPositionSwitch {
+                transition.setPosition(view: self.additionalPreviewContainerView, position: additionalPreviewFrame.center)
+                transition.setBounds(view: self.additionalPreviewContainerView, bounds: CGRect(origin: .zero, size: additionalPreviewFrame.size))
+                self.additionalPreviewContainerView.layer.cornerRadius = additionalPreviewFrame.width / 2.0
+                transition.setScale(view: self.additionalPreviewContainerView, scale: isDualCameraEnabled ? 1.0 : 0.1)
+            }
             
-            transition.setScale(view: self.additionalPreviewContainerView, scale: isDualCameraEnabled ? 1.0 : 0.1)
             transition.setAlpha(view: self.additionalPreviewContainerView, alpha: isDualCameraEnabled ? 1.0 : 0.0)
             
             if dualCamUpdated && isDualCameraEnabled {

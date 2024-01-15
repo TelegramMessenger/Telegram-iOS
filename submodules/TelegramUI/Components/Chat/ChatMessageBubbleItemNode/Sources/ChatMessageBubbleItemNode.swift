@@ -1022,6 +1022,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return rects
     }
     
+    public func animateInstantVideoFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageInstantVideoBubbleContentNode {
+                snapshotView.frame = contentNode.interactiveVideoNode.view.convert(snapshotView.frame, from: self.view)
+                contentNode.interactiveVideoNode.animateFromSnapshot(snapshotView: snapshotView, transition: transition)
+                return
+            }
+        }
+    }
+    
     override public func didLoad() {
         super.didLoad()
         
@@ -2913,13 +2923,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         var legacyTransition: ContainedViewLayoutTransition = .immediate
-        var useDisplayLinkAnimations = false
         if case let .System(duration, _) = animation {
             legacyTransition = .animated(duration: duration, curve: .spring)
-            
-            if let subject = item.associatedData.subject, case .messageOptions = subject, !"".isEmpty {
-                useDisplayLinkAnimations = true
-            }
         }
         
         var forceBackgroundSide = false
@@ -3230,9 +3235,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.credibilityHighlightNode = nil
             }
         }
-        
-        let beginAt = applyInfo.timestamp ?? CACurrentMediaTime()
-    
+            
         let timingFunction = kCAMediaTimingFunctionSpring        
         if let forwardInfoNode = forwardInfoSizeApply.1(bubbleContentWidth) {
             strongSelf.forwardInfoNode = forwardInfoNode
@@ -3255,15 +3258,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             let forwardInfoFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
             if case let .System(duration, _) = animation {
                 if animateFrame {
-                    if useDisplayLinkAnimations {
-                        let animation = ListViewAnimation(from: previousForwardInfoNodeFrame, to: forwardInfoFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { _, frame in
-                            forwardInfoNode.frame = frame
-                        })
-                        strongSelf.setAnimationForKey("forwardFrame", animation: animation)
-                    } else {
-                        forwardInfoNode.frame = forwardInfoFrame
-                        forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoFrame, duration: duration, timingFunction: timingFunction)
-                    }
+                    forwardInfoNode.frame = forwardInfoFrame
+                    forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoFrame, duration: duration, timingFunction: timingFunction)
                 } else {
                     forwardInfoNode.frame = forwardInfoFrame
                 }
@@ -3637,7 +3633,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             let contentNodeFrame = relativeFrame.offsetBy(dx: effectiveContentOriginX, dy: effectiveContentOriginY)
-            let previousContentNodeFrame = contentNode.frame
             
             if case let .System(duration, _) = animation {
                 var animateFrame = false
@@ -3653,58 +3648,51 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 if animateFrame {
-                    if useDisplayLinkAnimations {
-                        let animation = ListViewAnimation(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { _, frame in
-                            contentNode.frame = frame
+                    var useExpensiveSnapshot = false
+                    if case .messageOptions = item.associatedData.subject {
+                        useExpensiveSnapshot = true
+                    }
+                    
+                    if let animateTextAndWebpagePositionSwap, let contentNode = contentNode as? ChatMessageTextBubbleContentNode, let snapshotView = useExpensiveSnapshot ? contentNode.view.snapshotView(afterScreenUpdates: false) :  contentNode.layer.snapshotContentTreeAsView() {
+                        let clippingView = UIView()
+                        clippingView.clipsToBounds = true
+                        clippingView.frame = contentNode.frame
+                        
+                        clippingView.addSubview(snapshotView)
+                        snapshotView.frame = CGRect(origin: CGPoint(), size: contentNode.bounds.size)
+                        
+                        contentNode.view.superview?.insertSubview(clippingView, belowSubview: contentNode.view)
+                        
+                        animation.animator.updateAlpha(layer: clippingView.layer, alpha: 0.0, completion: { [weak clippingView] _ in
+                            clippingView?.removeFromSuperview()
                         })
-                        strongSelf.setAnimationForKey("contentNode\(contentNodeIndex)Frame", animation: animation)
-                    } else {
-                        var useExpensiveSnapshot = false
-                        if case .messageOptions = item.associatedData.subject {
-                            useExpensiveSnapshot = true
+                        
+                        let positionOffset: CGFloat = animateTextAndWebpagePositionSwap ? -1.0 : 1.0
+                        
+                        animation.animator.updatePosition(layer: snapshotView.layer, position: CGPoint(x: snapshotView.center.x, y: snapshotView.center.y + positionOffset * contentNode.frame.height), completion: nil)
+                        
+                        contentNode.frame = contentNodeFrame
+                        
+                        if let statusNode = contentNode.statusNode, let contentSuperview = contentNode.view.superview, statusNode.view.isDescendant(of: contentSuperview), let bottomStatusNodeAnimationSourcePosition {
+                            let localSourcePosition = statusNode.view.convert(bottomStatusNodeAnimationSourcePosition, from: contentSuperview)
+                            let offset = CGPoint(x: statusNode.bounds.width - localSourcePosition.x, y: statusNode.bounds.height - localSourcePosition.y)
+                            animation.animator.animatePosition(layer: statusNode.layer, from: statusNode.layer.position.offsetBy(dx: -offset.x, dy: -offset.y), to: statusNode.layer.position, completion: nil)
                         }
                         
-                        if let animateTextAndWebpagePositionSwap, let contentNode = contentNode as? ChatMessageTextBubbleContentNode, let snapshotView = useExpensiveSnapshot ? contentNode.view.snapshotView(afterScreenUpdates: false) :  contentNode.layer.snapshotContentTreeAsView() {
-                            let clippingView = UIView()
-                            clippingView.clipsToBounds = true
-                            clippingView.frame = contentNode.frame
-                            
-                            clippingView.addSubview(snapshotView)
-                            snapshotView.frame = CGRect(origin: CGPoint(), size: contentNode.bounds.size)
-                            
-                            contentNode.view.superview?.insertSubview(clippingView, belowSubview: contentNode.view)
-                            
-                            animation.animator.updateAlpha(layer: clippingView.layer, alpha: 0.0, completion: { [weak clippingView] _ in
-                                clippingView?.removeFromSuperview()
-                            })
-                            
-                            let positionOffset: CGFloat = animateTextAndWebpagePositionSwap ? -1.0 : 1.0
-                            
-                            animation.animator.updatePosition(layer: snapshotView.layer, position: CGPoint(x: snapshotView.center.x, y: snapshotView.center.y + positionOffset * contentNode.frame.height), completion: nil)
-                            
-                            contentNode.frame = contentNodeFrame
-                            
-                            if let statusNode = contentNode.statusNode, let contentSuperview = contentNode.view.superview, statusNode.view.isDescendant(of: contentSuperview), let bottomStatusNodeAnimationSourcePosition {
-                                let localSourcePosition = statusNode.view.convert(bottomStatusNodeAnimationSourcePosition, from: contentSuperview)
-                                let offset = CGPoint(x: statusNode.bounds.width - localSourcePosition.x, y: statusNode.bounds.height - localSourcePosition.y)
-                                animation.animator.animatePosition(layer: statusNode.layer, from: statusNode.layer.position.offsetBy(dx: -offset.x, dy: -offset.y), to: statusNode.layer.position, completion: nil)
-                            }
-                            
-                            contentNode.animateClippingTransition(offset: positionOffset * contentNodeFrame.height, animation: animation)
-                            
-                            contentNode.alpha = 0.0
-                            animation.animator.updateAlpha(layer: contentNode.layer, alpha: 1.0, completion: nil)
-                        } else if animateTextAndWebpagePositionSwap != nil, let contentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
-                            if let statusNode = contentNode.contentNode.statusNode, let contentSuperview = contentNode.view.superview, statusNode.view.isDescendant(of: contentSuperview), let bottomStatusNodeAnimationSourcePosition {
-                                let localSourcePosition = statusNode.view.convert(bottomStatusNodeAnimationSourcePosition, from: contentSuperview)
-                                let offset = CGPoint(x: statusNode.bounds.width - localSourcePosition.x, y: statusNode.bounds.height - localSourcePosition.y)
-                                animation.animator.animatePosition(layer: statusNode.layer, from: statusNode.layer.position.offsetBy(dx: -offset.x, dy: -offset.y), to: statusNode.layer.position, completion: nil)
-                            }
-                            
-                            animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
-                        } else {
-                            animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
+                        contentNode.animateClippingTransition(offset: positionOffset * contentNodeFrame.height, animation: animation)
+                        
+                        contentNode.alpha = 0.0
+                        animation.animator.updateAlpha(layer: contentNode.layer, alpha: 1.0, completion: nil)
+                    } else if animateTextAndWebpagePositionSwap != nil, let contentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
+                        if let statusNode = contentNode.contentNode.statusNode, let contentSuperview = contentNode.view.superview, statusNode.view.isDescendant(of: contentSuperview), let bottomStatusNodeAnimationSourcePosition {
+                            let localSourcePosition = statusNode.view.convert(bottomStatusNodeAnimationSourcePosition, from: contentSuperview)
+                            let offset = CGPoint(x: statusNode.bounds.width - localSourcePosition.x, y: statusNode.bounds.height - localSourcePosition.y)
+                            animation.animator.animatePosition(layer: statusNode.layer, from: statusNode.layer.position.offsetBy(dx: -offset.x, dy: -offset.y), to: statusNode.layer.position, completion: nil)
                         }
+                        
+                        animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
+                    } else {
+                        animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
                     }
                 } else if animateAlpha {
                     contentNode.frame = contentNodeFrame
@@ -3857,48 +3845,23 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             isCurrentlyPlayingMedia = true
         }
         
-        if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
+        if case .System = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
-                if useDisplayLinkAnimations {
-                    strongSelf.clippingNode.clipsToBounds = shouldClipOnTransitions
-                    let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
-                        if let strongSelf = strongSelf {
-                            strongSelf.backgroundNode.frame = frame
-                            if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
-                                backgroundHighlightNode.frame = frame
-                                backgroundHighlightNode.updateLayout(size: frame.size, transition: .immediate)
-                            }
-                            strongSelf.clippingNode.position = CGPoint(x: frame.midX, y: frame.midY)
-                            strongSelf.clippingNode.bounds = CGRect(origin:  CGPoint(x: frame.minX, y: frame.minY), size: frame.size)
-                            
-                            strongSelf.backgroundNode.updateLayout(size: frame.size, transition: .immediate)
-                            strongSelf.backgroundWallpaperNode.updateFrame(frame, transition: .immediate)
-                            strongSelf.shadowNode.updateLayout(backgroundFrame: frame, transition: .immediate)
-                        }
-                    }, completed: { [weak strongSelf] _ in
-                        guard let strongSelf else {
-                            return
-                        }
-                        strongSelf.clippingNode.clipsToBounds = false
-                    })
-                    strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
-                } else {
-                    animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
-                    if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
-                        animation.animator.updateFrame(layer: backgroundHighlightNode.layer, frame: backgroundFrame, completion: nil)
-                        backgroundHighlightNode.updateLayout(size: backgroundFrame.size, transition: animation)
-                    }
-                    animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
-                    strongSelf.clippingNode.clipsToBounds = shouldClipOnTransitions
-                    animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
-                        strongSelf?.clippingNode.clipsToBounds = false
-                    })
-
-                    strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
-                    animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
-                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, animator: animation.animator)
-                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, animator: animation.animator)
+                animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
+                    animation.animator.updateFrame(layer: backgroundHighlightNode.layer, frame: backgroundFrame, completion: nil)
+                    backgroundHighlightNode.updateLayout(size: backgroundFrame.size, transition: animation)
                 }
+                animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
+                strongSelf.clippingNode.clipsToBounds = shouldClipOnTransitions
+                animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
+                    strongSelf?.clippingNode.clipsToBounds = false
+                })
+
+                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
+                animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
+                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, animator: animation.animator)
+                strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, animator: animation.animator)
                 
                 if let _ = strongSelf.backgroundNode.type {
                     if !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -4198,6 +4161,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadId = item.message.threadId, Int32(clamping: threadId) == attribute.messageId.id, let quotedReply = item.message.attributes.first(where: { $0 is QuotedReplyMessageAttribute }) as? QuotedReplyMessageAttribute {
+                                    let _ = quotedReply
+                                    
                                     return .action(InternalBubbleTapAction.Action({ [weak self, weak replyInfoNode] in
                                         guard let self, let item = self.item, let replyInfoNode else {
                                             return
@@ -4207,7 +4172,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                             item.controllerInteraction.requestMessageUpdate(item.message.id, false)
                                             return
                                         }
-                                        item.controllerInteraction.attemptedNavigationToPrivateQuote(quotedReply.peerId.flatMap { item.message.peers[$0] })
+                                        var progress: Promise<Bool>?
+                                        if let replyInfoNode = self.replyInfoNode {
+                                            progress = replyInfoNode.makeProgress()
+                                        }
+                                        item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil, progress: progress))
                                     }, contextMenuOnLongPress: true))
                                 }
                                 

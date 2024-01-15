@@ -179,6 +179,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     private let context: AccountContext
     private var theme: PresentationTheme
     private let useDarkTheme: Bool
+    private let pause: Bool
     private let strings: PresentationStrings
     
     public var mode: ChatTextInputMediaRecordingButtonMode = .audio
@@ -322,17 +323,18 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         if let current = self.micLockValue {
             return current
         } else {
-            let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, useDarkTheme: self.useDarkTheme, strings: self.strings)
+            let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, useDarkTheme: self.useDarkTheme, pause: self.pause, strings: self.strings)
             lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
             self.micLockValue = lockView
             return lockView
         }
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, useDarkTheme: Bool = false, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, useDarkTheme: Bool = false, pause: Bool = false, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.context = context
         self.theme = theme
         self.useDarkTheme = useDarkTheme
+        self.pause = pause
         self.strings = strings
         self.animationView = ComponentView<Empty>()
         self.presentController = presentController

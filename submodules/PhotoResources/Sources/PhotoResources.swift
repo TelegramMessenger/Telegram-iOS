@@ -2154,7 +2154,7 @@ public func chatSecretMessageVideo(account: Account, userLocation: MediaResource
                             thumbnailContext2.withFlippedContext { c in
                                 c.interpolationQuality = .none
                                 if let image = thumbnailContext.generateImage()?.cgImage {
-                                    c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                                    c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size).insetBy(dx: -4.0, dy: -4.0))
                                 }
                             }
                             imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
@@ -2185,7 +2185,10 @@ public func chatSecretMessageVideo(account: Account, userLocation: MediaResource
                 }
             }
             
-            addCorners(context, arguments: arguments)
+            if arguments.corners.topLeft.radius > 40.0 {
+            } else {
+                addCorners(context, arguments: arguments)
+            }
             
             return context
         }

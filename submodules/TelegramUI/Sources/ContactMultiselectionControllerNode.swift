@@ -58,6 +58,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeerId) -> Void)?
     var openPeer: ((ContactListPeer) -> Void)?
+    var openDisabledPeer: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     var removeSelectedPeer: ((ContactListPeerId) -> Void)?
     var removeSelectedCategory: ((Int) -> Void)?
     var additionalCategorySelected: ((Int) -> Void)?
@@ -76,8 +77,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private let footerPanelNode: FooterPanelNode?
     
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
+    private let onlyWriteable: Bool
     
-    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
+    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], onlyWriteable: Bool, limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
         self.navigationBar = navigationBar
         
         self.context = context
@@ -87,6 +89,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.animationRenderer = context.animationRenderer
         
         self.isPeerEnabled = isPeerEnabled
+        self.onlyWriteable = onlyWriteable
         
         var proceedImpl: (() -> Void)?
         
@@ -127,8 +130,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             placeholder = placeholderValue
             let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout, displayPresence: chatSelection.displayPresence), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true, isMainTab: false)
             chatListNode.passthroughPeerSelection = true
-            chatListNode.disabledPeerSelected = { peer, _ in
-                attemptDisabledItemSelection?(peer)
+            chatListNode.disabledPeerSelected = { peer, _, reason in
+                attemptDisabledItemSelection?(peer, reason)
             }
             if let limit = limit {
                 chatListNode.selectionLimit = limit
@@ -157,7 +160,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             } else if case .requestedUsersSelection = mode {
                 displayTopPeers = true
             }
-            self.contentNode = .contacts(ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, selectionState: ContactListNodeGroupSelectionState()))
+            let contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)), filters: filters, onlyWriteable: onlyWriteable, selectionState: ContactListNodeGroupSelectionState())
+            self.contentNode = .contacts(contactListNode)
         }
         
         self.tokenListNode = EditableTokenListNode(context: self.context, presentationTheme: self.presentationData.theme, theme: EditableTokenListNodeTheme(backgroundColor: .clear, separatorColor: self.presentationData.theme.rootController.navigationBar.separatorColor, placeholderTextColor: self.presentationData.theme.list.itemPlaceholderTextColor, primaryTextColor: self.presentationData.theme.list.itemPrimaryTextColor, tokenBackgroundColor: self.presentationData.theme.list.itemCheckColors.strokeColor.withAlphaComponent(0.25), selectedTextColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, selectedBackgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, accentColor: self.presentationData.theme.list.itemAccentColor, keyboardColor: self.presentationData.theme.rootController.keyboardColor), placeholder: placeholder, shortPlaceholder: shortPlaceholder)
@@ -177,6 +181,12 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         case let .contacts(contactsNode):
             contactsNode.openPeer = { [weak self] peer, _ in
                 self?.openPeer?(peer)
+            }
+            contactsNode.openDisabledPeer = { [weak self] peer, reason in
+                guard let self else {
+                    return
+                }
+                self.openDisabledPeer?(peer, reason)
             }
         case let .chats(chatsNode):
             chatsNode.peerSelected = { [weak self] peer, _, _, _, _ in
@@ -243,10 +253,16 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         case .premiumGifting, .requestedUsersSelection:
                             searchChatList = true
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
+                        }
+                        searchResultsNode.openDisabledPeer = { peer, reason in
+                            guard let self else {
+                                return
+                            }
+                            self.openDisabledPeer?(peer, reason)
                         }
                         strongSelf.searchResultsNode = searchResultsNode
                         searchResultsNode.enableUpdates = true

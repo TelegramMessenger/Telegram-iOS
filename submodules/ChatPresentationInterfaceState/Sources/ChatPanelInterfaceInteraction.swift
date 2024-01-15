@@ -171,6 +171,7 @@ public final class ChatPanelInterfaceInteraction {
     public let addDoNotTranslateLanguage: (String) -> Void
     public let hideTranslationPanel: () -> Void
     public let openPremiumGift: () -> Void
+    public let openPremiumRequiredForMessaging: () -> Void
     public let updateHistoryFilter: ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
@@ -279,6 +280,7 @@ public final class ChatPanelInterfaceInteraction {
         addDoNotTranslateLanguage:  @escaping (String) -> Void,
         hideTranslationPanel:  @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
+        openPremiumRequiredForMessaging: @escaping () -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
         chatController: @escaping () -> ViewController?,
@@ -386,6 +388,7 @@ public final class ChatPanelInterfaceInteraction {
         self.addDoNotTranslateLanguage = addDoNotTranslateLanguage
         self.hideTranslationPanel = hideTranslationPanel
         self.openPremiumGift = openPremiumGift
+        self.openPremiumRequiredForMessaging = openPremiumRequiredForMessaging
         self.updateHistoryFilter = updateHistoryFilter
         self.requestLayout = requestLayout
 
@@ -501,6 +504,7 @@ public final class ChatPanelInterfaceInteraction {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, openPremiumRequiredForMessaging: {
         }, updateHistoryFilter: { _ in
         }, requestLayout: { _ in
         }, chatController: {

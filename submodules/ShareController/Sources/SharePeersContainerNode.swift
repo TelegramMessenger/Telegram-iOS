@@ -43,7 +43,7 @@ private struct SharePeerEntry: Comparable, Identifiable {
     
     var stableId: Int64 {
         switch self.item {
-        case let .peer(peer, _, _, _):
+        case let .peer(peer, _, _, _, _):
             return peer.peerId.toInt64()
         case .story:
             return 0
@@ -105,7 +105,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let extendedInitialReveal: Bool
     
     let accountPeer: EnginePeer
-    private let foundPeers = Promise<[EngineRenderedPeer]>([])
+    private let foundPeers = Promise<[(peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool)]>([])
     
     private let disposable = MetaDisposable()
     private var entries: [SharePeerEntry] = []
@@ -136,7 +136,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    let peersValue = Promise<[(EngineRenderedPeer, EnginePeer.Presence?)]>()
+    let peersValue = Promise<[(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool)]>()
     
     private var _tick: Int = 0 {
         didSet {
@@ -145,7 +145,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     private let tick = ValuePromise<Int>(0)
     
-    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?, fromPublicChannel: Bool) {
+    init(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool)], accountPeer: EnginePeer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void, debugAction: @escaping () -> Void, extendedInitialReveal: Bool, segmentedValues: [ShareControllerSegmentedValue]?, fromPublicChannel: Bool) {
         self.environment = environment
         self.context = context
         self.theme = theme
@@ -175,22 +175,22 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             }
             
             var existingPeerIds: Set<EnginePeer.Id> = Set()
-            entries.append(SharePeerEntry(index: index, item: .peer(peer: EngineRenderedPeer(peer: accountPeer), presence: nil, topicId: nil, threadData: nil), theme: theme, strings: strings))
+            entries.append(SharePeerEntry(index: index, item: .peer(peer: EngineRenderedPeer(peer: accountPeer), presence: nil, topicId: nil, threadData: nil, requiresPremiumForMessaging: false), theme: theme, strings: strings))
             existingPeerIds.insert(accountPeer.id)
             index += 1
             
-            for peer in foundPeers.reversed() {
+            for (peer, requiresPremiumForMessaging) in foundPeers.reversed() {
                 if !existingPeerIds.contains(peer.peerId) {
-                    entries.append(SharePeerEntry(index: index, item: .peer(peer: peer, presence: nil, topicId: nil, threadData: nil), theme: theme, strings: strings))
+                    entries.append(SharePeerEntry(index: index, item: .peer(peer: peer, presence: nil, topicId: nil, threadData: nil, requiresPremiumForMessaging: requiresPremiumForMessaging), theme: theme, strings: strings))
                     existingPeerIds.insert(peer.peerId)
                     index += 1
                 }
             }
             
-            for (peer, presence) in initialPeers {
+            for (peer, presence, requiresPremiumForMessaging) in initialPeers {
                 if !existingPeerIds.contains(peer.peerId) {
                     let thread = controllerInteraction?.selectedTopics[peer.peerId]
-                    entries.append(SharePeerEntry(index: index, item: .peer(peer: peer, presence: presence, topicId: thread?.0, threadData: thread?.1), theme: theme, strings: strings))
+                    entries.append(SharePeerEntry(index: index, item: .peer(peer: peer, presence: presence, topicId: thread?.0, threadData: thread?.1, requiresPremiumForMessaging: requiresPremiumForMessaging), theme: theme, strings: strings))
                     existingPeerIds.insert(peer.peerId)
                     index += 1
                 }

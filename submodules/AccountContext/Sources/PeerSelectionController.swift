@@ -39,6 +39,11 @@ public struct ChatListNodePeersFilter: OptionSet {
 }
 
 
+public enum ChatListDisabledPeerReason {
+    case generic
+    case premiumRequired
+}
+
 public final class PeerSelectionControllerParams {
     public let context: AccountContext
     public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
@@ -50,7 +55,7 @@ public final class PeerSelectionControllerParams {
     public let hasContactSelector: Bool
     public let hasGlobalSearch: Bool
     public let title: String?
-    public let attemptSelection: ((EnginePeer, Int64?) -> Void)?
+    public let attemptSelection: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)?
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
@@ -70,7 +75,7 @@ public final class PeerSelectionControllerParams {
         hasContactSelector: Bool = true,
         hasGlobalSearch: Bool = true,
         title: String? = nil,
-        attemptSelection: ((EnginePeer, Int64?) -> Void)? = nil,
+        attemptSelection: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)? = nil,
         createNewGroup: (() -> Void)? = nil,
         pretendPresentedInModal: Bool = false,
         multipleSelection: Bool = false,

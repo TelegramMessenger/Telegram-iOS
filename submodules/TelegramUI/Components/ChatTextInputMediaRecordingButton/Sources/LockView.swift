@@ -6,30 +6,33 @@ import TelegramPresentationData
 
 final class LockView: UIButton, TGModernConversationInputMicButtonLock {
     private let useDarkTheme: Bool
+    private let pause: Bool
     
-    private let idleView: AnimationView = {
-        guard let url = getAppBundle().url(forResource: "LockWait", withExtension: "json"), let animation = Animation.filepath(url.path)
-        else { return AnimationView() }
-        
-        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
-        view.loopMode = .autoReverse
-        view.backgroundColor = .clear
-        view.isOpaque = false
-        return view
-    }()
+    private let idleView: AnimationView
+    private let lockingView: AnimationView
     
-    private let lockingView: AnimationView = {
-        guard let url = getAppBundle().url(forResource: "Lock", withExtension: "json"), let animation = Animation.filepath(url.path)
-        else { return AnimationView() }
-        
-        let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
-        view.backgroundColor = .clear
-        view.isOpaque = false
-        return view
-    }()
-    
-    init(frame: CGRect, theme: PresentationTheme, useDarkTheme: Bool = false, strings: PresentationStrings) {
+    init(frame: CGRect, theme: PresentationTheme, useDarkTheme: Bool = false, pause: Bool = false, strings: PresentationStrings) {
         self.useDarkTheme = useDarkTheme
+        self.pause = pause
+        
+        if let url = getAppBundle().url(forResource: "LockWait", withExtension: "json"), let animation = Animation.filepath(url.path) {
+            let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+            view.loopMode = .autoReverse
+            view.backgroundColor = .clear
+            view.isOpaque = false
+            self.idleView = view
+        } else {
+            self.idleView = AnimationView()
+        }
+        
+        if let url = getAppBundle().url(forResource: self.pause ? "LockPause" : "Lock", withExtension: "json"), let animation = Animation.filepath(url.path) {
+            let view = AnimationView(animation: animation, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+            view.backgroundColor = .clear
+            view.isOpaque = false
+            self.lockingView = view
+        } else {
+            self.lockingView = AnimationView()
+        }
         
         super.init(frame: frame)
         
@@ -62,25 +65,33 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
     }
     
     func updateTheme(_ theme: PresentationTheme) {
-        [
-            "Rectangle.Заливка 1": theme.chat.inputPanel.panelBackgroundColor,
-            "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Rectangle 2.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Path.Path.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
-        ].forEach { key, value in
-            idleView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+//        [
+//            "Rectangle.Заливка 1": theme.chat.inputPanel.panelBackgroundColor,
+//            "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
+//            "Rectangle 2.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
+//            "Path.Path.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
+//            "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
+//        ].forEach { key, value in
+//            idleView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+//        }
+//        
+        for keypath in idleView.allKeypaths(predicate: { $0.keys.last == "Color" }) {
+            idleView.setValueProvider(ColorValueProvider(theme.chat.inputPanel.panelControlAccentColor.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
         }
         
-        [
-            "Path.Path.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Path.Path.Заливка 1": theme.chat.inputPanel.panelBackgroundColor.withAlphaComponent(1.0),
-            "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Rectangle.Заливка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
-        ].forEach { key, value in
-            lockingView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+        for keypath in lockingView.allKeypaths(predicate: { $0.keys.last == "Color" }) {
+            lockingView.setValueProvider(ColorValueProvider(theme.chat.inputPanel.panelControlAccentColor.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
         }
+//        
+//        [
+//            "Path.Path.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
+//            "Path.Path.Заливка 1": theme.chat.inputPanel.panelBackgroundColor.withAlphaComponent(1.0),
+//            "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
+//            "Rectangle.Заливка 1": theme.chat.inputPanel.panelControlAccentColor,
+//            "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor
+//        ].forEach { key, value in
+//            lockingView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: "\(key).Color"))
+//        }
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

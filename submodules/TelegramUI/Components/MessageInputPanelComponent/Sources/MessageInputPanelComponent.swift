@@ -20,6 +20,8 @@ import AnimatedCountLabelNode
 import MessageInputActionButtonComponent
 import ContextReferenceButtonComponent
 import ForwardInfoPanelComponent
+import MultilineTextComponent
+import PlainButtonComponent
 
 private var sharedIsReduceTransparencyEnabled = UIAccessibility.isReduceTransparencyEnabled
 
@@ -86,6 +88,42 @@ public final class MessageInputPanelComponent: Component {
         case counter([CounterItem])
     }
     
+    public enum DisabledPlaceholder: Equatable {
+        enum Kind {
+            case text
+            case premiumRequired
+        }
+        
+        case text(String)
+        case premiumRequired(title: String, subtitle: String, action: () -> Void)
+        
+        var kind: Kind {
+            switch self {
+            case .text:
+                return .text
+            case .premiumRequired:
+                return .premiumRequired
+            }
+        }
+        
+        public static func ==(lhs: DisabledPlaceholder, rhs: DisabledPlaceholder) -> Bool {
+            switch lhs {
+            case let .text(value):
+                if case .text(value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .premiumRequired(title, subtitle, _):
+                if case .premiumRequired(title, subtitle, _) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            }
+        }
+    }
+    
     public final class ExternalState {
         public fileprivate(set) var isEditing: Bool = false
         public fileprivate(set) var hasText: Bool = false
@@ -148,7 +186,7 @@ public final class MessageInputPanelComponent: Component {
     public let hideKeyboard: Bool
     public let customInputView: UIView?
     public let forceIsEditing: Bool
-    public let disabledPlaceholder: String?
+    public let disabledPlaceholder: DisabledPlaceholder?
     public let header: AnyComponent<Empty>?
     public let isChannel: Bool
     public let storyItem: EngineStoryItem?
@@ -203,7 +241,7 @@ public final class MessageInputPanelComponent: Component {
         hideKeyboard: Bool,
         customInputView: UIView?,
         forceIsEditing: Bool,
-        disabledPlaceholder: String?,
+        disabledPlaceholder: DisabledPlaceholder?,
         header: AnyComponent<Empty>?,
         isChannel: Bool,
         storyItem: EngineStoryItem?,
@@ -313,7 +351,7 @@ public final class MessageInputPanelComponent: Component {
         if lhs.wasRecordingDismissed != rhs.wasRecordingDismissed {
             return false
         }
-        if lhs.recordedAudioPreview !== rhs.recordedAudioPreview {
+        if lhs.recordedAudioPreview != rhs.recordedAudioPreview {
             return false
         }
         if lhs.hasRecordedVideoPreview != rhs.hasRecordedVideoPreview {
@@ -676,7 +714,8 @@ public final class MessageInputPanelComponent: Component {
             let baseFieldHeight: CGFloat = 40.0
             
             var transition = transition
-            if transition.animation.isImmediate, let previousComponent = self.component, previousComponent.storyItem?.id == component.storyItem?.id, component.isChannel {
+            let previousComponent = self.component
+            if transition.animation.isImmediate, let previousComponent, previousComponent.storyItem?.id == component.storyItem?.id, component.isChannel {
                 transition = transition.withAnimation(.curve(duration: 0.3, curve: .spring))
             }
 
@@ -1034,23 +1073,56 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
-            if let disabledPlaceholderText = component.disabledPlaceholder, !component.isChannel {
+            if let disabledPlaceholderValue = component.disabledPlaceholder, !component.isChannel {
                 let disabledPlaceholder: ComponentView<Empty>
                 var disabledPlaceholderTransition = transition
-                if let current = self.disabledPlaceholder {
+                if let current = self.disabledPlaceholder, let previous = previousComponent?.disabledPlaceholder, disabledPlaceholderValue.kind == previous.kind {
                     disabledPlaceholder = current
                 } else {
+                    self.disabledPlaceholder?.view?.removeFromSuperview()
+                    
                     disabledPlaceholderTransition = .immediate
                     disabledPlaceholder = ComponentView()
                     self.disabledPlaceholder = disabledPlaceholder
                 }
+                
+                let contents: AnyComponent<Empty>
+                var leftAlignment = false
+                switch disabledPlaceholderValue {
+                case let .text(text):
+                    contents = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: text, font: Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
+                    ))
+                case let .premiumRequired(title, subtitle, action):
+                    leftAlignment = true
+                    contents = AnyComponent(PlainButtonComponent(
+                        content: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: title, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
+                            ))),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor))
+                            )))
+                        ], alignment: .left, spacing: 1.0)),
+                        effectAlignment: .center,
+                        action: {
+                            action()
+                        }
+                    ))
+                }
+                
                 let disabledPlaceholderSize = disabledPlaceholder.update(
                     transition: .immediate,
-                    component: AnyComponent(Text(text: disabledPlaceholderText, font: Font.regular(17.0), color: UIColor(rgb: 0xffffff, alpha: 0.3))),
+                    component: contents,
                     environment: {},
                     containerSize: CGSize(width: fieldBackgroundFrame.width - 8.0 * 2.0, height: 100.0)
                 )
-                let disabledPlaceholderFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX + floor((fieldBackgroundFrame.width - disabledPlaceholderSize.width) * 0.5), y: fieldBackgroundFrame.minY + floor((fieldBackgroundFrame.height - disabledPlaceholderSize.height) * 0.5)), size: disabledPlaceholderSize)
+                let disabledPlaceholderFrame: CGRect
+                if leftAlignment {
+                    disabledPlaceholderFrame = CGRect(origin: CGPoint(x: 12.0, y: fieldBackgroundFrame.minY + floor((fieldBackgroundFrame.height - disabledPlaceholderSize.height) * 0.5)), size: disabledPlaceholderSize)
+                } else {
+                    disabledPlaceholderFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX + floor((fieldBackgroundFrame.width - disabledPlaceholderSize.width) * 0.5), y: fieldBackgroundFrame.minY + floor((fieldBackgroundFrame.height - disabledPlaceholderSize.height) * 0.5)), size: disabledPlaceholderSize)
+                }
                 if let disabledPlaceholderView = disabledPlaceholder.view {
                     if disabledPlaceholderView.superview == nil {
                         self.addSubview(disabledPlaceholderView)

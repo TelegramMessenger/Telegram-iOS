@@ -10,6 +10,7 @@ import PresentationDataUtils
 import TextFormat
 import UndoUI
 import ChatInterfaceState
+import PremiumUI
 
 extension ChatControllerImpl {    
     func forwardMessages(messageIds: [MessageId], options: ChatInterfaceForwardOptionsState? = nil, resetCurrent: Bool = false) {
@@ -41,12 +42,12 @@ extension ChatControllerImpl {
                     }
                 }
             }
-            var attemptSelectionImpl: ((EnginePeer) -> Void)?
-            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, hasFilters: true, attemptSelection: { peer, _ in
-                attemptSelectionImpl?(peer)
+            var attemptSelectionImpl: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
+            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, hasFilters: true, attemptSelection: { peer, _, reason in
+                attemptSelectionImpl?(peer, reason)
             }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }, selectForumThreads: true))
             let context = self.context
-            attemptSelectionImpl = { [weak self, weak controller] peer in
+            attemptSelectionImpl = { [weak self, weak controller] peer, reason in
                 guard let strongSelf = self, let controller = controller else {
                     return
                 }
@@ -57,7 +58,28 @@ extension ChatControllerImpl {
                         return
                     }
                 }
-                controller.present(textAlertController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                switch reason {
+                case .generic:
+                    controller.present(textAlertController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                case .premiumRequired:
+                    controller.forEachController { c in
+                        if let c = c as? UndoOverlayController {
+                            c.dismiss()
+                        }
+                        return true
+                    }
+                    controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
+                    }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak controller] action in
+                        guard let self, let controller else {
+                            return false
+                        }
+                        if case .undo = action {
+                            let premiumController = PremiumIntroScreen(context: self.context, source: .settings)
+                            controller.push(premiumController)
+                        }
+                        return false
+                    }), in: .current)
+                }
             }
             controller.multiplePeersSelected = { [weak self, weak controller] peers, peerMap, messageText, mode, forwardOptions in
                 guard let strongSelf = self, let strongController = controller else {

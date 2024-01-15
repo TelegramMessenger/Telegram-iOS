@@ -63,11 +63,10 @@ final class PeerInfoSubtitleBadgeView: HighlightTrackingButton {
         self.action()
     }
     
-    func update(fillColor: UIColor, foregroundColor: UIColor) -> CGSize {
-        //TODO:localize
+    func update(title: String, fillColor: UIColor, foregroundColor: UIColor) -> CGSize {
         let labelSize = self.labelView.update(
             transition: .immediate,
-            component: AnyComponent(Text(text: "show", font: Font.regular(11.0), color: foregroundColor)),
+            component: AnyComponent(Text(text: title, font: Font.regular(11.0), color: foregroundColor)),
             environment: {},
             containerSize: CGSize(width: 100.0, height: 100.0)
         )

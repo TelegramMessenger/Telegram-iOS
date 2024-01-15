@@ -300,6 +300,9 @@ public final class AccountViewTracker {
     private var refreshStoriesForPeerIdsAndTimestamps: [PeerId: Int32] = [:]
     private var refreshStoriesForPeerIdsDebounceDisposable: Disposable?
     private var pendingRefreshStoriesForPeerIds: [PeerId] = []
+    private var refreshCanSendMessagesForPeerIdsAndTimestamps: [PeerId: Int32] = [:]
+    private var refreshCanSendMessagesForPeerIdsDebounceDisposable: Disposable?
+    private var pendingRefreshCanSendMessagesForPeerIds: [PeerId] = []
     
     private var updatedSeenPersonalMessageIds = Set<MessageId>()
     private var updatedReactionsSeenForMessageIds = Set<MessageId>()
@@ -1368,6 +1371,110 @@ public final class AccountViewTracker {
         }
     }
     
+    public func refreshCanSendMessagesForPeerIds(peerIds: [PeerId]) {
+        self.queue.async {
+            self.pendingRefreshCanSendMessagesForPeerIds.append(contentsOf: peerIds)
+            
+            if self.refreshCanSendMessagesForPeerIdsDebounceDisposable == nil {
+                self.refreshCanSendMessagesForPeerIdsDebounceDisposable = (Signal<Never, NoError>.complete() |> delay(0.15, queue: self.queue)).start(completed: {
+                    self.refreshCanSendMessagesForPeerIdsDebounceDisposable = nil
+                    
+                    let pendingPeerIds = self.pendingRefreshCanSendMessagesForPeerIds
+                    self.pendingRefreshCanSendMessagesForPeerIds.removeAll()
+                    self.internalRefreshCanSendMessagesStatsForPeerIds(peerIds: pendingPeerIds)
+                })
+            }
+        }
+    }
+    
+    private func internalRefreshCanSendMessagesStatsForPeerIds(peerIds: [PeerId]) {
+        self.queue.async {
+            var addedPeerIds: [PeerId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for peerId in peerIds {
+                let messageTimestamp = self.refreshCanSendMessagesForPeerIdsAndTimestamps[peerId]
+                var refresh = false
+                if let messageTimestamp = messageTimestamp {
+                    refresh = messageTimestamp < timestamp - 60 * 60
+                } else {
+                    refresh = true
+                }
+                
+                if refresh {
+                    self.refreshCanSendMessagesForPeerIdsAndTimestamps[peerId] = timestamp
+                    addedPeerIds.append(peerId)
+                }
+            }
+            if !addedPeerIds.isEmpty {
+                let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                self.nextUpdatedUnsupportedMediaDisposableId += 1
+                
+                if let account = self.account {
+                    let signal = account.postbox.transaction { transaction -> [(PeerId, Api.InputUser)] in
+                        return addedPeerIds.compactMap { id -> (PeerId, Api.InputUser)? in
+                            if let user = transaction.getPeer(id).flatMap(apiInputUser) {
+                                return (id, user)
+                            } else {
+                                return nil
+                            }
+                        }
+                    }
+                    |> mapToSignal { inputPeers -> Signal<Never, NoError> in
+                        guard !inputPeers.isEmpty else {
+                            return .complete()
+                        }
+                        
+                        var requests: [Signal<Never, NoError>] = []
+                        
+                        let batchCount = 100
+                        var startIndex = 0
+                        while startIndex < inputPeers.count {
+                            var slice: [(PeerId, Api.InputUser)] = []
+                            for i in startIndex ..< min(startIndex + batchCount, inputPeers.count) {
+                                slice.append(inputPeers[i])
+                            }
+                            startIndex += batchCount
+                            requests.append(account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: slice.map(\.1)))
+                            |> `catch` { _ -> Signal<[Api.Bool], NoError> in
+                                return .single([])
+                            }
+                            |> mapToSignal { result -> Signal<Never, NoError> in
+                                return account.postbox.transaction { transaction in
+                                    for i in 0 ..< result.count {
+                                        if i < slice.count {
+                                            let value = result[i]
+                                            transaction.updatePeerCachedData(peerIds: Set([slice[i].0]), update: { _, cachedData in
+                                                var cachedData = cachedData as? CachedUserData ?? CachedUserData(about: nil, botInfo: nil, editableBotInfo: nil, peerStatusSettings: nil, pinnedMessageId: nil, isBlocked: false, commonGroupCount: 0, voiceCallsAvailable: true, videoCallsAvailable: true, callsPrivate: true, canPinMessages: true, hasScheduledMessages: true, autoremoveTimeout: .unknown, themeEmoticon: nil, photo: .unknown, personalPhoto: .unknown, fallbackPhoto: .unknown, premiumGiftOptions: [], voiceMessagesAvailable: true, wallpaper: nil, flags: [])
+                                                var flags = cachedData.flags
+                                                if case .boolTrue = value {
+                                                    flags.insert(.premiumRequired)
+                                                } else {
+                                                    flags.remove(.premiumRequired)
+                                                }
+                                                cachedData = cachedData.withUpdatedFlags(flags)
+                                                return cachedData
+                                            })
+                                        }
+                                    }
+                                }
+                                |> ignoreValues
+                            })
+                        }
+                        
+                        return combineLatest(requests)
+                        |> ignoreValues
+                    }
+                    |> afterDisposed { [weak self] in
+                        self?.queue.async {
+                            self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                        }
+                    }
+                    self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
+                }
+            }
+        }
+    }
+    
     public func updateMarkAllMentionsSeen(peerId: PeerId, threadId: Int64?) {
         self.queue.async {
             guard let account = self.account else {
@@ -2219,9 +2326,6 @@ public final class AccountViewTracker {
                     }
                 }
                 var reactionCount: Int32 = 0
-                /*if let view = views.views[pendingReactionsKey] as? PendingMessageActionsSummaryView {
-                    reactionCount -= view.count
-                }*/
                 if let view = views.views[summaryReactionsKey] as? MessageHistoryTagSummaryView {
                     if let unseenCount = view.count {
                         reactionCount += unseenCount

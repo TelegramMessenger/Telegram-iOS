@@ -91,6 +91,7 @@ public final class LottieComponent: Component {
     public let size: CGSize?
     public let renderingScale: CGFloat?
     public let loop: Bool
+    public let playOnce: ActionSlot<Void>?
     
     public init(
         content: Content,
@@ -99,7 +100,8 @@ public final class LottieComponent: Component {
         startingPosition: StartingPosition = .end,
         size: CGSize? = nil,
         renderingScale: CGFloat? = nil,
-        loop: Bool = false
+        loop: Bool = false,
+        playOnce: ActionSlot<Void>? = nil
     ) {
         self.content = content
         self.color = color
@@ -108,6 +110,7 @@ public final class LottieComponent: Component {
         self.size = size
         self.renderingScale = renderingScale
         self.loop = loop
+        self.playOnce = playOnce
     }
     
     public static func ==(lhs: LottieComponent, rhs: LottieComponent) -> Bool {
@@ -410,6 +413,13 @@ public final class LottieComponent: Component {
             
             self.component = component
             self.state = state
+            
+            component.playOnce?.connect { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.playOnce()
+            }
             
             let size = component.size ?? availableSize
             

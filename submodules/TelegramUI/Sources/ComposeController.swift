@@ -124,7 +124,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
 
         self.contactsNode.openCreateNewGroup = { [weak self] in
             if let strongSelf = self {
-                let controller = strongSelf.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: strongSelf.context, mode: .groupCreation, options: []))
+                let controller = strongSelf.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: strongSelf.context, mode: .groupCreation, options: [], onlyWriteable: true))
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)

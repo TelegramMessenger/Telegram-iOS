@@ -14,6 +14,8 @@ import PresentationDataUtils
 import ContactListUI
 import CounterContollerTitleView
 import EditableTokenListNode
+import PremiumUI
+import UndoUI
 
 private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
     if peer.id == accountPeerId {
@@ -30,7 +32,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let context: AccountContext
     private let mode: ContactMultiselectionControllerMode
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
-    private let attemptDisabledItemSelection: ((EnginePeer) -> Void)?
+    private let attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
     
     private let titleView: CounterContollerTitleView
     
@@ -80,6 +82,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private var initialPeersDisposable: Disposable?
     private let options: [ContactListAdditionalOption]
     private let filters: [ContactListFilter]
+    private let onlyWriteable: Bool
     private let limit: Int32?
     
     init(_ params: ContactMultiselectionControllerParams) {
@@ -90,6 +93,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.attemptDisabledItemSelection = params.attemptDisabledItemSelection
         self.options = params.options
         self.filters = params.filters
+        self.onlyWriteable = params.onlyWriteable
         self.limit = params.limit
         self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -239,7 +243,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, isPeerEnabled: self.isPeerEnabled, attemptDisabledItemSelection: self.attemptDisabledItemSelection, options: self.options, filters: self.filters, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit)
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, isPeerEnabled: self.isPeerEnabled, attemptDisabledItemSelection: self.attemptDisabledItemSelection, options: self.options, filters: self.filters, onlyWriteable: self.onlyWriteable, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit)
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
             self._listReady.set(contactsNode.ready)
@@ -363,6 +367,34 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 if displayCountAlert {
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.CreateGroup_SoftUserLimitAlert, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
+            }
+        }
+        
+        self.contactsNode.openDisabledPeer = { [weak self] peer, reason in
+            guard let self else {
+                return
+            }
+            switch reason {
+            case .generic:
+                break
+            case .premiumRequired:
+                self.forEachController { c in
+                    if let c = c as? UndoOverlayController {
+                        c.dismiss()
+                    }
+                    return true
+                }
+                self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
+                }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                    guard let self else {
+                        return false
+                    }
+                    if case .undo = action {
+                        let premiumController = PremiumIntroScreen(context: self.context, source: .settings)
+                        self.push(premiumController)
+                    }
+                    return false
+                }), in: .current)
             }
         }
         

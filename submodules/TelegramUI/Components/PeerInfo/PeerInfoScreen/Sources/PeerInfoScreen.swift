@@ -412,6 +412,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, addDoNotTranslateLanguage: { _ in
         }, hideTranslationPanel: {
         }, openPremiumGift: {
+        }, openPremiumRequiredForMessaging: {
         }, updateHistoryFilter: { _ in
         }, requestLayout: { _ in
         }, chatController: {
@@ -3939,14 +3940,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                var replaceImpl: ((ViewController) -> Void)?
-                let controller = PremiumDemoScreen(context: context, subject: .emojiStatus, action: {
-                    let controller = PremiumIntroScreen(context: context, source: .settings)
-                    replaceImpl?(controller)
-                })
-                replaceImpl = { [weak controller] c in
-                    controller?.replace(with: c)
-                }
+                let controller = self.context.sharedContext.makePremiumPrivacyControllerController(context: self.context, subject: .presence, peerId: self.peerId)
                 self.controller?.push(controller)
             }
             
@@ -9345,7 +9339,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     subject: nil,
                     keepStack: .always
                 ))
-            }, openDisabledPeer: { _, _ in
+            }, openDisabledPeer: { _, _, _ in
             }, openRecentPeerOptions: { _ in
             }, openMessage: { [weak self] peer, threadId, messageId, deactivateOnAction in
                 guard let self else {
@@ -11749,7 +11743,7 @@ public func presentAddMembersImpl(context: AccountContext, updatedPresentationDa
             }))
             contactsController.navigationPresentation = .modal
         } else {*/
-            contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: options, filters: [.excludeSelf, .disable(recentIds)]))
+            contactsController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, mode: .peerSelection(searchChatList: false, searchGroups: false, searchChannels: false), options: options, filters: [.excludeSelf, .disable(recentIds)], onlyWriteable: true))
             contactsController.navigationPresentation = .modal
         //}
         

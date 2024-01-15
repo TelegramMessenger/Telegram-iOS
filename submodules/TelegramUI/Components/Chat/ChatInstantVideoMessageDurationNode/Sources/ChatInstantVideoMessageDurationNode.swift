@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import UniversalMediaPlayer
+import AnimatedCountLabelNode
 
 private let textFont = Font.with(size: 11.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
 
