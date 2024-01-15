@@ -489,16 +489,14 @@ public extension Message {
 
 public extension Message {
     func areReactionsTags(accountPeerId: PeerId) -> Bool {
-        return false
-        
-        /*if self.id.peerId == accountPeerId {
+        if self.id.peerId == accountPeerId {
             if let reactionsAttribute = self.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
                 return reactionsAttribute.isTags
             } else {
                 return true
             }
         }
-        return false*/
+        return false
     }
 }
 

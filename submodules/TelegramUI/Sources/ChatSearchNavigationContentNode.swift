@@ -24,7 +24,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
     
     private var searchingActivityDisposable: Disposable?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, chatLocation: ChatLocation, interaction: ChatPanelInterfaceInteraction, presentationInterfaceState: ChatPresentationInterfaceState) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -35,7 +35,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         let placeholderText: String
         switch chatLocation {
         case .peer, .replyThread, .feed:
-            if chatLocation.peerId == context.account.peerId, !"".isEmpty {
+            if chatLocation.peerId == context.account.peerId, presentationInterfaceState.hasSearchTags {
                 placeholderText = strings.Chat_SearchTagsPlaceholder
             } else {
                 placeholderText = strings.Conversation_SearchPlaceholder
@@ -113,7 +113,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                 case .peer, .replyThread, .feed:
                     if presentationInterfaceState.historyFilter != nil {
                         placeholderText = self.strings.Common_Search
-                    } else if self.chatLocation.peerId == self.context.account.peerId, !"".isEmpty {
+                    } else if self.chatLocation.peerId == self.context.account.peerId, presentationInterfaceState.hasSearchTags {
                         placeholderText = self.strings.Chat_SearchTagsPlaceholder
                     } else {
                         placeholderText = self.strings.Conversation_SearchPlaceholder

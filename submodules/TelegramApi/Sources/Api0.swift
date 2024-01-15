@@ -594,6 +594,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[577659656] = { return Api.NotifyPeer.parse_notifyForumTopic($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
+    dict[1001931436] = { return Api.OutboxReadDate.parse_outboxReadDate($0) }
     dict[-1738178803] = { return Api.Page.parse_page($0) }
     dict[-837994576] = { return Api.PageBlock.parse_pageBlockAnchor($0) }
     dict[-2143067670] = { return Api.PageBlock.parse_pageBlockAudio($0) }
@@ -994,11 +995,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
-    dict[2011940674] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
-    dict[129960444] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
+    dict[1703516023] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
+    dict[1410997530] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
     dict[9203775] = { return Api.UserStatus.parse_userStatusOffline($0) }
     dict[-306628279] = { return Api.UserStatus.parse_userStatusOnline($0) }
-    dict[-496024847] = { return Api.UserStatus.parse_userStatusRecently($0) }
+    dict[2065268168] = { return Api.UserStatus.parse_userStatusRecently($0) }
     dict[-1274595769] = { return Api.Username.parse_username($0) }
     dict[-567037804] = { return Api.VideoSize.parse_videoSize($0) }
     dict[-128171716] = { return Api.VideoSize.parse_videoSizeEmojiMarkup($0) }
@@ -1652,6 +1653,8 @@ public extension Api {
             case let _1 as Api.NotificationSound:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.NotifyPeer:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.OutboxReadDate:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Page:
                 _1.serialize(buffer, boxed)

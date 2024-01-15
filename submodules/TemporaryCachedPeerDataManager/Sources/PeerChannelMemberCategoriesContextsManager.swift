@@ -222,12 +222,14 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
             self.profileDataPhotoPreloadContexts[peerId] = context
             
             disposable.set(fetch.start(next: { [weak context] value in
-                guard let context = context else {
-                    return
-                }
-                context.value = value
-                for f in context.subscribers.copyItems() {
-                    f(value)
+                Queue.mainQueue().async {
+                    guard let context = context else {
+                        return
+                    }
+                    context.value = value
+                    for f in context.subscribers.copyItems() {
+                        f(value)
+                    }
                 }
             }))
         }

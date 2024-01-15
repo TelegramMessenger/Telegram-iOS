@@ -5656,6 +5656,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getOutboxReadDate(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.OutboxReadDate>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1941176739)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getOutboxReadDate", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.OutboxReadDate? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.OutboxReadDate?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.OutboxReadDate
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getPeerDialogs(peers: [Api.InputDialogPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PeerDialogs>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-462373635)
@@ -9692,6 +9708,25 @@ public extension Api.functions.users {
                         var result: Api.users.UserFull?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.users.UserFull
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.users {
+                static func getIsPremiumRequiredToContact(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Bool]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1507677680)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(id.count))
+                    for item in id {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "users.getIsPremiumRequiredToContact", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.Bool]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.Bool]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Bool.self)
                         }
                         return result
                     })
