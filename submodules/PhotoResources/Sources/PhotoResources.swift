@@ -2185,7 +2185,10 @@ public func chatSecretMessageVideo(account: Account, userLocation: MediaResource
                 }
             }
             
-//            addCorners(context, arguments: arguments)
+            if arguments.corners.topLeft.radius > 40.0 {
+            } else {
+                addCorners(context, arguments: arguments)
+            }
             
             return context
         }

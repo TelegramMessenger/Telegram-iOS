@@ -634,7 +634,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         var isChannel = false
         if let currentData = self.currentData {
             if currentData.isChannel || currentData.info.isStream {
-                title = self.strings.VoiceChatChannel_Title
+                if let titleValue = currentData.info.title, !titleValue.isEmpty {
+                    title = titleValue
+                } else {
+                    title = self.strings.VoiceChatChannel_Title
+                }
                 isChannel = true
             }
         }
