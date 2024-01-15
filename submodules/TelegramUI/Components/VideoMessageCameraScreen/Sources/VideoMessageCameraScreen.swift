@@ -576,6 +576,8 @@ public class VideoMessageCameraScreen: ViewController {
                     if self.cameraState.isViewOnceEnabled {
                         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                         self.displayViewOnceTooltip(text: presentationData.strings.Chat_PlayVideoMessageOnceTooltip, hasIcon: false)
+                        
+                        let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager, count: 3).startStandalone()
                     } else {
                         self.dismissAllTooltips()
                     }
@@ -973,7 +975,7 @@ public class VideoMessageCameraScreen: ViewController {
                     self.displayViewOnceTooltip(text: presentationData.strings.Chat_TapToPlayVideoMessageOnceTooltip, hasIcon: true)
                 }
             
-                let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: context.sharedContext.accountManager).startStandalone()
+                let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
             })
         }
         
