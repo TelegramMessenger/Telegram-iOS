@@ -683,6 +683,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return true
             }
             
+            if let _ = strongSelf.videoRecorderValue {
+                return false
+            }
+            
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             if strongSelf.presentVoiceMessageDiscardAlert(action: action, performAction: false) {
@@ -15374,14 +15378,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isScheduledMessages = true
                 }
                 
-                let _ = isScheduledMessages
+                var isBot = false
+                if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                    isBot = true
+                }
                 
                 let controller = VideoMessageCameraScreen(
                     context: self.context,
                     updatedPresentationData: self.updatedPresentationData,
-                    peerId: peerId,
+                    allowLiveUpload: peerId.namespace != Namespaces.Peer.SecretChat,
+                    viewOnceAvailable: !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot,
                     inputPanelFrame: currentInputPanelFrame,
-                    completion: { [weak self] message in
+                    completion: { [weak self] message, silentPosting, scheduleTime in
                         guard let self, let videoController = self.videoRecorderValue else {
                             return
                         }
@@ -15400,8 +15408,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             .withUpdatedCorrelationId(correlationId)
                         
                         var usedCorrelationId = false
-                        
-                        if self.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
+                        if scheduleTime == nil, self.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
                             usedCorrelationId = true
                             self.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNodeImpl.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController, weak self] in
                                 videoController?.hideVideoSnapshot()
@@ -15424,7 +15431,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }, usedCorrelationId ? correlationId : nil)
                         
-                        self.sendMessages([message])
+                        let messages = [message]
+                        let transformedMessages: [EnqueueMessage]
+                        if let silentPosting {
+                            transformedMessages = self.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                        } else if let scheduleTime {
+                            transformedMessages = self.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
+                        } else {
+                            transformedMessages = self.transformEnqueueMessages(messages)
+                        }
+                        
+                        self.sendMessages(transformedMessages)
                     }
                 )
                 controller.onResume = { [weak self] in
@@ -15634,6 +15651,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func resumeMediaRecorder() {
+        self.context.sharedContext.mediaManager.playlistControl(.playback(.pause), type: nil)
+        
         if let audioRecorderValue = self.audioRecorderValue {
             audioRecorderValue.resume()
             
@@ -15743,7 +15762,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             donateSendMessageIntent(account: self.context.account, sharedContext: self.context.sharedContext, intentContext: .chat, peerIds: [peerId])
         case .video:
-            self.videoRecorderValue?.sendVideoRecording()
+            self.videoRecorderValue?.sendVideoRecording(silentPosting: silentPosting, scheduleTime: scheduleTime)
         }
     }
     

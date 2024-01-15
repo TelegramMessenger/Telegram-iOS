@@ -14,8 +14,11 @@ class CameraInput {
         }
     }
     
-    func invalidate(for session: CameraSession) {
+    func invalidate(for session: CameraSession, switchAudio: Bool = true) {
         for input in session.session.inputs {
+            if !switchAudio && input === self.audioInput {
+                continue
+            }
             session.session.removeInput(input)
         }
     }

@@ -29,7 +29,7 @@ final class CameraDevice {
     
     public private(set) var audioDevice: AVCaptureDevice? = nil
         
-    func configure(for session: CameraSession, position: Camera.Position, dual: Bool) {
+    func configure(for session: CameraSession, position: Camera.Position, dual: Bool, switchAudio: Bool) {
         self.position = position
         
         var selectedDevice: AVCaptureDevice?
@@ -57,7 +57,9 @@ final class CameraDevice {
         self.videoDevice = selectedDevice
         self.videoDevicePromise.set(.single(selectedDevice))
         
-        self.audioDevice = AVCaptureDevice.default(for: .audio)
+        if switchAudio {
+            self.audioDevice = AVCaptureDevice.default(for: .audio)
+        }
     }
     
     func configureDeviceFormat(maxDimensions: CMVideoDimensions, maxFramerate: Double) {

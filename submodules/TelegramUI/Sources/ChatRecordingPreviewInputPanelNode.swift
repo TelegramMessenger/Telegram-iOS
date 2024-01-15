@@ -107,6 +107,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         
         self.sendButton = HighlightTrackingButtonNode()
         self.sendButton.displaysAsynchronously = false
+        self.sendButton.isExclusiveTouch = true
         self.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(theme), for: [])
         
         self.viewOnceButton = ChatRecordingViewOnceButtonNode(icon: .viewOnce)
@@ -195,6 +196,12 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         let gestureRecognizer = ContextGesture(target: nil, action: nil)
         self.sendButton.view.addGestureRecognizer(gestureRecognizer)
         self.gestureRecognizer = gestureRecognizer
+        gestureRecognizer.shouldBegin = { [weak self] _ in
+            if let self, self.viewOnce {
+                return false
+            }
+            return true
+        }
         gestureRecognizer.activated = { [weak self] gesture, _ in
             guard let strongSelf = self else {
                 return

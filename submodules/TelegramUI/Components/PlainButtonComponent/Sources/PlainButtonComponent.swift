@@ -88,6 +88,8 @@ public final class PlainButtonComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            self.isExclusiveTouch = true
+            
             self.contentContainer.isUserInteractionEnabled = false
             self.addSubview(self.contentContainer)
             

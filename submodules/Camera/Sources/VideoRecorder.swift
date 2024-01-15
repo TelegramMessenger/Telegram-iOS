@@ -146,7 +146,7 @@ private final class VideoRecorderImpl {
             }
             
             if failed {
-                print("error")
+                print("append video error")
                 return
             }
                         
@@ -256,7 +256,7 @@ private final class VideoRecorderImpl {
             }
 
             if failed {
-                print("error")
+                print("append audio error")
                 return
             }
                                     
