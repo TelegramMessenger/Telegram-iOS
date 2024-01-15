@@ -1575,7 +1575,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
-                
+        self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
+        
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         
         self.statusBar.statusBarStyle = .Ignore
@@ -1647,11 +1648,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             if collection == nil {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
                 
-                if mode == .story || mode == .addImage {
-                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
-                    self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
-                    self.navigationItem.rightBarButtonItem?.target = self
-                }
+//                if mode == .story || mode == .addImage {
+//                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
+//                    self.navigationItem.rightBarButtonItem?.action = #selector(self.rightButtonPressed)
+//                    self.navigationItem.rightBarButtonItem?.target = self
+//                }
             } else {
                 self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
             }
@@ -1785,11 +1786,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         self.updateSelectionState(count: Int32(selectionContext.count()))
         
-        self.longTapWithTabBar = { [weak self] in
-            if let self, self.groupsController == nil {
-                self.presentSearch(activateOnDisplay: false)
-            }
-        }
+//        self.longTapWithTabBar = { [weak self] in
+//            if let self, self.groupsController == nil {
+//                self.presentSearch(activateOnDisplay: false)
+//            }
+//        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -1965,19 +1966,23 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private var selectionCount: Int32 = 0
     fileprivate func updateSelectionState(count: Int32) {
         self.selectionCount = count
-        
+    
+        var moreIsVisible = false
         if case let .media(media) = self.subject {
             self.titleView.title = media.count == 1 ? self.presentationData.strings.Attachment_Pasteboard : self.presentationData.strings.Attachment_SelectedMedia(count)
             self.titleView.segmentsHidden = true
-            self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
+            moreIsVisible = true
+//            self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         } else {
             if count > 0 {
                 self.titleView.segments = [self.presentationData.strings.Attachment_AllMedia, self.presentationData.strings.Attachment_SelectedMedia(count)]
                 self.titleView.segmentsHidden = false
-                self.moreButtonNode.iconNode.enqueueState(.more, animated: true)
+                moreIsVisible = true
+//                self.moreButtonNode.iconNode.enqueueState(.more, animated: true)
             } else {
                 self.titleView.segmentsHidden = true
-                self.moreButtonNode.iconNode.enqueueState(.search, animated: true)
+                moreIsVisible = false
+//                self.moreButtonNode.iconNode.enqueueState(.search, animated: true)
                 
                 if self.titleView.index != 0 {
                     Queue.mainQueue().after(0.3) {
@@ -1986,6 +1991,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }
         }
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
+        transition.updateAlpha(node: self.moreButtonNode.iconNode, alpha: moreIsVisible ? 1.0 : 0.0)
+        transition.updateTransformScale(node: self.moreButtonNode.iconNode, scale: moreIsVisible ? 1.0 : 0.1)
     }
     
     private func updateThemeAndStrings() {
@@ -2149,7 +2158,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
         switch self.moreButtonNode.iconNode.iconState {
             case .search:
-                self.presentSearch(activateOnDisplay: true)
+//            self.presentSearch(activateOnDisplay: true)
+                break
             case .more:
                 let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount

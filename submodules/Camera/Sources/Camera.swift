@@ -482,15 +482,39 @@ private final class CameraContext {
     }
     
     func setZoomLevel(_ zoomLevel: CGFloat) {
-        self.mainDeviceContext?.device.setZoomLevel(zoomLevel)
+        if self.initialConfiguration.isRoundVideo {
+            if self.positionValue == .front {
+                self.additionalDeviceContext?.device.setZoomLevel(zoomLevel)
+            } else {
+                self.mainDeviceContext?.device.setZoomLevel(zoomLevel)
+            }
+        } else {
+            self.mainDeviceContext?.device.setZoomLevel(zoomLevel)
+        }
     }
     
     func setZoomDelta(_ zoomDelta: CGFloat) {
-        self.mainDeviceContext?.device.setZoomDelta(zoomDelta)
+        if self.initialConfiguration.isRoundVideo {
+            if self.positionValue == .front {
+                self.additionalDeviceContext?.device.setZoomDelta(zoomDelta)
+            } else {
+                self.mainDeviceContext?.device.setZoomDelta(zoomDelta)
+            }
+        } else {
+            self.mainDeviceContext?.device.setZoomDelta(zoomDelta)
+        }
     }
     
     func rampZoom(_ zoomLevel: CGFloat, rate: CGFloat) {
-        self.mainDeviceContext?.device.rampZoom(zoomLevel, rate: rate)
+        if self.initialConfiguration.isRoundVideo {
+            if self.positionValue == .front {
+                self.additionalDeviceContext?.device.rampZoom(zoomLevel, rate: rate)
+            } else {
+                self.mainDeviceContext?.device.rampZoom(zoomLevel, rate: rate)
+            }
+        } else {
+            self.mainDeviceContext?.device.rampZoom(zoomLevel, rate: rate)
+        }
     }
     
     func takePhoto() -> Signal<PhotoCaptureResult, NoError> {

@@ -2115,6 +2115,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         let controller = PremiumPrivacyScreen(
             context: context,
+            peerId: peerId,
             subject: mappedSubject,
             action: {
                 actionImpl?()

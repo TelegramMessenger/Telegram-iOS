@@ -576,6 +576,8 @@ public class VideoMessageCameraScreen: ViewController {
                     if self.cameraState.isViewOnceEnabled {
                         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                         self.displayViewOnceTooltip(text: presentationData.strings.Chat_PlayVideoMessageOnceTooltip, hasIcon: false)
+                        
+                        let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager, count: 3).startStandalone()
                     } else {
                         self.dismissAllTooltips()
                     }
@@ -973,7 +975,7 @@ public class VideoMessageCameraScreen: ViewController {
                     self.displayViewOnceTooltip(text: presentationData.strings.Chat_TapToPlayVideoMessageOnceTooltip, hasIcon: true)
                 }
             
-                let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: context.sharedContext.accountManager).startStandalone()
+                let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
             })
         }
         
@@ -1470,14 +1472,28 @@ public class VideoMessageCameraScreen: ViewController {
                 return
             }
             
+            var startTime: Double = 0.0
             let finalDuration: Double
             if let trimRange = self.node.previewState?.trimRange {
+                startTime = trimRange.lowerBound
                 finalDuration = trimRange.upperBound - trimRange.lowerBound
                 if finalDuration != duration {
                     hasAdjustments = true
                 }
             } else {
                 finalDuration = duration
+            }
+            
+            var thumbnailImage = video.thumbnail
+            if startTime > 0.0 {
+                let composition = composition(with: results)
+                let imageGenerator = AVAssetImageGenerator(asset: composition)
+                imageGenerator.maximumSize = CGSize(width: 400, height: 400)
+                imageGenerator.appliesPreferredTrackTransform = true
+                
+                if let cgImage = try? imageGenerator.copyCGImage(at: CMTime(seconds: startTime, preferredTimescale: composition.duration.timescale), actualTime: nil) {
+                    thumbnailImage = UIImage(cgImage: cgImage)
+                }
             }
             
             let values = MediaEditorValues(peerId: self.context.account.peerId, originalDimensions: PixelDimensions(width: 400, height: 400), cropOffset: .zero, cropRect: CGRect(origin: .zero, size: CGSize(width: 400.0, height: 400.0)), cropScale: 1.0, cropRotation: 0.0, cropMirroring: false, cropOrientation: nil, gradientColors: nil, videoTrimRange: self.node.previewState?.trimRange, videoIsMuted: false, videoIsFullHd: false, videoIsMirrored: false, videoVolume: nil, additionalVideoPath: nil, additionalVideoIsDual: false, additionalVideoPosition: nil, additionalVideoScale: nil, additionalVideoRotation: nil, additionalVideoPositionChanges: [], additionalVideoTrimRange: nil, additionalVideoOffset: nil, additionalVideoVolume: nil, nightTheme: false, drawing: nil, entities: [], toolValues: [:], audioTrack: nil, audioTrackTrimRange: nil, audioTrackOffset: nil, audioTrackVolume: nil, audioTrackSamples: nil, qualityPreset: .videoMessage)
@@ -1507,8 +1523,7 @@ public class VideoMessageCameraScreen: ViewController {
                         
             let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             let thumbnailSize = video.dimensions.cgSize.aspectFitted(CGSize(width: 320.0, height: 320.0))
-            let thumbnailImage = scaleImageToPixelSize(image: video.thumbnail, size: thumbnailSize)
-            if let thumbnailData = thumbnailImage?.jpegData(compressionQuality: 0.4) {
+            if let thumbnailData = scaleImageToPixelSize(image: thumbnailImage, size: thumbnailSize)?.jpegData(compressionQuality: 0.4) {
                 self.context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
             }
@@ -1517,7 +1532,7 @@ public class VideoMessageCameraScreen: ViewController {
             defer {
                 TempBox.shared.dispose(tempFile)
             }
-            if let data = compressImageToJPEG(video.thumbnail, quality: 0.7, tempFilePath: tempFile.path) {
+            if let data = compressImageToJPEG(thumbnailImage, quality: 0.7, tempFilePath: tempFile.path) {
                 context.account.postbox.mediaBox.storeCachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), data: data)
             }
 
