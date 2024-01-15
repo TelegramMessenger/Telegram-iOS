@@ -12,7 +12,7 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
                     if cachedData.flags.contains(.premiumRequired) {
                         premiumRequired.append(id)
                     }
-                } else {
+                } else if let peer = peer as? TelegramUser, peer.flags.contains(.requirePremium), !peer.flags.contains(.mutualContact) {
                     inputUsers.append(inputUser)
                 }
             }
