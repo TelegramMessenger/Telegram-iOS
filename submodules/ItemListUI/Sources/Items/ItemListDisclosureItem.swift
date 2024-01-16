@@ -47,6 +47,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let title: String
     let titleColor: ItemListDisclosureItemTitleColor
     let titleFont: ItemListDisclosureItemTitleFont
+    let titleIcon: UIImage?
     let enabled: Bool
     let label: String
     let labelStyle: ItemListDisclosureLabelStyle
@@ -59,7 +60,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     public let tag: ItemListItemTag?
     public let shimmeringIndex: Int?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.context = context
@@ -67,6 +68,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.title = title
         self.titleColor = titleColor
         self.titleFont = titleFont
+        self.titleIcon = titleIcon
         self.enabled = enabled
         self.labelStyle = labelStyle
         self.label = label
@@ -138,6 +140,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     var avatarNode: AvatarNode?
     let iconNode: ASImageNode
     let titleNode: TextNode
+    let titleIconNode: ASImageNode
     public let labelNode: TextNode
     var additionalDetailLabelNode: TextNode?
     let arrowNode: ASImageNode
@@ -183,6 +186,10 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
+        
+        self.titleIconNode = ASImageNode()
+        self.titleIconNode.displayWithoutProcessing = true
+        self.titleIconNode.displaysAsynchronously = false
         
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
@@ -625,6 +632,19 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     } else if let additionalDetailLabelNode = strongSelf.additionalDetailLabelNode {
                         strongSelf.additionalDetailLabelNode = nil
                         additionalDetailLabelNode.removeFromSupernode()
+                    }
+                    
+                    if let titleIcon = item.titleIcon {
+                        if strongSelf.titleIconNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.titleIconNode)
+                        }
+                        
+                        strongSelf.titleIconNode.image = titleIcon
+                        strongSelf.titleIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + 5.0, y: floor((layout.contentSize.height - titleIcon.size.height) / 2.0) - 1.0), size: titleIcon.size)
+                    } else {
+                        if strongSelf.titleIconNode.supernode != nil {
+                            strongSelf.titleIconNode.removeFromSupernode()
+                        }
                     }
  
                     if case .textWithIcon = item.labelStyle {

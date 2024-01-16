@@ -97,7 +97,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case forwardPrivacy(PresentationTheme, String, String)
     case groupPrivacy(PresentationTheme, String, String)
     case voiceMessagePrivacy(PresentationTheme, String, String, Bool)
-    case messagePrivacy(Bool)
+    case messagePrivacy(PresentationTheme, Bool, Bool)
     case bioPrivacy(PresentationTheme, String, String)
     case selectivePrivacyInfo(PresentationTheme, String)
     case passcode(PresentationTheme, String, Bool, String)
@@ -240,14 +240,14 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .voiceMessagePrivacy(lhsTheme, lhsText, lhsValue, lhsLocked):
-                if case let .voiceMessagePrivacy(rhsTheme, rhsText, rhsValue, rhsLocked) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsLocked == rhsLocked {
+            case let .voiceMessagePrivacy(lhsTheme, lhsText, lhsValue, lhsHasPremium):
+                if case let .voiceMessagePrivacy(rhsTheme, rhsText, rhsValue, rhsHasPremium) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsHasPremium == rhsHasPremium  {
                     return true
                 } else {
                     return false
                 }
-            case let .messagePrivacy(value):
-                if case .messagePrivacy(value) = rhs {
+            case let .messagePrivacy(lhsTheme, lhsValue, lhsHasPremium):
+                if case let .messagePrivacy(rhsTheme, rhsValue, rhsHasPremium) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsHasPremium == rhsHasPremium {
                     return true
                 } else {
                     return false
@@ -390,12 +390,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupsPrivacy()
                 })
-            case let .voiceMessagePrivacy(_, text, value, locked):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: locked ? .textWithIcon(UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon")!.precomposed()) : .text, sectionId: self.section, style: .blocks, action: {
+            case let .voiceMessagePrivacy(theme, text, value, hasPremium):
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: value, labelStyle: !hasPremium ? .textWithIcon(UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon")!.precomposed()) : .text, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceMessagePrivacy()
                 })
-            case let .messagePrivacy(value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.Settings_Privacy_Messages, label: !value ? presentationData.strings.Settings_Privacy_Messages_ValueEveryone : presentationData.strings.Settings_Privacy_Messages_ValueContactsAndPremium, sectionId: self.section, style: .blocks, action: {
+            case let .messagePrivacy(theme, value, hasPremium):
+                return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.Settings_Privacy_Messages, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: !value ? presentationData.strings.Settings_Privacy_Messages_ValueEveryone : presentationData.strings.Settings_Privacy_Messages_ValueContactsAndPremium, sectionId: self.section, style: .blocks, action: {
                     arguments.openMessagePrivacy()
                 })
             case let .bioPrivacy(_, text, value):
@@ -591,8 +591,8 @@ private func privacyAndSecurityControllerEntries(
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceCalls)))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))
         if !isPremiumDisabled {
-            entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages), !isPremium))
-            entries.append(.messagePrivacy(privacySettings.globalSettings.nonContactChatsRequirePremium))
+            entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages), isPremium))
+            entries.append(.messagePrivacy(presentationData.theme, privacySettings.globalSettings.nonContactChatsRequirePremium, isPremium))
         }
     } else {
         entries.append(.phoneNumberPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_PhoneNumber, presentationData.strings.Channel_NotificationLoading))
@@ -603,7 +603,7 @@ private func privacyAndSecurityControllerEntries(
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, presentationData.strings.Channel_NotificationLoading))
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.Privacy_GroupsAndChannels, presentationData.strings.Channel_NotificationLoading))
         if !isPremiumDisabled {
-            entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, presentationData.strings.Channel_NotificationLoading, !isPremium))
+            entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, presentationData.strings.Channel_NotificationLoading, isPremium))
         }
     
         //entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
