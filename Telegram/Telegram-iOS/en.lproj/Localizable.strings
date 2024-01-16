@@ -10917,7 +10917,7 @@ Sorry for the inconvenience.";
 "Settings.Privacy.Messages.ValueContactsAndPremium" = "Contacts and Premium";
 
 "Settings.Privacy.ReadTime" = "Hide Read Time";
-"Settings.Privacy.ReadTimeFooter" = "Do not show the time when you read a message to people you hid your last seen from. If you turn this on, their read time will also be hidden from you.\nThis does not affect group chats.";
+"Settings.Privacy.ReadTimeFooter" = "Hide the time when you read messages from people who can't see your last seen. If you turn this on, their read time will also be hidden from you.\nThis setting does not affect group chats.";
 
 "Settings.Privacy.LastSeenRevealedToast" = "Your last seen time is now visible.";
 "Settings.Privacy.MessageReadTimeRevealedToast" = "Your read times are now visible.";
@@ -10937,7 +10937,7 @@ Sorry for the inconvenience.";
 "Chat.ReactionContextMenu.RemoveTag" = "Remove Tag";
 
 "Chat.EmptyStateMessagingRestrictedToPremium.Text" = "Subscribe to **Premium**\nto message **%@**.";
-"Chat.EmptyStateMessagingRestrictedToPremium.Action" = "Add Premium";
+"Chat.EmptyStateMessagingRestrictedToPremium.Action" = "Get Premium";
 
 "Chat.ContextMenuReadDate.ReadAvailablePrefix" = "read";
 "Chat.ContextMenuReadDate.ReadAvailableBadge" = "show when";
@@ -10963,3 +10963,4 @@ Sorry for the inconvenience.";
 "PrivacyInfo.ShowReadTime.Text" = "To see when **%@** read the message, either start showing your own read time:";
 "PrivacyInfo.ShowReadTime.ButtonTitle" = "Show My Read Time";
 "PrivacyInfo.ShowReadTime.PremiumInfo" = "Subscription will let you see **%@'s** read time without showing yours.";
+"PrivacyInfo.ShowReadTime.AlwaysToast.Text" = "Set **Last Seen** privacy to 'Nobody' or 'My Contacts.'";

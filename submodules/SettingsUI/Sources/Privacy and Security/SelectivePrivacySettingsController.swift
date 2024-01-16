@@ -138,7 +138,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case phoneDiscoveryEverybody(PresentationTheme, String, Bool)
     case phoneDiscoveryMyContacts(PresentationTheme, String, Bool)
     case phoneDiscoveryInfo(PresentationTheme, String, String)
-    case hideReadTime(PresentationTheme, String, Bool)
+    case hideReadTime(PresentationTheme, String, Bool, Bool)
     case hideReadTimeInfo(PresentationTheme, String)
     case subscribeToPremium(PresentationTheme, String)
     case subscribeToPremiumInfo(PresentationTheme, String)
@@ -410,8 +410,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .hideReadTime(lhsTheme, lhsText, lhsValue):
-                if case let .hideReadTime(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .hideReadTime(lhsTheme, lhsText, lhsEnabled, lhsValue):
+                if case let .hideReadTime(rhsTheme, rhsText, rhsEnabled, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled, lhsValue == rhsValue {
                     return true
                 } else {
                     return false
@@ -535,8 +535,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
             case let .publicPhotoInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                 })
-            case let .hideReadTime(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .hideReadTime(_, text, enabled, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateHideReadTime?(value)
                 })
             case let .hideReadTimeInfo(_, text):
@@ -847,12 +847,25 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     }
     
     if case .presence = kind, let peer {
-        entries.append(.hideReadTime(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTime, state.hideReadTimeEnabled == true))
-        entries.append(.hideReadTimeInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimeFooter))
-        
-        if !peer.isPremium {
-            entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
-            entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
+        let isEnabled: Bool
+        switch state.setting {
+        case .everybody:
+            if !state.disableFor.isEmpty {
+                isEnabled = true
+            } else {
+                isEnabled = false
+            }
+        default:
+            isEnabled = true
+        }
+        if isEnabled {
+            entries.append(.hideReadTime(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTime, isEnabled,  isEnabled && state.hideReadTimeEnabled == true))
+            entries.append(.hideReadTimeInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimeFooter))
+            
+            if !peer.isPremium {
+                entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
+                entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
+            }
         }
     }
     
@@ -1353,7 +1366,18 @@ func selectivePrivacySettingsController(
         (controller?.navigationController as? NavigationController)?.pushViewController(c, animated: animated)
     }
     presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
+        if c is UndoOverlayController {
+            controller?.forEachController { other in
+                if let other = other as? UndoOverlayController {
+                    other.dismiss()
+                }
+                return true
+            }
+            
+            controller?.present(c, in: .current, with: a)
+        } else {
+            controller?.present(c, in: .window(.root), with: a)
+        }
     }
     
     return controller
