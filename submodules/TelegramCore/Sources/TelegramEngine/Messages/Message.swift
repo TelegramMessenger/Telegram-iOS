@@ -2,6 +2,7 @@ import Postbox
 
 public final class EngineMessage: Equatable {
     public typealias Id = MessageId
+    public typealias StableId = UInt32
     public typealias Index = MessageIndex
     public typealias Tags = MessageTags
     public typealias Attribute = MessageAttribute

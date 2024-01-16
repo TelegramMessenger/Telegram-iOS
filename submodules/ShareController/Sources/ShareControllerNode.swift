@@ -13,7 +13,7 @@ import ContextUI
 enum ShareState {
     case preparing(Bool)
     case progress(Float)
-    case done
+    case done([Int64])
 }
 
 enum ShareExternalState {
@@ -67,6 +67,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var debugAction: (() -> Void)?
     var openStats: (() -> Void)?
     var completed: (([PeerId]) -> Void)?
+    var enqueued: (([PeerId], [Int64]) -> Void)?
     var present: ((ViewController) -> Void)?
     var disabledPeerSelected: ((EnginePeer) -> Void)?
     
@@ -954,7 +955,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     }
                 }
                 
-                if case .done = status, !fromForeignApp {
+                if case let .done(correlationIds) = status, !fromForeignApp {
+                    strongSelf.enqueued?(peerIds, correlationIds)
                     strongSelf.dismiss?(true)
                     return
                 }

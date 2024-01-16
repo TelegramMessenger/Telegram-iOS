@@ -425,6 +425,7 @@ swift_library(
         "//submodules/Components/BalancedTextComponent",
         "//submodules/TelegramUI/Components/VideoMessageCameraScreen",
         "//submodules/TelegramUI/Components/MediaScrubberComponent",
+        "//submodules/TelegramUI/Components/Chat/ChatShareMessageTagView",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

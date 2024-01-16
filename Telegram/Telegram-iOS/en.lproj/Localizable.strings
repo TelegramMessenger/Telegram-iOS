@@ -10964,3 +10964,5 @@ Sorry for the inconvenience.";
 "PrivacyInfo.ShowReadTime.ButtonTitle" = "Show My Read Time";
 "PrivacyInfo.ShowReadTime.PremiumInfo" = "Subscription will let you see **%@'s** read time without showing yours.";
 "PrivacyInfo.ShowReadTime.AlwaysToast.Text" = "Set **Last Seen** privacy to 'Nobody' or 'My Contacts.'";
+
+"Chat.ToastMessageTagged.Text" = "Message tagged with %@";
