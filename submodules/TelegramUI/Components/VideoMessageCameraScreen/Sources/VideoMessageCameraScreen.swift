@@ -1484,11 +1484,13 @@ public class VideoMessageCameraScreen: ViewController {
                 finalDuration = duration
             }
             
+            let dimensions = PixelDimensions(width: 400, height: 400)
+            
             var thumbnailImage = video.thumbnail
             if startTime > 0.0 {
                 let composition = composition(with: results)
                 let imageGenerator = AVAssetImageGenerator(asset: composition)
-                imageGenerator.maximumSize = CGSize(width: 400, height: 400)
+                imageGenerator.maximumSize = dimensions.cgSize
                 imageGenerator.appliesPreferredTrackTransform = true
                 
                 if let cgImage = try? imageGenerator.copyCGImage(at: CMTime(seconds: startTime, preferredTimescale: composition.duration.timescale), actualTime: nil) {
@@ -1496,7 +1498,7 @@ public class VideoMessageCameraScreen: ViewController {
                 }
             }
             
-            let values = MediaEditorValues(peerId: self.context.account.peerId, originalDimensions: PixelDimensions(width: 400, height: 400), cropOffset: .zero, cropRect: CGRect(origin: .zero, size: CGSize(width: 400.0, height: 400.0)), cropScale: 1.0, cropRotation: 0.0, cropMirroring: false, cropOrientation: nil, gradientColors: nil, videoTrimRange: self.node.previewState?.trimRange, videoIsMuted: false, videoIsFullHd: false, videoIsMirrored: false, videoVolume: nil, additionalVideoPath: nil, additionalVideoIsDual: false, additionalVideoPosition: nil, additionalVideoScale: nil, additionalVideoRotation: nil, additionalVideoPositionChanges: [], additionalVideoTrimRange: nil, additionalVideoOffset: nil, additionalVideoVolume: nil, nightTheme: false, drawing: nil, entities: [], toolValues: [:], audioTrack: nil, audioTrackTrimRange: nil, audioTrackOffset: nil, audioTrackVolume: nil, audioTrackSamples: nil, qualityPreset: .videoMessage)
+            let values = MediaEditorValues(peerId: self.context.account.peerId, originalDimensions: dimensions, cropOffset: .zero, cropRect: CGRect(origin: .zero, size: dimensions.cgSize), cropScale: 1.0, cropRotation: 0.0, cropMirroring: false, cropOrientation: nil, gradientColors: nil, videoTrimRange: self.node.previewState?.trimRange, videoIsMuted: false, videoIsFullHd: false, videoIsMirrored: false, videoVolume: nil, additionalVideoPath: nil, additionalVideoIsDual: false, additionalVideoPosition: nil, additionalVideoScale: nil, additionalVideoRotation: nil, additionalVideoPositionChanges: [], additionalVideoTrimRange: nil, additionalVideoOffset: nil, additionalVideoVolume: nil, nightTheme: false, drawing: nil, entities: [], toolValues: [:], audioTrack: nil, audioTrackTrimRange: nil, audioTrackOffset: nil, audioTrackVolume: nil, audioTrackSamples: nil, qualityPreset: .videoMessage)
             
             var resourceAdjustments: VideoMediaResourceAdjustments? = nil
             if let valuesData = try? JSONEncoder().encode(values) {

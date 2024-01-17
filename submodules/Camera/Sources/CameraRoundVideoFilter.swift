@@ -5,6 +5,9 @@ import CoreMedia
 import CoreVideo
 import Metal
 import Display
+import TelegramCore
+
+let videoMessageDimensions = PixelDimensions(width: 400, height: 400)
 
 func allocateOutputBufferPool(with inputFormatDescription: CMFormatDescription, outputRetainedBufferCountHint: Int) -> (
     outputBufferPool: CVPixelBufferPool?,
@@ -114,8 +117,7 @@ class CameraRoundVideoFilter {
         }
         self.inputFormatDescription = formatDescription
         
-        let diameter: CGFloat = 400.0
-        let circleImage = generateImage(CGSize(width: diameter, height: diameter), opaque: false, scale: 1.0, rotatedContext: { size, context in
+        let circleImage = generateImage(videoMessageDimensions.cgSize, opaque: false, scale: 1.0, rotatedContext: { size, context in
             let bounds = CGRect(origin: .zero, size: size)
             context.clear(bounds)
             context.setFillColor(UIColor.white.cgColor)
@@ -158,7 +160,7 @@ class CameraRoundVideoFilter {
         
         var sourceImage = CIImage(cvImageBuffer: pixelBuffer)
         sourceImage = sourceImage.oriented(additional ? .leftMirrored : .right)
-        let scale = 400.0 / min(sourceImage.extent.width, sourceImage.extent.height)
+        let scale = CGFloat(videoMessageDimensions.width) / min(sourceImage.extent.width, sourceImage.extent.height)
         
         resizeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
         resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
@@ -203,18 +205,14 @@ class CameraRoundVideoFilter {
         guard let finalImage else {
             return nil
         }
-        
-        if finalImage.extent.width != 400 {
-            print("wtf: \(finalImage)")
-        }
-        
+                
         var pbuf: CVPixelBuffer?
         CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, outputPixelBufferPool!, &pbuf)
         guard let outputPixelBuffer = pbuf else {
             return nil
         }
         
-        self.ciContext.render(finalImage, to: outputPixelBuffer, bounds: CGRect(origin: .zero, size: CGSize(width: 400, height: 400)), colorSpace: outputColorSpace)
+        self.ciContext.render(finalImage, to: outputPixelBuffer, bounds: CGRect(origin: .zero, size: videoMessageDimensions.cgSize), colorSpace: outputColorSpace)
         
         return outputPixelBuffer
     }

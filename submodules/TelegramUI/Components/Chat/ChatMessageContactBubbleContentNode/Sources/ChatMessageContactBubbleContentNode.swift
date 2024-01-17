@@ -327,7 +327,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     let lineWidth: CGFloat = 3.0
                     
                     var buttonCount = 1
-                    if canMessage {
+                    if canMessage && canAdd {
                         buttonCount += 1
                     }
                     var buttonWidth = floor((boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0 - lineWidth))
