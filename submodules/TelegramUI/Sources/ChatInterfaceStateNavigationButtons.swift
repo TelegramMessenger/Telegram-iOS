@@ -108,7 +108,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
             } else {
                 let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
                 buttonItem.accessibilityLabel = strings.Conversation_Search
-                return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                return ChatNavigationButton(action: .search(hasTags: false), buttonItem: buttonItem)
             }
         } else {
             if case .spacer = currentButton?.action {
@@ -126,7 +126,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
                 } else {
                     let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
                     buttonItem.accessibilityLabel = strings.Conversation_Search
-                    return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                    return ChatNavigationButton(action: .search(hasTags: false), buttonItem: buttonItem)
                 }
             } else {
                 if case .spacer = currentButton?.action {
@@ -149,13 +149,15 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
             if case .scheduledMessages = presentationInterfaceState.subject {
                 return chatInfoNavigationButton
             } else {
-                if presentationInterfaceState.hasPlentyOfMessages {
-                    if case .search = currentButton?.action {
+                let isTags = presentationInterfaceState.hasSearchTags
+                
+                if presentationInterfaceState.hasPlentyOfMessages || isTags {
+                    if case .search(isTags) = currentButton?.action {
                         return currentButton
                     } else {
-                        let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                        let buttonItem = UIBarButtonItem(image: isTags ? PresentationResourcesRootController.navigationCompactTagsSearchIcon(presentationInterfaceState.theme) : PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
                         buttonItem.accessibilityLabel = strings.Conversation_Search
-                        return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                        return ChatNavigationButton(action: .search(hasTags: isTags), buttonItem: buttonItem)
                     }
                 } else {
                     if case .spacer = currentButton?.action {

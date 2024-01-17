@@ -1037,12 +1037,17 @@ public extension TelegramEngine.EngineData.Item {
             func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
                 return [
                     .cachedPeerData(peerId: self.id),
-                    .basicPeer(data.accountPeerId)
+                    .basicPeer(data.accountPeerId),
+                    .basicPeer(self.id)
                 ]
             }
 
             func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
                 guard let basicPeerView = views[.basicPeer(data.accountPeerId)] as? BasicPeerView else {
+                    assertionFailure()
+                    return false
+                }
+                guard let basicTargetPeerView = views[.basicPeer(self.id)] as? BasicPeerView else {
                     assertionFailure()
                     return false
                 }
@@ -1052,6 +1057,13 @@ public extension TelegramEngine.EngineData.Item {
                 }
                 
                 if let peer = basicPeerView.peer, peer.isPremium {
+                    return false
+                }
+                
+                guard let targetPeer = basicTargetPeerView.peer as? TelegramUser else {
+                    return false
+                }
+                if !targetPeer.flags.contains(.requirePremium) {
                     return false
                 }
                 
