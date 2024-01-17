@@ -532,7 +532,7 @@ public class VideoMessageCameraScreen: ViewController {
         fileprivate var liveUploadInterface: LegacyLiveUploadInterface?
         private var currentLiveUploadPath: String?
         fileprivate var currentLiveUploadData: LegacyLiveUploadInterfaceResult?
-        
+                
         fileprivate let backgroundView: UIVisualEffectView
         fileprivate let containerView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
@@ -689,16 +689,27 @@ public class VideoMessageCameraScreen: ViewController {
         }
         
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
+            guard let controller = self.controller else {
+                return
+            }
             if #available(iOS 13.0, *) {
-                let _ = ((self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing)
-                |> filter { $0 }
-                |> take(1)).startStandalone(next: { _ in
+                let _ = (combineLatest(queue: Queue.mainQueue(),
+                    self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing,
+                    controller.audioSessionReady.get()
+                )
+                |> filter { $0 && $1 }
+                |> take(1)).startStandalone(next: { _, _ in
                     f()
                 })
             } else {
-                Queue.mainQueue().after(0.35) {
+                let _ = (combineLatest(queue: Queue.mainQueue(),
+                    .single(true) |> delay(0.35, queue: Queue.mainQueue()),
+                    controller.audioSessionReady.get()
+                )
+                |> filter { $0 && $1 }
+                |> take(1)).startStandalone(next: { _, _ in
                     f()
-                }
+                })
             }
         }
         
@@ -1241,6 +1252,7 @@ public class VideoMessageCameraScreen: ViewController {
     fileprivate let completion: (EnqueueMessage?, Bool?, Int32?) -> Void
     
     private var audioSessionDisposable: Disposable?
+    fileprivate let audioSessionReady = ValuePromise<Bool>(false)
     
     private let hapticFeedback = HapticFeedback()
     
@@ -1619,6 +1631,7 @@ public class VideoMessageCameraScreen: ViewController {
         self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
             if #available(iOS 13.0, *) {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+                self.audioSessionReady.set(true)
             }
         }, deactivate: { _ in
             return .single(Void())
