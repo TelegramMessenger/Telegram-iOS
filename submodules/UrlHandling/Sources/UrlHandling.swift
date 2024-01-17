@@ -126,6 +126,29 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
         }
         if !pathComponents.isEmpty && !pathComponents[0].isEmpty {
             let peerName: String = pathComponents[0]
+            
+            if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
+                let component = pathComponents[0].replacingOccurrences(of: "%20", with: "+")
+                if component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789+").inverted) == nil {
+                    var attach: String?
+                    var startAttach: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "attach" {
+                                    attach = value
+                                } else if queryItem.name == "startattach" {
+                                    startAttach = value
+                                }
+                            }
+                        }
+                    }
+                    
+                    return .phone(component.replacingOccurrences(of: "+", with: ""), attach, startAttach)
+                } else {
+                    return .join(String(component.dropFirst()))
+                }
+            }
             if pathComponents.count == 1 {
                 if let queryItems = components.queryItems {
                     if peerName == "socks" || peerName == "proxy" {
@@ -288,27 +311,6 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     }
                 } else if pathComponents[0].hasPrefix(phonebookUsernamePathPrefix), let idValue = Int64(String(pathComponents[0][pathComponents[0].index(pathComponents[0].startIndex, offsetBy: phonebookUsernamePathPrefix.count)...])) {
                     return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(idValue)))
-                } else if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
-                    let component = pathComponents[0].replacingOccurrences(of: "%20", with: "+")
-                    if component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789+").inverted) == nil {
-                        var attach: String?
-                        var startAttach: String?
-                        if let queryItems = components.queryItems {
-                            for queryItem in queryItems {
-                                if let value = queryItem.value {
-                                    if queryItem.name == "attach" {
-                                        attach = value
-                                    } else if queryItem.name == "startattach" {
-                                        startAttach = value
-                                    }
-                                }
-                            }
-                        }
-                        
-                        return .phone(component.replacingOccurrences(of: "+", with: ""), attach, startAttach)
-                    } else {
-                        return .join(String(component.dropFirst()))
-                    }
                 } else if pathComponents[0].hasPrefix("$") || pathComponents[0].hasPrefix("%24") {
                     var component = pathComponents[0].replacingOccurrences(of: "%24", with: "$")
                     if component.hasPrefix("$") {

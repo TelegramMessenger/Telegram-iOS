@@ -532,7 +532,7 @@ public class VideoMessageCameraScreen: ViewController {
         fileprivate var liveUploadInterface: LegacyLiveUploadInterface?
         private var currentLiveUploadPath: String?
         fileprivate var currentLiveUploadData: LegacyLiveUploadInterfaceResult?
-        
+                
         fileprivate let backgroundView: UIVisualEffectView
         fileprivate let containerView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
@@ -689,16 +689,27 @@ public class VideoMessageCameraScreen: ViewController {
         }
         
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
+            guard let controller = self.controller else {
+                return
+            }
             if #available(iOS 13.0, *) {
-                let _ = ((self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing)
-                |> filter { $0 }
-                |> take(1)).startStandalone(next: { _ in
+                let _ = (combineLatest(queue: Queue.mainQueue(),
+                    self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing,
+                    controller.audioSessionReady.get()
+                )
+                |> filter { $0 && $1 }
+                |> take(1)).startStandalone(next: { _, _ in
                     f()
                 })
             } else {
-                Queue.mainQueue().after(0.35) {
+                let _ = (combineLatest(queue: Queue.mainQueue(),
+                    .single(true) |> delay(0.35, queue: Queue.mainQueue()),
+                    controller.audioSessionReady.get()
+                )
+                |> filter { $0 && $1 }
+                |> take(1)).startStandalone(next: { _, _ in
                     f()
-                }
+                })
             }
         }
         
@@ -1241,6 +1252,7 @@ public class VideoMessageCameraScreen: ViewController {
     fileprivate let completion: (EnqueueMessage?, Bool?, Int32?) -> Void
     
     private var audioSessionDisposable: Disposable?
+    fileprivate let audioSessionReady = ValuePromise<Bool>(false)
     
     private let hapticFeedback = HapticFeedback()
     
@@ -1484,11 +1496,13 @@ public class VideoMessageCameraScreen: ViewController {
                 finalDuration = duration
             }
             
+            let dimensions = PixelDimensions(width: 400, height: 400)
+            
             var thumbnailImage = video.thumbnail
             if startTime > 0.0 {
                 let composition = composition(with: results)
                 let imageGenerator = AVAssetImageGenerator(asset: composition)
-                imageGenerator.maximumSize = CGSize(width: 400, height: 400)
+                imageGenerator.maximumSize = dimensions.cgSize
                 imageGenerator.appliesPreferredTrackTransform = true
                 
                 if let cgImage = try? imageGenerator.copyCGImage(at: CMTime(seconds: startTime, preferredTimescale: composition.duration.timescale), actualTime: nil) {
@@ -1496,7 +1510,7 @@ public class VideoMessageCameraScreen: ViewController {
                 }
             }
             
-            let values = MediaEditorValues(peerId: self.context.account.peerId, originalDimensions: PixelDimensions(width: 400, height: 400), cropOffset: .zero, cropRect: CGRect(origin: .zero, size: CGSize(width: 400.0, height: 400.0)), cropScale: 1.0, cropRotation: 0.0, cropMirroring: false, cropOrientation: nil, gradientColors: nil, videoTrimRange: self.node.previewState?.trimRange, videoIsMuted: false, videoIsFullHd: false, videoIsMirrored: false, videoVolume: nil, additionalVideoPath: nil, additionalVideoIsDual: false, additionalVideoPosition: nil, additionalVideoScale: nil, additionalVideoRotation: nil, additionalVideoPositionChanges: [], additionalVideoTrimRange: nil, additionalVideoOffset: nil, additionalVideoVolume: nil, nightTheme: false, drawing: nil, entities: [], toolValues: [:], audioTrack: nil, audioTrackTrimRange: nil, audioTrackOffset: nil, audioTrackVolume: nil, audioTrackSamples: nil, qualityPreset: .videoMessage)
+            let values = MediaEditorValues(peerId: self.context.account.peerId, originalDimensions: dimensions, cropOffset: .zero, cropRect: CGRect(origin: .zero, size: dimensions.cgSize), cropScale: 1.0, cropRotation: 0.0, cropMirroring: false, cropOrientation: nil, gradientColors: nil, videoTrimRange: self.node.previewState?.trimRange, videoIsMuted: false, videoIsFullHd: false, videoIsMirrored: false, videoVolume: nil, additionalVideoPath: nil, additionalVideoIsDual: false, additionalVideoPosition: nil, additionalVideoScale: nil, additionalVideoRotation: nil, additionalVideoPositionChanges: [], additionalVideoTrimRange: nil, additionalVideoOffset: nil, additionalVideoVolume: nil, nightTheme: false, drawing: nil, entities: [], toolValues: [:], audioTrack: nil, audioTrackTrimRange: nil, audioTrackOffset: nil, audioTrackVolume: nil, audioTrackSamples: nil, qualityPreset: .videoMessage)
             
             var resourceAdjustments: VideoMediaResourceAdjustments? = nil
             if let valuesData = try? JSONEncoder().encode(values) {
@@ -1614,9 +1628,12 @@ public class VideoMessageCameraScreen: ViewController {
     }
     
     private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
+        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { [weak self] _ in
             if #available(iOS 13.0, *) {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+            }
+            if let self {
+                self.audioSessionReady.set(true)
             }
         }, deactivate: { _ in
             return .single(Void())

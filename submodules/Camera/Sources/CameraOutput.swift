@@ -304,31 +304,35 @@ final class CameraOutput: NSObject {
         self.currentMode = mode
         self.lastSampleTimestamp = nil
         
-        let codecType: AVVideoCodecType
-        if case .roundVideo = mode {
-            codecType = .h264
-        } else {
-            if hasHEVCHardwareEncoder {
-                codecType = .hevc
-            } else {
-                codecType = .h264
-            }
-        }
-        
-        guard var videoSettings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
-            return .complete()
-        }
-        
-        var dimensions: CGSize = CGSize(width: 1080, height: 1920)
-        if orientation == .landscapeLeft || orientation == .landscapeRight {
-            dimensions = CGSize(width: 1920, height: 1080)
-        }
         var orientation = orientation
+        let dimensions: CGSize
+        let videoSettings: [String: Any]
         if case .roundVideo = mode {
-            videoSettings[AVVideoWidthKey] = 400
-            videoSettings[AVVideoHeightKey] = 400
-            dimensions = CGSize(width: 400, height: 400)
+            dimensions = videoMessageDimensions.cgSize
             orientation = .landscapeRight
+            
+            let compressionProperties: [String: Any] = [
+                AVVideoAverageBitRateKey: 1000 * 1000,
+                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                AVVideoH264EntropyModeKey: AVVideoH264EntropyModeCABAC
+            ]
+            videoSettings = [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoCompressionPropertiesKey: compressionProperties,
+                AVVideoWidthKey: Int(dimensions.width),
+                AVVideoHeightKey: Int(dimensions.height)
+            ]
+        } else {
+            let codecType: AVVideoCodecType = hasHEVCHardwareEncoder ? .hevc : .h264
+            if orientation == .landscapeLeft || orientation == .landscapeRight {
+                dimensions = CGSize(width: 1920, height: 1080)
+            } else {
+                dimensions = CGSize(width: 1080, height: 1920)
+            }
+            guard let settings = self.videoOutput.recommendedVideoSettings(forVideoCodecType: codecType, assetWriterOutputFileType: .mp4) else {
+                return .complete()
+            }
+            videoSettings = settings
         }
         
         let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
@@ -514,10 +518,10 @@ final class CameraOutput: NSObject {
         let extensions = CMFormatDescriptionGetExtensions(formatDescription) as! [String: Any]
         
         var updatedExtensions = extensions
-        updatedExtensions["CVBytesPerRow"] = 400 * 4
+        updatedExtensions["CVBytesPerRow"] = videoMessageDimensions.width * 4
         
         var newFormatDescription: CMFormatDescription?
-        var status = CMVideoFormatDescriptionCreate(allocator: nil, codecType: mediaSubType, width: 400, height: 400, extensions: updatedExtensions as CFDictionary, formatDescriptionOut: &newFormatDescription)
+        var status = CMVideoFormatDescriptionCreate(allocator: nil, codecType: mediaSubType, width: videoMessageDimensions.width, height: videoMessageDimensions.height, extensions: updatedExtensions as CFDictionary, formatDescriptionOut: &newFormatDescription)
         guard status == noErr, let newFormatDescription else {
             return nil
         }
