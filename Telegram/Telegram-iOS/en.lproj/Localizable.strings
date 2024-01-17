@@ -10886,6 +10886,7 @@ Sorry for the inconvenience.";
 "Call.StatusWeakSignal" = "Weak network signal";
 
 "Conversation.ContactAddContact" = "ADD";
+"Conversation.ContactAddContactLong" = "ADD CONTACT";
 "Conversation.ContactMessage" = "MESSAGE";
 
 "Chat.PlayOnceVideoMessageTooltip" = "This video message can only be played once.";

@@ -307,7 +307,18 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let (messageButtonWidth, messageContinueLayout) = makeMessageButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Conversation_ContactMessage.uppercased(), mainColor, false, false)
-                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, nil, false, !canMessage && !canAdd ? item.presentationData.strings.Conversation_ViewContactDetails.uppercased() : item.presentationData.strings.Conversation_ContactAddContact.uppercased(), mainColor, false, false)
+                
+                let addTitle: String
+                if !canMessage && !canAdd  {
+                    addTitle = item.presentationData.strings.Conversation_ViewContactDetails
+                } else {
+                    if canMessage {
+                        addTitle = item.presentationData.strings.Conversation_ContactAddContact
+                    } else {
+                        addTitle = item.presentationData.strings.Conversation_ContactAddContactLong
+                    }
+                }
+                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, nil, false, addTitle.uppercased(), mainColor, false, false)
                 
                 let maxButtonWidth = max(messageButtonWidth, addButtonWidth)
                 var maxContentWidth: CGFloat = avatarSize.width + 7.0
@@ -387,7 +398,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.messageButtonNode.isHidden = !canMessage
                             
                             let backgroundInsets = layoutConstants.text.bubbleInsets
-                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: contentWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
+                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: backgroundFrame.maxY + 3.0), size: statusSizeAndApply.0)

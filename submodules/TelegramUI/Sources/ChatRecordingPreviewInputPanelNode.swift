@@ -350,11 +350,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 }
             }
         }
-        
-        if isFirstTime, !self.viewOnceButton.isHidden {
-            self.maybePresentViewOnceTooltip()
-        }
-        
+                
         let panelHeight = defaultHeight(metrics: metrics)
 
         transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: 1), size: CGSize(width: 40.0, height: 40)))
@@ -486,6 +482,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     prevTextInputPanelNode?.requestLayout()
                 }
             }
+        }
+        
+        if isFirstTime, !self.viewOnceButton.isHidden {
+            self.maybePresentViewOnceTooltip()
         }
         
         return panelHeight
