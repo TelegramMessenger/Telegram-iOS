@@ -672,15 +672,9 @@ public class VideoMessageCameraScreen: ViewController {
                 }
                 self.loadingView.alpha = 0.0
                 self.additionalPreviewView.removePlaceholder(delay: 0.0)
-                
-                Queue.mainQueue().after(0.15) {
-                    self.startRecording.invoke(Void())
-                }
             })
                         
             self.idleTimerExtensionDisposable.set(self.context.sharedContext.applicationBindings.pushIdleTimerExtension())
-            
-            self.setupCamera()
         }
         
         deinit {
@@ -689,28 +683,19 @@ public class VideoMessageCameraScreen: ViewController {
         }
         
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
-            guard let controller = self.controller else {
-                return
-            }
+            let previewReady: Signal<Bool, NoError>
             if #available(iOS 13.0, *) {
-                let _ = (combineLatest(queue: Queue.mainQueue(),
-                    self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing,
-                    controller.audioSessionReady.get()
-                )
-                |> filter { $0 && $1 }
-                |> take(1)).startStandalone(next: { _, _ in
-                    f()
-                })
+                previewReady = self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing
             } else {
-                let _ = (combineLatest(queue: Queue.mainQueue(),
-                    .single(true) |> delay(0.35, queue: Queue.mainQueue()),
-                    controller.audioSessionReady.get()
-                )
-                |> filter { $0 && $1 }
-                |> take(1)).startStandalone(next: { _, _ in
-                    f()
-                })
+                previewReady = .single(true) |> delay(0.35, queue: Queue.mainQueue())
             }
+            
+            let _ = (previewReady
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { _ in
+                f()
+            })
         }
         
         func setupLiveUpload(filePath: String) {
@@ -734,7 +719,7 @@ public class VideoMessageCameraScreen: ViewController {
             self.view.addGestureRecognizer(pinchGestureRecognizer)
         }
                 
-        private func setupCamera() {
+        fileprivate func setupCamera() {
             guard self.camera == nil else {
                 return
             }
@@ -771,6 +756,10 @@ public class VideoMessageCameraScreen: ViewController {
             camera.startCapture()
             
             self.camera = camera
+            
+            Queue.mainQueue().justDispatch {
+                self.startRecording.invoke(Void())
+            }
         }
         
         @objc private func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
@@ -1252,7 +1241,6 @@ public class VideoMessageCameraScreen: ViewController {
     fileprivate let completion: (EnqueueMessage?, Bool?, Int32?) -> Void
     
     private var audioSessionDisposable: Disposable?
-    fileprivate let audioSessionReady = ValuePromise<Bool>(false)
     
     private let hapticFeedback = HapticFeedback()
     
@@ -1633,7 +1621,7 @@ public class VideoMessageCameraScreen: ViewController {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
             if let self {
-                self.audioSessionReady.set(true)
+                self.node.setupCamera()
             }
         }, deactivate: { _ in
             return .single(Void())
