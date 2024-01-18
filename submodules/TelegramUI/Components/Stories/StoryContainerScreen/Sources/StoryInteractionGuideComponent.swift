@@ -181,7 +181,7 @@ final class StoryInteractionGuideComponent: Component {
                 transition: transition,
                 component: AnyComponent(List(items)),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                containerSize: CGSize(width: min(500.0, availableSize.width - sideInset * 2.0), height: availableSize.height)
             )
             
             let textSpacing: CGFloat = 7.0
