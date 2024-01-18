@@ -2683,20 +2683,20 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser, let timestamp = currentStats.readTimestamps.first?.value {
                 let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: timestamp, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
                     dateFormatString: { value in
-                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSeenTimestamp_Date(value).string, ranges: [])
                     },
                     tomorrowFormatString: { value in
-                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSeenTimestamp_TodayAt(value).string, ranges: [])
                     },
                     todayFormatString: { value in
-                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSeenTimestamp_TodayAt(value).string, ranges: [])
                     },
                     yesterdayFormatString: { value in
-                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_MessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
+                        return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
                     }
                 )).string
                 
-                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadFormat(dateText).string, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                self.textNode.attributedText = NSAttributedString(string: dateText, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
             } else {
                 if reactionCount != 0 {
                     let text: String
