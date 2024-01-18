@@ -636,6 +636,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         longPressRecognizer.minimumPressDuration = 0.2
         self.longPressRecognizer = longPressRecognizer
         self.view.addGestureRecognizer(longPressRecognizer)
+        
+        if self.allPresetReactionsAreAvailable {
+            longPressRecognizer.isEnabled = false
+        }
     }
     
     @objc private func horizontalExpandGesture(_ recognizer: UIPanGestureRecognizer) {

@@ -158,7 +158,7 @@ extension ChatControllerImpl {
                                     animationCache: animationCache,
                                     animationRenderer: animationRenderer,
                                     isStandalone: false,
-                                    subject: .reaction(onlyTop: false),
+                                    subject: message.areReactionsTags(accountPeerId: self.context.account.peerId) ? .messageTag : .reaction(onlyTop: false),
                                     hasTrending: false,
                                     topReactionItems: reactionItems,
                                     areUnicodeEmojiEnabled: false,

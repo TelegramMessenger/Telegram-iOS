@@ -810,7 +810,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             canSelect: canSelect && !isEmbeddedMode,
             resourceStatus: resourceStatus,
             messageActions: isEmbeddedMode ? ChatAvailableMessageActions(
-                options: [],
+                options: messageActions.options.intersection([.deleteLocally, .deleteGlobally]),
                 banAuthor: nil,
                 disableDelete: true,
                 isCopyProtected: messageActions.isCopyProtected
