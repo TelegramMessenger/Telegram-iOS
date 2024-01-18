@@ -170,6 +170,8 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
         private var resultDisposable = MetaDisposable()
                 
         var cameraState: CameraState?
+        
+        var didDisplayViewOnce = false
                     
         private let hapticFeedback = HapticFeedback()
         
@@ -355,12 +357,18 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             }
             
             if let controller = component.getController() {
-                if controller.isSendingImmediately || controller.scheduledLock {
+                if controller.scheduledLock {
                     showViewOnce = true
                 }
                 if !controller.viewOnceAvailable {
                     showViewOnce = false
                 }
+            }
+            
+            if state.didDisplayViewOnce {
+                showViewOnce = true
+            } else if showViewOnce {
+                state.didDisplayViewOnce = true
             }
             
             if !component.isPreviewing {
@@ -377,6 +385,7 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                             )
                         ),
                         minSize: CGSize(width: 44.0, height: 44.0),
+                        isExclusive: false,
                         action: { [weak state] in
                             if let state {
                                 state.togglePosition()
