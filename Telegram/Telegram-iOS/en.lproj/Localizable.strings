@@ -10967,3 +10967,7 @@ Sorry for the inconvenience.";
 "PrivacyInfo.ShowReadTime.AlwaysToast.Text" = "Set **Last Seen** privacy to 'Nobody' or 'My Contacts.'";
 
 "Chat.ToastMessageTagged.Text" = "Message tagged with %@";
+
+"Chat.PrivateMessageSeenTimestamp.Date" = "read %@";
+"Chat.PrivateMessageSeenTimestamp.TodayAt" = "read today at %@";
+"Chat.PrivateMessageSeenTimestamp.YesterdayAt" = "read yesterday at %@";

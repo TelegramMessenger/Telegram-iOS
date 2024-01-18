@@ -1071,7 +1071,7 @@ public extension TelegramEngine.EngineData.Item {
                     if let cachedData = view.cachedPeerData as? CachedUserData {
                         return cachedData.flags.contains(.premiumRequired)
                     } else {
-                        return false
+                        return true
                     }
                 } else {
                     return false
