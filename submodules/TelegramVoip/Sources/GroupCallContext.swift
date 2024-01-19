@@ -377,6 +377,7 @@ public final class OngoingGroupCallContext {
         }
 
         public enum Buffer {
+            case argb(NativeBuffer)
             case bgra(NativeBuffer)
             case native(NativeBuffer)
             case nv12(NV12Buffer)
@@ -393,7 +394,9 @@ public final class OngoingGroupCallContext {
 
         init(frameData: CallVideoFrameData) {
             if let nativeBuffer = frameData.buffer as? CallVideoFrameNativePixelBuffer {
-                if CVPixelBufferGetPixelFormatType(nativeBuffer.pixelBuffer) == kCVPixelFormatType_32BGRA {
+                if CVPixelBufferGetPixelFormatType(nativeBuffer.pixelBuffer) == kCVPixelFormatType_32ARGB {
+                    self.buffer = .argb(NativeBuffer(pixelBuffer: nativeBuffer.pixelBuffer))
+                } else if CVPixelBufferGetPixelFormatType(nativeBuffer.pixelBuffer) == kCVPixelFormatType_32BGRA {
                     self.buffer = .bgra(NativeBuffer(pixelBuffer: nativeBuffer.pixelBuffer))
                 } else {
                     self.buffer = .native(NativeBuffer(pixelBuffer: nativeBuffer.pixelBuffer))
