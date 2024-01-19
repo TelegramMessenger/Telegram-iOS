@@ -10971,3 +10971,6 @@ Sorry for the inconvenience.";
 "Chat.PrivateMessageSeenTimestamp.Date" = "read %@";
 "Chat.PrivateMessageSeenTimestamp.TodayAt" = "read today at %@";
 "Chat.PrivateMessageSeenTimestamp.YesterdayAt" = "read yesterday at %@";
+
+"Settings.Privacy.ReadTimePremiumActive" = "Subcribed to Telegram Premium";
+"Settings.Privacy.ReadTimePremiumActiveFooter" = "Because you are a Telegram Premium subscriber, you will see the last seen and read time of all users who are sharing it with you – even if you are hiding yours.";

@@ -865,6 +865,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             if !peer.isPremium {
                 entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
                 entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
+            } else {
+                entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumActive))
+                entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumActiveFooter))
             }
         }
     }
