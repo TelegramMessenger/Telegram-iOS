@@ -519,4 +519,6 @@ func updateChatPresentationInterfaceStateImpl(
     } else {
         selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
     }
+    
+    selfController.updateDownButtonVisibility()
 }

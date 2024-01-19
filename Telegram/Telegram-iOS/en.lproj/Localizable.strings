@@ -10934,7 +10934,7 @@ Sorry for the inconvenience.";
 
 "Chat.ContextMenuTagsTitle" = "Tag the message with an emoji for quick access later";
 
-"Chat.ReactionContextMenu.FilterByTag" = "Fiter by Tag";
+"Chat.ReactionContextMenu.FilterByTag" = "Filter by Tag";
 "Chat.ReactionContextMenu.RemoveTag" = "Remove Tag";
 
 "Chat.EmptyStateMessagingRestrictedToPremium.Text" = "Subscribe to **Premium**\nto message **%@**.";
@@ -10974,3 +10974,5 @@ Sorry for the inconvenience.";
 
 "Settings.Privacy.ReadTimePremiumActive" = "Subcribed to Telegram Premium";
 "Settings.Privacy.ReadTimePremiumActiveFooter" = "Because you are a Telegram Premium subscriber, you will see the last seen and read time of all users who are sharing it with you – even if you are hiding yours.";
+
+"Privacy.VoiceMessages.NonPremiumHelp" = "Subscribe to Telegram Premium to restrict who can send you voice or video messages.\n\n[What is Telegram Premium?]()";

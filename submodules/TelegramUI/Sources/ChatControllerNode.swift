@@ -920,6 +920,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if hasChatThemeScreen {
                 return true
             }
+            
+            if strongSelf.chatPresentationInterfaceState.search != nil {
+                return true
+            }
+            
             return false
         }
         
@@ -2655,7 +2660,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let _ = self.chatPresentationInterfaceState.search, let interfaceInteraction = self.interfaceInteraction {
                 var activate = false
                 if self.searchNavigationNode == nil {
-                    activate = true
+                    if !self.chatPresentationInterfaceState.hasSearchTags {
+                        activate = true
+                    }
                     self.searchNavigationNode = ChatSearchNavigationContentNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction, presentationInterfaceState: self.chatPresentationInterfaceState)
                 }
                 self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)

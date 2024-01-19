@@ -19,23 +19,26 @@ extension ChatControllerImpl {
         if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
             var items: [ContextMenuItem] = []
             
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { _ in
-                return nil
-            }, action: { [weak self] _, a in
-                guard let self else {
+            let tags: [EngineMessage.CustomTag] = [ReactionsMessageAttribute.messageTag(reaction: value)]
+            
+            if self.presentationInterfaceState.historyFilter?.customTags != tags {
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagFilter"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    guard let self else {
+                        a(.default)
+                        return
+                    }
+                    self.interfaceInteraction?.updateHistoryFilter { _ in
+                        return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
+                    }
+                    
                     a(.default)
-                    return
-                }
-                self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    return state
-                        .updatedSearch(ChatSearchData())
-                        .updatedHistoryFilter(ChatPresentationInterfaceState.HistoryFilter(customTags: [ReactionsMessageAttribute.messageTag(reaction: value)], isActive: true))
-                })
-                
-                a(.default)
-            })))
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { _ in
-                return nil
+                })))
+            }
+            
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagRemove"), color: theme.contextMenu.destructiveColor)
             }, action: { [weak self] _, a in
                 a(.dismissWithoutContent)
                 guard let self else {

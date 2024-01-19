@@ -65,8 +65,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         
         super.init()
         
-        self.addSubnode(self.upButton)
-        self.addSubnode(self.downButton)
+        //self.addSubnode(self.upButton)
+        //self.addSubnode(self.downButton)
         self.addSubnode(self.calendarButton)
         self.addSubnode(self.membersButton)
         self.addSubnode(self.resultsButton)

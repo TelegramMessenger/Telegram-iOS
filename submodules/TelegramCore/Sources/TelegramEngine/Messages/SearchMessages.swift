@@ -222,6 +222,11 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
 }
 
 func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+    if case let .peer(peerId, fromId, tags, reactions, threadId, minDate, maxDate) = location, fromId == nil, tags == nil, let reactions, !reactions.isEmpty, threadId == nil, minDate == nil, maxDate == 0 {
+        let _ = peerId
+        print("short cirquit")
+    }
+    
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
         case let .peer(peerId, fromId, tags, reactions, threadId, minDate, maxDate):

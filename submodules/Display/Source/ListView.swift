@@ -1827,6 +1827,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         return ListViewState(insets: self.insets, visibleSize: self.visibleSize, invisibleInset: self.invisibleInset, nodes: nodes, scrollPosition: nil, stationaryOffset: nil, stackFromBottom: self.stackFromBottom)
     }
     
+    public func addAfterTransactionsCompleted(_ f: @escaping () -> Void) {
+        self.transactionQueue.addTransaction({ transactionCompletion in
+            f()
+            transactionCompletion()
+        })
+    }
+    
     public func transaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, additionalScrollDistance: CGFloat = 0.0, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil && updateSizeAndInsets == nil && additionalScrollDistance.isZero {
             if let updateOpaqueState = updateOpaqueState {
@@ -2640,6 +2647,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let updateSizeAndInsets = updateSizeAndInsets {
             if updateSizeAndInsets.size != self.visibleSize || updateSizeAndInsets.insets != self.insets {
                 sizeOrInsetsUpdated = true
+                if updateSizeAndInsets.insets.top == 83.0 && updateSizeAndInsets.duration < 0.5 {
+                    assert(true)
+                }
             }
         }
         

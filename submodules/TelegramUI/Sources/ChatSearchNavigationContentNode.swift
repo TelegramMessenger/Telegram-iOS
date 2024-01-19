@@ -105,7 +105,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationInterfaceState.theme, hasBackground: false, hasSeparator: false), strings: presentationInterfaceState.strings)
             
             switch search.domain {
-            case .everything:
+            case .everything, .tag:
                 self.searchBar.tokens = []
                 self.searchBar.prefixString = nil
                 let placeholderText: String

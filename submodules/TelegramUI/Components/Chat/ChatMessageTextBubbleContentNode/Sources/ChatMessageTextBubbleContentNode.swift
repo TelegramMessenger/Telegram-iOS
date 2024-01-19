@@ -714,7 +714,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     
                                     strongSelf.addSubnode(statusNode)
                                     
-                                    statusNode.reactionSelected = { [weak strongSelf] value in
+                                    statusNode.reactionSelected = { [weak strongSelf] _, value in
                                         guard let strongSelf, let item = strongSelf.item else {
                                             return
                                         }

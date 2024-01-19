@@ -133,9 +133,16 @@ private final class TitleLabelView: UIView {
     }
     
     func update(size: CGSize, text: String, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
+        let foregroundColor: UIColor
+        if theme.overallDarkAppearance {
+            foregroundColor = UIColor(white: 1.0, alpha: 0.5)
+        } else {
+            foregroundColor = UIColor(white: 0.5, alpha: 0.9)
+        }
+        
         let contentSize = self.contentView.update(
             transition: .immediate,
-            component: AnyComponent(Text(text: text, font: Font.regular(13.0), color: UIColor(white: 1.0, alpha: 0.2))),
+            component: AnyComponent(Text(text: text, font: Font.regular(13.0), color: foregroundColor)),
             environment: {},
             containerSize: size
         )
@@ -1903,6 +1910,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             itemNode.layer.animateAlpha(from: itemNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
+        if let titleLabelView = self.titleLabelView {
+            titleLabelView.layer.animateAlpha(from: titleLabelView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+        
         if let reactionComponentView = self.reactionSelectionComponentHost?.view {
             reactionComponentView.alpha = 0.0
             reactionComponentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
@@ -2470,6 +2481,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func highlightGestureMoved(location: CGPoint, hover: Bool) {
+        if self.allPresetReactionsAreAvailable {
+            return
+        }
+        
         let highlightedReaction = self.previewReaction(at: location)?.reaction
         if self.highlightedReaction != highlightedReaction {
             self.highlightedReaction = highlightedReaction
@@ -2489,10 +2504,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func highlightGestureFinished(performAction: Bool) {
+        if self.allPresetReactionsAreAvailable {
+            return
+        }
+        
         self.highlightGestureFinished(performAction: performAction, isLarge: false)
     }
     
     private func highlightGestureFinished(performAction: Bool, isLarge: Bool) {
+        if self.allPresetReactionsAreAvailable {
+            return
+        }
+        
         if let highlightedReaction = self.highlightedReaction {
             self.highlightedReaction = nil
             if performAction {

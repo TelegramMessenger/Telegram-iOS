@@ -3684,6 +3684,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     }
         
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, additionalScrollDistance: CGFloat, scrollToTop: Bool, completion: @escaping () -> Void) {
+        /*if updateSizeAndInsets.insets.top == 83.0 {
+            if !transition.isAnimated {
+                assert(true)
+            }
+        }*/
         var scrollToItem: ListViewScrollToItem?
         var postScrollToItem: ListViewScrollToItem?
         if scrollToTop, case .known = self.visibleContentOffset() {

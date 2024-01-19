@@ -356,6 +356,7 @@ public enum ChatSearchDomain: Equatable {
     case everything
     case members
     case member(Peer)
+    case tag(MessageReaction.Reaction)
     
     public static func ==(lhs: ChatSearchDomain, rhs: ChatSearchDomain) -> Bool {
         switch lhs {
@@ -373,6 +374,12 @@ public enum ChatSearchDomain: Equatable {
             }
         case let .member(lhsPeer):
             if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
+                return true
+            } else {
+                return false
+            }
+        case let .tag(reaction):
+            if case .tag(reaction) = rhs {
                 return true
             } else {
                 return false
