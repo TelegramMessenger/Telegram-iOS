@@ -316,7 +316,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
         }
     }
-    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void)?
     public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override public init() {
@@ -739,11 +739,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 resultingHeight = layoutSize.height
                 reactionButtonsResult = reactionButtonsContainer.update(
                     context: arguments.context,
-                    action: { value in
+                    action: { itemNode, value in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.reactionSelected?(value)
+                        strongSelf.reactionSelected?(itemNode, value)
                     },
                     reactions: [],
                     colors: reactionColors,
@@ -752,6 +752,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 )
             case let .trailingContent(contentWidth, reactionSettings):
                 if let reactionSettings = reactionSettings, !reactionSettings.displayInline {
+                    let isTag = arguments.areReactionsTags
+                    
                     var totalReactionCount: Int = 0
                     for reaction in arguments.reactions {
                         totalReactionCount += Int(reaction.count)
@@ -759,11 +761,15 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
-                        action: { value in
+                        action: { itemNode, value in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.reactionSelected?(value)
+                            if isTag {
+                                strongSelf.openReactionPreview?(nil, itemNode.containerView, value)
+                            } else {
+                                strongSelf.reactionSelected?(itemNode, value)
+                            }
                         },
                         reactions: arguments.reactions.map { reaction in
                             var centerAnimation: TelegramMediaFile?
@@ -815,11 +821,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 } else {
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
-                        action: { value in
+                        action: { itemNode, value in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.reactionSelected?(value)
+                            strongSelf.reactionSelected?(itemNode, value)
                         },
                         reactions: [],
                         colors: reactionColors,

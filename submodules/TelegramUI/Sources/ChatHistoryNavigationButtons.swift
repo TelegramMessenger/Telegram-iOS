@@ -1,4 +1,5 @@
 import Foundation
+import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -6,13 +7,32 @@ import TelegramPresentationData
 import WallpaperBackgroundNode
 
 final class ChatHistoryNavigationButtons: ASDisplayNode {
+    struct ButtonState: Equatable {
+        var isEnabled: Bool
+        
+        init(isEnabled: Bool) {
+            self.isEnabled = isEnabled
+        }
+    }
+    
+    struct DirectionState: Equatable {
+        var up: ButtonState?
+        var down: ButtonState?
+        
+        init(up: ButtonState?, down: ButtonState?) {
+            self.up = up
+            self.down = down
+        }
+    }
+    
     private var theme: PresentationTheme
     private var dateTimeFormat: PresentationDateTimeFormat
     private let isChatRotated: Bool
     
     let reactionsButton: ChatHistoryNavigationButtonNode
     let mentionsButton: ChatHistoryNavigationButtonNode
-    private let downButton: ChatHistoryNavigationButtonNode
+    let downButton: ChatHistoryNavigationButtonNode
+    let upButton: ChatHistoryNavigationButtonNode
     
     var downPressed: (() -> Void)? {
         didSet {
@@ -20,12 +40,18 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
     }
     
+    var upPressed: (() -> Void)? {
+        didSet {
+            self.upButton.tapped = self.upPressed
+        }
+    }
+    
     var reactionsPressed: (() -> Void)?
     var mentionsPressed: (() -> Void)?
     
-    var displayDownButton: Bool = false {
+    var directionButtonState: DirectionState = DirectionState(up: nil, down: nil) {
         didSet {
-            if oldValue != self.displayDownButton {
+            if oldValue != self.directionButtonState {
                 let _ = self.updateLayout(transition: .animated(duration: 0.3, curve: .spring))
             }
         }
@@ -86,11 +112,16 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         self.downButton.alpha = 0.0
         self.downButton.isHidden = true
         
+        self.upButton = ChatHistoryNavigationButtonNode(theme: theme, backgroundNode: backgroundNode, type: isChatRotated ? .up : .down)
+        self.upButton.alpha = 0.0
+        self.upButton.isHidden = true
+        
         super.init()
         
         self.addSubnode(self.reactionsButton)
         self.addSubnode(self.mentionsButton)
         self.addSubnode(self.downButton)
+        self.addSubnode(self.upButton)
         
         self.reactionsButton.tapped = { [weak self] in
             self?.reactionsPressed?()
@@ -101,6 +132,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
         
         self.downButton.isGestureEnabled = false
+        self.upButton.isGestureEnabled = false
     }
     
     override func didLoad() {
@@ -114,6 +146,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         self.reactionsButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
         self.mentionsButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
         self.downButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
+        self.upButton.updateTheme(theme: theme, backgroundNode: backgroundNode)
     }
     
     private var absoluteRect: (CGRect, CGSize)?
@@ -130,6 +163,11 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         mentionsFrame.origin.y += rect.minY
         self.mentionsButton.update(rect: mentionsFrame, within: containerSize, transition: transition)
         
+        var upFrame = self.upButton.frame
+        upFrame.origin.x += rect.minX
+        upFrame.origin.y += rect.minY
+        self.upButton.update(rect: upFrame, within: containerSize, transition: transition)
+        
         var downFrame = self.downButton.frame
         downFrame.origin.x += rect.minX
         downFrame.origin.y += rect.minY
@@ -139,11 +177,16 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     func updateLayout(transition: ContainedViewLayoutTransition) -> CGSize {
         let buttonSize = CGSize(width: 38.0, height: 38.0)
         let completeSize = CGSize(width: buttonSize.width, height: buttonSize.height * 2.0 + 12.0)
+        var upOffset: CGFloat = 0.0
         var mentionsOffset: CGFloat = 0.0
         var reactionsOffset: CGFloat = 0.0
         
-        if self.displayDownButton {
+        if let down = self.directionButtonState.down {
+            self.downButton.imageNode.alpha = down.isEnabled ? 1.0 : 0.5
+            self.downButton.buttonNode.isEnabled = down.isEnabled
+            
             mentionsOffset += buttonSize.height + 12.0
+            upOffset += buttonSize.height + 12.0
 
             self.downButton.isHidden = false
             transition.updateAlpha(node: self.downButton, alpha: 1.0)
@@ -156,6 +199,25 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
                 strongSelf.downButton.isHidden = true
             })
             transition.updateTransformScale(node: self.downButton, scale: 0.2)
+        }
+        
+        if let up = self.directionButtonState.up {
+            self.upButton.imageNode.alpha = up.isEnabled ? 1.0 : 0.5
+            self.upButton.buttonNode.isEnabled = up.isEnabled
+            
+            mentionsOffset += buttonSize.height + 12.0
+
+            self.upButton.isHidden = false
+            transition.updateAlpha(node: self.upButton, alpha: 1.0)
+            transition.updateTransformScale(node: self.upButton, scale: 1.0)
+        } else {
+            transition.updateAlpha(node: self.upButton, alpha: 0.0, completion: { [weak self] completed in
+                guard let strongSelf = self, completed else {
+                    return
+                }
+                strongSelf.upButton.isHidden = true
+            })
+            transition.updateTransformScale(node: self.upButton, scale: 0.2)
         }
         
         if self.mentionCount != 0 {
@@ -190,10 +252,12 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         
         if self.isChatRotated {
             transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height), size: buttonSize).center)
+            transition.updatePosition(node: self.upButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - upOffset), size: buttonSize).center)
             transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset), size: buttonSize).center)
             transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: completeSize.height - buttonSize.height - mentionsOffset - reactionsOffset), size: buttonSize).center)
         } else {
             transition.updatePosition(node: self.downButton, position: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: buttonSize).center)
+            transition.updatePosition(node: self.upButton, position: CGRect(origin: CGPoint(x: 0.0, y: upOffset), size: buttonSize).center)
             transition.updatePosition(node: self.mentionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset), size: buttonSize).center)
             transition.updatePosition(node: self.reactionsButton, position: CGRect(origin: CGPoint(x: 0.0, y: mentionsOffset + reactionsOffset), size: buttonSize).center)
         }

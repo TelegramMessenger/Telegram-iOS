@@ -93,10 +93,6 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
             loadTags = true
         }
         
-        if "".isEmpty {
-            loadTags = false
-        }
-        
         if loadTags {
             return tagMessageReactions(context: context)
         }

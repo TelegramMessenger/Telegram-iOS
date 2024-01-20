@@ -821,7 +821,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         guard let layout = self.layout else {
             return
         }
-        layout.spec.component.action(layout.spec.component.reaction.value)
+        layout.spec.component.action(self, layout.spec.component.reaction.value)
     }
     
     fileprivate func apply(layout: Layout, animation: ListViewItemUpdateAnimation, arguments: ReactionButtonsAsyncLayoutContainer.Arguments) {
@@ -1061,7 +1061,7 @@ public final class ReactionButtonComponent: Equatable {
     public let isTag: Bool
     public let count: Int
     public let chosenOrder: Int?
-    public let action: (MessageReaction.Reaction) -> Void
+    public let action: (ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void
 
     public init(
         context: AccountContext,
@@ -1071,7 +1071,7 @@ public final class ReactionButtonComponent: Equatable {
         isTag: Bool,
         count: Int,
         chosenOrder: Int?,
-        action: @escaping (MessageReaction.Reaction) -> Void
+        action: @escaping (ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void
     ) {
         self.context = context
         self.colors = colors
@@ -1218,7 +1218,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
     
     public func update(
         context: AccountContext,
-        action: @escaping (MessageReaction.Reaction) -> Void,
+        action: @escaping (ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void,
         reactions: [ReactionButtonsAsyncLayoutContainer.Reaction],
         colors: ReactionButtonComponent.Colors,
         isTag: Bool,

@@ -391,7 +391,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openGroupsPrivacy()
                 })
             case let .voiceMessagePrivacy(theme, text, value, hasPremium):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: value, labelStyle: !hasPremium ? .textWithIcon(UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon")!.precomposed()) : .text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceMessagePrivacy()
                 })
             case let .messagePrivacy(theme, value, hasPremium):
@@ -933,7 +933,6 @@ public func privacyAndSecurityController(
             }
         }))
     }, openVoiceMessagePrivacy: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let signal = combineLatest(
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
             privacySettingsPromise.get()
@@ -941,42 +940,22 @@ public func privacyAndSecurityController(
         |> take(1)
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] peer, info in
-            let isPremium = peer?.isPremium ?? false
-            
-            if isPremium {
-                if let info = info {
-                    pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceMessages, current: info.voiceMessages, updated: { updated, _, _, _ in
-                        if let currentInfoDisposable = currentInfoDisposable {
-                            let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
-                                |> filter { $0 != nil }
-                                |> take(1)
-                                |> deliverOnMainQueue
-                                |> mapToSignal { value -> Signal<Void, NoError> in
-                                    if let value = value {
-                                        privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: updated, bio: value.bio, globalSettings: value.globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
-                                    }
-                                    return .complete()
-                            }
-                            currentInfoDisposable.set(applySetting.start())
+            if let info = info {
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .voiceMessages, current: info.voiceMessages, updated: { updated, _, _, _ in
+                    if let currentInfoDisposable = currentInfoDisposable {
+                        let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
+                            |> filter { $0 != nil }
+                            |> take(1)
+                            |> deliverOnMainQueue
+                            |> mapToSignal { value -> Signal<Void, NoError> in
+                                if let value = value {
+                                    privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: updated, bio: value.bio, globalSettings: value.globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
+                                }
+                                return .complete()
                         }
-                    }), true)
-                }
-            } else {
-                let hapticFeedback = HapticFeedback()
-                hapticFeedback.impact()
-                
-                var alreadyPresented = false
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                    if action == .info {
-                        if !alreadyPresented {
-                            let controller = PremiumIntroScreen(context: context, source: .settings)
-                            pushControllerImpl?(controller, true)
-                            alreadyPresented = true
-                        }
-                        return true
+                        currentInfoDisposable.set(applySetting.start())
                     }
-                    return false
-                }))
+                }), true)
             }
         }))
     }, openBioPrivacy: {

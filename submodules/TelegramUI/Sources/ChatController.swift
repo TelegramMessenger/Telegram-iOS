@@ -6947,6 +6947,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let currentItem = self.tempVoicePlaylistCurrentItem {
             self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
         }
+        
+        self.chatDisplayNode.historyNode.beganDragging = { [weak self] in
+            guard let self else {
+                return
+            }
+            if self.presentationInterfaceState.search != nil && self.presentationInterfaceState.historyFilter != nil {
+                self.chatDisplayNode.historyNode.addAfterTransactionsCompleted { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.chatDisplayNode.dismissInput()
+                }
+            }
+        }
     
         self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode, isTracking in
             guard let strongSelf = self else {
@@ -6978,6 +6993,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
             }
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+            
         }
         
         self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
@@ -7927,7 +7943,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators, animateFromPreviousFilter: false), updateSizeAndInsets)
                     }, updateExtraNavigationBarBackgroundHeight: { value, hitTestSlop, _ in
                         strongSelf.additionalNavigationBarBackgroundHeight = value
                         strongSelf.additionalNavigationBarHitTestSlop = hitTestSlop
@@ -8161,20 +8177,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         self.chatDisplayNode.navigateButtons.downPressed = { [weak self] in
-            if let strongSelf = self, strongSelf.isNodeLoaded {
-                if let messageId = strongSelf.historyNavigationStack.removeLast() {
-                    strongSelf.navigateToMessage(from: nil, to: .id(messageId.id, NavigateToMessageParams(timestamp: nil, quote: nil)), rememberInStack: false)
+            guard let self else {
+                return
+            }
+            
+            if self.presentationInterfaceState.search?.resultsState != nil {
+                self.interfaceInteraction?.navigateMessageSearch(.later)
+            } else {
+                if let messageId = self.historyNavigationStack.removeLast() {
+                    self.navigateToMessage(from: nil, to: .id(messageId.id, NavigateToMessageParams(timestamp: nil, quote: nil)), rememberInStack: false)
                 } else {
-                    if case .known = strongSelf.chatDisplayNode.historyNode.visibleContentOffset() {
-                        strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                    } else if case .peer = strongSelf.chatLocation {
-                        strongSelf.scrollToEndOfHistory()
-                     } else if case .replyThread = strongSelf.chatLocation {
-                        strongSelf.scrollToEndOfHistory()
+                    if case .known = self.chatDisplayNode.historyNode.visibleContentOffset() {
+                        self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                    } else if case .peer = self.chatLocation {
+                        self.scrollToEndOfHistory()
+                    } else if case .replyThread = self.chatLocation {
+                        self.scrollToEndOfHistory()
                     } else {
-                        strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                        self.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
                 }
+            }
+        }
+        self.chatDisplayNode.navigateButtons.upPressed = { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            if self.presentationInterfaceState.search?.resultsState != nil {
+                self.interfaceInteraction?.navigateMessageSearch(.earlier)
             }
         }
         
@@ -9045,7 +9076,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state.updatedSearch(ChatSearchData(query: "", domain: .members, domainSuggestionContext: .none, resultsState: nil))
                     } else if let search = state.search {
                         switch search.domain {
-                        case .everything:
+                        case .everything, .tag:
                             return state
                         case .members:
                             return state.updatedSearch(ChatSearchData(query: "", domain: .everything, domainSuggestionContext: .none, resultsState: nil))
@@ -10791,7 +10822,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                return state.updatedHistoryFilter(updatedFilter)
+                var state = state.updatedHistoryFilter(updatedFilter)
+                if let updatedFilter, !updatedFilter.isActive, let reactionData = updatedFilter.customTags.first, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: reactionData) {
+                    state = state.updatedSearch(ChatSearchData(domain: .tag(reaction)))
+                } else {
+                    state = state.updatedSearch(ChatSearchData())
+                }
+                return state
             })
         }, requestLayout: { [weak self] transition in
             if let strongSelf = self, let layout = strongSelf.validLayout {
@@ -15656,8 +15693,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func updateDownButtonVisibility() {
-        let recordingMediaMessage = self.audioRecorderValue != nil || self.videoRecorderValue != nil || self.presentationInterfaceState.recordedMediaPreview != nil
-        self.chatDisplayNode.navigateButtons.displayDownButton = self.shouldDisplayDownButton && !recordingMediaMessage
+        if let search = self.presentationInterfaceState.search, let results = search.resultsState {
+            let resultCount = results.messageIndices.count
+            var resultIndex: Int?
+            if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
+                resultIndex = index
+            } else {
+                resultIndex = nil
+            }
+            
+            if let resultIndex {
+                self.chatDisplayNode.navigateButtons.directionButtonState = ChatHistoryNavigationButtons.DirectionState(
+                    up: ChatHistoryNavigationButtons.ButtonState(isEnabled: resultIndex != 0),
+                    down: ChatHistoryNavigationButtons.ButtonState(isEnabled: resultIndex != resultCount - 1)
+                )
+            } else {
+                self.chatDisplayNode.navigateButtons.directionButtonState = ChatHistoryNavigationButtons.DirectionState(
+                    up: ChatHistoryNavigationButtons.ButtonState(isEnabled: false),
+                    down: ChatHistoryNavigationButtons.ButtonState(isEnabled: false)
+                )
+            }
+        } else {
+            let recordingMediaMessage = self.audioRecorderValue != nil || self.videoRecorderValue != nil || self.presentationInterfaceState.recordedMediaPreview != nil
+            
+            self.chatDisplayNode.navigateButtons.directionButtonState = ChatHistoryNavigationButtons.DirectionState(
+                up: nil,
+                down: (self.shouldDisplayDownButton && !recordingMediaMessage) ? ChatHistoryNavigationButtons.ButtonState(isEnabled: true) : nil
+            )
+        }
     }
     
     func updateTextInputState(_ textInputState: ChatTextInputState) {

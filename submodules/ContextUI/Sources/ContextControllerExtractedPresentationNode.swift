@@ -1586,6 +1586,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         if self.reactionContextNodeIsAnimatingOut, let reactionContextNode = self.reactionContextNode {
             reactionContextNode.bounds = reactionContextNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
             transition.animateOffsetAdditive(node: reactionContextNode, offset: -offset.y)
+            
+            if let itemContentNode = self.itemContentNode {
+                itemContentNode.bounds = itemContentNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
+                transition.animateOffsetAdditive(node: itemContentNode, offset: -offset.y)
+            }
         }
     }
 }

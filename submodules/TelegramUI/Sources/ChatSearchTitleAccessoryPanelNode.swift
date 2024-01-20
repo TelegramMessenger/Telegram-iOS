@@ -372,6 +372,10 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                             return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: filter?.isActive ?? true)
                         }
                     })
+                    
+                    if let itemView = self.itemViews[reaction] {
+                        self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -46.0, dy: 0.0), animated: true)
+                    }
                 })
                 self.itemViews[itemId] = itemView
                 self.scrollView.addSubview(itemView)

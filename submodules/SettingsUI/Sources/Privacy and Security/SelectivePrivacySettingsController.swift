@@ -59,6 +59,7 @@ private final class SelectivePrivacySettingsControllerArguments {
     let removePublicPhoto: (() -> Void)?
     let updateHideReadTime: ((Bool) -> Void)?
     let openPremiumIntro: () -> Void
+    let displayLockedInfo: () -> Void
     
     init(
         context: AccountContext,
@@ -71,7 +72,8 @@ private final class SelectivePrivacySettingsControllerArguments {
         setPublicPhoto: (() -> Void)?,
         removePublicPhoto: (() -> Void)?,
         updateHideReadTime: ((Bool) -> Void)?,
-        openPremiumIntro: @escaping () -> Void
+        openPremiumIntro: @escaping () -> Void,
+        displayLockedInfo: @escaping () -> Void
     ) {
         self.context = context
         self.updateType = updateType
@@ -84,6 +86,7 @@ private final class SelectivePrivacySettingsControllerArguments {
         self.removePublicPhoto = removePublicPhoto
         self.updateHideReadTime = updateHideReadTime
         self.openPremiumIntro = openPremiumIntro
+        self.displayLockedInfo = displayLockedInfo
     }
 }
 
@@ -116,9 +119,9 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case forwardsPreviewHeader(PresentationTheme, String)
     case forwardsPreview(PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationChatBubbleCorners, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, String, Bool, String)
     case settingHeader(PresentationTheme, String)
-    case everybody(PresentationTheme, String, Bool)
-    case contacts(PresentationTheme, String, Bool)
-    case nobody(PresentationTheme, String, Bool)
+    case everybody(PresentationTheme, String, Bool, Bool)
+    case contacts(PresentationTheme, String, Bool, Bool)
+    case nobody(PresentationTheme, String, Bool, Bool)
     case settingInfo(PresentationTheme, String, String)
     case exceptionsHeader(PresentationTheme, String)
     case disableFor(PresentationTheme, String, String)
@@ -260,20 +263,20 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .everybody(lhsTheme, lhsText, lhsValue):
-                if case let .everybody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .everybody(lhsTheme, lhsText, lhsValue, lhsIsLocked):
+                if case let .everybody(rhsTheme, rhsText, rhsValue, rhsIsLocked) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsIsLocked == rhsIsLocked {
                     return true
                 } else {
                     return false
                 }
-            case let .contacts(lhsTheme, lhsText, lhsValue):
-                if case let .contacts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .contacts(lhsTheme, lhsText, lhsValue, lhsIsLocked):
+                if case let .contacts(rhsTheme, rhsText, rhsValue, rhsIsLocked) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsIsLocked == rhsIsLocked {
                     return true
                 } else {
                     return false
                 }
-            case let .nobody(lhsTheme, lhsText, lhsValue):
-                if case let .nobody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .nobody(lhsTheme, lhsText, lhsValue, lhsIsLocked):
+                if case let .nobody(rhsTheme, rhsText, rhsValue, rhsIsLocked) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsIsLocked == rhsIsLocked {
                     return true
                 } else {
                     return false
@@ -450,17 +453,28 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return ForwardPrivacyChatPreviewItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, peerName: peerName, linkEnabled: linkEnabled, tooltipText: tooltipText)
             case let .settingHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
-            case let .everybody(_, text, value):
-                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateType(.everybody)
+            case let .everybody(_, text, value, isLocked):
+                return ItemListCheckboxItem(presentationData: presentationData, icon: !isLocked ? nil : generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: presentationData.theme.list.itemSecondaryTextColor), iconPlacement: .check, title: text, style: .left, checked: value && !isLocked, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    if isLocked {
+                    } else {
+                        arguments.updateType(.everybody)
+                    }
                 })
-            case let .contacts(_, text, value):
-                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateType(.contacts)
+            case let .contacts(_, text, value, isLocked):
+                return ItemListCheckboxItem(presentationData: presentationData, icon: !isLocked ? nil : generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: presentationData.theme.list.itemSecondaryTextColor), iconPlacement: .check, title: text, style: .left, checked: value && !isLocked, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    if isLocked {
+                        arguments.displayLockedInfo()
+                    } else {
+                        arguments.updateType(.contacts)
+                    }
                 })
-            case let .nobody(_, text, value):
-                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateType(.nobody)
+            case let .nobody(_, text, value, isLocked):
+                return ItemListCheckboxItem(presentationData: presentationData, icon: !isLocked ? nil : generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: presentationData.theme.list.itemSecondaryTextColor), iconPlacement: .check, title: text, style: .left, checked: value && !isLocked, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                    if isLocked {
+                        arguments.displayLockedInfo()
+                    } else {
+                        arguments.updateType(.contacts)
+                    }
                 })
             case let .settingInfo(_, text, link):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
@@ -696,10 +710,16 @@ private struct SelectivePrivacySettingsControllerState: Equatable {
 private func selectivePrivacySettingsControllerEntries(presentationData: PresentationData, kind: SelectivePrivacySettingsKind, state: SelectivePrivacySettingsControllerState, peerName: String, phoneNumber: String, peer: EnginePeer?, publicPhoto: TelegramMediaImage?) -> [SelectivePrivacySettingsEntry] {
     var entries: [SelectivePrivacySettingsEntry] = []
     
+    let isPremium = peer?.isPremium ?? false
+    
     let settingTitle: String
     let settingInfoText: String?
     let disableForText: String
     let enableForText: String
+    
+    let phoneLink = "https://t.me/+\(phoneNumber)"
+    var settingInfoLink = phoneLink
+    
     switch kind {
         case .presence:
             settingTitle = presentationData.strings.PrivacyLastSeenSettings_WhoCanSeeMyTimestamp
@@ -737,7 +757,12 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             enableForText = presentationData.strings.PrivacyLastSeenSettings_AlwaysShareWith
         case .voiceMessages:
             settingTitle = presentationData.strings.Privacy_VoiceMessages_WhoCanSend
-            settingInfoText = presentationData.strings.Privacy_VoiceMessages_CustomHelp
+            if isPremium {
+                settingInfoText = presentationData.strings.Privacy_VoiceMessages_CustomHelp
+            } else {
+                settingInfoText = presentationData.strings.Privacy_VoiceMessages_NonPremiumHelp
+                settingInfoLink = "premium"
+            }
             disableForText = presentationData.strings.Privacy_GroupsAndChannels_NeverAllow
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
         case .bio:
@@ -767,13 +792,18 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     
     entries.append(.settingHeader(presentationData.theme, settingTitle))
     
-    entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
-    entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
-    entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-
-    let phoneLink = "https://t.me/+\(phoneNumber)"
+    if case .voiceMessages = kind {
+        entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody || !isPremium, false))
+        entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts && isPremium, !isPremium))
+        entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody && isPremium, !isPremium))
+    } else {
+        entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody, false))
+        entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts, false))
+        entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody, false))
+    }
+    
     if let settingInfoText = settingInfoText {
-        entries.append(.settingInfo(presentationData.theme, settingInfoText, phoneLink))
+        entries.append(.settingInfo(presentationData.theme, settingInfoText, settingInfoLink))
     }
     
     if case .phoneNumber = kind, state.setting == .nobody {
@@ -782,32 +812,36 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
         entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
     }
+     
+    if case .voiceMessages = kind, !isPremium {
         
-    entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
-    
-    switch state.setting {
-        case .everybody:
-            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor, strings: presentationData.strings)))
-        case .contacts:
-            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor, strings: presentationData.strings)))
-            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor, strings: presentationData.strings)))
-        case .nobody:
-            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor, strings: presentationData.strings)))
-    }
-    let exceptionsInfo: String
-    if case .profilePhoto = kind {
-        switch state.setting {
-        case .nobody:
-            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideAddInfo
-        case .contacts:
-            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideBothInfo
-        case .everybody:
-            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideInfo
-        }
     } else {
-        exceptionsInfo = presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp
+        entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
+        
+        switch state.setting {
+        case .everybody:
+            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor, strings: presentationData.strings)))
+        case .contacts:
+            entries.append(.disableFor(presentationData.theme, disableForText, stringForUserCount(state.disableFor, strings: presentationData.strings)))
+            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor, strings: presentationData.strings)))
+        case .nobody:
+            entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor, strings: presentationData.strings)))
+        }
+        let exceptionsInfo: String
+        if case .profilePhoto = kind {
+            switch state.setting {
+            case .nobody:
+                exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideAddInfo
+            case .contacts:
+                exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideBothInfo
+            case .everybody:
+                exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideInfo
+            }
+        } else {
+            exceptionsInfo = presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp
+        }
+        entries.append(.peersInfo(presentationData.theme, exceptionsInfo))
     }
-    entries.append(.peersInfo(presentationData.theme, exceptionsInfo))
     
     if case .voiceCalls = kind, let p2pMode = state.callP2PMode, let integrationAvailable = state.callIntegrationAvailable, let integrationEnabled = state.callIntegrationEnabled  {
         entries.append(.callsP2PHeader(presentationData.theme, presentationData.strings.Privacy_Calls_P2P.uppercased()))
@@ -865,6 +899,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             if !peer.isPremium {
                 entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremium))
                 entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumFooter))
+            } else {
+                entries.append(.subscribeToPremium(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumActive))
+                entries.append(.subscribeToPremiumInfo(presentationData.theme, presentationData.strings.Settings_Privacy_ReadTimePremiumActiveFooter))
             }
         }
     }
@@ -1146,10 +1183,15 @@ func selectivePrivacySettingsController(
             return state.withUpdatedPhoneDiscoveryEnabled(value)
         }
     }, copyPhoneLink: { link in
-        UIPasteboard.general.string = link
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        if link == "premium" {
+            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
+            pushControllerImpl?(controller, true)
+        } else {
+            UIPasteboard.general.string = link
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        }
     }, setPublicPhoto: {
         requestPublicPhotoSetup?({ result in
             var result = result
@@ -1180,6 +1222,16 @@ func selectivePrivacySettingsController(
     }, openPremiumIntro: {
         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
         pushControllerImpl?(controller, true)
+    }, displayLockedInfo: {
+        let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: presentationData.strings.Privacy_Messages_PremiumToast_Title, text: presentationData.strings.Privacy_Messages_PremiumToast_Text, customUndoText: presentationData.strings.Privacy_Messages_PremiumToast_Action, timeout: nil, linkAction: { _ in
+        }), elevatedLayout: false, action: { action in
+            if case .undo = action {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .presence, forceDark: false, dismissed: nil)
+                pushControllerImpl?(controller, true)
+            }
+            return false
+        }), nil)
     })
     
     let peer = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))

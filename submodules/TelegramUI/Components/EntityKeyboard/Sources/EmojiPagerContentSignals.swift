@@ -1116,7 +1116,7 @@ public extension EmojiPagerContentComponent {
                 }
             }
             
-            let hasRecentEmoji = ![.reaction(onlyTop: true), .reaction(onlyTop: false), .quickReaction, .status, .profilePhoto, .groupPhoto, .topicIcon, .backgroundIcon, .reactionList].contains(subject)
+            let hasRecentEmoji = ![.reaction(onlyTop: true), .reaction(onlyTop: false), .quickReaction, .status, .profilePhoto, .groupPhoto, .topicIcon, .backgroundIcon, .reactionList, .messageTag].contains(subject)
             
             if let recentEmoji = recentEmoji, hasRecentEmoji {
                 for item in recentEmoji.items {
@@ -1381,7 +1381,7 @@ public extension EmojiPagerContentComponent {
             var displaySearchWithPlaceholder: String?
             let searchInitiallyHidden = true
             if hasSearch {
-                if [.reaction(onlyTop: false), .quickReaction].contains(subject) {
+                if [.reaction(onlyTop: false), .quickReaction, .messageTag].contains(subject) {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
                 } else if case .status = subject {
                     displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
@@ -1436,7 +1436,7 @@ public extension EmojiPagerContentComponent {
                 )
             }
             
-            let warpContentsOnEdges = [.reaction(onlyTop: true), .reaction(onlyTop: false), .quickReaction, .status, .channelStatus, .profilePhoto, .groupPhoto, .backgroundIcon].contains(subject)
+            let warpContentsOnEdges = [.reaction(onlyTop: true), .reaction(onlyTop: false), .quickReaction, .status, .channelStatus, .profilePhoto, .groupPhoto, .backgroundIcon, .messageTag].contains(subject)
             let enableLongPress = [.reaction(onlyTop: true), .reaction(onlyTop: false), .status, .channelStatus].contains(subject)
                         
             return EmojiPagerContentComponent(

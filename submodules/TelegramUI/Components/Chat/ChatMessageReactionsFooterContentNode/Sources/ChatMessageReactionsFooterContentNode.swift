@@ -120,11 +120,15 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
         
         let reactionButtonsResult = self.container.update(
             context: context,
-            action: { [weak self] value in
-                guard let strongSelf = self else {
+            action: { [weak self] itemView, value in
+                guard let self else {
                     return
                 }
-                strongSelf.reactionSelected?(value)
+                if reactions.isTags {
+                    self.openReactionPreview?(nil, itemView.containerView, value)
+                } else {
+                    self.reactionSelected?(value)
+                }
             },
             reactions: reactions.reactions.map { reaction in
                 var centerAnimation: TelegramMediaFile?

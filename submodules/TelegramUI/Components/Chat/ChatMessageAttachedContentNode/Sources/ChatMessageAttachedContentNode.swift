@@ -1279,7 +1279,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.statusNode = statusNode
                                 self.addSubnode(statusNode)
                                 
-                                statusNode.reactionSelected = { [weak self] value in
+                                statusNode.reactionSelected = { [weak self] _, value in
                                     guard let self, let message = self.message else {
                                         return
                                     }
