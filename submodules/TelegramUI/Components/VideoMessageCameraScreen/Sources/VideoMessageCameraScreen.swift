@@ -584,7 +584,7 @@ public class VideoMessageCameraScreen: ViewController {
                 if self.cameraState.isViewOnceEnabled != oldValue.isViewOnceEnabled {
                     if self.cameraState.isViewOnceEnabled {
                         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                        self.displayViewOnceTooltip(text: presentationData.strings.Chat_PlayVideoMessageOnceTooltip, hasIcon: false)
+                        self.displayViewOnceTooltip(text: presentationData.strings.Chat_PlayVideoMessageOnceTooltip, hasIcon: true)
                         
                         let _ = ApplicationSpecificNotice.incrementVideoMessagesPlayOnceSuggestion(accountManager: self.context.sharedContext.accountManager, count: 3).startStandalone()
                     } else {
@@ -1439,9 +1439,10 @@ public class VideoMessageCameraScreen: ViewController {
             return
         }
         
+        var skipAction = false
         let currentTimestamp = CACurrentMediaTime()
         if let lastActionTimestamp = self.lastActionTimestamp, currentTimestamp - lastActionTimestamp < 0.5 {
-            return
+            skipAction = true
         }
         
         if case .none = self.cameraState.recording, self.node.results.isEmpty {
@@ -1451,9 +1452,21 @@ public class VideoMessageCameraScreen: ViewController {
         
         if case .none = self.cameraState.recording {
         } else {
-            self.isSendingImmediately = true
-            self.waitingForNextResult = true
-            self.node.stopRecording.invoke(Void())
+            if self.cameraState.duration > 0.5 {
+                if skipAction {
+                    return
+                }
+                self.isSendingImmediately = true
+                self.waitingForNextResult = true
+                self.node.stopRecording.invoke(Void())
+            } else {
+                self.completion(nil, nil, nil)
+                return
+            }
+        }
+        
+        guard !skipAction else {
+            return
         }
         
         self.didSend = true
@@ -1630,7 +1643,9 @@ public class VideoMessageCameraScreen: ViewController {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
             if let self {
-                self.node.setupCamera()
+                Queue.mainQueue().async {
+                    self.node.setupCamera()
+                }
             }
         }, deactivate: { _ in
             return .single(Void())

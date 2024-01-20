@@ -45,16 +45,18 @@ final class CameraDeviceContext {
     
     private let exclusive: Bool
     private let additional: Bool
+    private let isRoundVideo: Bool
     
     let device = CameraDevice()
     let input = CameraInput()
     let output: CameraOutput
     
-    init(session: CameraSession, exclusive: Bool, additional: Bool, ciContext: CIContext, use32BGRA: Bool = false) {
+    init(session: CameraSession, exclusive: Bool, additional: Bool, ciContext: CIContext, colorSpace: CGColorSpace, isRoundVideo: Bool = false) {
         self.session = session
         self.exclusive = exclusive
         self.additional = additional
-        self.output = CameraOutput(exclusive: exclusive, ciContext: ciContext, use32BGRA: use32BGRA)
+        self.isRoundVideo = isRoundVideo
+        self.output = CameraOutput(exclusive: exclusive, ciContext: ciContext, colorSpace: colorSpace, use32BGRA: isRoundVideo)
     }
     
     func configure(position: Camera.Position, previewView: CameraSimplePreviewView?, audio: Bool, photo: Bool, metadata: Bool, preferWide: Bool = false, preferLowerFramerate: Bool = false, switchAudio: Bool = true) {
@@ -63,7 +65,7 @@ final class CameraDeviceContext {
         }
         
         self.previewView = previewView
-        
+                
         self.device.configure(for: session, position: position, dual: !self.exclusive || self.additional, switchAudio: switchAudio)
         self.device.configureDeviceFormat(maxDimensions: self.maxDimensions(additional: self.additional, preferWide: preferWide), maxFramerate: self.preferredMaxFrameRate(useLower: preferLowerFramerate))
         self.input.configure(for: session, device: self.device, audio: audio && switchAudio)
@@ -83,11 +85,19 @@ final class CameraDeviceContext {
     }
     
     private func maxDimensions(additional: Bool, preferWide: Bool) -> CMVideoDimensions {
-        if additional || preferWide {
-            return CMVideoDimensions(width: 1920, height: 1440)
-        } else {
-            return CMVideoDimensions(width: 1920, height: 1080)
-        }
+//        if self.isRoundVideo {
+//            if additional {
+//                return CMVideoDimensions(width: 640, height: 480)
+//            } else {
+//                return CMVideoDimensions(width: 1280, height: 720)
+//            }
+//        } else {
+            if additional || preferWide {
+                return CMVideoDimensions(width: 1920, height: 1440)
+            } else {
+                return CMVideoDimensions(width: 1920, height: 1080)
+            }
+//        }
     }
     
     private func preferredMaxFrameRate(useLower: Bool) -> Double {
@@ -108,14 +118,13 @@ final class CameraDeviceContext {
 
 private final class CameraContext {
     private let queue: Queue
-    
     private let session: CameraSession
+    private let ciContext: CIContext
+    private let colorSpace: CGColorSpace
     
     private var mainDeviceContext: CameraDeviceContext?
     private var additionalDeviceContext: CameraDeviceContext?
 
-    private let ciContext = CIContext()
-    
     private let initialConfiguration: Camera.Configuration
     private var invalidated = false
     
@@ -139,7 +148,7 @@ private final class CameraContext {
                 transform = CGAffineTransformTranslate(transform, 0.0, -size.height)
                 ciImage = ciImage.transformed(by: transform)
             }
-            ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 40.0).cropped(to: CGRect(origin: .zero, size: size))
+            ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 100.0).cropped(to: CGRect(origin: .zero, size: size))
             if let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
                 if front {
@@ -156,6 +165,10 @@ private final class CameraContext {
         
         self.queue = queue
         self.session = session
+        
+        self.colorSpace = CGColorSpaceCreateDeviceRGB()
+        self.ciContext = CIContext(options: [.workingColorSpace : self.colorSpace])
+        
         self.initialConfiguration = configuration
         self.simplePreviewView = previewView
         self.secondaryPreviewView = secondaryPreviewView
@@ -313,10 +326,10 @@ private final class CameraContext {
         if enabled {
             self.configure {
                 self.mainDeviceContext?.invalidate()
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: false, ciContext: self.ciContext, use32BGRA: self.initialConfiguration.isRoundVideo)
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: false, ciContext: self.ciContext, colorSpace: self.colorSpace, isRoundVideo: self.initialConfiguration.isRoundVideo)
                 self.mainDeviceContext?.configure(position: .back, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata)
             
-                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: true, ciContext: self.ciContext, use32BGRA: self.initialConfiguration.isRoundVideo)
+                self.additionalDeviceContext = CameraDeviceContext(session: self.session, exclusive: false, additional: true, ciContext: self.ciContext, colorSpace: self.colorSpace, isRoundVideo: self.initialConfiguration.isRoundVideo)
                 self.additionalDeviceContext?.configure(position: .front, previewView: self.secondaryPreviewView, audio: false, photo: true, metadata: false)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
@@ -356,7 +369,7 @@ private final class CameraContext {
                 let preferWide = self.initialConfiguration.preferWide || self.initialConfiguration.isRoundVideo
                 let preferLowerFramerate = self.initialConfiguration.preferLowerFramerate || self.initialConfiguration.isRoundVideo
                 
-                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false, ciContext: self.ciContext, use32BGRA: self.initialConfiguration.isRoundVideo)
+                self.mainDeviceContext = CameraDeviceContext(session: self.session, exclusive: true, additional: false, ciContext: self.ciContext, colorSpace: self.colorSpace, isRoundVideo: self.initialConfiguration.isRoundVideo)
                 self.mainDeviceContext?.configure(position: self.positionValue, previewView: self.simplePreviewView, audio: self.initialConfiguration.audio, photo: self.initialConfiguration.photo, metadata: self.initialConfiguration.metadata, preferWide: preferWide, preferLowerFramerate: preferLowerFramerate)
             }
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in

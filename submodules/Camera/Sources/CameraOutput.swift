@@ -80,6 +80,7 @@ public struct CameraCode: Equatable {
 final class CameraOutput: NSObject {
     let exclusive: Bool
     let ciContext: CIContext
+    let colorSpace: CGColorSpace
     let isVideoMessage: Bool
     
     let photoOutput = AVCapturePhotoOutput()
@@ -104,9 +105,10 @@ final class CameraOutput: NSObject {
     var processAudioBuffer: ((CMSampleBuffer) -> Void)?
     var processCodes: (([CameraCode]) -> Void)?
         
-    init(exclusive: Bool, ciContext: CIContext, use32BGRA: Bool = false) {
+    init(exclusive: Bool, ciContext: CIContext, colorSpace: CGColorSpace, use32BGRA: Bool = false) {
         self.exclusive = exclusive
         self.ciContext = ciContext
+        self.colorSpace = colorSpace
         self.isVideoMessage = use32BGRA
         
         super.init()
@@ -530,7 +532,7 @@ final class CameraOutput: NSObject {
         if let current = self.roundVideoFilter {
             filter = current
         } else {
-            filter = CameraRoundVideoFilter(ciContext: self.ciContext)
+            filter = CameraRoundVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace)
             self.roundVideoFilter = filter
         }
         if !filter.isPrepared {
