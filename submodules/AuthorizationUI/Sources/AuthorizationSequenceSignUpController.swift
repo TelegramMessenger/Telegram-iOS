@@ -10,6 +10,7 @@ import ProgressNavigationButtonNode
 import ImageCompression
 import LegacyMediaPickerUI
 import Postbox
+import TextFormat
 
 final class AuthorizationSequenceSignUpController: ViewController {
     private var controllerNode: AuthorizationSequenceSignUpControllerNode {
@@ -25,6 +26,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     private var termsOfService: UnauthorizedAccountTermsOfService?
     
     var signUpWithName: ((String, String, Data?, Any?, TGVideoEditAdjustments?) -> Void)?
+    var openUrl: ((String) -> Void)?
     
     var avatarAsset: Any?
     var avatarAdjustments: TGVideoEditAdjustments?
@@ -122,7 +124,32 @@ final class AuthorizationSequenceSignUpController: ViewController {
                 return
             }
             strongSelf.view.endEditing(true)
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.Login_TermsOfServiceHeader, text: termsOfService.text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+
+            let presentAlertImpl: () -> Void = {
+                guard let strongSelf = self else {
+                    return
+                }
+                var dismissImpl: (() -> Void)?
+                let alertTheme = AlertControllerTheme(presentationData: strongSelf.presentationData)
+                let attributedText = stringWithAppliedEntities(termsOfService.text, entities: termsOfService.entities, baseColor: alertTheme.primaryColor, linkColor: alertTheme.accentColor, baseFont: Font.regular(13.0), linkFont: Font.regular(13.0), boldFont: Font.semibold(13.0), italicFont: Font.italic(13.0), boldItalicFont: Font.semiboldItalic(13.0), fixedFont: Font.regular(13.0), blockQuoteFont: Font.regular(13.0), message: nil)
+                let contentNode = TextAlertContentNode(theme: alertTheme, title: NSAttributedString(string: strongSelf.presentationData.strings.Login_TermsOfServiceHeader, font: Font.medium(17.0), textColor: alertTheme.primaryColor, paragraphAlignment: .center), text: attributedText, actions: [
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        dismissImpl?()
+                    })
+                ], actionLayout: .vertical, dismissOnOutsideTap: true)
+                contentNode.textAttributeAction = (NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), { value in
+                    if let value = value as? String {
+                        strongSelf.openUrl?(value)
+                    }
+                })
+                let controller = AlertController(theme: alertTheme, contentNode: contentNode)
+                dismissImpl = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                strongSelf.view.endEditing(true)
+                strongSelf.present(controller, in: .window(.root))
+            }
+            presentAlertImpl()
         }
         
         self.controllerNode.updateData(firstName: self.initialName.0, lastName: self.initialName.1, hasTermsOfService: self.termsOfService != nil)
