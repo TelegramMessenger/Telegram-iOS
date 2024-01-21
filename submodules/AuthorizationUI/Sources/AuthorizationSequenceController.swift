@@ -1031,6 +1031,12 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 
                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
             }, displayCancel: displayCancel)
+            controller.openUrl = { [weak self] url in
+                guard let self else {
+                    return
+                }
+                self.openUrl(url)
+            }
             controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarAsset, avatarAdjustments in
                 if let strongSelf = self {
                     controller?.inProgress = true
