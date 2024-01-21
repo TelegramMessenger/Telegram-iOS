@@ -153,12 +153,12 @@ private final class VideoRecorderImpl {
                 Logger.shared.log("VideoRecorder", "Failed to append video buffer")
                 return
             }
-                  
+            
             if self.assetWriter.status == .unknown {
                 if sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
                     return
                 }
-                if self.videoInput != nil && self.audioInput != nil {
+                if self.videoInput != nil && (self.audioInput != nil || !self.configuration.hasAudio) {
                     if !self.assetWriter.startWriting() {
                         if let error = self.assetWriter.error {
                             self.transitionToFailedStatus(error: .avError(error))
