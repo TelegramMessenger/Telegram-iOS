@@ -532,7 +532,7 @@ final class CameraOutput: NSObject {
         if let current = self.roundVideoFilter {
             filter = current
         } else {
-            filter = CameraRoundVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace)
+            filter = CameraRoundVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace, simple: self.exclusive)
             self.roundVideoFilter = filter
         }
         if !filter.isPrepared {
