@@ -26,6 +26,7 @@ import MediaResources
 import LocalMediaResources
 import ImageCompression
 import LegacyMediaPickerUI
+import TelegramAudio
 
 struct CameraState: Equatable {
     enum Recording: Equatable {
@@ -694,7 +695,7 @@ public class VideoMessageCameraScreen: ViewController {
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
             let previewReady: Signal<Bool, NoError>
             if #available(iOS 13.0, *) {
-                previewReady = self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing
+                previewReady = self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing |> delay(0.2, queue: Queue.mainQueue())
             } else {
                 previewReady = .single(true) |> delay(0.35, queue: Queue.mainQueue())
             }
@@ -1116,9 +1117,22 @@ public class VideoMessageCameraScreen: ViewController {
             let previewSide = min(369.0, layout.size.width - 24.0)
             let previewFrame: CGRect
             if layout.metrics.isTablet {
-                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.2 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                let statusBarOrientation: UIInterfaceOrientation
+                if #available(iOS 13.0, *) {
+                    statusBarOrientation = UIApplication.shared.windows.first?.windowScene?.interfaceOrientation ?? .portrait
+                } else {
+                    statusBarOrientation = UIApplication.shared.statusBarOrientation
+                }
+                
+                if statusBarOrientation == .landscapeLeft {
+                    previewFrame = CGRect(origin: CGPoint(x: layout.size.width - 44.0 - previewSide, y: floorToScreenPixels((layout.size.height - previewSide) / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                } else if statusBarOrientation == .landscapeRight {
+                    previewFrame = CGRect(origin: CGPoint(x: 44.0, y: floorToScreenPixels((layout.size.height - previewSide) / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                } else {
+                    previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.2 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                }
             } else {
-                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 16.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
+                previewFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - previewSide) / 2.0), y: max(layout.statusBarHeight ?? 0.0 + 24.0, availableHeight * 0.4 - previewSide / 2.0)), size: CGSize(width: previewSide, height: previewSide))
             }
             if !self.animatingIn {
                 transition.setFrame(view: self.previewContainerView, frame: previewFrame)
@@ -1321,7 +1335,7 @@ public class VideoMessageCameraScreen: ViewController {
         
     public func takenRecordedData() -> Signal<RecordedVideoData?, NoError> {
         let previewState = self.node.previewStatePromise.get()
-        let count = 12
+        let count = 13
         
         let initialPlaceholder: Signal<UIImage?, NoError>
         if let firstResult = self.node.results.first {
@@ -1657,7 +1671,14 @@ public class VideoMessageCameraScreen: ViewController {
     }
     
     private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { [weak self] _ in
+        let audioSessionType: ManagedAudioSessionType
+        if self.context.sharedContext.currentMediaInputSettings.with({ $0 }).pauseMusicOnRecording { 
+            audioSessionType = .record(speaker: false, withOthers: false)
+        } else {
+            audioSessionType = .recordWithOthers
+        }
+      
+        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: audioSessionType, activate: { [weak self] _ in
             if #available(iOS 13.0, *) {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }

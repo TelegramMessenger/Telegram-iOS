@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AVFoundation
 import CoreImage
 import CoreMedia
 import CoreVideo
@@ -157,13 +158,29 @@ final class CameraRoundVideoFilter {
     private var lastMainSourceImage: CIImage?
     private var lastAdditionalSourceImage: CIImage?
     
-    func render(pixelBuffer: CVPixelBuffer, additional: Bool, transitionFactor: CGFloat) -> CVPixelBuffer? {
+    func render(pixelBuffer: CVPixelBuffer, additional: Bool, captureOrientation: AVCaptureVideoOrientation, transitionFactor: CGFloat) -> CVPixelBuffer? {
         guard let resizeFilter = self.resizeFilter, let overlayFilter = self.overlayFilter, let compositeFilter = self.compositeFilter, let borderFilter = self.borderFilter, self.isPrepared else {
             return nil
         }
         
         var sourceImage = CIImage(cvImageBuffer: pixelBuffer, options: [.colorSpace: self.colorSpace])
-        sourceImage = sourceImage.oriented(additional ? .leftMirrored : .right)
+        var sourceOrientation: CGImagePropertyOrientation
+        var sourceIsLandscape = false
+        switch captureOrientation {
+        case .portrait:
+            sourceOrientation = additional ? .leftMirrored : .right
+        case .landscapeLeft:
+            sourceOrientation = additional ? .upMirrored : .down
+            sourceIsLandscape = true
+        case .landscapeRight:
+            sourceOrientation = additional ? .downMirrored : .up
+            sourceIsLandscape = true
+        case .portraitUpsideDown:
+            sourceOrientation = additional ? .rightMirrored : .left
+        @unknown default:
+            sourceOrientation = additional ? .leftMirrored : .right
+        }
+        sourceImage = sourceImage.oriented(sourceOrientation)
         let scale = CGFloat(videoMessageDimensions.width) / min(sourceImage.extent.width, sourceImage.extent.height)
         
         if !self.simple {
@@ -179,8 +196,13 @@ final class CameraRoundVideoFilter {
             sourceImage = sourceImage.transformed(by: CGAffineTransformMakeScale(scale, scale), highQualityDownsample: true)
         }
         
-        sourceImage = sourceImage.transformed(by: CGAffineTransformMakeTranslation(0.0, -(sourceImage.extent.height - sourceImage.extent.width) / 2.0))
-        sourceImage = sourceImage.cropped(to: CGRect(x: 0.0, y: 0.0, width: sourceImage.extent.width, height: sourceImage.extent.width))
+        if sourceIsLandscape {
+            sourceImage = sourceImage.transformed(by: CGAffineTransformMakeTranslation(-(sourceImage.extent.width - sourceImage.extent.height) / 2.0, 0.0))
+            sourceImage = sourceImage.cropped(to: CGRect(x: 0.0, y: 0.0, width: sourceImage.extent.height, height: sourceImage.extent.height))
+        } else {
+            sourceImage = sourceImage.transformed(by: CGAffineTransformMakeTranslation(0.0, -(sourceImage.extent.height - sourceImage.extent.width) / 2.0))
+            sourceImage = sourceImage.cropped(to: CGRect(x: 0.0, y: 0.0, width: sourceImage.extent.width, height: sourceImage.extent.width))
+        }
         
         if additional {
             self.lastAdditionalSourceImage = sourceImage
