@@ -337,18 +337,21 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         ),
                         environment: {},
                         forceUpdate: false,
-                        containerSize: CGSize(width: width - leftInset - rightInset - 45.0 * 2.0, height: 33.0)
+                        containerSize: CGSize(width: min(424, width - leftInset - rightInset - 45.0 * 2.0), height: 33.0)
                     )
-                    
+
                     if let view = self.scrubber.view {
                         if view.superview == nil {
                             self.view.addSubview(view)
                         }
-                        
-                        view.frame = CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: scrubberSize)
+                        view.bounds = CGRect(origin: .zero, size: scrubberSize)
                     }
                 }
             }
+        }
+        
+        if let view = self.scrubber.view {
+            view.frame = CGRect(origin: CGPoint(x: max(leftInset + 45.0, floorToScreenPixels((width - view.bounds.width) / 2.0)), y: 7.0 - UIScreenPixel), size: view.bounds.size)
         }
                 
         let panelHeight = defaultHeight(metrics: metrics)
