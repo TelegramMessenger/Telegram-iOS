@@ -167,7 +167,7 @@ final class CameraRoundVideoFilter {
         resizeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
         resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
         
-        if !"".isEmpty, let resizedImage = resizeFilter.outputImage {
+        if let resizedImage = resizeFilter.outputImage {
             sourceImage = resizedImage
         } else {
             sourceImage = sourceImage.transformed(by: CGAffineTransformMakeScale(scale, scale), highQualityDownsample: true)
