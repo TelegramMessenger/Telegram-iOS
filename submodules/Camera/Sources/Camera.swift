@@ -85,26 +85,19 @@ final class CameraDeviceContext {
     }
     
     private func maxDimensions(additional: Bool, preferWide: Bool) -> CMVideoDimensions {
-//        if self.isRoundVideo {
-//            if additional {
-//                return CMVideoDimensions(width: 640, height: 480)
-//            } else {
-//                return CMVideoDimensions(width: 1280, height: 720)
-//            }
-//        } else {
+        if self.isRoundVideo && !Camera.isDualCameraSupported {
+            return CMVideoDimensions(width: 640, height: 480)
+        } else {
             if additional || preferWide {
                 return CMVideoDimensions(width: 1920, height: 1440)
             } else {
                 return CMVideoDimensions(width: 1920, height: 1080)
             }
-//        }
+        }
     }
     
     private func preferredMaxFrameRate(useLower: Bool) -> Double {
-        if !self.exclusive {
-            return 30.0
-        }
-        if useLower {
+        if !self.exclusive || self.isRoundVideo || useLower {
             return 30.0
         }
         switch DeviceModel.current {
