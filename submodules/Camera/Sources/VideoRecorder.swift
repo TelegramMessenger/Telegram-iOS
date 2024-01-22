@@ -112,7 +112,7 @@ private final class VideoRecorderImpl {
             }
         }
     }
-        
+    
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
         if let _ = self.hasError() {
             return
@@ -129,6 +129,8 @@ private final class VideoRecorderImpl {
             }
             var failed = false
             if self.videoInput == nil {
+                Logger.shared.log("VideoRecorder", "Try adding video input")
+                
                 let videoSettings = self.configuration.videoSettings
                 if self.assetWriter.canApply(outputSettings: videoSettings, forMediaType: .video) {
                     let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings, sourceFormatHint: formatDescription)
@@ -137,6 +139,8 @@ private final class VideoRecorderImpl {
                     if self.assetWriter.canAdd(videoInput) {
                         self.assetWriter.add(videoInput)
                         self.videoInput = videoInput
+                        
+                        Logger.shared.log("VideoRecorder", "Successfully added video input")
                     } else {
                         failed = true
                     }
@@ -146,26 +150,32 @@ private final class VideoRecorderImpl {
             }
             
             if failed {
-                print("append video error")
+                Logger.shared.log("VideoRecorder", "Failed to append video buffer")
                 return
             }
-                        
+            
             if self.assetWriter.status == .unknown {
                 if sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
                     return
                 }
-                if !self.assetWriter.startWriting() {
-                    if let error = self.assetWriter.error {
-                        self.transitionToFailedStatus(error: .avError(error))
-                        return
+                if self.videoInput != nil && (self.audioInput != nil || !self.configuration.hasAudio) {
+                    if !self.assetWriter.startWriting() {
+                        if let error = self.assetWriter.error {
+                            self.transitionToFailedStatus(error: .avError(error))
+                            return
+                        }
                     }
+                    
+                    self.assetWriter.startSession(atSourceTime: presentationTime)
+                    self.recordingStartSampleTime = presentationTime
+                    self.lastVideoSampleTime = presentationTime
                 }
-                
-                self.assetWriter.startSession(atSourceTime: presentationTime)
-                self.recordingStartSampleTime = presentationTime
-                self.lastVideoSampleTime = presentationTime
             }
             
+            if self.recordingStartSampleTime == .invalid || sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
+                return
+            }
+           
             if self.assetWriter.status == .writing {
                 if self.recordingStopSampleTime != .invalid && sampleBuffer.presentationTimestamp > self.recordingStopSampleTime {
                     self.hasAllVideoBuffers = true
@@ -225,6 +235,8 @@ private final class VideoRecorderImpl {
             
             var failed = false
             if self.audioInput == nil {
+                Logger.shared.log("VideoRecorder", "Try adding audio input")
+                
                 var audioSettings = self.configuration.audioSettings
                 if let currentAudioStreamBasicDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) {
                     audioSettings[AVSampleRateKey] = currentAudioStreamBasicDescription.pointee.mSampleRate
@@ -247,6 +259,8 @@ private final class VideoRecorderImpl {
                     if self.assetWriter.canAdd(audioInput) {
                         self.assetWriter.add(audioInput)
                         self.audioInput = audioInput
+                        
+                        Logger.shared.log("VideoRecorder", "Successfully added audio input")
                     } else {
                         failed = true
                     }
@@ -256,11 +270,11 @@ private final class VideoRecorderImpl {
             }
 
             if failed {
-                print("append audio error")
+                Logger.shared.log("VideoRecorder", "Failed to append audio buffer")
                 return
             }
                                     
-            if self.assetWriter.status == .writing {
+            if self.recordingStartSampleTime != .invalid { //self.assetWriter.status == .writing {
                 if sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
                     return
                 }

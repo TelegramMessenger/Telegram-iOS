@@ -89,8 +89,9 @@ private func preallocateBuffers(pool: CVPixelBufferPool, allocationThreshold: In
     pixelBuffers.removeAll()
 }
 
-class CameraRoundVideoFilter {
+final class CameraRoundVideoFilter {
     private let ciContext: CIContext
+    private let colorSpace: CGColorSpace
     
     private var resizeFilter: CIFilter?
     private var overlayFilter: CIFilter?
@@ -104,8 +105,9 @@ class CameraRoundVideoFilter {
     
     private(set) var isPrepared = false
     
-    init(ciContext: CIContext) {
+    init(ciContext: CIContext, colorSpace: CGColorSpace) {
         self.ciContext = ciContext
+        self.colorSpace = colorSpace
     }
     
     func prepare(with formatDescription: CMFormatDescription, outputRetainedBufferCountHint: Int) {
@@ -158,7 +160,7 @@ class CameraRoundVideoFilter {
             return nil
         }
         
-        var sourceImage = CIImage(cvImageBuffer: pixelBuffer)
+        var sourceImage = CIImage(cvImageBuffer: pixelBuffer, options: [.colorSpace: self.colorSpace])
         sourceImage = sourceImage.oriented(additional ? .leftMirrored : .right)
         let scale = CGFloat(videoMessageDimensions.width) / min(sourceImage.extent.width, sourceImage.extent.height)
         
