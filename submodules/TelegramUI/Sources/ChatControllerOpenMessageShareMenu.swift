@@ -14,6 +14,62 @@ import ChatQrCodeScreen
 import ChatShareMessageTagView
 import ReactionSelectionNode
 
+func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl, reactionItems: [ReactionItem], correlationId: Int64?) -> (() -> UndoOverlayControllerAdditionalView?)? {
+    guard let correlationId else {
+        return nil
+    }
+    return { [weak chatController] () -> UndoOverlayControllerAdditionalView? in
+        guard let chatController else {
+            return nil
+        }
+        return ChatShareMessageTagView(context: chatController.context, presentationData: chatController.presentationData, reactionItems: reactionItems, completion: { [weak chatController] file, updateReaction in
+            guard let chatController else {
+                return
+            }
+            
+            let _ = (chatController.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: chatController.context.account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 45, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: [])
+            |> map { view, _, _ -> [EngineMessage.Id] in
+                guard let messageId = chatController.context.engine.messages.synchronouslyLookupCorrelationId(correlationId: correlationId) else {
+                    return []
+                }
+                
+                let exactResult = view.entries.compactMap { entry -> EngineMessage.Id? in
+                    if entry.message.id == messageId {
+                        return entry.message.id
+                    } else {
+                        return nil
+                    }
+                }
+                if !exactResult.isEmpty {
+                    return exactResult
+                }
+                
+                return []
+            }
+            |> filter { !$0.isEmpty }
+            |> take(1)
+            |> timeout(5.0, queue: .mainQueue(), alternate: .single([]))
+            |> deliverOnMainQueue).start(next: { [weak chatController] messageIds in
+                guard let chatController else {
+                    return
+                }
+                if let messageId = messageIds.first {
+                    let _ = chatController.context.engine.messages.setMessageReactions(id: messageId, reactions: [updateReaction])
+                    
+                    var isBuiltinReaction = false
+                    if case .builtin = updateReaction {
+                        isBuiltinReaction = true
+                    }
+                    let presentationData = chatController.context.sharedContext.currentPresentationData.with { $0 }
+                    chatController.present(UndoOverlayController(presentationData: presentationData, content: .messageTagged(context: chatController.context, customEmoji: file, isBuiltinReaction: isBuiltinReaction), elevatedLayout: false, position: .top, animateInAsReplacement: true, action: { _ in
+                        return false
+                    }), in: .current)
+                }
+            })
+        })
+    }
+}
+
 extension ChatControllerImpl {
     func openMessageShareMenu(id: EngineMessage.Id) {
         guard let messages = self.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first else {
@@ -150,62 +206,7 @@ extension ChatControllerImpl {
                             })
                         }
                         return false
-                    }, additionalView: savedMessages ? { [weak self] () -> UndoOverlayControllerAdditionalView? in
-                        guard let self else {
-                            return nil
-                        }
-                        return ChatShareMessageTagView(context: self.context, presentationData: self.presentationData, reactionItems: reactionItems, completion: { [weak self] file, updateReaction in
-                            guard let self else {
-                                return
-                            }
-                            
-                            let _ = (self.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: context.account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 45, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: [])
-                            |> map { view, _, _ -> [EngineMessage.Id] in
-                                //TODO:filter?
-                                for entry in view.entries.reversed() {
-                                    if entry.message.id.namespace == Namespaces.Message.Cloud {
-                                        return [entry.message.id]
-                                    }
-                                }
-                                
-                                return view.entries.compactMap { entry -> EngineMessage.Id? in
-                                    for attribute in entry.message.attributes {
-                                        if let attribute = attribute as? OutgoingMessageInfoAttribute {
-                                            if let correlationId = attribute.correlationId {
-                                                if correlationIds.contains(correlationId) {
-                                                    if entry.message.id.namespace == Namespaces.Message.Cloud {
-                                                        return entry.message.id
-                                                    } else {
-                                                        return nil
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    return nil
-                                }
-                            }
-                            |> filter { !$0.isEmpty }
-                            |> take(1)
-                            |> timeout(5.0, queue: .mainQueue(), alternate: .single([]))
-                            |> deliverOnMainQueue).start(next: { [weak self] messageIds in
-                                guard let self else {
-                                    return
-                                }
-                                if let messageId = messageIds.first {
-                                    let _ = context.engine.messages.setMessageReactions(id: messageId, reactions: [updateReaction])
-                                    
-                                    var isBuiltinReaction = false
-                                    if case .builtin = updateReaction {
-                                        isBuiltinReaction = true
-                                    }
-                                    self.present(UndoOverlayController(presentationData: presentationData, content: .messageTagged(context: self.context, customEmoji: file, isBuiltinReaction: isBuiltinReaction), elevatedLayout: false, position: .top, animateInAsReplacement: true, action: { _ in
-                                        return false
-                                    }), in: .current)
-                                }
-                            })
-                        })
-                    } : nil), in: .current)
+                    }, additionalView: savedMessages ? chatShareToSavedMessagesAdditionalView(self, reactionItems: reactionItems, correlationId: correlationIds.first) : nil), in: .current)
                 })
             })
         }

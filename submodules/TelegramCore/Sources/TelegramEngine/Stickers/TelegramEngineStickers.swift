@@ -109,6 +109,19 @@ public extension TelegramEngine {
             return _internal_cachedAvailableReactions(postbox: self.account.postbox)
         }
         
+        public func savedMessageTagData() -> Signal<SavedMessageTags?, NoError> {
+            return self.account.postbox.combinedView(keys: [PostboxViewKey.cachedItem(_internal_savedMessageTagsCacheKey())])
+            |> mapToSignal { views -> Signal<SavedMessageTags?, NoError> in
+                guard let views = views.views[PostboxViewKey.cachedItem(_internal_savedMessageTagsCacheKey())] as? CachedItemView else {
+                    return .single(nil)
+                }
+                guard let savedMessageTags = views.value?.get(SavedMessageTags.self) else {
+                    return .single(nil)
+                }
+                return .single(savedMessageTags)
+            }
+        }
+        
         public func savedMessageTags() -> Signal<([SavedMessageTags.Tag], [Int64: TelegramMediaFile]), NoError> {
             return self.account.postbox.combinedView(keys: [PostboxViewKey.cachedItem(_internal_savedMessageTagsCacheKey())])
             |> mapToSignal { views -> Signal<([SavedMessageTags.Tag], [Int64: TelegramMediaFile]), NoError> in
@@ -134,7 +147,11 @@ public extension TelegramEngine {
         }
         
         public func refreshSavedMessageTags() -> Signal<Never, NoError> {
-            return managedSynchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network)
+            return managedSynchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
+        }
+        
+        public func setSavedMessageTagTitle(reaction: MessageReaction.Reaction, title: String?) -> Signal<Never, NoError> {
+            return _internal_setSavedMessageTagTitle(account: self.account, reaction: reaction, title: title)
         }
         
         public func emojiSearchCategories(kind: EmojiSearchCategories.Kind) -> Signal<EmojiSearchCategories?, NoError> {

@@ -13,11 +13,20 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         return nil
     }
     if let search = chatPresentationInterfaceState.search, chatPresentationInterfaceState.hasSearchTags {
-        if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId, case .everything = search.domain {
+        var matches = false
+        if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId {
+            if case .everything = search.domain {
+                matches = true
+            } else if case .tag = search.domain, search.query.isEmpty {
+                matches = true
+            }
+        }
+        
+        if matches {
             if let currentPanel = currentPanel as? ChatSearchTitleAccessoryPanelNode {
                 return currentPanel
             } else {
-                let panel = ChatSearchTitleAccessoryPanelNode(context: context)
+                let panel = ChatSearchTitleAccessoryPanelNode(context: context, chatLocation: chatPresentationInterfaceState.chatLocation)
                 panel.interfaceInteraction = interfaceInteraction
                 return panel
             }

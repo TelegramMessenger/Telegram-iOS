@@ -2275,7 +2275,9 @@ public final class ShareController: ViewController {
                             }
                         }
                         
-                        messagesToEnqueue.append(.forward(source: message.id, threadId: threadId, grouping: .auto, attributes: [], correlationId: nil))
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        correlationIds.append(correlationId)
+                        messagesToEnqueue.append(.forward(source: message.id, threadId: threadId, grouping: .auto, attributes: [], correlationId: correlationId))
                     }
                     messagesToEnqueue = transformMessages(messagesToEnqueue, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: currentContext.context.account, peerId: peerId, messages: messagesToEnqueue))

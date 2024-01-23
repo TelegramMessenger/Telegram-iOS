@@ -1326,6 +1326,10 @@ public extension TelegramEngine {
             return self.account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
         }
         
+        public func synchronouslyLookupCorrelationId(correlationId: Int64) -> EngineMessage.Id? {
+            return self.account.pendingMessageManager.synchronouslyLookupCorrelationId(correlationId: correlationId)
+        }
+        
         public func savedMessagesPeerListHead() -> Signal<EnginePeer.Id?, NoError> {
             return self.account.postbox.combinedView(keys: [.savedMessagesIndex(peerId: self.account.peerId)])
             |> map { views -> EnginePeer.Id? in
@@ -1337,6 +1341,21 @@ public extension TelegramEngine {
                     return nil
                 } else {
                     return view.items.first?.peer?.id
+                }
+            }
+        }
+        
+        public func savedMessagesHasPeersOtherThanSaved() -> Signal<Bool, NoError> {
+            return self.account.postbox.combinedView(keys: [.savedMessagesIndex(peerId: self.account.peerId)])
+            |> map { views -> Bool in
+                //TODO:api optimize
+                guard let view = views.views[.savedMessagesIndex(peerId: self.account.peerId)] as? MessageHistorySavedMessagesIndexView else {
+                    return false
+                }
+                if view.isLoading {
+                    return false
+                } else {
+                    return view.items.contains(where: { $0.peer?.id != self.account.peerId })
                 }
             }
         }

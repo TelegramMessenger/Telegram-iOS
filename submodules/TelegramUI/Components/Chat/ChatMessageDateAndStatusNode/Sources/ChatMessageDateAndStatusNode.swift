@@ -225,6 +225,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var layoutInput: LayoutInput
         var constrainedSize: CGSize
         var availableReactions: AvailableReactions?
+        var savedMessageTags: SavedMessageTags?
         var reactions: [MessageReaction]
         var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
         var displayAllReactionPeers: Bool
@@ -246,6 +247,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             layoutInput: LayoutInput,
             constrainedSize: CGSize,
             availableReactions: AvailableReactions?,
+            savedMessageTags: SavedMessageTags?,
             reactions: [MessageReaction],
             reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
             displayAllReactionPeers: Bool,
@@ -265,6 +267,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.type = type
             self.layoutInput = layoutInput
             self.availableReactions = availableReactions
+            self.savedMessageTags = savedMessageTags
             self.constrainedSize = constrainedSize
             self.reactions = reactions
             self.reactionPeers = reactionPeers
@@ -803,11 +806,21 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 }
                             }
                             
+                            var title: String?
+                            if arguments.areReactionsTags, let savedMessageTags = arguments.savedMessageTags {
+                                for tag in savedMessageTags.tags {
+                                    if tag.reaction == reaction.value {
+                                        title = tag.title
+                                    }
+                                }
+                            }
+                            
                             return ReactionButtonsAsyncLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
                                     centerAnimation: centerAnimation,
-                                    animationFileId: animationFileId
+                                    animationFileId: animationFileId,
+                                    title: title
                                 ),
                                 count: Int(reaction.count),
                                 peers: arguments.areReactionsTags ? [] : peers,

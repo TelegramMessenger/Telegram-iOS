@@ -148,6 +148,7 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
         
         transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: params.size))
         reactionContextNode.updateLayout(size: params.size, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: transition)
+        reactionContextNode.updateIsIntersectingContent(isIntersectingContent: true, transition: .immediate)
         if isFirstTime {
             reactionContextNode.animateIn(from: reactionsAnchorRect)
         }

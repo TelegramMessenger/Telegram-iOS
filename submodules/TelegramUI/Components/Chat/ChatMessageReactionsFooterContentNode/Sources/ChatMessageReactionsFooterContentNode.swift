@@ -58,6 +58,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
         presentationData: ChatPresentationData,
         presentationContext: ChatPresentationContext,
         availableReactions: AvailableReactions?,
+        savedMessageTags: SavedMessageTags?,
         reactions: ReactionsMessageAttribute,
         accountPeer: EnginePeer?,
         message: Message,
@@ -176,11 +177,21 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                     }
                 }
                 
+                var title: String?
+                if isTag, let savedMessageTags {
+                    for tag in savedMessageTags.tags {
+                        if tag.reaction == reaction.value {
+                            title = tag.title
+                        }
+                    }
+                }
+                
                 return ReactionButtonsAsyncLayoutContainer.Reaction(
                     reaction: ReactionButtonComponent.Reaction(
                         value: reaction.value,
                         centerAnimation: centerAnimation,
-                        animationFileId: animationFileId
+                        animationFileId: animationFileId,
+                        title: title
                     ),
                     count: Int(reaction.count),
                     peers: peers,
@@ -515,7 +526,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
                     context: item.context,
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
-                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, accountPeer: item.associatedData.accountPeer, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
+                    availableReactions: item.associatedData.availableReactions, savedMessageTags: item.associatedData.savedMessageTags, reactions: reactionsAttribute, accountPeer: item.associatedData.accountPeer, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
                      
                 return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { boundingWidth in
                     var boundingSize = CGSize()
@@ -593,6 +604,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         public let presentationData: ChatPresentationData
         public let presentationContext: ChatPresentationContext
         public let availableReactions: AvailableReactions?
+        public let savedMessageTags: SavedMessageTags?
         public let reactions: ReactionsMessageAttribute
         public let message: Message
         public let accountPeer: EnginePeer?
@@ -604,6 +616,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             presentationData: ChatPresentationData,
             presentationContext: ChatPresentationContext,
             availableReactions: AvailableReactions?,
+            savedMessageTags: SavedMessageTags?,
             reactions: ReactionsMessageAttribute,
             message: Message,
             accountPeer: EnginePeer?,
@@ -614,6 +627,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             self.presentationData = presentationData
             self.presentationContext = presentationContext
             self.availableReactions = availableReactions
+            self.savedMessageTags = savedMessageTags
             self.reactions = reactions
             self.message = message
             self.accountPeer = accountPeer
@@ -652,6 +666,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
                 presentationData: arguments.presentationData,
                 presentationContext: arguments.presentationContext,
                 availableReactions: arguments.availableReactions,
+                savedMessageTags: arguments.savedMessageTags,
                 reactions: arguments.reactions,
                 accountPeer: arguments.accountPeer,
                 message: arguments.message,

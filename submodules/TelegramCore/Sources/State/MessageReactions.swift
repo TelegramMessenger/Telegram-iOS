@@ -67,24 +67,27 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
             }
             
             if storeAsRecentlyUsed {
-                let effectiveReactions = currentMessage.effectiveReactions(isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId)) ?? []
-                for updatedReaction in reactions {
-                    if !effectiveReactions.contains(where: { $0.value == updatedReaction.reaction && $0.isSelected }) {
-                        let recentReactionItem: RecentReactionItem
-                        switch updatedReaction {
-                        case let .builtin(value):
-                            recentReactionItem = RecentReactionItem(.builtin(value))
-                        case let .custom(fileId, file):
-                            if let file = file ?? (transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile) {
-                                recentReactionItem = RecentReactionItem(.custom(file))
-                            } else {
-                                continue
+                let isTags = currentMessage.areReactionsTags(accountPeerId: account.peerId)
+                if !isTags {
+                    let effectiveReactions = currentMessage.effectiveReactions(isTags: isTags) ?? []
+                    for updatedReaction in reactions {
+                        if !effectiveReactions.contains(where: { $0.value == updatedReaction.reaction && $0.isSelected }) {
+                            let recentReactionItem: RecentReactionItem
+                            switch updatedReaction {
+                            case let .builtin(value):
+                                recentReactionItem = RecentReactionItem(.builtin(value))
+                            case let .custom(fileId, file):
+                                if let file = file ?? (transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile) {
+                                    recentReactionItem = RecentReactionItem(.custom(file))
+                                } else {
+                                    continue
+                                }
                             }
-                        }
-                        
-                        if let entry = CodableEntry(recentReactionItem) {
-                            let itemEntry = OrderedItemListEntry(id: recentReactionItem.id.rawValue, contents: entry)
-                            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentReactions, item: itemEntry, removeTailIfCountExceeds: 50)
+                            
+                            if let entry = CodableEntry(recentReactionItem) {
+                                let itemEntry = OrderedItemListEntry(id: recentReactionItem.id.rawValue, contents: entry)
+                                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentReactions, item: itemEntry, removeTailIfCountExceeds: 50)
+                            }
                         }
                     }
                 }

@@ -570,6 +570,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         layoutInput: dateLayoutInput,
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
+                        savedMessageTags: item.associatedData.savedMessageTags,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,

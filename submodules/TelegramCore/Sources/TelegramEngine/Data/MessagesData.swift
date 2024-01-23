@@ -392,13 +392,15 @@ public extension TelegramEngine.EngineData.Item {
             public typealias Result = [MessageReaction.Reaction: Int]
             
             fileprivate var peerId: EnginePeer.Id
+            fileprivate var threadId: Int64?
             
-            public init(peerId: EnginePeer.Id) {
+            public init(peerId: EnginePeer.Id, threadId: Int64?) {
                 self.peerId = peerId
+                self.threadId = threadId
             }
 
             var key: PostboxViewKey {
-                return .historyCustomTagSummariesView(peerId: self.peerId, namespace: Namespaces.Message.Cloud)
+                return .historyCustomTagSummariesView(peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud)
             }
 
             func extract(view: PostboxView) -> Result {

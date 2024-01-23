@@ -654,6 +654,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 ),
                                 constrainedSize: CGSize(width: maxStatusContentWidth, height: CGFloat.greatestFiniteMagnitude),
                                 availableReactions: associatedData.availableReactions,
+                                savedMessageTags: associatedData.savedMessageTags,
                                 reactions: dateReactionsAndPeers.reactions,
                                 reactionPeers: dateReactionsAndPeers.peers,
                                 displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,

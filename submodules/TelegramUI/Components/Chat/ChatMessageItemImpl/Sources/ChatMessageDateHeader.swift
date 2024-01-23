@@ -718,12 +718,16 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
 
     override public func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
     }
+    
+    private var currentSelectionOffset: CGFloat = 0.0
 
     public func updateSelectionState(animated: Bool) {
+        let currentSelectionOffset = self.currentSelectionOffset
         let offset: CGFloat = self.controllerInteraction?.selectionState != nil ? 42.0 : 0.0
+        self.currentSelectionOffset = offset
 
-        let previousSubnodeTransform = self.subnodeTransform
-        self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
+        let previousSubnodeTransform = CATransform3DMakeTranslation(currentSelectionOffset, 0.0, 0.0)
+        self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0)
         if animated {
             self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
         }

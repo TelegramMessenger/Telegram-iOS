@@ -2431,6 +2431,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         case .ended:
             let point = recognizer.location(in: self.view)
             
+            if self.isExpanded {
+                return
+            }
             if let expandItemView = self.expandItemView, expandItemView.bounds.contains(self.view.convert(point, to: self.expandItemView)) {
                 self.animateFromExtensionDistance = self.contentTopInset * 2.0 + self.extensionDistance
                 self.contentTopInset = 0.0

@@ -933,6 +933,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         layoutInput: statusLayoutInput,
                         constrainedSize: constrainedSize,
                         availableReactions: arguments.associatedData.availableReactions,
+                        savedMessageTags: arguments.associatedData.savedMessageTags,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: arguments.message.id.peerId.namespace == Namespaces.Peer.CloudUser,

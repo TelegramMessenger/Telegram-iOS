@@ -10976,3 +10976,6 @@ Sorry for the inconvenience.";
 "Settings.Privacy.ReadTimePremiumActiveFooter" = "Because you are a Telegram Premium subscriber, you will see the last seen and read time of all users who are sharing it with you – even if you are hiding yours.";
 
 "Privacy.VoiceMessages.NonPremiumHelp" = "Subscribe to Telegram Premium to restrict who can send you voice or video messages.\n\n[What is Telegram Premium?]()";
+
+"ChatList.DeleteSavedPeerMyNotesConfirmation" = "Are you sure you want to delete all messages from %@?";
+"ChatList.DeleteSavedPeerMyNotesConfirmationTitle" = "My Notes";
