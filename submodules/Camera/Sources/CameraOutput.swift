@@ -100,6 +100,8 @@ final class CameraOutput: NSObject {
     
     private var photoCaptureRequests: [Int64: PhotoCaptureContext] = [:]
     private var videoRecorder: VideoRecorder?
+    
+    private var captureOrientation: AVCaptureVideoOrientation = .portrait
         
     var processSampleBuffer: ((CMSampleBuffer, CVImageBuffer, AVCaptureConnection) -> Void)?
     var processAudioBuffer: ((CMSampleBuffer) -> Void)?
@@ -305,6 +307,7 @@ final class CameraOutput: NSObject {
         
         self.currentMode = mode
         self.lastSampleTimestamp = nil
+        self.captureOrientation = orientation
         
         var orientation = orientation
         let dimensions: CGSize
@@ -532,13 +535,13 @@ final class CameraOutput: NSObject {
         if let current = self.roundVideoFilter {
             filter = current
         } else {
-            filter = CameraRoundVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace)
+            filter = CameraRoundVideoFilter(ciContext: self.ciContext, colorSpace: self.colorSpace, simple: self.exclusive)
             self.roundVideoFilter = filter
         }
         if !filter.isPrepared {
             filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 3)
         }
-        guard let newPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, additional: additional, transitionFactor: transitionFactor) else {
+        guard let newPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, additional: additional, captureOrientation: self.captureOrientation, transitionFactor: transitionFactor) else {
             self.semaphore.signal()
             return nil
         }

@@ -85,26 +85,19 @@ final class CameraDeviceContext {
     }
     
     private func maxDimensions(additional: Bool, preferWide: Bool) -> CMVideoDimensions {
-//        if self.isRoundVideo {
-//            if additional {
-//                return CMVideoDimensions(width: 640, height: 480)
-//            } else {
-//                return CMVideoDimensions(width: 1280, height: 720)
-//            }
-//        } else {
+        if self.isRoundVideo && !Camera.isDualCameraSupported {
+            return CMVideoDimensions(width: 640, height: 480)
+        } else {
             if additional || preferWide {
                 return CMVideoDimensions(width: 1920, height: 1440)
             } else {
                 return CMVideoDimensions(width: 1920, height: 1080)
             }
-//        }
+        }
     }
     
     private func preferredMaxFrameRate(useLower: Bool) -> Double {
-        if !self.exclusive {
-            return 30.0
-        }
-        if useLower {
+        if !self.exclusive || self.isRoundVideo || useLower {
             return 30.0
         }
         switch DeviceModel.current {
@@ -138,7 +131,10 @@ private final class CameraContext {
     var secondaryPreviewView: CameraSimplePreviewView?
     
     private var lastSnapshotTimestamp: Double = CACurrentMediaTime()
+    private var savedSnapshot = false
     private var lastAdditionalSnapshotTimestamp: Double = CACurrentMediaTime()
+    private var savedAdditionalSnapshot = false
+    
     private func savePreviewSnapshot(pixelBuffer: CVPixelBuffer, front: Bool) {
         Queue.concurrentDefaultQueue().async {
             var ciImage = CIImage(cvImageBuffer: pixelBuffer)
@@ -148,7 +144,7 @@ private final class CameraContext {
                 transform = CGAffineTransformTranslate(transform, 0.0, -size.height)
                 ciImage = ciImage.transformed(by: transform)
             }
-            ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: 100.0).cropped(to: CGRect(origin: .zero, size: size))
+            ciImage = ciImage.clampedToExtent().applyingGaussianBlur(sigma: Camera.isDualCameraSupported ? 100.0 : 40.0).cropped(to: CGRect(origin: .zero, size: size))
             if let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) {
                 let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
                 if front {
@@ -337,13 +333,14 @@ private final class CameraContext {
                     return
                 } 
                 let timestamp = CACurrentMediaTime()
-                if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording {
+                if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording || !self.savedSnapshot {
                     var front = false
                     if #available(iOS 13.0, *) {
                         front = connection.inputPorts.first?.sourceDevicePosition == .front
                     }
                     self.savePreviewSnapshot(pixelBuffer: pixelBuffer, front: front)
                     self.lastSnapshotTimestamp = timestamp
+                    self.savedSnapshot = true
                 }
             }
             self.additionalDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
@@ -351,13 +348,14 @@ private final class CameraContext {
                     return
                 }
                 let timestamp = CACurrentMediaTime()
-                if timestamp > self.lastAdditionalSnapshotTimestamp + 2.5, !additionalDeviceContext.output.isRecording {
+                if timestamp > self.lastAdditionalSnapshotTimestamp + 2.5, !additionalDeviceContext.output.isRecording || !self.savedAdditionalSnapshot {
                     var front = false
                     if #available(iOS 13.0, *) {
                         front = connection.inputPorts.first?.sourceDevicePosition == .front
                     }
                     self.savePreviewSnapshot(pixelBuffer: pixelBuffer, front: front)
                     self.lastAdditionalSnapshotTimestamp = timestamp
+                    self.savedAdditionalSnapshot = true
                 }
             }
         } else {
@@ -377,13 +375,14 @@ private final class CameraContext {
                     return
                 }
                 let timestamp = CACurrentMediaTime()
-                if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording {
+                if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording || !self.savedSnapshot {
                     var front = false
                     if #available(iOS 13.0, *) {
                         front = connection.inputPorts.first?.sourceDevicePosition == .front
                     }
                     self.savePreviewSnapshot(pixelBuffer: pixelBuffer, front: front)
                     self.lastSnapshotTimestamp = timestamp
+                    self.savedSnapshot = true
                 }
             }
             if self.initialConfiguration.reportAudioLevel {
@@ -564,7 +563,7 @@ private final class CameraContext {
         
         let orientation = self.simplePreviewView?.videoPreviewLayer.connection?.videoOrientation ?? .portrait
         if self.initialConfiguration.isRoundVideo {
-            return mainDeviceContext.output.startRecording(mode: .roundVideo, orientation: .portrait, additionalOutput: self.additionalDeviceContext?.output)
+            return mainDeviceContext.output.startRecording(mode: .roundVideo, orientation: DeviceModel.current.isIpad ? orientation : .portrait, additionalOutput: self.additionalDeviceContext?.output)
         } else {
             if let additionalDeviceContext = self.additionalDeviceContext {
                 return combineLatest(
