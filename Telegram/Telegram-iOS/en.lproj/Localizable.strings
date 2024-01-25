@@ -10979,3 +10979,5 @@ Sorry for the inconvenience.";
 
 "ChatList.DeleteSavedPeerMyNotesConfirmation" = "Are you sure you want to delete all messages from %@?";
 "ChatList.DeleteSavedPeerMyNotesConfirmationTitle" = "My Notes";
+
+"Conversation.ForwardOptions.SenderNamesRemoved" = "Sender names removed";
