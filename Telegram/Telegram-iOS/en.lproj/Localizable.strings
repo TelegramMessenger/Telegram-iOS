@@ -10981,3 +10981,7 @@ Sorry for the inconvenience.";
 "ChatList.DeleteSavedPeerMyNotesConfirmationTitle" = "My Notes";
 
 "Conversation.ForwardOptions.SenderNamesRemoved" = "Sender names removed";
+
+"Login.Announce.Info" = "Notify people on Telegram who know my phone number that I signed up.";
+"Login.Announce.Notify" = "Notify";
+"Login.Announce.DontNotify" = "Do Not Notify";
