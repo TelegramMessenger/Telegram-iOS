@@ -1152,6 +1152,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.contentMedia?.removeFromSupernode()
                                 self.contentMedia = contentMedia
                                 
+                                contentMedia.activatePinch = { [weak controllerInteraction] sourceNode in
+                                    guard let controllerInteraction else {
+                                        return
+                                    }
+                                    controllerInteraction.activateMessagePinch(sourceNode)
+                                }
                                 contentMedia.activateLocalContent = { [weak self] mode in
                                     guard let self else {
                                         return
