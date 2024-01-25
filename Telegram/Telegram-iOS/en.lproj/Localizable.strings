@@ -10977,6 +10977,9 @@ Sorry for the inconvenience.";
 
 "Privacy.VoiceMessages.NonPremiumHelp" = "Subscribe to Telegram Premium to restrict who can send you voice or video messages.\n\n[What is Telegram Premium?]()";
 
+"ChatList.DeleteSavedPeerMyNotesConfirmation" = "Are you sure you want to delete all messages from %@?";
+"ChatList.DeleteSavedPeerMyNotesConfirmationTitle" = "My Notes";
+
 "ChannelBoost.Title.Other" = "Help Upgrade This Channel";
 "ChannelBoost.Title.Current" = "Boost Channel";
 

@@ -5080,9 +5080,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let hasSearchTags: Signal<Bool, NoError>
-                if case let .peer(peerId) = self.chatLocation, peerId == context.account.peerId {
+                if let peerId = self.chatLocation.peerId, peerId == context.account.peerId {
                     hasSearchTags = context.engine.data.subscribe(
-                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: self.chatLocation.threadId)
                     )
                     |> map { tags -> Bool in
                         return !tags.isEmpty
@@ -5632,9 +5632,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let hasSearchTags: Signal<Bool, NoError>
-                if case let .peer(peerId) = self.chatLocation, peerId == context.account.peerId {
+                if let peerId = self.chatLocation.peerId, peerId == context.account.peerId {
                     hasSearchTags = context.engine.data.subscribe(
-                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: self.chatLocation.threadId)
                     )
                     |> map { tags -> Bool in
                         return !tags.isEmpty
@@ -5740,6 +5740,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return $0.updatedPeer { _ in
                                     return renderedPeer
                                 }.updatedSavedMessagesTopicPeer(savedMessagesPeer?.peer)
+                                .updatedHasSearchTags(hasSearchTags)
                             })
                             
                             (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: savedMessagesPeer?.peer, overrideImage: imageOverride)

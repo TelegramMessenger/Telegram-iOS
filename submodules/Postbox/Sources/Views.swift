@@ -13,7 +13,7 @@ public enum PostboxViewKey: Hashable {
     case invalidatedMessageHistoryTagSummaries(peerId: PeerId?, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace)
     case pendingMessageActionsSummary(type: PendingMessageActionType, peerId: PeerId, namespace: MessageId.Namespace)
     case historyTagSummaryView(tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, customTag: MemoryBuffer?)
-    case historyCustomTagSummariesView(peerId: PeerId, namespace: MessageId.Namespace)
+    case historyCustomTagSummariesView(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace)
     case cachedPeerData(peerId: PeerId)
     case unreadCounts(items: [UnreadMessageCountsItem])
     case combinedReadState(peerId: PeerId, handleThreads: Bool)
@@ -85,8 +85,9 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(threadId)
             hasher.combine(namespace)
             hasher.combine(customTag)
-        case let .historyCustomTagSummariesView(peerId, namespace):
+        case let .historyCustomTagSummariesView(peerId, threadId, namespace):
             hasher.combine(peerId)
+            hasher.combine(threadId)
             hasher.combine(namespace)
         case let .cachedPeerData(peerId):
             hasher.combine(peerId)
@@ -241,8 +242,8 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
-        case let .historyCustomTagSummariesView(peerId, namespace):
-            if case .historyCustomTagSummariesView(peerId, namespace) = rhs {
+        case let .historyCustomTagSummariesView(peerId, threadId, namespace):
+            if case .historyCustomTagSummariesView(peerId, threadId, namespace) = rhs {
                 return true
             } else {
                 return false
@@ -487,8 +488,8 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutablePendingMessageActionsSummaryView(postbox: postbox, type: type, peerId: peerId, namespace: namespace)
     case let .historyTagSummaryView(tag, peerId, threadId, namespace, customTag):
         return MutableMessageHistoryTagSummaryView(postbox: postbox, tag: tag, peerId: peerId, threadId: threadId, namespace: namespace, customTag: customTag)
-    case let .historyCustomTagSummariesView(peerId, namespace):
-        return MutableMessageHistoryCustomTagSummariesView(postbox: postbox, peerId: peerId, namespace: namespace)
+    case let .historyCustomTagSummariesView(peerId, threadId, namespace):
+        return MutableMessageHistoryCustomTagSummariesView(postbox: postbox, peerId: peerId, threadId: threadId, namespace: namespace)
     case let .cachedPeerData(peerId):
         return MutableCachedPeerDataView(postbox: postbox, peerId: peerId)
     case let .unreadCounts(items):

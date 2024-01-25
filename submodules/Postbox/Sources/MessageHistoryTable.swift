@@ -301,6 +301,12 @@ final class MessageHistoryTable: Table {
                         }
                         
                         self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: nil, namespace: message.id.namespace, customTag: customTag), id: message.id.id, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                        
+                        if let threadId = message.threadId {
+                            self.threadsTable.add(threadId: threadId, index: message.index)
+                            
+                            self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace, customTag: customTag), id: message.id.id, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                        }
                     }
                     
                     let globalTags = message.globalTags.rawValue
@@ -1386,6 +1392,10 @@ final class MessageHistoryTable: Table {
                 }
                 
                 self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: nil, namespace: message.id.namespace, customTag: customTag), id: message.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                
+                if let threadId = message.threadId {
+                    self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace, customTag: customTag), id: message.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                }
             }
             for tag in message.globalTags {
                 self.globalTagsTable.remove(tag, index: index)
@@ -1619,6 +1629,8 @@ final class MessageHistoryTable: Table {
                     self.customTagTable.remove(threadId: nil, tag: customTag, index: index)
                     if let threadId = previousMessage.threadId {
                         self.customTagTable.remove(threadId: threadId, tag: customTag, index: index)
+                        
+                        self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: index.id.peerId, threadId: threadId, namespace: index.id.namespace, customTag: customTag), id: index.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                     }
                     
                     self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: index.id.peerId, threadId: nil, namespace: index.id.namespace, customTag: customTag), id: index.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
@@ -1627,6 +1639,8 @@ final class MessageHistoryTable: Table {
                     self.customTagTable.add(threadId: nil, tag: customTag, index: message.index)
                     if let threadId = message.threadId {
                         self.customTagTable.add(threadId: threadId, tag: customTag, index: message.index)
+                        
+                        self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace, customTag: customTag), id: message.id.id, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                     }
                     
                     self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: nil, namespace: message.id.namespace, customTag: customTag), id: message.id.id, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)

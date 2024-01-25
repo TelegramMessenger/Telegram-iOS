@@ -514,10 +514,13 @@ func updateChatPresentationInterfaceStateImpl(
     
     selfController.presentationInterfaceStatePromise.set(selfController.presentationInterfaceState)
     
-    if let historyFilter = selfController.presentationInterfaceState.historyFilter, historyFilter.isActive, !historyFilter.customTags.isEmpty {
-        selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTags[0]))
+    if case .tag = selfController.chatDisplayNode.historyNode.tag {
     } else {
-        selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
+        if let historyFilter = selfController.presentationInterfaceState.historyFilter, historyFilter.isActive, !historyFilter.customTags.isEmpty {
+            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTags[0]))
+        } else {
+            selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
+        }
     }
     
     selfController.updateDownButtonVisibility()

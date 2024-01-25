@@ -473,7 +473,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                     if isLocked {
                         arguments.displayLockedInfo()
                     } else {
-                        arguments.updateType(.contacts)
+                        arguments.updateType(.nobody)
                     }
                 })
             case let .settingInfo(_, text, link):

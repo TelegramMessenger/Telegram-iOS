@@ -156,13 +156,16 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     return (panel, nil)
                 }
             } else {
-                if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
-                    return (currentPanel, nil)
+                if message.threadId == context.account.peerId.toInt64() {
                 } else {
-                    let panel = ChatChannelSubscriberInputPanelNode()
-                    panel.interfaceInteraction = interfaceInteraction
-                    panel.context = context
-                    return (panel, nil)
+                    if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                        return (currentPanel, nil)
+                    } else {
+                        let panel = ChatChannelSubscriberInputPanelNode()
+                        panel.interfaceInteraction = interfaceInteraction
+                        panel.context = context
+                        return (panel, nil)
+                    }
                 }
             }
         }

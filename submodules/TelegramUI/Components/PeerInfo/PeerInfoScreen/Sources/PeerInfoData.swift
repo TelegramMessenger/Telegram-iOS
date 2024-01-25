@@ -298,10 +298,7 @@ public func hasAvailablePeerInfoMediaPanes(context: AccountContext, peerId: Peer
                          
     let hasSavedMessagesChats: Signal<Bool, NoError>
     if peerId == context.account.peerId {
-        hasSavedMessagesChats = context.engine.messages.savedMessagesPeerListHead()
-        |> map { headPeerId -> Bool in
-            return headPeerId != nil
-        }
+        hasSavedMessagesChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
         |> distinctUntilChanged
     } else {
         hasSavedMessagesChats = .single(false)
@@ -842,11 +839,15 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 |> distinctUntilChanged
                 
-                hasSavedMessagesChats = context.engine.messages.savedMessagesPeerListHead()
-                |> map { headPeerId -> Bool in
-                    return headPeerId != nil
+                if peerId == context.account.peerId {
+                    hasSavedMessagesChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
+                } else {
+                    hasSavedMessagesChats = context.engine.messages.savedMessagesPeerListHead()
+                    |> map { headPeerId -> Bool in
+                        return headPeerId != nil
+                    }
+                    |> distinctUntilChanged
                 }
-                |> distinctUntilChanged
             } else {
                 hasSavedMessages = .single(false)
                 hasSavedMessagesChats = .single(false)

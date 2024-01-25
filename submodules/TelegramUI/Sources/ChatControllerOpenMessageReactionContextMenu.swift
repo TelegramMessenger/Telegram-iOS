@@ -13,6 +13,7 @@ import TooltipUI
 import StickerPackPreviewUI
 import TextNodeWithEntities
 import ChatPresentationInterfaceState
+import PromptUI
 
 extension ChatControllerImpl {
     func openMessageReactionContextMenu(message: Message, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?, value: MessageReaction.Reaction) {
@@ -29,6 +30,8 @@ extension ChatControllerImpl {
                         a(.default)
                         return
                     }
+                    self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
+                    
                     self.interfaceInteraction?.updateHistoryFilter { _ in
                         return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
                     }
@@ -36,6 +39,39 @@ extension ChatControllerImpl {
                     a(.default)
                 })))
             }
+            
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                guard let self else {
+                    a(.default)
+                    return
+                }
+                a(.default)
+                
+                let _ = (self.context.engine.stickers.savedMessageTagData()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags in
+                    guard let self, let savedMessageTags else {
+                        return
+                    }
+                    
+                    let reaction = value
+                    
+                    //TODO:localize
+                    let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: "Edit Title", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", characterLimit: 10, apply: { [weak self] value in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let value {
+                            let _ = self.context.engine.stickers.setSavedMessageTagTitle(reaction: reaction, title: value.isEmpty ? nil : value).start()
+                        }
+                    })
+                    self.interfaceInteraction?.presentController(promptController, nil)
+                })
+            })))
             
             items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagRemove"), color: theme.contextMenu.destructiveColor)

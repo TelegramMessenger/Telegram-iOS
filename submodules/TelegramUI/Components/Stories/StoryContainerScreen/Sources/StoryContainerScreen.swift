@@ -427,6 +427,8 @@ private final class StoryContainerScreenComponent: Component {
         private var previousSeekTime: Double?
         private var initialSeekTimestamp: Double?
         
+        private var isUpdating: Bool = false
+        
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
             self.backgroundLayer.backgroundColor = UIColor.black.cgColor
@@ -486,7 +488,9 @@ private final class StoryContainerScreenComponent: Component {
                 if point != nil {
                     if !self.isHoldingTouch {
                         self.isHoldingTouch = true
-                        self.state?.updated(transition: .immediate)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
                     }
                 } else {
                     DispatchQueue.main.async { [weak self] in
@@ -496,7 +500,9 @@ private final class StoryContainerScreenComponent: Component {
                         
                         if self.isHoldingTouch {
                             self.isHoldingTouch = false
-                            self.state?.updated(transition: .immediate)
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .immediate)
+                            }
                         }
                     }
                 }
@@ -606,14 +612,18 @@ private final class StoryContainerScreenComponent: Component {
                     }
                 }
                 self.itemSetPinchState = StoryItemSetContainerComponent.PinchState(scale: scale, location: pinchLocation, offset: offset)
-                self.state?.updated(transition: .immediate)
+                if !self.isUpdating {
+                    self.state?.updated(transition: .immediate)
+                }
             }
             pinchRecognizer.ended = { [weak self] in
                 guard let self else {
                     return
                 }
                 self.itemSetPinchState = nil
-                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                if !self.isUpdating {
+                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                }
             }
             self.addGestureRecognizer(pinchRecognizer)
             
@@ -677,7 +687,9 @@ private final class StoryContainerScreenComponent: Component {
                             }
                         }
                         
-                        self.state?.updated(transition: .immediate)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
                     }
                 }
             })
@@ -764,12 +776,16 @@ private final class StoryContainerScreenComponent: Component {
             if let itemSetPanState = self.itemSetPanState, !itemSetPanState.didBegin {
                 self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
                 if !updateImmediately {
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    if !self.isUpdating {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    }
                 }
             } else {
                 self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
                 if !updateImmediately {
-                    self.state?.updated(transition: .immediate)
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
                 }
             }
             
@@ -801,7 +817,9 @@ private final class StoryContainerScreenComponent: Component {
                 itemSetPanState.fraction = fraction
                 self.itemSetPanState = itemSetPanState
                 
-                self.state?.updated(transition: .immediate)
+                if !self.isUpdating {
+                    self.state?.updated(transition: .immediate)
+                }
             }
         }
         
@@ -841,7 +859,9 @@ private final class StoryContainerScreenComponent: Component {
                             itemSetPanState.fraction = itemSetPanState.fraction - 1.0
                         }
                         self.itemSetPanState = itemSetPanState
-                        self.state?.updated(transition: .immediate)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
                     } else {
                         shouldDismiss = mayDismiss
                     }
@@ -851,14 +871,18 @@ private final class StoryContainerScreenComponent: Component {
                 self.itemSetPanState = itemSetPanState
                 
                 let transition = Transition(animation: .curve(duration: 0.4, curve: .spring))
-                self.state?.updated(transition: transition)
+                if !self.isUpdating {
+                    self.state?.updated(transition: transition)
+                }
                 
                 transition.attachAnimation(view: self, id: "panState", completion: { [weak self] completed in
                     guard let self, completed else {
                         return
                     }
                     self.itemSetPanState = nil
-                    self.state?.updated(transition: .immediate)
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
                     
                     /*if let component = self.component {
                         component.content.resetSideStates()
@@ -890,12 +914,16 @@ private final class StoryContainerScreenComponent: Component {
             case .began:
                 if self.itemSetPanState == nil {
                     self.itemSetPanState = ItemSetPanState(fraction: 0.0, didBegin: false)
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    if !self.isUpdating {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    }
                 }
             case .cancelled, .ended:
                 if let itemSetPanState = self.itemSetPanState, !itemSetPanState.didBegin {
                     self.itemSetPanState = nil
-                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    if !self.isUpdating {
+                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+                    }
                 }
             default:
                 break
@@ -977,15 +1005,21 @@ private final class StoryContainerScreenComponent: Component {
                             }
                             
                             self.didAnimateIn = true
-                            self.state?.updated(transition: .immediate)
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .immediate)
+                            }
                         })
                     } else {
                         self.didAnimateIn = true
-                        self.state?.updated(transition: .immediate)
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
                     }
                 } else {
                     self.didAnimateIn = true
-                    self.state?.updated(transition: .immediate)
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
                 }
             } else {
                 self.layer.allowsGroupOpacity = true
@@ -1180,6 +1214,11 @@ private final class StoryContainerScreenComponent: Component {
                 return availableSize
             }
             
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
@@ -1308,9 +1347,9 @@ private final class StoryContainerScreenComponent: Component {
                             if self.stateValue?.slice == nil {
                                 self.environment?.controller()?.dismiss()
                             } else {
-                                let startTime = CFAbsoluteTimeGetCurrent()
-                                self.state?.updated(transition: .immediate)
-                                print("update time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                                if !self.isUpdating {
+                                    self.state?.updated(transition: .immediate)
+                                }
                             }
                         } else {
                             DispatchQueue.main.async { [weak self] in

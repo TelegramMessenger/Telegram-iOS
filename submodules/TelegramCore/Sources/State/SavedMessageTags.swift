@@ -132,8 +132,27 @@ func _internal_setSavedMessageTags(transaction: Transaction, savedMessageTags: S
     }
 }
 
-func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
+func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Never, NoError> {
     let poll = Signal<Never, NoError> { subscriber in
+        let key: PostboxViewKey = .pendingMessageActions(type: .updateReaction)
+        let waitForApplySignal: Signal<Never, NoError> = postbox.combinedView(keys: [key])
+        |> map { views -> Bool in
+            guard let view = views.views[key] as? PendingMessageActionsView else {
+                return false
+            }
+            
+            for entry in view.entries {
+                if entry.id.peerId == accountPeerId {
+                    return false
+                }
+            }
+            
+            return true
+        }
+        |> filter { $0 }
+        |> take(1)
+        |> ignoreValues
+        
         let signal: Signal<Never, NoError> = _internal_savedMessageTags(postbox: postbox)
         |> mapToSignal { current in
             return (network.request(Api.functions.messages.getSavedReactionTags(hash: current?.hash ?? 0))
@@ -187,7 +206,7 @@ func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network) -> S
             })
         }
                 
-        return signal.start(completed: {
+        return (waitForApplySignal |> then(signal)).start(completed: {
             subscriber.putCompletion()
         })
     }
@@ -200,4 +219,28 @@ func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network) -> S
     	)
     )
     |> restart
+}
+
+func _internal_setSavedMessageTagTitle(account: Account, reaction: MessageReaction.Reaction, title: String?) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        let value = _internal_savedMessageTags(transaction: transaction) ?? SavedMessageTags(hash: 0, tags: [])
+        var updatedTags = value.tags
+        if let index = updatedTags.firstIndex(where: { $0.reaction == reaction }) {
+            updatedTags[index] = SavedMessageTags.Tag(reaction: updatedTags[index].reaction, title: title, count: updatedTags[index].count)
+        } else {
+            updatedTags.append(SavedMessageTags.Tag(reaction: reaction, title: title, count: 0))
+        }
+        _internal_setSavedMessageTags(transaction: transaction, savedMessageTags: SavedMessageTags(hash: 0, tags: updatedTags))
+    }
+    |> mapToSignal { _ -> Signal<Never, NoError> in
+        var flags: Int32 = 0
+        if title != nil {
+            flags |= 1 << 0
+        }
+        return account.network.request(Api.functions.messages.updateSavedReactionTag(flags: flags, reaction: reaction.apiReaction, title: title))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
 }

@@ -2,12 +2,14 @@ import Foundation
 
 final class MutableMessageHistoryCustomTagSummariesView: MutablePostboxView {
     private let peerId: PeerId
+    private let threadId: Int64?
     private let namespace: MessageId.Namespace
     
     fileprivate var tags: [MemoryBuffer: Int] = [:]
     
-    init(postbox: PostboxImpl, peerId: PeerId, namespace: MessageId.Namespace) {
+    init(postbox: PostboxImpl, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace) {
         self.peerId = peerId
+        self.threadId = threadId
         self.namespace = namespace
 
         self.reload(postbox: postbox)
@@ -16,8 +18,8 @@ final class MutableMessageHistoryCustomTagSummariesView: MutablePostboxView {
     private func reload(postbox: PostboxImpl) {
         self.tags.removeAll()
         
-        for tag in postbox.messageHistoryTagsSummaryTable.getCustomTags(tag: [], peerId: self.peerId, threadId: nil, namespace: self.namespace) {
-            if let summary = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: [], peerId: self.peerId, threadId: nil, namespace: self.namespace, customTag: tag)) {
+        for tag in postbox.messageHistoryTagsSummaryTable.getCustomTags(tag: [], peerId: self.peerId, threadId: self.threadId, namespace: self.namespace) {
+            if let summary = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: [], peerId: self.peerId, threadId: self.threadId, namespace: self.namespace, customTag: tag)) {
                 if summary.count > 0 {
                     self.tags[tag] = Int(summary.count)
                 }
@@ -29,7 +31,7 @@ final class MutableMessageHistoryCustomTagSummariesView: MutablePostboxView {
         var hasChanges = false
         
         for key in transaction.currentUpdatedMessageTagSummaries.keys {
-            if key.peerId == self.peerId && key.namespace == self.namespace && key.customTag != nil {
+            if key.peerId == self.peerId && key.namespace == self.namespace && key.customTag != nil && key.threadId == self.threadId {
                 hasChanges = true
                 break
             }

@@ -278,7 +278,12 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                 chatController.canReadHistory.set(false)
                 let source: ContextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: parentController.navigationController as? NavigationController))
                 
-                let contextController = ContextController(presentationData: self.presentationData, source: source, items: savedMessagesPeerMenuItems(context: self.context, threadId: threadId, parentController: parentController) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let contextController = ContextController(presentationData: self.presentationData, source: source, items: savedMessagesPeerMenuItems(context: self.context, threadId: threadId, parentController: parentController, deletePeerChat: { [weak self] peerId in
+                    guard let self else {
+                        return
+                    }
+                    self.chatListNode.deletePeerChat?(peerId, false)
+                }) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 parentController.presentInGlobalOverlay(contextController)
             }
         }

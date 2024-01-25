@@ -12,6 +12,8 @@ import UIKitRuntimeUtils
 import TelegramCore
 import EmojiStatusComponent
 import SwiftSignalKit
+import ContextUI
+import PromptUI
 
 final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UIScrollViewDelegate {
     private struct Params: Equatable {
@@ -47,39 +49,56 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
     private final class Item {
         let reaction: MessageReaction.Reaction
         let count: Int
+        let title: String?
         let file: TelegramMediaFile
         
-        init(reaction: MessageReaction.Reaction, count: Int, file: TelegramMediaFile) {
+        init(reaction: MessageReaction.Reaction, count: Int, title: String?, file: TelegramMediaFile) {
             self.reaction = reaction
             self.count = count
+            self.title = title
             self.file = file
         }
     }
     
-    private final class ItemView: HighlightTrackingButton {
+    private final class ItemView: UIView {
         private let context: AccountContext
         private let action: () -> Void
+        
+        private let extractedContainerNode: ContextExtractedContentContainingNode
+        private let containerNode: ContextControllerSourceNode
+        
+        private let containerButton: HighlightTrackingButton
         
         private let background: UIImageView
         private let icon = ComponentView<Empty>()
         private let counter = ComponentView<Empty>()
         
-        init(context: AccountContext, action: @escaping (() -> Void)) {
+        init(context: AccountContext, action: @escaping (() -> Void), contextGesture: @escaping (ContextGesture, ContextExtractedContentContainingNode) -> Void) {
+            self.context = context
+            self.action = action
+            
+            self.extractedContainerNode = ContextExtractedContentContainingNode()
+            self.containerNode = ContextControllerSourceNode()
+            
+            self.containerButton = HighlightTrackingButton()
+            
             self.background = UIImageView()
             if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
                 self.background.image = image.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0).withRenderingMode(.alwaysTemplate)
             }
             
-            self.context = context
-            self.action = action
-            
             super.init(frame: CGRect())
             
-            self.addSubview(self.background)
+            self.extractedContainerNode.contentNode.view.addSubview(self.containerButton)
             
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.containerNode.addSubnode(self.extractedContainerNode)
+            self.containerNode.targetNodeForActivationProgress = self.extractedContainerNode.contentNode
+            self.addSubview(self.containerNode.view)
             
-            self.highligthedChanged = { [weak self] highlighted in
+            self.containerButton.addSubview(self.background)
+            
+            self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.containerButton.highligthedChanged = { [weak self] highlighted in
                 if let self, self.bounds.width > 0.0 {
                     let topScale: CGFloat = (self.bounds.width - 1.0) / self.bounds.width
                     let maxScale: CGFloat = (self.bounds.width + 1.0) / self.bounds.width
@@ -102,6 +121,13 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                         })
                     }
                 }
+            }
+            
+            self.containerNode.activated = { [weak self] gesture, _ in
+                guard let self else {
+                    return
+                }
+                contextGesture(gesture, self.extractedContainerNode)
             }
         }
         
@@ -152,10 +178,16 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                 containerSize: reactionDisplaySize
             )
             
+            let title: String
+            if let value = item.title, !value.isEmpty {
+                title = "\(value) \(item.count)"
+            } else {
+                title = "\(item.count)"
+            }
             let counterSize = self.counter.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "\(item.count)", font: Font.regular(14.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
+                    text: .plain(NSAttributedString(string: title, font: Font.regular(14.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -169,7 +201,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     iconView.isUserInteractionEnabled = false
-                    self.addSubview(iconView)
+                    self.containerButton.addSubview(iconView)
                 }
                 iconView.frame = reactionDisplaySize.centered(around: iconFrame.center)
             }
@@ -177,16 +209,27 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             if let counterView = self.counter.view {
                 if counterView.superview == nil {
                     counterView.isUserInteractionEnabled = false
-                    self.addSubview(counterView)
+                    self.containerButton.addSubview(counterView)
                 }
                 counterView.frame = counterFrame
             }
             
-            self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : theme.list.controlSecondaryColor
+            if theme.overallDarkAppearance {
+                self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : UIColor(white: 1.0, alpha: 0.1)
+            } else {
+                self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : theme.list.controlSecondaryColor
+            }
             if let image = self.background.image {
                 let backgroundFrame = CGRect(origin: CGPoint(x: -6.0, y: floorToScreenPixels((size.height - image.size.height) * 0.5)), size: CGSize(width: size.width + 6.0 + 9.0, height: image.size.height))
                 transition.setFrame(view: self.background, frame: backgroundFrame)
             }
+            
+            transition.setFrame(view: self.containerButton, frame: CGRect(origin: CGPoint(), size: size))
+            
+            self.extractedContainerNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.extractedContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.extractedContainerNode.contentRect = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
+            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             
             return size
         }
@@ -213,7 +256,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
     
     private var itemsDisposable: Disposable?
     
-    init(context: AccountContext) {
+    init(context: AccountContext, chatLocation: ChatLocation) {
         self.context = context
         
         self.scrollView = ScrollView(frame: CGRect())
@@ -239,7 +282,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
         
         let tagsAndFiles: Signal<([MessageReaction.Reaction: Int], [Int64: TelegramMediaFile]), NoError> = context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId)
+            TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: chatLocation.threadId)
         )
         |> distinctUntilChanged
         |> mapToSignal { tags -> Signal<([MessageReaction.Reaction: Int], [Int64: TelegramMediaFile]), NoError> in
@@ -262,9 +305,10 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         var isFirstUpdate = true
         self.itemsDisposable = (combineLatest(
             context.engine.stickers.availableReactions(),
+            context.engine.stickers.savedMessageTagData(),
             tagsAndFiles
         )
-        |> deliverOnMainQueue).start(next: { [weak self] availableReactions, tagsAndFiles in
+        |> deliverOnMainQueue).start(next: { [weak self] availableReactions, savedMessageTags, tagsAndFiles in
             guard let self else {
                 return
             }
@@ -272,13 +316,15 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             
             let (tags, files) = tagsAndFiles
             for (reaction, count) in tags {
+                let title = savedMessageTags?.tags.first(where: { $0.reaction == reaction })?.title
+                
                 switch reaction {
                 case .builtin:
                     if let availableReactions {
                         inner: for availableReaction in availableReactions.reactions {
                             if availableReaction.value == reaction {
                                 if let file = availableReaction.centerAnimation {
-                                    self.items.append(Item(reaction: reaction, count: count, file: file))
+                                    self.items.append(Item(reaction: reaction, count: count, title: title, file: file))
                                 }
                                 break inner
                             }
@@ -286,7 +332,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                     }
                 case let .custom(fileId):
                     if let file = files[fileId] {
-                        self.items.append(Item(reaction: reaction, count: count, file: file))
+                        self.items.append(Item(reaction: reaction, count: count, title: title, file: file))
                     }
                 }
             }
@@ -376,6 +422,34 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                     if let itemView = self.itemViews[reaction] {
                         self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -46.0, dy: 0.0), animated: true)
                     }
+                }, contextGesture: { [weak self] gesture, sourceNode in
+                    guard let self, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
+                        gesture.cancel()
+                        return
+                    }
+                    
+                    var items: [ContextMenuItem] = []
+                    
+                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] c, a in
+                        guard let self else {
+                            a(.default)
+                            return
+                        }
+                        
+                        c.dismiss(completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.openEditTagTitle(reaction: reaction)
+                        })
+                    })))
+                    
+                    let controller = ContextController(presentationData: presentationData, source: .extracted(TagContextExtractedContentSource(controller: chatController, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+                    interfaceInteraction.presentGlobalOverlayController(controller, nil)
                 })
                 self.itemViews[itemId] = itemView
                 self.scrollView.addSubview(itemView)
@@ -428,5 +502,51 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize
         }
+    }
+    
+    private func openEditTagTitle(reaction: MessageReaction.Reaction) {
+        let _ = (self.context.engine.stickers.savedMessageTagData()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags in
+            guard let self, let savedMessageTags else {
+                return
+            }
+            
+            //TODO:localize
+            let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: "Edit Title", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", characterLimit: 10, apply: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                
+                if let value {
+                    let _ = self.context.engine.stickers.setSavedMessageTagTitle(reaction: reaction, title: value.isEmpty ? nil : value).start()
+                }
+            })
+            self.interfaceInteraction?.presentController(promptController, nil)
+        })
+    }
+}
+
+private final class TagContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+        self.keepInPlace = keepInPlace
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

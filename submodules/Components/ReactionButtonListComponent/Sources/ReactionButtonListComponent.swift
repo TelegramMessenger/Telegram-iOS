@@ -379,7 +379,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     func drawContents(colors: Colors) {
                         let backgroundColor: UIColor
                         let foregroundColor: UIColor
-                        if isExtracted {
+                        if isExtracted && !layout.colors.isSelected {
                             backgroundColor = UIColor(argb: colors.extractedBackground)
                             foregroundColor = UIColor(argb: colors.extractedForeground)
                         } else {
@@ -416,7 +416,12 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                             let isForegroundTransparent = foregroundColor.alpha < 1.0
                             context.setBlendMode(isForegroundTransparent ? .copy : .normal)
                             
-                            let textOrigin: CGFloat = 36.0
+                            let textOrigin: CGFloat
+                            if layout.isTag {
+                                textOrigin = 30.0
+                            } else {
+                                textOrigin = 36.0
+                            }
                             
                             var rightTextOrigin = textOrigin + totalComponentWidth
                             
@@ -642,26 +647,17 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             
             let boundingImageSize = CGSize(width: 20.0, height: 20.0)
             let imageSize: CGSize = boundingImageSize
-            /*if let file = spec.component.reaction.centerAnimation {
-                let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
-                imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
-            } else {
-                imageSize = boundingImageSize
-            }*/
             
             var counterComponents: [String] = []
-            for character in countString(Int64(spec.component.count)) {
-                counterComponents.append(String(character))
-            }
-            
-            /*#if DEBUG
-            if spec.component.count % 2 == 0 {
-                counterComponents.removeAll()
-                for character in "123.5K" {
+            var hasTitle = false
+            if let title = spec.component.reaction.title, !title.isEmpty {
+                hasTitle = true
+                counterComponents.append(title)
+            } else {
+                for character in countString(Int64(spec.component.count)) {
                     counterComponents.append(String(character))
                 }
             }
-            #endif*/
             
             let backgroundColor = spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground
             
@@ -671,7 +667,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             } else {
                 imageFrame = CGRect(origin: CGPoint(x: sideInsets + floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
             }
-            
             
             var counterLayout: CounterLayout?
             
@@ -683,7 +678,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 } else {
                     size.width -= 2.0
                 }
-            } else if spec.component.isTag {
+            } else if spec.component.isTag && !hasTitle {
                 size.width += 2.0
             } else {
                 let counterSpec = CounterLayout.Spec(
@@ -1002,11 +997,13 @@ public final class ReactionButtonComponent: Equatable {
         public var value: MessageReaction.Reaction
         public var centerAnimation: TelegramMediaFile?
         public var animationFileId: Int64?
+        public var title: String?
         
-        public init(value: MessageReaction.Reaction, centerAnimation: TelegramMediaFile?, animationFileId: Int64?) {
+        public init(value: MessageReaction.Reaction, centerAnimation: TelegramMediaFile?, animationFileId: Int64?, title: String?) {
             self.value = value
             self.centerAnimation = centerAnimation
             self.animationFileId = animationFileId
+            self.title = title
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
@@ -1017,6 +1014,9 @@ public final class ReactionButtonComponent: Equatable {
                 return false
             }
             if lhs.animationFileId != rhs.animationFileId {
+                return false
+            }
+            if lhs.title != rhs.title {
                 return false
             }
             return true
