@@ -1968,7 +1968,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         transition.updateFrame(node: self.sendAsAvatarReferenceNode, frame: CGRect(origin: CGPoint(), size: menuButtonFrame.size))
         transition.updateFrame(node: self.sendAsAvatarNode, frame: CGRect(origin: CGPoint(), size: menuButtonFrame.size))
         
-        let showMenuButton = hasMenuButton && interfaceState.recordedMediaPreview == nil
+        let showMenuButton = hasMenuButton && interfaceState.interfaceState.mediaDraftState == nil
         if isSendAsButton {
             if interfaceState.showSendAsPeers {
                 transition.updateTransformScale(node: self.menuButton, scale: 1.0)
@@ -1997,8 +1997,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         var hideMicButton = false
         var audioRecordingItemsAlpha: CGFloat = 1
-        if mediaRecordingState != nil || (interfaceState.recordedMediaPreview != nil && self.finishedTransitionToPreview != true) {
-            if interfaceState.recordedMediaPreview != nil {
+        if mediaRecordingState != nil || (interfaceState.interfaceState.mediaDraftState != nil && self.finishedTransitionToPreview != true) {
+            if interfaceState.interfaceState.mediaDraftState != nil {
                 self.finishedTransitionToPreview = false
             }
             
@@ -2043,7 +2043,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 self.clippingNode.insertSubnode(audioRecordingCancelIndicator, at: 0)
             }
             
-            let isLocked = mediaRecordingState?.isLocked ?? (interfaceState.recordedMediaPreview != nil)
+            let isLocked = mediaRecordingState?.isLocked ?? (interfaceState.interfaceState.mediaDraftState != nil)
             var hideInfo = false
             
             if let mediaRecordingState = mediaRecordingState {

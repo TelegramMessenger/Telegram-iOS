@@ -27,7 +27,7 @@ public final class SliderContextItem: ContextMenuCustomItem {
 
 private let textFont = Font.with(size: 17.0, design: .regular, traits: .monospacedNumbers)
 
-private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode {
+private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode, UIGestureRecognizerDelegate {
     private var presentationData: PresentationData
     
     private(set) var vibrancyEffectView: UIVisualEffectView?
@@ -132,6 +132,7 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
         }
         
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        panGestureRecognizer.delegate = self
         self.view.addGestureRecognizer(panGestureRecognizer)
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
@@ -201,7 +202,7 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode 
             self.updateValue(transition: transition)
         })
     }
-    
+        
     @objc private func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
         let range = self.maxValue - self.minValue
         switch gestureRecognizer.state {

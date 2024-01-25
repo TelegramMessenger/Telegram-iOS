@@ -60,6 +60,7 @@ private final class InstalledStickerPacksControllerArguments {
 }
 
 private enum InstalledStickerPacksSection: Int32 {
+    case info
     case categories
     case settings
     case stickers
@@ -83,6 +84,7 @@ private enum InstalledStickerPacksEntryId: Hashable {
 }
 
 private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
+    case info(PresentationTheme, String)
     case suggestOptions(PresentationTheme, String, String)
     case largeEmoji(PresentationTheme, String, Bool)
     case trending(PresentationTheme, String, Int32)
@@ -100,6 +102,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+            case .info:
+                return InstalledStickerPacksSection.info.rawValue
             case .trending, .masks, .emoji, .quickReaction, .archived:
                 return InstalledStickerPacksSection.categories.rawValue
             case .suggestOptions, .largeEmoji, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo, .packOrder, .packOrderInfo:
@@ -111,6 +115,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     var stableId: InstalledStickerPacksEntryId {
         switch self {
+            case .info:
+                return .index(-1)
             case .trending:
                 return .index(0)
             case .archived:
@@ -144,6 +150,12 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     static func ==(lhs: InstalledStickerPacksEntry, rhs: InstalledStickerPacksEntry) -> Bool {
         switch lhs {
+            case let .info(lhsTheme, lhsText):
+                if case let .info(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .suggestOptions(lhsTheme, lhsText, lhsValue):
                 if case let .suggestOptions(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -263,86 +275,93 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     
     static func <(lhs: InstalledStickerPacksEntry, rhs: InstalledStickerPacksEntry) -> Bool {
         switch lhs {
+        case .info:
+            switch rhs {
+            case .info:
+                return false
+            default:
+                return true
+            }
         case .trending:
             switch rhs {
-            case .trending:
+            case .info, .trending:
                 return false
             default:
                 return true
             }
         case .archived:
             switch rhs {
-            case .trending, .archived:
+            case .info, .trending, .archived:
                 return false
             default:
                 return true
             }
         case .masks:
             switch rhs {
-            case .trending, .archived, .masks:
+            case .info, .trending, .archived, .masks:
                 return false
             default:
                 return true
             }
         case .emoji:
             switch rhs {
-            case .trending, .archived, .masks, .emoji:
+            case .info, .trending, .archived, .masks, .emoji:
                 return false
             default:
                 return true
             }
         case .quickReaction:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction:
                 return false
             default:
                 return true
             }
         case .suggestOptions:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions:
                 return false
             default:
                 return true
             }
         case .largeEmoji:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji:
                 return false
             default:
                 return true
             }
         case .packOrder:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder:
                 return false
             default:
                 return true
             }
         case .packOrderInfo:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo:
                 return false
             default:
                 return true
             }
         case .suggestAnimatedEmoji:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji:
                 return false
             default:
                 return true
             }
         case .suggestAnimatedEmojiInfo:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo:
                 return false
             default:
                 return true
             }
         case .packsTitle:
             switch rhs {
-            case .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo, .packsTitle:
+            case .info, .trending, .archived, .masks, .emoji, .quickReaction, .suggestOptions, .largeEmoji, .packOrder, .packOrderInfo, .suggestAnimatedEmoji, .suggestAnimatedEmojiInfo, .packsTitle:
                 return false
             default:
                 return true
@@ -369,6 +388,8 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! InstalledStickerPacksControllerArguments
         switch self {
+            case let .info(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .suggestOptions(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSuggestOptions()
@@ -489,7 +510,7 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
             return Namespaces.ItemCollection.CloudStickerPacks
         case .masks:
             return Namespaces.ItemCollection.CloudMaskPacks
-        case .emoji:
+        case .emoji, .groupEmoji:
             return Namespaces.ItemCollection.CloudEmojiPacks
     }
 }
@@ -553,6 +574,11 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         
         entries.append(.suggestAnimatedEmoji(presentationData.strings.StickerPacksSettings_SuggestAnimatedEmoji, stickerSettings.suggestAnimatedEmoji))
         entries.append(.suggestAnimatedEmojiInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_SuggestAnimatedEmojiInfo))
+    case .groupEmoji:
+        entries.append(.info(presentationData.theme, "All members will be able to use these emoji in the group, even if they don't have Telegram Premium.\n"))
+        
+        //TODO:localize
+        entries.append(.packsTitle(presentationData.theme, "CHOOSE EMOJI PACK".uppercased()))
     }
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView {
@@ -598,27 +624,38 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         }
     }
     
-    var markdownString: String
-    switch mode {
+    if case .groupEmoji = mode {
+        
+    } else {
+        var markdownString: String
+        switch mode {
         case .general, .modal:
             markdownString = presentationData.strings.StickerPacksSettings_ManagingHelp
         case .masks:
             markdownString = presentationData.strings.MaskStickerSettings_Info
         case .emoji:
             markdownString = presentationData.strings.EmojiStickerSettings_Info
+        case .groupEmoji:
+            markdownString = ""
+        }
+        let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+        if let entity = entities.first {
+            markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+            markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+        }
+        entries.append(.packsInfo(presentationData.theme, markdownString))
     }
-    let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
-    if let entity = entities.first {
-        markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
-        markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
-    }
-    entries.append(.packsInfo(presentationData.theme, markdownString))
     
     return entries
 }
 
 public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil, forceTheme: PresentationTheme? = nil) -> ViewController {
-    let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal).withUpdatedSelectedPackIds(mode == .modal ? Set() : nil)
+    var initialEditing = false
+    if case .modal = mode {
+        initialEditing = true
+    }
+    
+    let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(initialEditing).withUpdatedSelectedPackIds(initialEditing ? Set() : nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((InstalledStickerPacksControllerState) -> InstalledStickerPacksControllerState) -> Void = { f in
@@ -880,7 +917,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .masks) |> map(Optional.init)))
             quickReaction = .single(nil)
             emojiCount.set(.single(0))
-        case .emoji:
+        case .emoji, .groupEmoji:
             featured.set(.single([]))
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .emoji) |> map(Optional.init)))
             quickReaction = .single(nil)
@@ -1033,6 +1070,8 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             } else {
                 if case .modal = mode {
                     rightNavigationButton = nil
+                } else if case .groupEmoji = mode {
+                    rightNavigationButton = nil
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
@@ -1054,6 +1093,9 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 title = presentationData.strings.MaskStickerSettings_Title
             case .emoji:
                 title = presentationData.strings.EmojiPacksSettings_Title
+            case .groupEmoji:
+                //TODO:localize
+                title = "Group Emoji Pack"
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
@@ -1208,43 +1250,48 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 packs.insert(packReference, at: 0)
             }
             if let mainStickerPack = mainStickerPack {
-                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: [mainStickerPack], parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { actions in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    var animateInAsReplacement = false
-                    if let navigationController = navigationControllerImpl?() {
-                        for controller in navigationController.overlayControllers {
-                            if let controller = controller as? UndoOverlayController {
-                                controller.dismissWithCommitActionAndReplacementAnimation()
-                                animateInAsReplacement = true
+                //TODO:localize
+                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: [mainStickerPack], mainActionTitle: "Set as Group Emoji Pack", parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { actions in
+                    if case .groupEmoji = mode {
+                        
+                    } else {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        var animateInAsReplacement = false
+                        if let navigationController = navigationControllerImpl?() {
+                            for controller in navigationController.overlayControllers {
+                                if let controller = controller as? UndoOverlayController {
+                                    controller.dismissWithCommitActionAndReplacementAnimation()
+                                    animateInAsReplacement = true
+                                }
                             }
                         }
-                    }
-                    if let (info, items, action) = actions.first {
-                        switch action {
-                        case .add:
-                            navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                                return true
-                            }))
-                        case let .remove(positionInList):
-                            let removedTitle: String
-                            let removedText: String
-                            if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                                removedTitle = presentationData.strings.EmojiPackActionInfo_RemovedTitle
-                                removedText = presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string
-                            } else if info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
-                                removedTitle = presentationData.strings.MaskPackActionInfo_RemovedTitle
-                                removedText = presentationData.strings.MaskPackActionInfo_RemovedText(info.title).string
-                            } else {
-                                removedTitle = presentationData.strings.StickerPackActionInfo_RemovedTitle
-                                removedText = presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string
-                            }
-                            
-                            navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: removedTitle, text: removedText, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
-                                if case .undo = action {
-                                    let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                        if let (info, items, action) = actions.first {
+                            switch action {
+                            case .add:
+                                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                                    return true
+                                }))
+                            case let .remove(positionInList):
+                                let removedTitle: String
+                                let removedText: String
+                                if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                                    removedTitle = presentationData.strings.EmojiPackActionInfo_RemovedTitle
+                                    removedText = presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string
+                                } else if info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
+                                    removedTitle = presentationData.strings.MaskPackActionInfo_RemovedTitle
+                                    removedText = presentationData.strings.MaskPackActionInfo_RemovedText(info.title).string
+                                } else {
+                                    removedTitle = presentationData.strings.StickerPackActionInfo_RemovedTitle
+                                    removedText = presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string
                                 }
-                                return true
-                            }))
+                                
+                                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: removedTitle, text: removedText, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
+                                    if case .undo = action {
+                                        let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                    }
+                                    return true
+                                }))
+                            }
                         }
                     }
                 }), nil)

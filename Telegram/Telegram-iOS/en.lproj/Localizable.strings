@@ -10976,3 +10976,26 @@ Sorry for the inconvenience.";
 "Settings.Privacy.ReadTimePremiumActiveFooter" = "Because you are a Telegram Premium subscriber, you will see the last seen and read time of all users who are sharing it with you – even if you are hiding yours.";
 
 "Privacy.VoiceMessages.NonPremiumHelp" = "Subscribe to Telegram Premium to restrict who can send you voice or video messages.\n\n[What is Telegram Premium?]()";
+
+"ChannelBoost.Title.Other" = "Help Upgrade This Channel";
+"ChannelBoost.Title.Current" = "Boost Channel";
+
+"ChannelBoost.MoreBoostsNeeded.Text" = "**%1$@** needs %2$@ to unlock new features.";
+"ChannelBoost.MoreBoostsNeeded.Boosts_1" = "**%@** more boost";
+"ChannelBoost.MoreBoostsNeeded.Boosts_any" = "**%@** more boosts";
+"ChannelBoost.MaxLevelReached.Text" = "**%1$@** reached **Level %2$@**.";
+
+"ContactList.Context.Delete" = "Delete Contact";
+"ContactList.Context.Select" = "Select";
+
+"ContactList.DeleteConfirmation_1" = "Delete %@ Contact";
+"ContactList.DeleteConfirmation_any" = "Delete %@ Contacts";
+
+"ContactList.DeletedContacts_1" = "Deleted %@ Contact";
+"ContactList.DeletedContacts_any" = "Deleted %@ Contacts";
+
+"Conversation.ForwardOptions.SenderNamesRemoved" = "Sender names removed";
+
+"Login.Announce.Info" = "Notify people on Telegram who know my phone number that I signed up.";
+"Login.Announce.Notify" = "Notify";
+"Login.Announce.DontNotify" = "Do Not Notify";

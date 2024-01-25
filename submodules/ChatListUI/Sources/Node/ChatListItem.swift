@@ -87,6 +87,7 @@ public enum ChatListItemContent {
         public var hasUnseenMentions: Bool
         public var hasUnseenReactions: Bool
         public var draftState: DraftState?
+        public var mediaDraftContentType: EngineChatList.MediaDraftContentType?
         public var inputActivities: [(EnginePeer, PeerInputActivity)]?
         public var promoInfo: ChatListNodeEntryPromoInfo?
         public var ignoreUnreadBadge: Bool
@@ -108,6 +109,7 @@ public enum ChatListItemContent {
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
             draftState: DraftState?,
+            mediaDraftContentType: EngineChatList.MediaDraftContentType?,
             inputActivities: [(EnginePeer, PeerInputActivity)]?,
             promoInfo: ChatListNodeEntryPromoInfo?,
             ignoreUnreadBadge: Bool,
@@ -128,6 +130,7 @@ public enum ChatListItemContent {
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions =  hasUnseenReactions
             self.draftState = draftState
+            self.mediaDraftContentType = mediaDraftContentType
             self.inputActivities = inputActivities
             self.promoInfo = promoInfo
             self.ignoreUnreadBadge = ignoreUnreadBadge
@@ -1639,6 +1642,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let isRemovedFromTotalUnreadCount: Bool
             let peerPresence: EnginePeer.Presence?
             let draftState: ChatListItemContent.DraftState?
+            let mediaDraftContentType: EngineChatList.MediaDraftContentType?
             let hasUnseenMentions: Bool
             let hasUnseenReactions: Bool
             let inputActivities: [(EnginePeer, PeerInputActivity)]?
@@ -1690,6 +1694,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         return EnginePeer.Presence(status: presence.status, lastActivity: 0)
                     }
                     draftState = draftStateValue
+                    mediaDraftContentType = peerData.mediaDraftContentType
                     threadInfo = threadInfoValue
                     hasUnseenMentions = hasUnseenMentionsValue
                     hasUnseenReactions = hasUnseenReactionsValue
@@ -1734,6 +1739,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     combinedReadState = nil
                     isRemovedFromTotalUnreadCount = false
                     draftState = nil
+                    mediaDraftContentType = nil
                     hasUnseenMentions = false
                     hasUnseenReactions = false
                     inputActivities = nil
@@ -1971,7 +1977,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         chatListText = (text, messageText)
                     }
                     
-                    if inlineAuthorPrefix == nil, let draftState = draftState {
+                    if inlineAuthorPrefix == nil, let mediaDraftContentType {
+                        hasDraft = true
+                        authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
+                        
+                        //TODO:localize
+                        switch mediaDraftContentType {
+                        case .audio:
+                            attributedText = NSAttributedString(string: "Voice Message", font: textFont, textColor: theme.messageTextColor)
+                        case .video:
+                            attributedText = NSAttributedString(string: "Video Message", font: textFont, textColor: theme.messageTextColor)
+                        }
+                    } else if inlineAuthorPrefix == nil, let draftState = draftState {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         

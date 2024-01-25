@@ -13,7 +13,7 @@ public final class ListSectionComponent: Component {
     public typealias ChildView = ListSectionComponentChildView
     
     public enum Background: Equatable {
-        case none
+        case none(clipped: Bool)
         case all
         case range(from: AnyHashable, corners: DynamicCornerRadiusView.Corners)
     }
@@ -71,7 +71,6 @@ public final class ListSectionComponent: Component {
         
         public override init(frame: CGRect) {
             self.contentView = UIView()
-            self.contentView.layer.cornerRadius = 11.0
             self.contentView.clipsToBounds = true
             
             self.contentBackgroundView = DynamicCornerRadiusView()
@@ -219,11 +218,15 @@ public final class ListSectionComponent: Component {
             
             let backgroundFrame: CGRect
             var backgroundAlpha: CGFloat = 1.0
+            var contentCornerRadius: CGFloat = 11.0
             switch component.background {
-            case .none:
+            case let .none(clipped):
                 backgroundFrame = contentFrame
                 backgroundAlpha = 0.0
                 self.contentBackgroundView.update(size: backgroundFrame.size, corners: DynamicCornerRadiusView.Corners(minXMinY: 11.0, maxXMinY: 11.0, minXMaxY: 11.0, maxXMaxY: 11.0), transition: transition)
+                if !clipped {
+                    contentCornerRadius = 0.0
+                }
             case .all:
                 backgroundFrame = contentFrame
                 self.contentBackgroundView.update(size: backgroundFrame.size, corners: DynamicCornerRadiusView.Corners(minXMinY: 11.0, maxXMinY: 11.0, minXMaxY: 11.0, maxXMaxY: 11.0), transition: transition)
@@ -237,7 +240,8 @@ public final class ListSectionComponent: Component {
             }
             transition.setFrame(view: self.contentBackgroundView, frame: backgroundFrame)
             transition.setAlpha(view: self.contentBackgroundView, alpha: backgroundAlpha)
-            
+            transition.setCornerRadius(layer: self.contentView.layer, cornerRadius: contentCornerRadius)
+
             contentHeight += innerContentHeight
             
             if let footerValue = component.footer {

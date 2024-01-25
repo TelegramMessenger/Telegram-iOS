@@ -66,16 +66,53 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
 class InternalChatInterfaceState: Codable {
     let synchronizeableInputState: SynchronizeableChatInputState?
     let historyScrollMessageIndex: MessageIndex?
+    let mediaDraftState: MediaDraftState?
     let opaqueData: Data?
 
     init(
         synchronizeableInputState: SynchronizeableChatInputState?,
         historyScrollMessageIndex: MessageIndex?,
+        mediaDraftState: MediaDraftState?,
         opaqueData: Data?
     ) {
         self.synchronizeableInputState = synchronizeableInputState
         self.historyScrollMessageIndex = historyScrollMessageIndex
+        self.mediaDraftState = mediaDraftState
         self.opaqueData = opaqueData
+    }
+}
+
+public struct MediaDraftState: Codable, Equatable {
+    public let contentType: EngineChatList.MediaDraftContentType
+    public let timestamp: Int32
+    
+    public init(contentType: EngineChatList.MediaDraftContentType, timestamp: Int32) {
+        self.contentType = contentType
+        self.timestamp = timestamp
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        self.contentType = EngineChatList.MediaDraftContentType(rawValue: try container.decode(Int32.self, forKey: "t")) ?? .audio
+        self.timestamp = (try? container.decode(Int32.self, forKey: "s")) ?? 0
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.contentType.rawValue, forKey: "t")
+        try container.encode(self.timestamp, forKey: "s")
+    }
+    
+    public static func ==(lhs: MediaDraftState, rhs: MediaDraftState) -> Bool {
+        if lhs.contentType != rhs.contentType {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        return true
     }
 }
 
@@ -90,14 +127,27 @@ func _internal_updateChatInputState(transaction: Transaction, peerId: PeerId, th
             previousState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))
         }
     }
+    
+    var overrideChatTimestamp: Int32?
+    if let inputState = inputState {
+        overrideChatTimestamp = inputState.timestamp
+    }
+    
+    if let mediaDraftState = previousState?.mediaDraftState {
+        if let current = overrideChatTimestamp, mediaDraftState.timestamp < current {
+        } else {
+            overrideChatTimestamp = mediaDraftState.timestamp
+        }
+    }
 
     if let updatedStateData = try? AdaptedPostboxEncoder().encode(InternalChatInterfaceState(
         synchronizeableInputState: inputState,
         historyScrollMessageIndex: previousState?.historyScrollMessageIndex,
+        mediaDraftState: previousState?.mediaDraftState,
         opaqueData: previousState?.opaqueData
     )) {
         let storedState = StoredPeerChatInterfaceState(
-            overrideChatTimestamp: inputState?.timestamp,
+            overrideChatTimestamp: overrideChatTimestamp,
             historyScrollMessageIndex: previousState?.historyScrollMessageIndex,
             associatedMessageIds: (inputState?.replySubject?.messageId).flatMap({ [$0] }) ?? [],
             data: updatedStateData

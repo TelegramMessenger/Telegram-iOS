@@ -433,6 +433,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
                     draftState: nil,
+                    mediaDraftContentType: nil,
                     inputActivities: hasInputActivity ? [(author, .typingText)] : [],
                     promoInfo: nil,
                     ignoreUnreadBadge: false,

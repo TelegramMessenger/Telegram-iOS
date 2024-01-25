@@ -33,6 +33,7 @@ import ChatHistoryEntry
 import ChatMessageItemCommon
 import TelegramStringFormatting
 import AnimatedCountLabelNode
+import AudioWaveform
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

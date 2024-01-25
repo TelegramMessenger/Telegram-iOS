@@ -2382,7 +2382,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 if hasEmptyMark {
                     if let componentView = self.chatListHeaderView() {
-                        if let rightButtonView = componentView.rightButtonView {
+                        if let rightButtonView = componentView.rightButtonViews["compose"] {
                             let absoluteFrame = rightButtonView.convert(rightButtonView.bounds, to: self.view)
                             let text: String = self.presentationData.strings.ChatList_EmptyListTooltip
                             

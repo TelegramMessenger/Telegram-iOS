@@ -1133,8 +1133,7 @@ private final class LimitSheetContent: CombinedComponent {
                                 PeerShortcutComponent(
                                     context: component.context,
                                     theme: environment.theme,
-                                    peer: peer,
-                                    badge: myBoostCount > 0 ? "\(myBoostCount)" : nil
+                                    peer: peer
                                 )
                             ),
                             action: {
@@ -1884,17 +1883,15 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     }
 }
 
-private final class PeerShortcutComponent: Component {
+final class PeerShortcutComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peer: EnginePeer
-    let badge: String?
 
-    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer, badge: String?) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
         self.context = context
         self.theme = theme
         self.peer = peer
-        self.badge = badge
     }
 
     static func ==(lhs: PeerShortcutComponent, rhs: PeerShortcutComponent) -> Bool {
@@ -1905,9 +1902,6 @@ private final class PeerShortcutComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
-            return false
-        }
-        if lhs.badge != rhs.badge {
             return false
         }
         return true

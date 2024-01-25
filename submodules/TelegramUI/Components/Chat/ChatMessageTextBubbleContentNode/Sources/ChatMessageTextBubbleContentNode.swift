@@ -1310,6 +1310,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if item.message.containsSecretMedia {
                     enableQuote = false
                 }
+                if item.associatedData.translateToLanguage != nil {
+                    enableQuote = false
+                }
                 
                 textSelectionNode.enableQuote = enableQuote
                 textSelectionNode.enableTranslate = enableOtherActions

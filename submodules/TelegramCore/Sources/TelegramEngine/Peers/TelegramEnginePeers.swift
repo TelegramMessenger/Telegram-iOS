@@ -14,15 +14,18 @@ public typealias EngineStringIndexTokenTransliteration = StringIndexTokenTransli
 public final class OpaqueChatInterfaceState {
     public let opaqueData: Data?
     public let historyScrollMessageIndex: MessageIndex?
+    public let mediaDraftState: MediaDraftState?
     public let synchronizeableInputState: SynchronizeableChatInputState?
 
     public init(
         opaqueData: Data?,
         historyScrollMessageIndex: MessageIndex?,
+        mediaDraftState: MediaDraftState?,
         synchronizeableInputState: SynchronizeableChatInputState?
     ) {
         self.opaqueData = opaqueData
         self.historyScrollMessageIndex = historyScrollMessageIndex
+        self.mediaDraftState = mediaDraftState
         self.synchronizeableInputState = synchronizeableInputState
     }
 }
@@ -863,6 +866,7 @@ public extension TelegramEngine {
                 return OpaqueChatInterfaceState(
                     opaqueData: internalState.opaqueData,
                     historyScrollMessageIndex: internalState.historyScrollMessageIndex,
+                    mediaDraftState: internalState.mediaDraftState,
                     synchronizeableInputState: internalState.synchronizeableInputState
                 )
             }
@@ -873,6 +877,7 @@ public extension TelegramEngine {
                 guard let data = try? AdaptedPostboxEncoder().encode(InternalChatInterfaceState(
                     synchronizeableInputState: state.synchronizeableInputState,
                     historyScrollMessageIndex: state.historyScrollMessageIndex,
+                    mediaDraftState: state.mediaDraftState,
                     opaqueData: state.opaqueData
                 )) else {
                     return
@@ -881,9 +886,21 @@ public extension TelegramEngine {
                 #if DEBUG
                 let _ = try! AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data)
                 #endif
+                
+                var overrideChatTimestamp: Int32?
+                if let inputState = state.synchronizeableInputState {
+                    overrideChatTimestamp = inputState.timestamp
+                }
+                
+                if let mediaDraftState = state.mediaDraftState {
+                    if let current = overrideChatTimestamp, mediaDraftState.timestamp < current {
+                    } else {
+                        overrideChatTimestamp = mediaDraftState.timestamp
+                    }
+                }
 
                 let storedState = StoredPeerChatInterfaceState(
-                    overrideChatTimestamp: state.synchronizeableInputState?.timestamp,
+                    overrideChatTimestamp: overrideChatTimestamp,
                     historyScrollMessageIndex: state.historyScrollMessageIndex,
                     associatedMessageIds: (state.synchronizeableInputState?.replySubject?.messageId).flatMap({ [$0] }) ?? [],
                     data: data
@@ -1359,6 +1376,7 @@ public func _internal_decodeStoredChatInterfaceState(state: StoredPeerChatInterf
     return OpaqueChatInterfaceState(
         opaqueData: internalState.opaqueData,
         historyScrollMessageIndex: internalState.historyScrollMessageIndex,
+        mediaDraftState: internalState.mediaDraftState,
         synchronizeableInputState: internalState.synchronizeableInputState
     )
 }

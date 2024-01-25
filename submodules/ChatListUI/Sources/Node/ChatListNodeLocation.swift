@@ -292,7 +292,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     hasFailed: false,
                     isContact: false,
                     autoremoveTimeout: nil,
-                    storyStats: nil
+                    storyStats: nil,
+                    mediaDraftContentType: nil
                 ))
             }
             
@@ -356,7 +357,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     hasFailed: false,
                     isContact: false,
                     autoremoveTimeout: nil,
-                    storyStats: nil
+                    storyStats: nil,
+                    mediaDraftContentType: nil
                 ))
             }
             

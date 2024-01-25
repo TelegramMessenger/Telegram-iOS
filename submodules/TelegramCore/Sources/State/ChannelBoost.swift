@@ -76,6 +76,10 @@ public struct ChannelBoostStatus: Equatable {
         }
         return true
     }
+    
+    public func withUpdated(boosts: Int) -> ChannelBoostStatus {
+        return ChannelBoostStatus(level: self.level, boosts: boosts, giftBoosts: self.giftBoosts, currentLevelBoosts: self.currentLevelBoosts, nextLevelBoosts: self.nextLevelBoosts, premiumAudience: self.premiumAudience, url: self.url, prepaidGiveaways: self.prepaidGiveaways, boostedByMe: self.boostedByMe)
+    }
 }
 
 func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal<ChannelBoostStatus?, NoError> {

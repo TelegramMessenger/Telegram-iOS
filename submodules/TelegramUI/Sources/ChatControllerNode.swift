@@ -265,7 +265,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var isLoadingValue: Bool = false
     private var isLoadingEarlier: Bool = false
     private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
-        var useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.SecretChat
+        var useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser && self.chatLocation.peerId?.namespace != Namespaces.Peer.SecretChat
         if case let .replyThread(message) = self.chatLocation, message.peerId == self.context.account.peerId {
             useLoadingPlaceholder = true
         }
@@ -3736,7 +3736,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
             return false
         }
-        if self.chatPresentationInterfaceState.recordedMediaPreview != nil {
+        if self.chatPresentationInterfaceState.interfaceState.mediaDraftState != nil {
             return false
         }
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {

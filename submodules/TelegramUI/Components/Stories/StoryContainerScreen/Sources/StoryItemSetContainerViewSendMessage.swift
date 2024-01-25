@@ -49,6 +49,7 @@ import TelegramNotices
 import ObjectiveC
 import LocationUI
 import ReactionSelectionNode
+import AudioWaveform
 
 private var ObjCKey_DeinitWatcher: Int?
 

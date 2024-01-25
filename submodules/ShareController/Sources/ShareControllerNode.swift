@@ -1458,7 +1458,8 @@ private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: 
                 hasFailed: false,
                 isContact: false,
                 autoremoveTimeout: nil,
-                storyStats: nil
+                storyStats: nil,
+                mediaDraftContentType: nil
             ))
         }
         

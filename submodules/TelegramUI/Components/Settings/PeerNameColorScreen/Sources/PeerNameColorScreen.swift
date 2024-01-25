@@ -201,6 +201,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
                 theme: presentationData.theme,
                 componentTheme: presentationData.theme,
                 strings: presentationData.strings,
+                topInset: 0.0,
                 sectionId: self.section,
                 peer: peer,
                 files: files,

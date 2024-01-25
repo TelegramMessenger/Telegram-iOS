@@ -218,7 +218,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if let item = strongSelf.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
+                if let item = strongSelf.item, item.presentationData.largeEmoji && messageIsEligibleForLargeEmoji(item.message) {
                     if strongSelf.imageNode.frame.contains(point) {
                         return .waitForDoubleTap
                     }
@@ -436,7 +436,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var isEmoji = false
-            if item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
+            if item.presentationData.largeEmoji && messageIsEligibleForLargeEmoji(item.message) {
                 let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width, height: 90.0), alignment: .natural))
                 
@@ -1618,7 +1618,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         
         let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
         var isEmoji = false
-        if let item = self.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
+        if let item = self.item, item.presentationData.largeEmoji && messageIsEligibleForLargeEmoji(item.message) {
             isEmoji = true
         }
 

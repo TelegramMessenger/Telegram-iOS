@@ -56,6 +56,7 @@ private enum ChannelPermissionsSection: Int32 {
     case permissions
     case slowmode
     case conversion
+    case unrestrictBoosters
     case kicked
     case exceptions
 }
@@ -78,6 +79,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
     case slowmodeInfo(PresentationTheme, String)
+    case unrestrictBoosters(PresentationTheme, String, Bool)
+    case unrestrictBoostersInfo(PresentationTheme, String)
     case conversionHeader(PresentationTheme, String)
     case conversion(PresentationTheme, String)
     case conversionInfo(PresentationTheme, String)
@@ -94,6 +97,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ChannelPermissionsSection.slowmode.rawValue
             case .conversionHeader, .conversion, .conversionInfo:
                 return ChannelPermissionsSection.conversion.rawValue
+            case .unrestrictBoosters, .unrestrictBoostersInfo:
+                return ChannelPermissionsSection.unrestrictBoosters.rawValue
             case .kicked:
                 return ChannelPermissionsSection.kicked.rawValue
             case .exceptionsHeader, .add, .peerItem:
@@ -119,12 +124,16 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(1002)
             case .slowmodeInfo:
                 return .index(1003)
-            case .kicked:
+            case .unrestrictBoosters:
                 return .index(1004)
-            case .exceptionsHeader:
+            case .unrestrictBoostersInfo:
                 return .index(1005)
-            case .add:
+            case .kicked:
                 return .index(1006)
+            case .exceptionsHeader:
+                return .index(1007)
+            case .add:
+                return .index(1008)
             case let .peerItem(_, _, _, _, _, participant, _, _, _, _):
                 return .peer(participant.peer.id)
         }
@@ -180,7 +189,19 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .kicked(lhsTheme, lhsText, lhsValue):
+            case let .unrestrictBoosters(lhsTheme, lhsText, lhsValue):
+                if case let .unrestrictBoosters(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .unrestrictBoostersInfo(lhsTheme, lhsValue):
+                if case let .unrestrictBoostersInfo(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+                case let .kicked(lhsTheme, lhsText, lhsValue):
                 if case let .kicked(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
@@ -325,6 +346,12 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(value), sectionId: self.section) { _ in
                     arguments.openChannelExample()
                 }
+            case let .unrestrictBoosters(_, title, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    
+                })
+            case let .unrestrictBoostersInfo(_, value):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
             case let .kicked(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openKicked()
@@ -602,9 +629,17 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).string))
         }
         
+        
+        let slowModeTimeout = state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)
         entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
-        entries.append(.slowmode(presentationData.theme, presentationData.strings, state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)))
+        entries.append(.slowmode(presentationData.theme, presentationData.strings, slowModeTimeout))
         entries.append(.slowmodeInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeInfo))
+        
+        //TODO:localize
+        if slowModeTimeout > 0 {
+            entries.append(.unrestrictBoosters(presentationData.theme, "Do Not Restrict Boosters", false))
+            entries.append(.unrestrictBoostersInfo(presentationData.theme, "Turn this on to always allow users who boosted your group to send messages and media."))
+        }
         
         entries.append(.kicked(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Removed, cachedData.participantsSummary.kickedCount.flatMap({ $0 == 0 ? "" : "\($0)" }) ?? ""))
         entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))

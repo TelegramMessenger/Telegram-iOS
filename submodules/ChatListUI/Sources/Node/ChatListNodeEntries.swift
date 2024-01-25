@@ -97,6 +97,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var readState: EnginePeerReadCounters?
         var isRemovedFromTotalUnreadCount: Bool
         var draftState: ChatListItemContent.DraftState?
+        var mediaDraftContentType: EngineChatList.MediaDraftContentType?
         var peer: EngineRenderedPeer
         var threadInfo: ChatListItemContent.ThreadInfo?
         var presence: EnginePeer.Presence?
@@ -123,6 +124,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             readState: EnginePeerReadCounters?,
             isRemovedFromTotalUnreadCount: Bool,
             draftState: ChatListItemContent.DraftState?,
+            mediaDraftContentType: EngineChatList.MediaDraftContentType?,
             peer: EngineRenderedPeer,
             threadInfo: ChatListItemContent.ThreadInfo?,
             presence: EnginePeer.Presence?,
@@ -148,6 +150,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.readState = readState
             self.isRemovedFromTotalUnreadCount = isRemovedFromTotalUnreadCount
             self.draftState = draftState
+            self.mediaDraftContentType = mediaDraftContentType
             self.peer = peer
             self.threadInfo = threadInfo
             self.presence = presence
@@ -216,6 +219,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                     return false
                 }
             } else if (lhs.draftState != nil) != (rhs.draftState != nil) {
+                return false
+            }
+            if lhs.mediaDraftContentType != rhs.mediaDraftContentType {
                 return false
             }
             if lhs.editing != rhs.editing {
@@ -590,7 +596,15 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     var result: [ChatListNodeEntry] = []
     
     if !view.hasEarlier {
+        var existingPeerIds = Set<EnginePeer.Id>()
+        for item in view.items {
+            existingPeerIds.insert(item.renderedPeer.peerId)
+        }
+        
         for contact in contacts {
+            if existingPeerIds.contains(contact.peer.id) {
+                continue
+            }
             result.append(.ContactEntry(ChatListNodeEntry.ContactEntryData(
                 presentationData: state.presentationData,
                 peer: contact.peer,
@@ -657,7 +671,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         if let draft = entry.draft {
             draftState = ChatListItemContent.DraftState(draft: draft)
         }
-        
+                
         var hasActiveRevealControls = false
         if let peerId {
             hasActiveRevealControls = ChatListNodeState.ItemId(peerId: peerId, threadId: threadId) == state.peerIdWithRevealedOptions
@@ -686,6 +700,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
             readState: updatedCombinedReadState,
             isRemovedFromTotalUnreadCount: entry.isMuted,
             draftState: draftState,
+            mediaDraftContentType: entry.mediaDraftContentType,
             peer: entry.renderedPeer,
             threadInfo: threadInfo,
             presence: entry.presence,
@@ -742,6 +757,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                         readState: nil,
                         isRemovedFromTotalUnreadCount: false,
                         draftState: nil,
+                        mediaDraftContentType: nil,
                         peer: EngineRenderedPeer(peerId: peer.0.id, peers: peers, associatedMedia: [:]),
                         threadInfo: nil,
                         presence: nil,
@@ -774,6 +790,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 readState: nil,
                 isRemovedFromTotalUnreadCount: false,
                 draftState: nil,
+                mediaDraftContentType: nil,
                 peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer], associatedMedia: [:]),
                 threadInfo: nil,
                 presence: nil,
@@ -826,6 +843,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                         readState: item.item.readCounters,
                         isRemovedFromTotalUnreadCount: item.item.isMuted,
                         draftState: draftState,
+                        mediaDraftContentType: item.item.mediaDraftContentType,
                         peer: item.item.renderedPeer,
                         threadInfo: item.item.threadData.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwnedByMe: $0.isOwnedByMe, isClosed: $0.isClosed, isHidden: $0.isHidden) },
                         presence: item.item.presence,

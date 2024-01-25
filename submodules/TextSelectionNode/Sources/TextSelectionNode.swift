@@ -731,12 +731,6 @@ public final class TextSelectionNode: ASDisplayNode {
                 }))
             }
         }
-//        if isSpeakSelectionEnabled() {
-//            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
-//                self?.performAction(attributedText, .speak)
-//                self?.dismissSelection()
-//            }))
-//        }
         
         let realFullRange = NSRange(location: 0, length: attributedString.length)
         if range != realFullRange {

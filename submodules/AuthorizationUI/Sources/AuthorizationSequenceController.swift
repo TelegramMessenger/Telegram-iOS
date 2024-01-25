@@ -1037,7 +1037,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                 }
                 self.openUrl(url)
             }
-            controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarAsset, avatarAdjustments in
+            controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarAsset, avatarAdjustments, announceSignUp in
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
@@ -1097,6 +1097,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         avatarVideo = nil
                     }
                     
+                    //TODO: pass signup announcement
                     strongSelf.actionDisposable.set((signUpWithName(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData, avatarVideo: avatarVideo, videoStartTimestamp: videoStartTimestamp, forcedPasswordSetupNotice: { value in
                         guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
                             return nil

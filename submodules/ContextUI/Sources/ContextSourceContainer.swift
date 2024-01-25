@@ -32,7 +32,7 @@ final class ContextSourceContainer: ASDisplayNode {
         var delayLayoutUpdate: Bool = false
         var isAnimatingOut: Bool = false
         
-        let itemsDisposable = MetaDisposable()
+        var itemsDisposables = DisposableSet()
         
         let ready = Promise<Bool>()
         private let contentReady = Promise<Bool>()
@@ -226,7 +226,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 self._presentationNode = presentationNode
             }
             
-            self.itemsDisposable.set((items |> deliverOnMainQueue).start(next: { [weak self] items in
+            self.itemsDisposables.add((items |> deliverOnMainQueue).start(next: { [weak self] items in
                 guard let self else {
                     return
                 }
@@ -237,7 +237,7 @@ final class ContextSourceContainer: ASDisplayNode {
         }
         
         deinit {
-            self.itemsDisposable.dispose()
+            self.itemsDisposables.dispose()
         }
         
         func animateIn() {
@@ -274,7 +274,9 @@ final class ContextSourceContainer: ASDisplayNode {
         }
         
         func setItems(items: Signal<ContextController.Items, NoError>, animated: Bool) {
-            self.itemsDisposable.set((items
+            self.itemsDisposables.dispose()
+            self.itemsDisposables = DisposableSet()
+            self.itemsDisposables.add((items
             |> deliverOnMainQueue).start(next: { [weak self] items in
                 guard let self else {
                     return
@@ -288,7 +290,7 @@ final class ContextSourceContainer: ASDisplayNode {
         }
         
         func pushItems(items: Signal<ContextController.Items, NoError>) {
-            self.itemsDisposable.set((items
+            self.itemsDisposables.add((items
             |> deliverOnMainQueue).start(next: { [weak self] items in
                 guard let self else {
                     return
@@ -298,6 +300,7 @@ final class ContextSourceContainer: ASDisplayNode {
         }
         
         func popItems() {
+            self.itemsDisposables.removeLast()
             self.presentationNode.popItems()
         }
         

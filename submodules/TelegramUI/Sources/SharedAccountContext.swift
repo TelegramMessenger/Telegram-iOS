@@ -1749,6 +1749,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
+        }, openGroupBoostInfo: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

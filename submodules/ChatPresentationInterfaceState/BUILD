@@ -21,6 +21,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ChatContextQuery",
         "//submodules/TooltipUI",
+        "//submodules/AudioWaveform",
     ],
     visibility = [
         "//visibility:public",

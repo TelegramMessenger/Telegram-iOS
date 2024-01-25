@@ -26,16 +26,21 @@ public final class HStack<ChildEnvironment: Equatable>: CombinedComponent {
         let children = ChildMap(environment: ChildEnvironment.self, keyedBy: AnyHashable.self)
 
         return { context in
-            let updatedChildren = context.component.items.map { item in
-                return children[item.id].update(
+            var remainingWidth: CGFloat = context.availableSize.width
+            var updatedChildren: [_UpdatedChildComponent] = []
+            
+            for item in context.component.items {
+                let child = children[item.id].update(
                     component: item.component, environment: {
                         context.environment[ChildEnvironment.self]
                     },
-                    availableSize: context.availableSize,
+                    availableSize: CGSize(width: remainingWidth, height: context.availableSize.height),
                     transition: context.transition
                 )
+                updatedChildren.append(child)
+                remainingWidth -= context.component.spacing + child.size.width
             }
-
+            
             var size = CGSize(width: 0.0, height: 0.0)
             for child in updatedChildren {
                 size.width += child.size.width

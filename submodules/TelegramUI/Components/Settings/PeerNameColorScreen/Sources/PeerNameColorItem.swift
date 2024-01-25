@@ -12,51 +12,7 @@ import PresentationDataUtils
 import AccountContext
 import ListItemComponentAdaptor
 
-private enum PeerNameColorEntryId: Hashable {
-    case color(Int32)
-}
-
-private enum PeerNameColorEntry: Comparable, Identifiable {
-    case color(Int, PeerNameColor, PeerNameColors.Colors, Bool, Bool)
-    
-    var stableId: PeerNameColorEntryId {
-        switch self {
-            case let .color(_, color, _, _, _):
-                return .color(color.rawValue)
-        }
-    }
-    
-    static func ==(lhs: PeerNameColorEntry, rhs: PeerNameColorEntry) -> Bool {
-        switch lhs {
-            case let .color(lhsIndex, lhsColor, lhsAccentColor, lhsIsDark, lhsSelected):
-                if case let .color(rhsIndex, rhsColor, rhsAccentColor, rhsIsDark, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsColor == rhsColor, lhsAccentColor == rhsAccentColor, lhsIsDark == rhsIsDark, lhsSelected == rhsSelected {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    static func <(lhs: PeerNameColorEntry, rhs: PeerNameColorEntry) -> Bool {
-        switch lhs {
-            case let .color(lhsIndex, _, _, _, _):
-                switch rhs {
-                    case let .color(rhsIndex, _, _, _, _):
-                        return lhsIndex < rhsIndex
-            }
-        }
-    }
-    
-    func item(action: @escaping (PeerNameColor) -> Void) -> ListViewItem {
-        switch self {
-            case let .color(_, index, colors, isDark, selected):
-                return PeerNameColorIconItem(index: index, colors: colors, isDark: isDark, selected: selected, action: action)
-        }
-    }
-}
-
-
-private class PeerNameColorIconItem: ListViewItem {
+private class PeerNameColorIconItem {
     let index: PeerNameColor
     let colors: PeerNameColors.Colors
     let isDark: Bool
@@ -70,55 +26,10 @@ private class PeerNameColorIconItem: ListViewItem {
         self.selected = selected
         self.action = action
     }
-    
-    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
-        async {
-            let node = PeerNameColorIconItemNode()
-            let (nodeLayout, apply) = node.asyncLayout()(self, params)
-            node.insets = nodeLayout.insets
-            node.contentSize = nodeLayout.contentSize
-            
-            Queue.mainQueue().async {
-                completion(node, {
-                    return (nil, { _ in
-                        apply(false)
-                    })
-                })
-            }
-        }
-    }
-    
-    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
-        Queue.mainQueue().async {
-            assert(node() is PeerNameColorIconItemNode)
-            if let nodeValue = node() as? PeerNameColorIconItemNode {
-                let layout = nodeValue.asyncLayout()
-                async {
-                    let (nodeLayout, apply) = layout(self, params)
-                    Queue.mainQueue().async {
-                        completion(nodeLayout, { _ in
-                            let animated: Bool
-                            if case .Crossfade = animation {
-                                animated = true
-                            } else {
-                                animated = false
-                            }
-                            apply(animated)
-                        })
-                    }
-                }
-            }
-        }
-    }
-    
-    public var selectable = true
-    public func selected(listView: ListView) {
-        self.action(self.index)
-    }
 }
 
-private func generateRingImage(nameColor: PeerNameColors.Colors) -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+private func generateRingImage(nameColor: PeerNameColors.Colors, size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
+    return generateImage(size, rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
@@ -211,14 +122,14 @@ public func generateSettingsMenuPeerColorsLabelIcon(colors: [PeerNameColors.Colo
     })!
 }
 
-private final class PeerNameColorIconItemNode : ListViewItemNode {
+private final class PeerNameColorIconItemNode : ASDisplayNode {
     private let containerNode: ContextControllerSourceNode
     private let fillNode: ASImageNode
     private let ringNode: ASImageNode
     
     var item: PeerNameColorIconItem?
 
-    init() {
+    override init() {
         self.containerNode = ContextControllerSourceNode()
 
         self.fillNode = ASImageNode()
@@ -229,7 +140,7 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
         self.ringNode.displaysAsynchronously = false
         self.ringNode.displayWithoutProcessing = true
     
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init()
 
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.ringNode)
@@ -239,13 +150,20 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
-        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped)))
+    }
+
+    @objc private func tapped() {
+        guard let item = self.item else {
+            return
+        }
+        item.action(item.index)
     }
     
     func setSelected(_ selected: Bool, animated: Bool = false) {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
         if selected {
-            transition.updateTransformScale(node: self.fillNode, scale: 0.8)
+            transition.updateTransformScale(node: self.fillNode, scale: 0.75)
             transition.updateTransformScale(node: self.ringNode, scale: 1.0)
         } else {
             transition.updateTransformScale(node: self.fillNode, scale: 1.0)
@@ -253,64 +171,39 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (PeerNameColorIconItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func updateItem(_ item: PeerNameColorIconItem, size: CGSize) {
         let currentItem = self.item
-
-        return { [weak self] item, params in
-            var updatedAccentColor = false
-            var updatedSelected = false
-            
-            if currentItem == nil || currentItem?.colors != item.colors {
-                updatedAccentColor = true
-            }
-            if currentItem?.selected != item.selected {
-                updatedSelected = true
-            }
-            
-            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 60.0, height: 56.0), insets: UIEdgeInsets())
-            return (itemLayout, { animated in
-                if let strongSelf = self {
-                    strongSelf.item = item
-                    
-                    if updatedAccentColor {
-                        strongSelf.fillNode.image = generatePeerNameColorImage(nameColor: item.colors, isDark: item.isDark)
-                        strongSelf.ringNode.image = generateRingImage(nameColor: item.colors)
-                    }
-                    
-                    let center = CGPoint(x: 30.0, y: 28.0)
-                    let bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 40.0, height: 40.0))
-                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
-                    
-                    strongSelf.fillNode.position = center
-                    strongSelf.ringNode.position = center
-                    
-                    strongSelf.fillNode.bounds = bounds
-                    strongSelf.ringNode.bounds = bounds
-                    
-                    if updatedSelected {
-                        strongSelf.setSelected(item.selected, animated: !updatedAccentColor && currentItem != nil)
-                    }
-                }
-            })
+        
+        var updatedAccentColor = false
+        var updatedSelected = false
+        
+        if currentItem == nil || currentItem?.colors != item.colors {
+            updatedAccentColor = true
         }
-    }
-    
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        super.animateInsertion(currentTimestamp, duration: duration, short: short)
+        if currentItem?.selected != item.selected {
+            updatedSelected = true
+        }
         
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-    }
-    
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        super.animateRemoved(currentTimestamp, duration: duration)
+        self.item = item
         
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-    }
-    
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
-        super.animateAdded(currentTimestamp, duration: duration)
+        if updatedAccentColor {
+            self.fillNode.image = generatePeerNameColorImage(nameColor: item.colors, isDark: item.isDark, bounds: size, size: size)
+            self.ringNode.image = generateRingImage(nameColor: item.colors, size: size)
+        }
         
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        let bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: bounds.size)
+        
+        self.fillNode.position = center
+        self.ringNode.position = center
+        
+        self.fillNode.bounds = bounds
+        self.ringNode.bounds = bounds
+        
+        if updatedSelected {
+            self.setSelected(item.selected, animated: !updatedAccentColor && currentItem != nil)
+        }
     }
 }
 
@@ -389,40 +282,6 @@ final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdap
     }
 }
 
-private struct PeerNameColorItemNodeTransition {
-    let deletions: [ListViewDeleteItem]
-    let insertions: [ListViewInsertItem]
-    let updates: [ListViewUpdateItem]
-    let updatePosition: Bool
-}
-
-private func preparedTransition(action: @escaping (PeerNameColor) -> Void, from fromEntries: [PeerNameColorEntry], to toEntries: [PeerNameColorEntry], updatePosition: Bool) -> PeerNameColorItemNodeTransition {
-    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
-    
-    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(action: action), directionHint: .Down) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(action: action), directionHint: nil) }
-    
-    return PeerNameColorItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, updatePosition: updatePosition)
-}
-
-private func ensureColorVisible(listNode: ListView, color: PeerNameColor, animated: Bool) -> Bool {
-    var resultNode: PeerNameColorIconItemNode?
-    listNode.forEachItemNode { node in
-        if resultNode == nil, let node = node as? PeerNameColorIconItemNode {
-            if node.item?.index == color {
-                resultNode = node
-            }
-        }
-    }
-    if let resultNode = resultNode {
-        listNode.ensureItemNodeVisible(resultNode, animated: animated, overflow: 76.0)
-        return true
-    } else {
-        return false
-    }
-}
-
 final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
@@ -430,16 +289,13 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
 
-    private let listNode: ListView
-    private var entries: [PeerNameColorEntry]?
-    private var enqueuedTransitions: [PeerNameColorItemNodeTransition] = []
+    private var items: [PeerNameColorIconItem] = []
+    private var itemNodes: [Int32 : PeerNameColorIconItemNode] = [:]
     private var initialized = false
     
     private var item: PeerNameColorItem?
     private var layoutParams: ListViewItemLayoutParams?
-    
-    private var tapping = false
-    
+        
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
@@ -458,53 +314,9 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
         
         self.maskNode = ASImageNode()
         
-        self.listNode = ListView()
-        self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
-        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.containerNode)
-        self.addSubnode(self.listNode)
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        self.listNode.view.disablesInteractiveTransitionGestureRecognizer = true
-    }
-    
-    private func enqueueTransition(_ transition: PeerNameColorItemNodeTransition) {
-        self.enqueuedTransitions.append(transition)
-        
-        if let _ = self.item {
-            while !self.enqueuedTransitions.isEmpty {
-                self.dequeueTransition()
-            }
-        }
-    }
-    
-    private func dequeueTransition() {
-        guard let item = self.item, let transition = self.enqueuedTransitions.first else {
-            return
-        }
-        self.enqueuedTransitions.remove(at: 0)
-        
-        let options = ListViewDeleteAndInsertOptions()
-        var scrollToItem: ListViewScrollToItem?
-        if !self.initialized || transition.updatePosition || !self.tapping {
-            let displayOrder: [Int32]
-            if item.isProfile {
-                displayOrder = item.colors.profileDisplayOrder
-            } else {
-                displayOrder = item.colors.displayOrder
-            }
-            if let index = displayOrder.firstIndex(where: { $0 == item.currentColor?.rawValue }) {
-                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
-                self.initialized = true
-            }
-        }
-
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
-        })
     }
     
     func asyncLayout() -> (_ item: PeerNameColorItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -520,7 +332,19 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            contentSize = CGSize(width: params.width, height: 60.0)
+            let itemsPerRow: Int
+            let displayOrder: [Int32]
+            if item.isProfile {
+                displayOrder = item.colors.profileDisplayOrder
+                itemsPerRow = 8
+            } else {
+                displayOrder = item.colors.displayOrder
+                itemsPerRow = 7
+            }
+            
+            let rowsCount = ceil(CGFloat(displayOrder.count) / CGFloat(itemsPerRow))
+            
+            contentSize = CGSize(width: params.width, height: 48.0 * rowsCount)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -595,22 +419,11 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     
-                    var listInsets = UIEdgeInsets()
-                    listInsets.top += params.leftInset + 8.0
-                    listInsets.bottom += params.rightInset + 8.0
-                    
-                    strongSelf.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: contentSize.height, height: contentSize.width)
-                    strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0)
-                    strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                    
-                    var entries: [PeerNameColorEntry] = []
-                    
-                    let displayOrder: [Int32]
-                    if item.isProfile {
-                        displayOrder = item.colors.profileDisplayOrder
-                    } else {
-                        displayOrder = item.colors.displayOrder
+                    let action: (PeerNameColor) -> Void = { color in
+                        item.updated(color)
                     }
+                    
+                    var items: [PeerNameColorIconItem] = []
                     var i: Int = 0
                     for index in displayOrder {
                         let color = PeerNameColor(rawValue: index)
@@ -620,29 +433,42 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                         } else {
                             colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
                         }
-                        entries.append(.color(i, color, colors, item.theme.overallDarkAppearance, color == item.currentColor))
                         
+                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, action: action))
                         i += 1
                     }
+                    strongSelf.items = items
                     
-                    let action: (PeerNameColor) -> Void = { [weak self] color in
-                        guard let self else {
-                            return
+                    let sideInset: CGFloat = 10.0
+                    let iconSize = CGSize(width: 32.0, height: 32.0)
+                    
+                    let spacing = (params.width - sideInset * 2.0 - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1)
+                    
+                    var origin = CGPoint(x: sideInset, y: 10.0)
+                    
+                    i = 0
+                    for item in items {
+                        let iconItemNode: PeerNameColorIconItemNode
+                        if let current = strongSelf.itemNodes[item.index.rawValue] {
+                            iconItemNode = current
+                        } else {
+                            iconItemNode = PeerNameColorIconItemNode()
+                            strongSelf.itemNodes[item.index.rawValue] = iconItemNode
+                            strongSelf.containerNode.addSubnode(iconItemNode)
                         }
-                        self.tapping = true
-                        item.updated(color)
-                        Queue.mainQueue().after(0.4) {
-                            self.tapping = false
+                        
+                        let itemFrame = CGRect(origin: origin, size: iconSize)
+                        origin.x += iconSize.width + spacing
+                        iconItemNode.frame = itemFrame
+                        iconItemNode.updateItem(item, size: iconSize)
+                        
+                        i += 1
+                        if i == itemsPerRow {
+                            i = 0
+                            origin.x = sideInset
+                            origin.y += iconSize.height + 10.0
                         }
-                        let _ = ensureColorVisible(listNode: self.listNode, color: color, animated: true)
                     }
-                 
-                    let previousEntries = strongSelf.entries ?? []
-                    let updatePosition = currentItem != nil && previousEntries.count != entries.count
-                    let transition = preparedTransition(action: action, from: previousEntries, to: entries, updatePosition: updatePosition)
-                    strongSelf.enqueueTransition(transition)
-                    
-                    strongSelf.entries = entries
                 }
             })
         }

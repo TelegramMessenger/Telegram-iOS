@@ -95,6 +95,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         hasUnseenMentions: false,
                         hasUnseenReactions: false,
                         draftState: nil,
+                        mediaDraftContentType: nil,
                         inputActivities: nil,
                         promoInfo: nil,
                         ignoreUnreadBadge: true,

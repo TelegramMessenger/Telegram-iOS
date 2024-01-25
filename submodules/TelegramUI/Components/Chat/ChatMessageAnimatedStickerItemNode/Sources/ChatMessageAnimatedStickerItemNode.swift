@@ -481,7 +481,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var emojiFile: TelegramMediaFile?
             var emojiString: String?
-            if messageIsElligibleForLargeCustomEmoji(item.message) || messageIsElligibleForLargeEmoji(item.message) {
+            if messageIsEligibleForLargeCustomEmoji(item.message) || messageIsEligibleForLargeEmoji(item.message) {
                 emojiString = item.message.text
             }
             

@@ -1109,25 +1109,25 @@ final class ChatEmptyNode: ASDisplayNode {
     }
     
     func animateFromLoadingNode(_ loadingNode: ChatLoadingNode) {
-        guard let (_, node) = content else {
+        guard let (_, node) = self.content else {
             return
         }
         
-        let duration: Double = 0.2
-        node.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        node.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+        let duration: Double = 0.3
+        node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        node.layer.animateScale(from: 0.01, to: 1.0, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
         
         let targetCornerRadius = self.backgroundNode.backgroundCornerRadius
         let targetFrame = self.backgroundNode.frame
         let initialFrame = loadingNode.convert(loadingNode.progressFrame, to: self)
         
-        let transition = ContainedViewLayoutTransition.animated(duration: duration, curve: .easeInOut)
-        self.backgroundNode.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration)
+        let transition = ContainedViewLayoutTransition.animated(duration: duration, curve: .spring)
+        self.backgroundNode.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
         self.backgroundNode.update(size: initialFrame.size, cornerRadius: initialFrame.size.width / 2.0, transition: .immediate)
         self.backgroundNode.update(size: targetFrame.size, cornerRadius: targetCornerRadius, transition: transition)
         
         if let backgroundContent = self.backgroundContent {
-            backgroundContent.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration)
+            backgroundContent.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
             backgroundContent.cornerRadius = initialFrame.size.width / 2.0
             transition.updateCornerRadius(layer: backgroundContent.layer, cornerRadius: targetCornerRadius)
         }

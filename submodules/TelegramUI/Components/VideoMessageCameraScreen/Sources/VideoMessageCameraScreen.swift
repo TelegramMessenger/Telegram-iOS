@@ -655,7 +655,6 @@ public class VideoMessageCameraScreen: ViewController {
             
             self.backgroundColor = .clear
             
-            self.view.addSubview(self.backgroundView)
             self.view.addSubview(self.containerView)
             
             self.containerView.addSubview(self.previewContainerView)
@@ -792,6 +791,10 @@ public class VideoMessageCameraScreen: ViewController {
         func animateIn() {
             self.animatingIn = true
             
+            if let chatNode = self.controller?.chatNode {
+                chatNode.supernode?.view.insertSubview(self.backgroundView, aboveSubview: chatNode.view)
+            }
+            
             self.backgroundView.alpha = 0.0
             UIView.animate(withDuration: 0.4, animations: {
                 self.backgroundView.alpha = 1.0
@@ -817,6 +820,7 @@ public class VideoMessageCameraScreen: ViewController {
             UIView.animate(withDuration: 0.25, animations: {
                 self.backgroundView.alpha = 0.0
             }, completion: { _ in
+                self.backgroundView.removeFromSuperview()
                 completion()
             })
             
@@ -1401,19 +1405,23 @@ public class VideoMessageCameraScreen: ViewController {
         }
     }
     
+    fileprivate weak var chatNode: ASDisplayNode?
+    
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         allowLiveUpload: Bool,
         viewOnceAvailable: Bool,
         inputPanelFrame: CGRect,
+        chatNode: ASDisplayNode?,
         completion: @escaping (EnqueueMessage?, Bool?, Int32?) -> Void
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
-        self.inputPanelFrame = inputPanelFrame
         self.allowLiveUpload = allowLiveUpload
         self.viewOnceAvailable = viewOnceAvailable
+        self.inputPanelFrame = inputPanelFrame
+        self.chatNode = chatNode
         self.completion = completion
         
         self.recordingStatus = RecordingStatus(micLevel: self.micLevelValue.get(), duration: self.durationValue.get())
