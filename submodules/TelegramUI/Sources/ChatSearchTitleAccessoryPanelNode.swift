@@ -17,6 +17,14 @@ import PromptUI
 import BundleIconComponent
 import SavedTagNameAlertController
 
+private let backgroundTagImage: UIImage? = {
+    if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
+        return image.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0).withRenderingMode(.alwaysTemplate)
+    } else {
+        return nil
+    }
+}()
+
 final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UIScrollViewDelegate {
     private struct Params: Equatable {
         var width: CGFloat
@@ -78,9 +86,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             self.containerButton = HighlightTrackingButton()
             
             self.background = UIImageView()
-            if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
-                self.background.image = image.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0).withRenderingMode(.alwaysTemplate)
-            }
+            self.background.image = backgroundTagImage
             
             super.init(frame: CGRect())
             
@@ -203,6 +209,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         
         private let background: UIImageView
         private let icon = ComponentView<Empty>()
+        private let title = ComponentView<Empty>()
         private let counter = ComponentView<Empty>()
         
         init(context: AccountContext, action: @escaping (() -> Void), contextGesture: @escaping (ContextGesture, ContextExtractedContentContainingNode) -> Void) {
@@ -215,9 +222,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             self.containerButton = HighlightTrackingButton()
             
             self.background = UIImageView()
-            if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
-                self.background.image = image.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0).withRenderingMode(.alwaysTemplate)
-            }
+            self.background.image = backgroundTagImage
             
             super.init(frame: CGRect())
             
@@ -280,9 +285,9 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         }
         
         func update(item: Item, isSelected: Bool, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
-            let spacing: CGFloat = 4.0
+            let spacing: CGFloat = 3.0
             
-            let reactionSize = CGSize(width: 16.0, height: 16.0)
+            let reactionSize = CGSize(width: 20.0, height: 20.0)
             var reactionDisplaySize = reactionSize
             if case .builtin = item.reaction {
                 reactionDisplaySize = CGSize(width: reactionDisplaySize.width * 2.0, height: reactionDisplaySize.height * 2.0)
@@ -310,25 +315,40 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                 containerSize: reactionDisplaySize
             )
             
-            let title: String
-            if let value = item.title, !value.isEmpty {
-                title = "\(value) \(item.count)"
-            } else {
-                title = "\(item.count)"
-            }
-            let counterSize = self.counter.update(
+            let titleText: String = item.title ?? ""
+            let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: title, font: Font.regular(11.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
+                    text: .plain(NSAttributedString(string: titleText, font: Font.regular(11.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             
-            let size = CGSize(width: reactionSize.width + spacing + counterSize.width, height: height)
+            let counterText: String = "\(item.count)"
+            let counterSize = self.counter.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: counterText, font: Font.regular(11.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
             
-            let iconFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - reactionSize.height) * 0.5)), size: reactionSize)
-            let counterFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + spacing, y: floor((size.height - counterSize.height) * 0.5)), size: counterSize)
+            let titleCounterSpacing: CGFloat = 3.0
+            
+            var titleAndCounterSize: CGFloat = titleSize.width
+            if titleSize.width != 0.0 {
+                titleAndCounterSize += titleCounterSpacing
+            }
+            titleAndCounterSize += counterSize.width
+            
+            let size = CGSize(width: reactionSize.width + spacing + titleAndCounterSize - 2.0, height: height)
+            
+            let iconFrame = CGRect(origin: CGPoint(x: -1.0, y: floor((size.height - reactionSize.height) * 0.5)), size: reactionSize)
+            
+            let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + spacing, y: floor((size.height - titleSize.height) * 0.5)), size: titleSize)
+            let counterFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + (titleSize.width.isZero ? 0.0 : titleCounterSpacing), y: floor((size.height - counterSize.height) * 0.5)), size: counterSize)
             
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
@@ -338,6 +358,13 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                 iconView.frame = reactionDisplaySize.centered(around: iconFrame.center)
             }
             
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(titleView)
+                }
+                titleView.frame = titleFrame
+            }
             if let counterView = self.counter.view {
                 if counterView.superview == nil {
                     counterView.isUserInteractionEnabled = false
@@ -506,7 +533,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         let panelHeight: CGFloat = 39.0
         
         let containerInsets = UIEdgeInsets(top: 0.0, left: params.leftInset + 16.0, bottom: 0.0, right: params.rightInset + 16.0)
-        let itemSpacing: CGFloat = 26.0
+        let itemSpacing: CGFloat = 24.0
         
         var contentSize = CGSize(width: 0.0, height: panelHeight)
         contentSize.width += containerInsets.left
@@ -642,12 +669,12 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                 let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
                 
                 itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
+                itemTransition.updateBounds(layer: itemView.layer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+                
                 if animateIn && transition.isAnimated {
                     itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                     transition.animateTransformScale(view: itemView, from: 0.001)
                 }
-                
-                itemView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
                 
                 contentSize.width += itemSize.width
             }

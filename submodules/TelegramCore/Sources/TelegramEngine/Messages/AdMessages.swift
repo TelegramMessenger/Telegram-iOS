@@ -624,8 +624,6 @@ private class AdMessagesHistoryContextImpl {
                                         let image = telegramMediaImageFromApiPhoto(photo)
                                         let flags: ExternalJoiningChatState.Invite.Flags = .init(isChannel: (flags & (1 << 0)) != 0, isBroadcast: (flags & (1 << 1)) != 0, isPublic: (flags & (1 << 2)) != 0, isMegagroup: (flags & (1 << 3)) != 0, requestNeeded: (flags & (1 << 6)) != 0, isVerified: (flags & (1 << 7)) != 0, isScam: (flags & (1 << 8)) != 0, isFake: (flags & (1 << 9)) != 0)
                                         
-                                        displayAvatar = false
-                                        
                                         let _ = flags
                                         let _ = participantsCount
                                         let _ = participants
@@ -634,9 +632,11 @@ private class AdMessagesHistoryContextImpl {
                                             title: title,
                                             joinHash: chatInviteHash,
                                             nameColor: PeerNameColor(rawValue: nameColor),
-                                            image: image,
+                                            image: displayAvatar ? image : nil,
                                             peer: nil
                                         ))
+                                        
+                                        displayAvatar = false
                                     case let .chatInvitePeek(chat, _):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                             target = .invite(CachedMessage.Target.Invite(
@@ -649,16 +649,16 @@ private class AdMessagesHistoryContextImpl {
                                         }
                                     case let .chatInviteAlready(chat):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                            displayAvatar = false
-                                            
                                             target = .invite(CachedMessage.Target.Invite(
                                                 title: peer.debugDisplayTitle,
                                                 joinHash: chatInviteHash,
                                                 nameColor: peer.nameColor,
                                                 image: nil,
-                                                peer: peer
+                                                peer: displayAvatar ? peer : nil
                                             ))
                                         }
+                                        
+                                        displayAvatar = false
                                     }
                                 } 
 //                                else if let botApp = app.flatMap({ BotApp(apiBotApp: $0) }) {

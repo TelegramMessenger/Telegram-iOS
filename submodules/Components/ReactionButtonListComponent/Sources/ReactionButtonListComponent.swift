@@ -423,7 +423,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                             
                             let textOrigin: CGFloat
                             if layout.isTag {
-                                textOrigin = 30.0
+                                textOrigin = 32.0
                             } else {
                                 textOrigin = 36.0
                             }
@@ -684,7 +684,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     size.width -= 2.0
                 }
             } else if spec.component.isTag && !hasTitle {
-                size.width += 2.0
+                size.width += 1.0
             } else {
                 let counterSpec = CounterLayout.Spec(
                     stringComponents: counterComponents
@@ -700,6 +700,9 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 }
                 counterLayout = counterValue
                 size.width += spacing + counterValue.size.width
+                if spec.component.isTag {
+                    size.width += 5.0
+                }
             }
             
             let backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
