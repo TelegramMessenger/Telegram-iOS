@@ -767,6 +767,10 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     
     override init(frame: CGRect) {
         self.containerView = ContextExtractedContentContainingView()
+        
+        self.containerView.isMultipleTouchEnabled = false
+        self.containerView.isExclusiveTouch = true
+        
         self.buttonNode = ContainerButtonNode()
         
         self.iconView = ReactionIconView()

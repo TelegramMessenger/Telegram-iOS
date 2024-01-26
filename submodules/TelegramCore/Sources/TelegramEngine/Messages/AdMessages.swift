@@ -644,9 +644,11 @@ private class AdMessagesHistoryContextImpl {
                                                 joinHash: chatInviteHash,
                                                 nameColor: peer.nameColor,
                                                 image: nil,
-                                                peer: peer
+                                                peer: displayAvatar ? peer : nil
                                             ))
                                         }
+                                        
+                                        displayAvatar = false
                                     case let .chatInviteAlready(chat):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                             target = .invite(CachedMessage.Target.Invite(

@@ -1347,16 +1347,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    if !canAddMessageReactions(message: message) {
-                        itemNode.openMessageContextMenu()
-                        return
-                    }
-                    
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
-                        itemNode.openMessageContextMenu()
-                        return
-                    }
-                    
                     let chosenReaction: MessageReaction.Reaction?
                     
                     switch reaction {
@@ -1397,6 +1387,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if removedReaction == nil {
+                        if !canAddMessageReactions(message: message) {
+                            itemNode.openMessageContextMenu()
+                            return
+                        }
+                        
+                        if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
+                            itemNode.openMessageContextMenu()
+                            return
+                        }
+                        
                         guard let allowedReactions = allowedReactions else {
                             itemNode.openMessageContextMenu()
                             return
