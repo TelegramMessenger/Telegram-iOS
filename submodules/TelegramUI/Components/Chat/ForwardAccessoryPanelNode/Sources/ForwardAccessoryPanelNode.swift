@@ -87,8 +87,6 @@ public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
     public let messageIds: [MessageId]
     private var messages: [Message] = []
-    private var authors: String?
-    private var sourcePeer: (peerId: PeerId, displayTitle: String)?
     
     let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
@@ -169,69 +167,7 @@ public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 if messages.isEmpty {
                     strongSelf.dismiss?()
                 } else {
-                    var authors = ""
-                    var uniquePeerIds = Set<PeerId>()
-                    var title = ""
-                    var text = NSMutableAttributedString(string: "")
-                    var sourcePeer: (PeerId, String)?
-                    for message in messages {
-                        if let author = message.forwardInfo?.author ?? message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
-                            uniquePeerIds.insert(author.id)
-                            if !authors.isEmpty {
-                                authors.append(", ")
-                            }
-                            if author.id == context.account.peerId {
-                                authors.append(strongSelf.strings.DialogList_You)
-                            } else {
-                                authors.append(EnginePeer(author).compactDisplayTitle)
-                            }
-                        }
-                        if let peer = message.peers[message.id.peerId] {
-                            sourcePeer = (peer.id, EnginePeer(peer).displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
-                        }
-                    }
-                    
-                    if messages.count == 1 {
-                        title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                        let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: strings)
-                        
-                        text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
-                        
-                        let additionalText = NSMutableAttributedString(attributedString: NSAttributedString(string: string, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
-                        for entity in entities {
-                            switch entity.type {
-                            case let .CustomEmoji(_, fileId):
-                                let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                                if range.lowerBound >= 0 && range.upperBound <= additionalText.length {
-                                    additionalText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: messages[0].associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: range)
-                                }
-                            default:
-                                break
-                            }
-                        }
-                        
-                        text.append(additionalText)
-                    } else {
-                        title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
-                        text = NSMutableAttributedString(attributedString: NSAttributedString(string: strongSelf.strings.Conversation_ForwardFrom(authors).string, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
-                    }
-                    
                     strongSelf.messages = messages
-                    strongSelf.sourcePeer = sourcePeer
-                    strongSelf.authors = authors
-                    
-                    strongSelf.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                    strongSelf.textNode.attributedText = text
-                    strongSelf.originalText = text
-                    strongSelf.textNode.visibility = true
-                    
-                    let headerString: String
-                    if messages.count == 1 {
-                        headerString = "Forward message"
-                    } else {
-                        headerString = "Forward messages"
-                    }
-                    strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
 
                     if let (size, inset, interfaceState) = strongSelf.validLayout {
                         strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
@@ -354,6 +290,67 @@ public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
             self.iconView.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
+        var authors = ""
+        var uniquePeerIds = Set<PeerId>()
+        var title = ""
+        var text = NSMutableAttributedString(string: "")
+        
+        for message in self.messages {
+            if let author = message.forwardInfo?.author ?? message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
+                uniquePeerIds.insert(author.id)
+                if !authors.isEmpty {
+                    authors.append(", ")
+                }
+                if author.id == context.account.peerId {
+                    authors.append(self.strings.DialogList_You)
+                } else {
+                    authors.append(EnginePeer(author).compactDisplayTitle)
+                }
+            }
+        }
+        
+        if self.messages.count == 1 {
+            title = self.strings.Conversation_ForwardOptions_ForwardTitleSingle
+            let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: strings)
+            
+            text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
+            
+            let additionalText = NSMutableAttributedString(attributedString: NSAttributedString(string: string, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
+            for entity in entities {
+                switch entity.type {
+                case let .CustomEmoji(_, fileId):
+                    let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                    if range.lowerBound >= 0 && range.upperBound <= additionalText.length {
+                        additionalText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: messages[0].associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile), range: range)
+                    }
+                default:
+                    break
+                }
+            }
+            
+            text.append(additionalText)
+        } else {
+            title = self.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
+            text = NSMutableAttributedString(attributedString: NSAttributedString(string: self.strings.Conversation_ForwardFrom(authors).string, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
+        }
+        
+        if interfaceState.interfaceState.forwardOptionsState?.hideNames == true {
+            text = NSMutableAttributedString(attributedString: NSAttributedString(string: self.strings.Conversation_ForwardOptions_SenderNamesRemoved, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor))
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+        self.textNode.attributedText = text
+        self.originalText = text
+        self.textNode.visibility = true
+        
+        let headerString: String
+        if messages.count == 1 {
+            headerString = "Forward message"
+        } else {
+            headerString = "Forward messages"
+        }
+        self.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
+        
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset, y: 7.0), size: titleSize)
 
@@ -362,9 +359,12 @@ public final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     }
     
     @objc private func closePressed() {
-        guard let (peerId, peerDisplayTitle) = self.sourcePeer else {
+        guard let message = self.messages.first, let peer = message.peers[message.id.peerId] else {
             return
         }
+        let peerId = peer.id
+        let peerDisplayTitle = EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)
+
         let messageCount = Int32(self.messageIds.count)
         let messages = self.strings.Conversation_ForwardOptions_Messages(messageCount)
         let string: PresentationStrings.FormattedString
