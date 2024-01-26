@@ -1305,6 +1305,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return nil
                         }
                     } else {
+                        strongSelf.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
                         strongSelf.interfaceInteraction?.updateHistoryFilter { _ in
                             return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
                         }

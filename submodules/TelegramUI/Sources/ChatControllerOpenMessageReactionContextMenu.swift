@@ -110,7 +110,6 @@ extension ChatControllerImpl {
                             return
                         }
                         self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
-                        
                         self.interfaceInteraction?.updateHistoryFilter { _ in
                             return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
                         }

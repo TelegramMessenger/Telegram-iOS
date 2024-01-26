@@ -42,16 +42,19 @@ private class AdMessagesHistoryContextImpl {
                     case title
                     case joinHash
                     case nameColor
+                    case image
                 }
                 
                 var title: String
                 var joinHash: String
                 var nameColor: PeerNameColor?
+                var image: TelegramMediaImage?
                 
-                init(title: String, joinHash: String, nameColor: PeerNameColor? = nil) {
+                init(title: String, joinHash: String, nameColor: PeerNameColor?, image: TelegramMediaImage?) {
                     self.title = title
                     self.joinHash = joinHash
                     self.nameColor = nameColor
+                    self.image = image
                 }
                 
                 init(from decoder: Decoder) throws {
@@ -60,6 +63,9 @@ private class AdMessagesHistoryContextImpl {
                     self.title = try container.decode(String.self, forKey: .title)
                     self.joinHash = try container.decode(String.self, forKey: .joinHash)
                     self.nameColor = try container.decodeIfPresent(Int32.self, forKey: .nameColor).flatMap { PeerNameColor(rawValue: $0) }
+                    self.image = (try container.decodeIfPresent(Data.self, forKey: .image)).flatMap { data in
+                        return TelegramMediaImage(decoder: PostboxDecoder(buffer: MemoryBuffer(data: data)))
+                    }
                 }
                 
                 func encode(to encoder: Encoder) throws {
@@ -68,6 +74,11 @@ private class AdMessagesHistoryContextImpl {
                     try container.encode(self.title, forKey: .title)
                     try container.encode(self.joinHash, forKey: .joinHash)
                     try container.encodeIfPresent(self.nameColor?.rawValue, forKey: .nameColor)
+                    try container.encodeIfPresent(self.image.flatMap { image in
+                        let encoder = PostboxEncoder()
+                        image.encode(encoder)
+                        return encoder.makeData()
+                    }, forKey: .image)
                 }
             }
             
@@ -350,6 +361,11 @@ private class AdMessagesHistoryContextImpl {
             
             let messageHash = (self.text.hashValue &+ 31 &* peerId.hashValue) &* 31 &+ author.id.hashValue
             let messageStableVersion = UInt32(bitPattern: Int32(truncatingIfNeeded: messageHash))
+            
+            var media: [Media] = self.media
+            if media.isEmpty, case let .invite(invite) = self.target, let image = invite.image {
+                media.append(image)
+            }
 
             return Message(
                 stableId: 0,
@@ -369,7 +385,7 @@ private class AdMessagesHistoryContextImpl {
                 author: author,
                 text: self.text,
                 attributes: attributes,
-                media: self.media,
+                media: media,
                 peers: messagePeers,
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
@@ -567,8 +583,6 @@ private class AdMessagesHistoryContextImpl {
                                         target = .peer(fromId.peerId)
                                     }
                                 } else if let webPage = webPage {
-                                    displayAvatar = false
-                                    
                                     switch webPage {
                                     case let .sponsoredWebPage(_, url, siteName, photo):
                                         let photo = photo.flatMap { telegramMediaImageFromApiPhoto($0) }
@@ -577,10 +591,11 @@ private class AdMessagesHistoryContextImpl {
                                 } else if let chatInvite = chatInvite, let chatInviteHash = chatInviteHash {
                                     switch chatInvite {
                                     case let .chatInvite(flags, title, _, photo, participantsCount, participants, nameColor):
-                                        let photo = telegramMediaImageFromApiPhoto(photo).flatMap({ smallestImageRepresentation($0.representations) })
+                                        let image = telegramMediaImageFromApiPhoto(photo)
                                         let flags: ExternalJoiningChatState.Invite.Flags = .init(isChannel: (flags & (1 << 0)) != 0, isBroadcast: (flags & (1 << 1)) != 0, isPublic: (flags & (1 << 2)) != 0, isMegagroup: (flags & (1 << 3)) != 0, requestNeeded: (flags & (1 << 6)) != 0, isVerified: (flags & (1 << 7)) != 0, isScam: (flags & (1 << 8)) != 0, isFake: (flags & (1 << 9)) != 0)
                                         
-                                        let _ = photo
+                                        displayAvatar = false
+                                        
                                         let _ = flags
                                         let _ = participantsCount
                                         let _ = participants
@@ -588,14 +603,16 @@ private class AdMessagesHistoryContextImpl {
                                         target = .invite(CachedMessage.Target.Invite(
                                             title: title,
                                             joinHash: chatInviteHash,
-                                            nameColor: PeerNameColor(rawValue: nameColor)
+                                            nameColor: PeerNameColor(rawValue: nameColor),
+                                            image: image
                                         ))
                                     case let .chatInvitePeek(chat, _):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                             target = .invite(CachedMessage.Target.Invite(
                                                 title: peer.debugDisplayTitle,
                                                 joinHash: chatInviteHash,
-                                                nameColor: peer.nameColor
+                                                nameColor: peer.nameColor,
+                                                image: nil
                                             ))
                                         }
                                     case let .chatInviteAlready(chat):
@@ -603,7 +620,8 @@ private class AdMessagesHistoryContextImpl {
                                             target = .invite(CachedMessage.Target.Invite(
                                                 title: peer.debugDisplayTitle,
                                                 joinHash: chatInviteHash,
-                                                nameColor: peer.nameColor
+                                                nameColor: peer.nameColor,
+                                                image: nil
                                             ))
                                         }
                                     }
