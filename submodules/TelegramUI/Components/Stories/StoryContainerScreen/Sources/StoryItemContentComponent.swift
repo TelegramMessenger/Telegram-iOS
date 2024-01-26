@@ -615,6 +615,9 @@ final class StoryItemContentComponent: Component {
                 reloadMedia = true
                 
                 if let videoNode = self.videoNode {
+                    self.videoProgressDisposable?.dispose()
+                    self.videoProgressDisposable = nil
+                    
                     self.videoNode = nil
                     videoNode.view.removeFromSuperview()
                 }
