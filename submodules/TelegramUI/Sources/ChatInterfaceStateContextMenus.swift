@@ -287,7 +287,9 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         break
     }
     if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation, replyThreadMessage.peerId == accountPeerId {
-        return false
+        if replyThreadMessage.threadId != accountPeerId.toInt64() {
+            return false
+        }
     }
     
     if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {

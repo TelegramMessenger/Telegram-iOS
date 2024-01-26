@@ -489,7 +489,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let credibilityIcon: CredibilityIcon
         var verifiedIcon: CredibilityIcon = .none
         if let peer = peer {
-            if peer.isFake {
+            if peer.id == self.context.account.peerId && !self.isSettings {
+                credibilityIcon = .none
+            } else if peer.isFake {
                 credibilityIcon = .fake
             } else if peer.isScam {
                 credibilityIcon = .scam
@@ -969,7 +971,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if let peer = peer {
             var title: String
             if peer.id == self.context.account.peerId && !self.isSettings {
-                title = presentationData.strings.Conversation_SavedMessages
+                if case .replyThread = self.chatLocation {
+                    title = presentationData.strings.Conversation_MyNotes
+                } else {
+                    title = presentationData.strings.Conversation_SavedMessages
+                }
             } else if peer.id.isAnonymousSavedMessages {
                 title = presentationData.strings.ChatList_AuthorHidden
             } else if let threadData = threadData {

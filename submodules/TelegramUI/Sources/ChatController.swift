@@ -1266,6 +1266,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if !force && message.areReactionsTags(accountPeerId: strongSelf.context.account.peerId) {
+                if case .pinnedMessages = strongSelf.subject {
+                    return
+                }
+                
                 if !strongSelf.presentationInterfaceState.isPremium {
                     //TODO:localize
                     let context = strongSelf.context
@@ -2807,7 +2811,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return .none
                 }
                 if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.peerId == strongSelf.context.account.peerId {
-                    return .none
+                    if replyThreadMessage.threadId != strongSelf.context.account.peerId.toInt64() {
+                        return .none
+                    }
                 }
                 if case .peer = strongSelf.chatLocation, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
                     if message.threadId == nil {

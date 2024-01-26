@@ -118,21 +118,24 @@ extension ChatControllerImpl {
                     })
                 })))
                 
-                if self.presentationInterfaceState.historyFilter?.customTags != tags {
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagFilter"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        guard let self else {
+                if case .pinnedMessages = self.subject {
+                } else {
+                    if self.presentationInterfaceState.historyFilter?.customTags != tags {
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagFilter"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, a in
+                            guard let self else {
+                                a(.default)
+                                return
+                            }
+                            self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
+                            self.interfaceInteraction?.updateHistoryFilter { _ in
+                                return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
+                            }
+                            
                             a(.default)
-                            return
-                        }
-                        self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
-                        self.interfaceInteraction?.updateHistoryFilter { _ in
-                            return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
-                        }
-                        
-                        a(.default)
-                    })))
+                        })))
+                    }
                 }
                 
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { theme in
