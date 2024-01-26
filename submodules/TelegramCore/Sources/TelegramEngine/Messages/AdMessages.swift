@@ -43,18 +43,40 @@ private class AdMessagesHistoryContextImpl {
                     case joinHash
                     case nameColor
                     case image
+                    case peer
                 }
                 
                 var title: String
                 var joinHash: String
                 var nameColor: PeerNameColor?
                 var image: TelegramMediaImage?
+                var peer: Peer?
                 
-                init(title: String, joinHash: String, nameColor: PeerNameColor?, image: TelegramMediaImage?) {
+                init(title: String, joinHash: String, nameColor: PeerNameColor?, image: TelegramMediaImage?, peer: Peer?) {
                     self.title = title
                     self.joinHash = joinHash
                     self.nameColor = nameColor
                     self.image = image
+                    self.peer = peer
+                }
+                
+                static func ==(lhs: Invite, rhs: Invite) -> Bool {
+                    if lhs.title != rhs.title {
+                        return false
+                    }
+                    if lhs.joinHash != rhs.joinHash {
+                        return false
+                    }
+                    if lhs.nameColor != rhs.nameColor {
+                        return false
+                    }
+                    if lhs.image != rhs.image {
+                        return false
+                    }
+                    if !arePeersEqual(lhs.peer, rhs.peer) {
+                        return false
+                    }
+                    return true
                 }
                 
                 init(from decoder: Decoder) throws {
@@ -65,6 +87,9 @@ private class AdMessagesHistoryContextImpl {
                     self.nameColor = try container.decodeIfPresent(Int32.self, forKey: .nameColor).flatMap { PeerNameColor(rawValue: $0) }
                     self.image = (try container.decodeIfPresent(Data.self, forKey: .image)).flatMap { data in
                         return TelegramMediaImage(decoder: PostboxDecoder(buffer: MemoryBuffer(data: data)))
+                    }
+                    self.peer = (try container.decodeIfPresent(Data.self, forKey: .peer)).flatMap { data in
+                        return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Peer
                     }
                 }
                 
@@ -79,6 +104,11 @@ private class AdMessagesHistoryContextImpl {
                         image.encode(encoder)
                         return encoder.makeData()
                     }, forKey: .image)
+                    try container.encodeIfPresent(self.peer.flatMap { peer in
+                        let encoder = PostboxEncoder()
+                        encoder.encodeRootObject(peer)
+                        return encoder.makeData()
+                    }, forKey: .peer)
                 }
             }
             
@@ -272,7 +302,7 @@ private class AdMessagesHistoryContextImpl {
             case let .peer(peerId):
                 target = .peer(id: peerId, message: self.messageId, startParam: self.startParam)
             case let .invite(invite):
-                target = .join(title: invite.title, joinHash: invite.joinHash)
+                target = .join(title: invite.title, joinHash: invite.joinHash, peer: invite.peer.flatMap(EnginePeer.init))
             case let .webPage(webPage):
                 target = .webPage(title: webPage.title, url: webPage.url)
             case let .botApp(peerId, botApp):
@@ -604,7 +634,8 @@ private class AdMessagesHistoryContextImpl {
                                             title: title,
                                             joinHash: chatInviteHash,
                                             nameColor: PeerNameColor(rawValue: nameColor),
-                                            image: image
+                                            image: image,
+                                            peer: nil
                                         ))
                                     case let .chatInvitePeek(chat, _):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
@@ -612,16 +643,20 @@ private class AdMessagesHistoryContextImpl {
                                                 title: peer.debugDisplayTitle,
                                                 joinHash: chatInviteHash,
                                                 nameColor: peer.nameColor,
-                                                image: nil
+                                                image: nil,
+                                                peer: peer
                                             ))
                                         }
                                     case let .chatInviteAlready(chat):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                            displayAvatar = false
+                                            
                                             target = .invite(CachedMessage.Target.Invite(
                                                 title: peer.debugDisplayTitle,
                                                 joinHash: chatInviteHash,
                                                 nameColor: peer.nameColor,
-                                                image: nil
+                                                image: nil,
+                                                peer: peer
                                             ))
                                         }
                                     }

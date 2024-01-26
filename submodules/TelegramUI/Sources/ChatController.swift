@@ -1266,6 +1266,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if !force && message.areReactionsTags(accountPeerId: strongSelf.context.account.peerId) {
+                if !strongSelf.presentationInterfaceState.isPremium {
+                    //TODO:localize
+                    let context = strongSelf.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                        let controller = PremiumIntroScreen(context: context, source: .reactions)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    strongSelf.push(controller)
+                    return
+                }
+                
                 strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                     guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item else {
                         return
@@ -3958,7 +3973,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                 }
-            case let .join(_, joinHash):
+            case let .join(_, joinHash, _):
                 self.controllerInteraction?.openJoinLink(joinHash)
             case let .webPage(_, url):
                 self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: true))

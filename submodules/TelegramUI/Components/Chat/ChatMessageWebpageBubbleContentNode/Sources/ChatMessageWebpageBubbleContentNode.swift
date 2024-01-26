@@ -497,7 +497,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 for media in item.message.media {
                     switch media {
                     case _ as TelegramMediaImage, _ as TelegramMediaFile, _ as TelegramMediaStory:
-                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                        mediaAndFlags = (media, [.preferMediaInline])
                     default:
                         break
                     }
