@@ -74,6 +74,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         private let containerButton: HighlightTrackingButton
         
         private let background: UIImageView
+        private let titleIcon = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private let text = ComponentView<Empty>()
         private let arrowIcon = ComponentView<Empty>()
@@ -118,6 +119,19 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         }
         
         func update(theme: PresentationTheme, strings: PresentationStrings, height: CGFloat, transition: Transition) -> CGSize {
+            let titleIconSpacing: CGFloat = 0.0
+            
+            let titleIconSize = self.titleIcon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: "Chat/Stickers/Lock",
+                    tintColor: theme.rootController.navigationBar.accentTextColor,
+                    maxSize: CGSize(width: 14.0, height: 14.0)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 14.0, height: 14.0)
+            )
+            
             //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -128,10 +142,18 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
                 containerSize: CGSize(width: 200.0, height: 100.0)
             )
             
-            let size = CGSize(width: titleSize.width, height: height)
+            let size = CGSize(width: titleIconSize.width + titleIconSpacing + titleSize.width - 1.0, height: height)
             
-            let titleFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - titleSize.height) * 0.5)), size: titleSize)
+            let titleIconFrame = CGRect(origin: CGPoint(x: -1.0, y: UIScreenPixel + floor((size.height - titleIconSize.height) * 0.5)), size: titleIconSize)
+            if let titleIconView = self.titleIcon.view {
+                if titleIconView.superview == nil {
+                    titleIconView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(titleIconView)
+                }
+                titleIconView.frame = titleIconFrame
+            }
             
+            let titleFrame = CGRect(origin: CGPoint(x: titleIconSize.width + titleIconSpacing, y: floor((size.height - titleSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
