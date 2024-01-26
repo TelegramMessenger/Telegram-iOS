@@ -15,6 +15,7 @@ import EntityKeyboard
 import TextNodeWithEntities
 import PremiumUI
 import TooltipUI
+import TopMessageReactions
 
 extension ChatControllerImpl {
     func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, anyRecognizer: UIGestureRecognizer?, location: CGPoint?) -> Void {
@@ -110,11 +111,18 @@ extension ChatControllerImpl {
                                                          
                 if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                     actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
+                    actions.selectedReactionItems = selectedReactions.reactions
                     if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
-                        actions.reactionsTitle = presentationData.strings.Chat_ContextMenuTagsTitle
+                        if self.presentationInterfaceState.isPremium {
+                            actions.reactionsTitle = presentationData.strings.Chat_ContextMenuTagsTitle
+                        } else {
+                            //TODO:localize
+                            actions.reactionsTitle = "Organize your Saved Messages with tags for quicker access. [Learn more...]()"
+                            actions.reactionsLocked = true
+                            actions.selectedReactionItems = Set()
+                        }
                         actions.allPresetReactionsAreAvailable = true
                     }
-                    actions.selectedReactionItems = selectedReactions.reactions
                     
                     if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
                         actions.alwaysAllowPremiumReactions = true
@@ -299,6 +307,7 @@ extension ChatControllerImpl {
                 }
                 self.currentContextController = controller
                 
+                //TODO:localize
                 controller.premiumReactionsSelected = { [weak self, weak controller] in
                     guard let self else {
                         return

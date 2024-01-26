@@ -267,6 +267,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             var foreground: UInt32
             var extractedBackground: UInt32
             var extractedForeground: UInt32
+            var extractedSelectedForeground: UInt32
             var isSelected: Bool
         }
         
@@ -379,9 +380,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     func drawContents(colors: Colors) {
                         let backgroundColor: UIColor
                         let foregroundColor: UIColor
-                        if isExtracted && !layout.colors.isSelected {
+                        if isExtracted {
                             backgroundColor = UIColor(argb: colors.extractedBackground)
-                            foregroundColor = UIColor(argb: colors.extractedForeground)
+                            if layout.colors.isSelected {
+                                foregroundColor = UIColor(argb: colors.extractedSelectedForeground)
+                            } else {
+                                foregroundColor = UIColor(argb: colors.extractedForeground)
+                            }
                         } else {
                             backgroundColor = UIColor(argb: colors.background)
                             foregroundColor = UIColor(argb: colors.foreground)
@@ -702,6 +707,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
                 extractedBackground: spec.component.colors.extractedBackground,
                 extractedForeground: spec.component.colors.extractedForeground,
+                extractedSelectedForeground: spec.component.colors.extractedSelectedForeground,
                 isSelected: spec.component.chosenOrder != nil
             )
             var backgroundCounter: ReactionButtonAsyncNode.ContainerButtonNode.Counter?
@@ -1030,6 +1036,7 @@ public final class ReactionButtonComponent: Equatable {
         public var selectedForeground: UInt32
         public var extractedBackground: UInt32
         public var extractedForeground: UInt32
+        public var extractedSelectedForeground: UInt32
         public var deselectedMediaPlaceholder: UInt32
         public var selectedMediaPlaceholder: UInt32
         
@@ -1040,6 +1047,7 @@ public final class ReactionButtonComponent: Equatable {
             selectedForeground: UInt32,
             extractedBackground: UInt32,
             extractedForeground: UInt32,
+            extractedSelectedForeground: UInt32,
             deselectedMediaPlaceholder: UInt32,
             selectedMediaPlaceholder: UInt32
         ) {
@@ -1049,6 +1057,7 @@ public final class ReactionButtonComponent: Equatable {
             self.selectedForeground = selectedForeground
             self.extractedBackground = extractedBackground
             self.extractedForeground = extractedForeground
+            self.extractedSelectedForeground = extractedSelectedForeground
             self.deselectedMediaPlaceholder = deselectedMediaPlaceholder
             self.selectedMediaPlaceholder = selectedMediaPlaceholder
         }

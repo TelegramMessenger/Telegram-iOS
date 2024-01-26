@@ -13,8 +13,12 @@ import ShareController
 import ChatQrCodeScreen
 import ChatShareMessageTagView
 import ReactionSelectionNode
+import TopMessageReactions
 
 func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl, reactionItems: [ReactionItem], correlationId: Int64?) -> (() -> UndoOverlayControllerAdditionalView?)? {
+    if !chatController.presentationInterfaceState.isPremium {
+        return nil
+    }
     guard let correlationId else {
         return nil
     }

@@ -557,7 +557,7 @@ private class AdMessagesHistoryContextImpl {
                                 }
                                 
                                 let isRecommended = (flags & (1 << 5)) != 0
-                                let displayAvatar = (flags & (1 << 6)) != 0
+                                var displayAvatar = (flags & (1 << 6)) != 0
                                 
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
@@ -567,6 +567,8 @@ private class AdMessagesHistoryContextImpl {
                                         target = .peer(fromId.peerId)
                                     }
                                 } else if let webPage = webPage {
+                                    displayAvatar = false
+                                    
                                     switch webPage {
                                     case let .sponsoredWebPage(_, url, siteName, photo):
                                         let photo = photo.flatMap { telegramMediaImageFromApiPhoto($0) }

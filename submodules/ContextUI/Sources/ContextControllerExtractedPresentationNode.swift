@@ -649,6 +649,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     items: reactionItems.reactionItems,
                     selectedItems: reactionItems.selectedReactionItems,
                     title: reactionItems.reactionsTitle,
+                    reactionsLocked: reactionItems.reactionsLocked,
                     alwaysAllowPremiumReactions: reactionItems.alwaysAllowPremiumReactions,
                     allPresetReactionsAreAvailable: reactionItems.allPresetReactionsAreAvailable,
                     getEmojiContent: reactionItems.getEmojiContent,
@@ -689,6 +690,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 reactionContextNode.premiumReactionsSelected = { [weak self] file in
                     guard let strongSelf = self, let validLayout = strongSelf.validLayout, let controller = strongSelf.getController() as? ContextController else {
                         return
+                    }
+                    
+                    if let reactionItems = strongSelf.actionsStackNode.topReactionItems, !reactionItems.reactionItems.isEmpty {
+                        if reactionItems.allPresetReactionsAreAvailable {
+                            controller.premiumReactionsSelected?()
+                            return
+                        }
                     }
                     
                     if let file = file, let reactionContextNode = strongSelf.reactionContextNode {

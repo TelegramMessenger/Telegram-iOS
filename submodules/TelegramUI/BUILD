@@ -427,6 +427,9 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaScrubberComponent",
         "//submodules/TelegramUI/Components/Chat/ChatShareMessageTagView",
         "//submodules/PromptUI",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/Chat/TopMessageReactions",
+        "//submodules/TelegramUI/Components/Chat/SavedTagNameAlertController",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

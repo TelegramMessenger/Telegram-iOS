@@ -1567,6 +1567,7 @@ public final class StoryItemSetContainerComponent: Component {
                             audioMode: component.audioMode,
                             isVideoBuffering: visibleItem.isBuffering,
                             isCurrent: index == centralIndex,
+                            preferHighQuality: component.slice.additionalPeerData.preferHighQualityStories,
                             activateReaction: { [weak self] reactionView, reaction in
                                 guard let self else {
                                     return
@@ -4379,6 +4380,7 @@ public final class StoryItemSetContainerComponent: Component {
                         items: reactionItems.map(ReactionContextItem.reaction),
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         title: self.displayLikeReactions ? nil : component.strings.Story_SendReactionAsMessage,
+                        reactionsLocked: false,
                         alwaysAllowPremiumReactions: false,
                         allPresetReactionsAreAvailable: false,
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
@@ -5611,6 +5613,16 @@ public final class StoryItemSetContainerComponent: Component {
             ), nil)
         }
         
+        private func presentQualityUpgradeScreen() {
+            self.sendMessageContext.presentQualityUpgrade(view: self, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                //TODO:localize
+                self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
+            })
+        }
+        
         private func presentStealthModeUpgradeScreen() {
             self.sendMessageContext.presentStealthModeUpgrade(view: self, action: { [weak self] in
                 guard let self else {
@@ -6536,6 +6548,88 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
+                if !component.slice.peer.isService && component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
+                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        
+                        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            if let link {
+                                UIPasteboard.general.string = link
+                                
+                                component.presentController(UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
+                                    elevatedLayout: false,
+                                    animateInAsReplacement: false,
+                                    blurred: true,
+                                    action: { _ in return false }
+                                ), nil)
+                            }
+                        })
+                    })))
+                }
+                
+                if case let .file(file) = component.slice.item.storyItem.media, file.isVideo {
+                    //TODO:localize
+                    let isHq = component.slice.additionalPeerData.preferHighQualityStories
+                    items.append(.action(ContextMenuActionItem(text: isHq ? "Decrease Quality" : "Increase Quality", icon: { theme in
+                        if isHq {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QualitySd"), color: theme.contextMenu.primaryColor)
+                        } else {
+                            return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/QualityHd" : "Chat/Context Menu/QualityHdLocked"), color: theme.contextMenu.primaryColor)
+                        }
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self, let component = self.component, let controller = component.controller() else {
+                            return
+                        }
+                        
+                        if !component.slice.additionalPeerData.preferHighQualityStories && !accountUser.isPremium {
+                            //TODO:localize
+                            self.presentQualityUpgradeScreen()
+                            
+                            return
+                        }
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                        //TODO:localize
+                        let title: String
+                        let text: String
+                        if component.slice.additionalPeerData.preferHighQualityStories {
+                            title = "Quality Lowered"
+                            text = "Stories will now download faster."
+                        } else {
+                            title = "Quality Increased"
+                            text = "You can lower the quality later for faster downloads."
+                        }
+                        controller.present(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            blurred: true,
+                            action: { _ in return false }
+                        ), in: .current)
+                        
+                        let _ = updateMediaDownloadSettingsInteractively(accountManager: component.context.sharedContext.accountManager, { settings in
+                            var settings = settings
+                            settings.highQualityStories = !isHq
+                            return settings
+                        }).startStandalone()
+                    })))
+                }
+                
                 var isHidden = false
                 if case let .user(user) = component.slice.peer, let storiesHidden = user.storiesHidden {
                     isHidden = storiesHidden
@@ -6630,37 +6724,6 @@ public final class StoryItemSetContainerComponent: Component {
                         } else {
                             self.presentStealthModeUpgradeScreen()
                         }
-                    })))
-                }
-                
-                if !component.slice.peer.isService && component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
-                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, a in
-                        a(.default)
-                        
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        
-                        let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                        |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            if let link {
-                                UIPasteboard.general.string = link
-                                
-                                component.presentController(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    blurred: true,
-                                    action: { _ in return false }
-                                ), nil)
-                            }
-                        })
                     })))
                 }
                 

@@ -142,19 +142,22 @@ public final class StoryContentContextState {
         public let presence: EnginePeer.Presence?
         public let canViewStats: Bool
         public let isPremiumRequiredForMessaging: Bool
+        public let preferHighQualityStories: Bool
         
         public init(
             isMuted: Bool,
             areVoiceMessagesAvailable: Bool,
             presence: EnginePeer.Presence?,
             canViewStats: Bool,
-            isPremiumRequiredForMessaging: Bool
+            isPremiumRequiredForMessaging: Bool,
+            preferHighQualityStories: Bool
         ) {
             self.isMuted = isMuted
             self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
             self.presence = presence
             self.canViewStats = canViewStats
             self.isPremiumRequiredForMessaging = isPremiumRequiredForMessaging
+            self.preferHighQualityStories = preferHighQualityStories
         }
         
         public static func == (lhs: StoryContentContextState.AdditionalPeerData, rhs: StoryContentContextState.AdditionalPeerData) -> Bool {
@@ -171,6 +174,9 @@ public final class StoryContentContextState {
                 return false
             }
             if lhs.isPremiumRequiredForMessaging != rhs.isPremiumRequiredForMessaging {
+                return false
+            }
+            if lhs.preferHighQualityStories != rhs.preferHighQualityStories {
                 return false
             }
             return true

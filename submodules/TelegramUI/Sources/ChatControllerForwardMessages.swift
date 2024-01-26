@@ -12,6 +12,7 @@ import UndoUI
 import ChatInterfaceState
 import PremiumUI
 import ReactionSelectionNode
+import TopMessageReactions
 
 extension ChatControllerImpl {    
     func forwardMessages(messageIds: [MessageId], options: ChatInterfaceForwardOptionsState? = nil, resetCurrent: Bool = false) {

@@ -40,16 +40,18 @@ public struct ContextControllerReactionItems {
     public var reactionItems: [ReactionContextItem]
     public var selectedReactionItems: Set<MessageReaction.Reaction>
     public var reactionsTitle: String?
+    public var reactionsLocked: Bool
     public var animationCache: AnimationCache
     public var alwaysAllowPremiumReactions: Bool
     public var allPresetReactionsAreAvailable: Bool
     public var getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
     
-    public init(context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, reactionsTitle: String?, animationCache: AnimationCache, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?) {
+    public init(context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, reactionsTitle: String?, reactionsLocked: Bool, animationCache: AnimationCache, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?) {
         self.context = context
         self.reactionItems = reactionItems
         self.selectedReactionItems = selectedReactionItems
         self.reactionsTitle = reactionsTitle
+        self.reactionsLocked = reactionsLocked
         self.animationCache = animationCache
         self.alwaysAllowPremiumReactions = alwaysAllowPremiumReactions
         self.allPresetReactionsAreAvailable = allPresetReactionsAreAvailable
@@ -1075,6 +1077,7 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> [C
             reactionItems: items.reactionItems,
             selectedReactionItems: items.selectedReactionItems,
             reactionsTitle: items.reactionsTitle,
+            reactionsLocked: items.reactionsLocked,
             animationCache: animationCache,
             alwaysAllowPremiumReactions: items.alwaysAllowPremiumReactions,
             allPresetReactionsAreAvailable: items.allPresetReactionsAreAvailable,

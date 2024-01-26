@@ -2531,7 +2531,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             let gesture: ContextGesture? = anyRecognizer as? ContextGesture
-            let _ = (strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+            let _ = (strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id], keepUpdated: false)
             |> deliverOnMainQueue).startStandalone(next: { actions in
                 guard let strongSelf = self else {
                     return
@@ -2680,7 +2680,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.controller?.window?.presentInGlobalOverlay(controller)
             })
         }, openMessageReactionContextMenu: { _, _, _, _ in
-        }, updateMessageReaction: { _, _ in
+        }, updateMessageReaction: { _, _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { [weak self] message, node, rect, gesture in
             guard let strongSelf = self else {
@@ -2697,7 +2697,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if let previewData = previewData {
                     let context = strongSelf.context
                     let strings = strongSelf.presentationData.strings
-                    let items = strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id])
+                    let items = strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: [message.id], keepUpdated: false)
                     |> map { actions -> [ContextMenuItem] in
                         var items: [ContextMenuItem] = []
                         
@@ -8996,7 +8996,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private func deleteMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
-            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: messageIds)
+            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(engine: self.context.engine, accountPeerId: self.context.account.peerId, messageIds: messageIds, keepUpdated: false)
             |> deliverOnMainQueue).startStrict(next: { [weak self] actions in
                 if let strongSelf = self, let peer = strongSelf.data?.peer, !actions.options.isEmpty {
                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)

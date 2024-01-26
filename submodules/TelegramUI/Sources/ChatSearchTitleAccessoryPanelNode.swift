@@ -14,6 +14,8 @@ import EmojiStatusComponent
 import SwiftSignalKit
 import ContextUI
 import PromptUI
+import BundleIconComponent
+import SavedTagNameAlertController
 
 final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UIScrollViewDelegate {
     private struct Params: Equatable {
@@ -57,6 +59,136 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             self.count = count
             self.title = title
             self.file = file
+        }
+    }
+    
+    private final class PromoView: UIView {
+        private let containerButton: HighlightTrackingButton
+        
+        private let background: UIImageView
+        private let title = ComponentView<Empty>()
+        private let text = ComponentView<Empty>()
+        private let arrowIcon = ComponentView<Empty>()
+        
+        let action: () -> Void
+        
+        init(action: @escaping () -> Void) {
+            self.action = action
+            
+            self.containerButton = HighlightTrackingButton()
+            
+            self.background = UIImageView()
+            if let image = UIImage(bundleImageName: "Chat/Title Panels/SearchTagTab") {
+                self.background.image = image.stretchableImage(withLeftCapWidth: 8, topCapHeight: 0).withRenderingMode(.alwaysTemplate)
+            }
+            
+            super.init(frame: CGRect())
+            
+            self.containerButton.layer.allowsGroupOpacity = true
+            
+            self.containerButton.addSubview(self.background)
+            
+            self.addSubview(self.containerButton)
+            
+            self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.containerButton.highligthedChanged = { [weak self] highlighted in
+                guard let self else {
+                    return
+                }
+                if highlighted {
+                    self.containerButton.alpha = 0.7
+                } else {
+                    Transition.easeInOut(duration: 0.25).setAlpha(view: self.containerButton, alpha: 1.0)
+                }
+            }
+        }
+        
+        required init?(coder: NSCoder) {
+            preconditionFailure()
+        }
+        
+        @objc private func pressed() {
+            self.action()
+        }
+        
+        func update(theme: PresentationTheme, strings: PresentationStrings, height: CGFloat, transition: Transition) -> CGSize {
+            //TODO:localize
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "Add tags", font: Font.medium(14.0), textColor: theme.rootController.navigationBar.accentTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
+            
+            let size = CGSize(width: titleSize.width, height: height)
+            
+            let titleFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - titleSize.height) * 0.5)), size: titleSize)
+            
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(titleView)
+                }
+                titleView.frame = titleFrame
+            }
+            
+            self.background.tintColor = theme.rootController.navigationBar.accentTextColor.withMultipliedAlpha(0.1)
+            
+            if let image = self.background.image {
+                let backgroundFrame = CGRect(origin: CGPoint(x: -6.0, y: floorToScreenPixels((size.height - image.size.height) * 0.5)), size: CGSize(width: size.width + 6.0 + 9.0, height: image.size.height))
+                transition.setFrame(view: self.background, frame: backgroundFrame)
+            }
+            
+            var totalSize = size
+            
+            let textSize = self.text.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "to your Saved Messages", font: Font.regular(14.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
+            let arrowSize = self.arrowIcon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: "Item List/DisclosureArrow",
+                    tintColor: theme.rootController.navigationBar.secondaryTextColor.withMultipliedAlpha(0.6)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
+            let textSpacing: CGFloat = 13.0
+            let arrowSpacing: CGFloat = -5.0
+            
+            totalSize.width += textSpacing
+            
+            let textFrame = CGRect(origin: CGPoint(x: totalSize.width, y: floor((size.height - textSize.height) * 0.5)), size: textSize)
+            if let textView = self.text.view {
+                if textView.superview == nil {
+                    textView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(textView)
+                }
+                textView.frame = textFrame
+            }
+            totalSize.width += textSize.width
+            totalSize.width += arrowSpacing
+            
+            let arrowFrame = CGRect(origin: CGPoint(x: totalSize.width, y: 1.0 + floor((size.height - arrowSize.height) * 0.5)), size: arrowSize)
+            if let arrowIconView = self.arrowIcon.view {
+                if arrowIconView.superview == nil {
+                    arrowIconView.isUserInteractionEnabled = false
+                    self.containerButton.addSubview(arrowIconView)
+                }
+                arrowIconView.frame = arrowFrame
+            }
+            totalSize.width += arrowSize.width
+            
+            transition.setFrame(view: self.containerButton, frame: CGRect(origin: CGPoint(), size: totalSize))
+            
+            return totalSize
         }
     }
     
@@ -187,7 +319,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             let counterSize = self.counter.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: title, font: Font.regular(14.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
+                    text: .plain(NSAttributedString(string: title, font: Font.regular(11.0), textColor: isSelected ? theme.list.itemCheckColors.foregroundColor : theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.6)))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -217,7 +349,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
             if theme.overallDarkAppearance {
                 self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : UIColor(white: 1.0, alpha: 0.1)
             } else {
-                self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : theme.list.controlSecondaryColor
+                self.background.tintColor = isSelected ? theme.list.itemCheckColors.fillColor : theme.rootController.navigationSearchBar.inputFillColor
             }
             if let image = self.background.image {
                 let backgroundFrame = CGRect(origin: CGPoint(x: -6.0, y: floorToScreenPixels((size.height - image.size.height) * 0.5)), size: CGSize(width: size.width + 6.0 + 9.0, height: image.size.height))
@@ -253,6 +385,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
     
     private var items: [Item] = []
     private var itemViews: [MessageReaction.Reaction: ItemView] = [:]
+    private var promoView: PromoView?
     
     private var itemsDisposable: Disposable?
     
@@ -379,100 +512,145 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         contentSize.width += containerInsets.left
         
         var validIds: [MessageReaction.Reaction] = []
-        var isFirst = true
-        for item in self.items {
-            if isFirst {
-                isFirst = false
-            } else {
-                contentSize.width += itemSpacing
-            }
-            let itemId = item.reaction
-            validIds.append(itemId)
-            
+        
+        if !params.interfaceState.isPremium {
+            let promoView: PromoView
             var itemTransition = transition
-            var animateIn = false
-            let itemView: ItemView
-            if let current = self.itemViews[itemId] {
-                itemView = current
+            if let current = self.promoView {
+                promoView = current
             } else {
                 itemTransition = .immediate
-                animateIn = true
-                let reaction = item.reaction
-                itemView = ItemView(context: self.context, action: { [weak self] in
-                    guard let self else {
+                promoView = PromoView(action: { [weak self] in
+                    guard let self, let interfaceInteraction = self.interfaceInteraction else {
                         return
                     }
-                    
-                    let tag = ReactionsMessageAttribute.messageTag(reaction: reaction)
-                    
-                    self.interfaceInteraction?.updateHistoryFilter({ filter in
-                        var tags: [EngineMessage.CustomTag] = filter?.customTags ?? []
-                        if let index = tags.firstIndex(of: tag) {
-                            tags.remove(at: index)
-                        } else {
-                            tags.append(tag)
-                        }
-                        if tags.isEmpty {
-                            return nil
-                        } else {
-                            return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: filter?.isActive ?? true)
-                        }
-                    })
-                    
-                    if let itemView = self.itemViews[reaction] {
-                        self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -46.0, dy: 0.0), animated: true)
-                    }
-                }, contextGesture: { [weak self] gesture, sourceNode in
-                    guard let self, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
-                        gesture.cancel()
-                        return
-                    }
-                    
-                    var items: [ContextMenuItem] = []
-                    
-                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
                     //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] c, a in
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = self.context.sharedContext.makePremiumDemoController(context: self.context, subject: .uniqueReactions, action: { [weak self] in
                         guard let self else {
-                            a(.default)
                             return
                         }
                         
-                        c.dismiss(completion: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            self.openEditTagTitle(reaction: reaction)
-                        })
-                    })))
-                    
-                    let controller = ContextController(presentationData: presentationData, source: .extracted(TagContextExtractedContentSource(controller: chatController, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
-                    interfaceInteraction.presentGlobalOverlayController(controller, nil)
+                        let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    interfaceInteraction.chatController()?.push(controller)
                 })
-                self.itemViews[itemId] = itemView
-                self.scrollView.addSubview(itemView)
+                self.promoView = promoView
+                self.scrollView.addSubview(promoView)
             }
             
-            var isSelected = false
-            if let historyFilter = params.interfaceState.historyFilter {
-                if historyFilter.customTags.contains(ReactionsMessageAttribute.messageTag(reaction: item.reaction)) {
-                    isSelected = true
-                }
-            }
-            let itemSize = itemView.update(item: item, isSelected: isSelected, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
+            let itemSize = promoView.update(theme: params.interfaceState.theme, strings: params.interfaceState.strings, height: panelHeight, transition: .immediate)
             let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
             
-            itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
-            if animateIn && transition.isAnimated {
-                itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                transition.animateTransformScale(view: itemView, from: 0.001)
-            }
-            
-            itemView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+            itemTransition.updatePosition(layer: promoView.layer, position: itemFrame.center)
+            promoView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
             
             contentSize.width += itemSize.width
+        } else {
+            if let promoView = self.promoView {
+                self.promoView = nil
+                promoView.removeFromSuperview()
+            }
+            
+            var isFirst = true
+            for item in self.items {
+                if isFirst {
+                    isFirst = false
+                } else {
+                    contentSize.width += itemSpacing
+                }
+                let itemId = item.reaction
+                validIds.append(itemId)
+                
+                var itemTransition = transition
+                var animateIn = false
+                let itemView: ItemView
+                if let current = self.itemViews[itemId] {
+                    itemView = current
+                } else {
+                    itemTransition = .immediate
+                    animateIn = true
+                    let reaction = item.reaction
+                    itemView = ItemView(context: self.context, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        let tag = ReactionsMessageAttribute.messageTag(reaction: reaction)
+                        
+                        self.interfaceInteraction?.updateHistoryFilter({ filter in
+                            var tags: [EngineMessage.CustomTag] = filter?.customTags ?? []
+                            if let index = tags.firstIndex(of: tag) {
+                                tags.remove(at: index)
+                            } else {
+                                tags.append(tag)
+                            }
+                            if tags.isEmpty {
+                                return nil
+                            } else {
+                                return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: filter?.isActive ?? true)
+                            }
+                        })
+                        
+                        if let itemView = self.itemViews[reaction] {
+                            self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -46.0, dy: 0.0), animated: true)
+                        }
+                    }, contextGesture: { [weak self] gesture, sourceNode in
+                        guard let self, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
+                            gesture.cancel()
+                            return
+                        }
+                        
+                        var items: [ContextMenuItem] = []
+                        
+                        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                        //TODO:localize
+                        items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, a in
+                            guard let self else {
+                                a(.default)
+                                return
+                            }
+                            
+                            c.dismiss(completion: { [weak self] in
+                                guard let self, let item = self.items.first(where: { $0.reaction == reaction }) else {
+                                    return
+                                }
+                                self.openEditTagTitle(reaction: reaction, hasTitle: item.title != nil)
+                            })
+                        })))
+                        
+                        let controller = ContextController(presentationData: presentationData, source: .extracted(TagContextExtractedContentSource(controller: chatController, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+                        interfaceInteraction.presentGlobalOverlayController(controller, nil)
+                    })
+                    self.itemViews[itemId] = itemView
+                    self.scrollView.addSubview(itemView)
+                }
+                
+                var isSelected = false
+                if let historyFilter = params.interfaceState.historyFilter {
+                    if historyFilter.customTags.contains(ReactionsMessageAttribute.messageTag(reaction: item.reaction)) {
+                        isSelected = true
+                    }
+                }
+                let itemSize = itemView.update(item: item, isSelected: isSelected, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
+                let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
+                
+                itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
+                if animateIn && transition.isAnimated {
+                    itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                    transition.animateTransformScale(view: itemView, from: 0.001)
+                }
+                
+                itemView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+                
+                contentSize.width += itemSize.width
+            }
         }
         var removedIds: [MessageReaction.Reaction] = []
         for (id, itemView) in self.itemViews {
@@ -504,16 +682,37 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         }
     }
     
-    private func openEditTagTitle(reaction: MessageReaction.Reaction) {
-        let _ = (self.context.engine.stickers.savedMessageTagData()
+    private func openEditTagTitle(reaction: MessageReaction.Reaction, hasTitle: Bool) {
+        //TODO:localize
+        let optionTitle = hasTitle ? "Edit Name" : "Add Name"
+        
+        let reactionFile: Signal<TelegramMediaFile?, NoError>
+        switch reaction {
+        case .builtin:
+            reactionFile = self.context.engine.stickers.availableReactions()
+            |> take(1)
+            |> map { availableReactions -> TelegramMediaFile? in
+                return availableReactions?.reactions.first(where: { $0.value == reaction })?.selectAnimation
+            }
+        case let .custom(fileId):
+            reactionFile = self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+            |> map { files -> TelegramMediaFile? in
+                return files.values.first
+            }
+        }
+        
+        let _ = (combineLatest(
+            self.context.engine.stickers.savedMessageTagData(),
+            reactionFile
+        )
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags in
-            guard let self, let savedMessageTags else {
+        |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags, reactionFile in
+            guard let self, let reactionFile, let savedMessageTags else {
                 return
             }
             
             //TODO:localize
-            let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: "Edit Title", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", characterLimit: 10, apply: { [weak self] value in
+            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: "You can label your emoji tag with a text name.", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
                 guard let self else {
                     return
                 }

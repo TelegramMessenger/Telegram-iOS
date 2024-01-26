@@ -13,90 +13,137 @@ import TooltipUI
 import StickerPackPreviewUI
 import TextNodeWithEntities
 import ChatPresentationInterfaceState
-import PromptUI
+import SavedTagNameAlertController
 
 extension ChatControllerImpl {
     func openMessageReactionContextMenu(message: Message, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?, value: MessageReaction.Reaction) {
+        if !self.chatDisplayNode.historyNode.rotated {
+            gesture?.cancel()
+            return
+        }
+        
         if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
-            var items: [ContextMenuItem] = []
+            let reactionFile: Signal<TelegramMediaFile?, NoError>
+            switch value {
+            case .builtin:
+                reactionFile = self.context.engine.stickers.availableReactions()
+                |> take(1)
+                |> map { availableReactions -> TelegramMediaFile? in
+                    return availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
+                }
+            case let .custom(fileId):
+                reactionFile = self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                |> map { files -> TelegramMediaFile? in
+                    return files.values.first
+                }
+            }
             
-            let tags: [EngineMessage.CustomTag] = [ReactionsMessageAttribute.messageTag(reaction: value)]
-            
-            if self.presentationInterfaceState.historyFilter?.customTags != tags {
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagFilter"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak self] _, a in
+            let _ = (combineLatest(queue: .mainQueue(),
+                self.context.engine.stickers.savedMessageTagData(),
+                reactionFile
+            )
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags, reactionFile in
+                guard let self, let savedMessageTags else {
+                    return
+                }
+                guard let reactionFile else {
+                    return
+                }
+                
+                var items: [ContextMenuItem] = []
+                
+                let tags: [EngineMessage.CustomTag] = [ReactionsMessageAttribute.messageTag(reaction: value)]
+                
+                var hasTitle = false
+                if let tag = savedMessageTags.tags.first(where: { $0.reaction == value }) {
+                    if let title = tag.title, !title.isEmpty {
+                        hasTitle = true
+                    }
+                }
+                
+                let optionTitle = hasTitle ? "Edit Name" : "Add Name"
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: optionTitle, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, a in
                     guard let self else {
                         a(.default)
                         return
                     }
-                    self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
-                    
-                    self.interfaceInteraction?.updateHistoryFilter { _ in
-                        return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
-                    }
-                    
-                    a(.default)
-                })))
-            }
-            
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
-                guard let self else {
-                    a(.default)
-                    return
-                }
-                a(.default)
-                
-                let _ = (self.context.engine.stickers.savedMessageTagData()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags in
-                    guard let self, let savedMessageTags else {
-                        return
-                    }
-                    
-                    let reaction = value
-                    
-                    //TODO:localize
-                    let promptController = promptController(sharedContext: self.context.sharedContext, updatedPresentationData: nil, text: "Edit Title", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", characterLimit: 10, apply: { [weak self] value in
+                    c.dismiss(completion: { [weak self] in
                         guard let self else {
                             return
                         }
                         
-                        if let value {
-                            let _ = self.context.engine.stickers.setSavedMessageTagTitle(reaction: reaction, title: value.isEmpty ? nil : value).start()
-                        }
+                        let _ = (self.context.engine.stickers.savedMessageTagData()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags in
+                            guard let self, let savedMessageTags else {
+                                return
+                            }
+                            
+                            let reaction = value
+                            
+                            //TODO:localize
+                            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: "You can label your emoji tag with a text name.", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                if let value {
+                                    let _ = self.context.engine.stickers.setSavedMessageTagTitle(reaction: reaction, title: value.isEmpty ? nil : value).start()
+                                }
+                            })
+                            self.interfaceInteraction?.presentController(promptController, nil)
+                        })
                     })
-                    self.interfaceInteraction?.presentController(promptController, nil)
+                })))
+                
+                if self.presentationInterfaceState.historyFilter?.customTags != tags {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagFilter"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        guard let self else {
+                            a(.default)
+                            return
+                        }
+                        self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
+                        
+                        self.interfaceInteraction?.updateHistoryFilter { _ in
+                            return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
+                        }
+                        
+                        a(.default)
+                    })))
+                }
+                
+                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagRemove"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak self] _, a in
+                    a(.dismissWithoutContent)
+                    guard let self else {
+                        return
+                    }
+                    self.controllerInteraction?.updateMessageReaction(message, .reaction(value), true)
+                })))
+                
+                self.canReadHistory.set(false)
+                
+                let controller = ContextController(presentationData: self.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, contentView: sourceView)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+                controller.dismissed = { [weak self] in
+                    self?.canReadHistory.set(true)
+                }
+                
+                self.forEachController({ controller in
+                    if let controller = controller as? TooltipScreen {
+                        controller.dismiss()
+                    }
+                    return true
                 })
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_RemoveTag, textColor: .destructive, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagRemove"), color: theme.contextMenu.destructiveColor)
-            }, action: { [weak self] _, a in
-                a(.dismissWithoutContent)
-                guard let self else {
-                    return
-                }
-                self.controllerInteraction?.updateMessageReaction(message, .reaction(value))
-            })))
-            
-            self.canReadHistory.set(false)
-            
-            let controller = ContextController(presentationData: self.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, contentView: sourceView)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
-            controller.dismissed = { [weak self] in
-                self?.canReadHistory.set(true)
-            }
-            
-            self.forEachController({ controller in
-                if let controller = controller as? TooltipScreen {
-                    controller.dismiss()
-                }
-                return true
+                self.window?.presentInGlobalOverlay(controller)
             })
-            self.window?.presentInGlobalOverlay(controller)
         } else {
             var customFileIds: [Int64] = []
             if case let .custom(fileId) = value {

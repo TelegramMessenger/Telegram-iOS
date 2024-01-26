@@ -134,7 +134,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
         }
         
         self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceView, value in
@@ -524,7 +524,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))

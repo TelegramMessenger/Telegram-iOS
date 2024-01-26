@@ -48,11 +48,15 @@ protocol ReactionItemNode: ASDisplayNode {
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition)
 }
 
+private let lockedBackgroundImage: UIImage = generateFilledCircleImage(diameter: 12.0, color: .white)!.withRenderingMode(.alwaysTemplate)
+private let lockedBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeLock"), color: .white)
+
 public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
     let theme: PresentationTheme
     let item: ReactionItem
     private let loopIdle: Bool
+    private let isLocked: Bool
     private let hasAppearAnimation: Bool
     private let useDirectRendering: Bool
     
@@ -65,6 +69,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     private var stillAnimationNode: AnimatedStickerNode?
     private var customContentsNode: ASDisplayNode?
     private var animationNode: AnimatedStickerNode?
+    
+    private var lockBackgroundView: UIImageView?
+    private var lockIconView: UIImageView?
     
     private var dismissedStillAnimationNodes: [AnimatedStickerNode] = []
     
@@ -91,11 +98,12 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         return self.staticAnimationNode.currentFrameImage != nil
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, loopIdle: Bool, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
+    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, loopIdle: Bool, isLocked: Bool, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
         self.context = context
         self.theme = theme
         self.item = item
         self.loopIdle = loopIdle
+        self.isLocked = isLocked
         self.hasAppearAnimation = hasAppearAnimation
         self.useDirectRendering = useDirectRendering
         
@@ -141,6 +149,25 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .standalone(resource: item.listAnimation.resource)).start()
         if let applicationAnimation = item.applicationAnimation {
             self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .standalone(resource: applicationAnimation.resource)).start()
+        }
+        
+        if self.isLocked {
+            let lockBackgroundView = UIImageView(image: lockedBackgroundImage)
+            self.lockBackgroundView = lockBackgroundView
+            self.view.addSubview(lockBackgroundView)
+            
+            let lockIconView = UIImageView(image: lockedBadgeIcon)
+            self.lockIconView = lockIconView
+            self.view.addSubview(lockIconView)
+            
+            if let staticAnimationNode = self.staticAnimationNode as? DefaultAnimatedStickerNodeImpl {
+                staticAnimationNode.frameColorUpdated = { [weak lockBackgroundView] color in
+                    guard let lockBackgroundView else {
+                        return
+                    }
+                    lockBackgroundView.tintColor = color
+                }
+            }
         }
     }
     
@@ -433,6 +460,17 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
         if let customContentsNode = self.customContentsNode {
             transition.updateFrame(node: customContentsNode, frame: animationFrame)
+        }
+        
+        if let lockBackgroundView = self.lockBackgroundView, let lockIconView = self.lockIconView, let iconImage = lockIconView.image {
+            let lockSize: CGFloat = 12.0
+            let iconBackgroundFrame = CGRect(origin: CGPoint(x: animationFrame.maxX - lockSize, y: animationFrame.maxY - lockSize), size: CGSize(width: lockSize, height: lockSize))
+            transition.updateFrame(view: lockBackgroundView, frame: iconBackgroundFrame)
+            
+            let iconFactor: CGFloat = 0.7
+            let iconImageSize = CGSize(width: floor(iconImage.size.width * iconFactor), height: floor(iconImage.size.height * iconFactor))
+            
+            transition.updateFrame(view: lockIconView, frame: CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floorToScreenPixels((iconBackgroundFrame.width - iconImageSize.width) * 0.5), y: iconBackgroundFrame.minY + floorToScreenPixels((iconBackgroundFrame.height - iconImageSize.height) * 0.5)), size: iconImageSize))
         }
     }
 }

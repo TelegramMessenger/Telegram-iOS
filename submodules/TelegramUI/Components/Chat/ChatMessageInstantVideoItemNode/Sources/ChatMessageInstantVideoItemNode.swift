@@ -613,6 +613,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                     savedMessageTags: item.associatedData.savedMessageTags,
                     reactions: reactions,
                     message: item.message,
+                    associatedData: item.associatedData,
                     accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
@@ -833,7 +834,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                                     guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                         return
                                     }
-                                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
                                 }
                                 reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
                                     guard let strongSelf = weakSelf.value, let item = strongSelf.item else {

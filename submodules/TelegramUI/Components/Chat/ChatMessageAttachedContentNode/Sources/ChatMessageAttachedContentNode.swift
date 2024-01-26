@@ -662,7 +662,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 replyCount: dateReplies,
                                 isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                                 hasAutoremove: message.isSelfExpiring,
-                                canViewReactionList: canViewMessageReactionList(message: message),
+                                canViewReactionList: canViewMessageReactionList(message: message, isInline: associatedData.isInline),
                                 animationCache: controllerInteraction.presentationContext.animationCache,
                                 animationRenderer: controllerInteraction.presentationContext.animationRenderer
                             ))
@@ -1158,11 +1158,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     }
                                     self.openMedia?(mode)
                                 }
-                                contentMedia.updateMessageReaction = { [weak controllerInteraction] message, value in
+                                contentMedia.updateMessageReaction = { [weak controllerInteraction] message, value, force in
                                     guard let controllerInteraction else {
                                         return
                                     }
-                                    controllerInteraction.updateMessageReaction(message, value)
+                                    controllerInteraction.updateMessageReaction(message, value, force)
                                 }
                                 contentMedia.visibility = self.visibility != .none
                                 
@@ -1284,7 +1284,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     guard let self, let message = self.message else {
                                         return
                                     }
-                                    controllerInteraction.updateMessageReaction(message, .reaction(value))
+                                    controllerInteraction.updateMessageReaction(message, .reaction(value), false)
                                 }
                                 
                                 statusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
