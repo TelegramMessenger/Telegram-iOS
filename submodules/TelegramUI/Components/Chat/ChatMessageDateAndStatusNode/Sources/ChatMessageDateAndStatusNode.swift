@@ -394,6 +394,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     selectedForeground: themeColors.reactionActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
                     extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    extractedSelectedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
                     deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                     selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )
@@ -406,7 +407,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     deselectedForeground: themeColors.reactionInactiveForeground.argb,
                     selectedForeground: themeColors.reactionActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    extractedSelectedForeground: arguments.presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
                     deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                     selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )
@@ -755,8 +757,6 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 )
             case let .trailingContent(contentWidth, reactionSettings):
                 if let reactionSettings = reactionSettings, !reactionSettings.displayInline {
-                    let isTag = arguments.areReactionsTags
-                    
                     var totalReactionCount: Int = 0
                     for reaction in arguments.reactions {
                         totalReactionCount += Int(reaction.count)
@@ -768,11 +768,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             guard let strongSelf = self else {
                                 return
                             }
-                            if isTag {
-                                strongSelf.openReactionPreview?(nil, itemNode.containerView, value)
-                            } else {
-                                strongSelf.reactionSelected?(itemNode, value)
-                            }
+                            strongSelf.reactionSelected?(itemNode, value)
                         },
                         reactions: arguments.reactions.map { reaction in
                             var centerAnimation: TelegramMediaFile?

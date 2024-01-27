@@ -582,7 +582,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message),
+                canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                 animationCache: item.controllerInteraction.presentationContext.animationCache,
                 animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
             ))

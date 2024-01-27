@@ -35,9 +35,10 @@ final class StoryItemContentComponent: Component {
     let audioMode: StoryContentItem.AudioMode
     let isVideoBuffering: Bool
     let isCurrent: Bool
+    let preferHighQuality: Bool
     let activateReaction: (UIView, MessageReaction.Reaction) -> Void
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, entityFiles: [MediaId: TelegramMediaFile], audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, entityFiles: [MediaId: TelegramMediaFile], audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, preferHighQuality: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
 		self.context = context
         self.strings = strings
         self.peer = peer
@@ -47,6 +48,7 @@ final class StoryItemContentComponent: Component {
         self.audioMode = audioMode
         self.isVideoBuffering = isVideoBuffering
         self.isCurrent = isCurrent
+        self.preferHighQuality = preferHighQuality
         self.activateReaction = activateReaction
 	}
 
@@ -73,6 +75,9 @@ final class StoryItemContentComponent: Component {
             return false
         }
         if lhs.isCurrent != rhs.isCurrent {
+            return false
+        }
+        if lhs.preferHighQuality != rhs.preferHighQuality {
             return false
         }
 		return true
@@ -576,7 +581,7 @@ final class StoryItemContentComponent: Component {
             
             let selectedMedia: EngineMedia
             var messageMedia: EngineMedia?
-            if component.context.sharedContext.immediateExperimentalUISettings.alternativeStoryMedia, let alternativeMedia = component.item.alternativeMedia {
+            if !component.preferHighQuality, let alternativeMedia = component.item.alternativeMedia {
                 selectedMedia = alternativeMedia
                 
                 switch alternativeMedia {
@@ -610,6 +615,9 @@ final class StoryItemContentComponent: Component {
                 reloadMedia = true
                 
                 if let videoNode = self.videoNode {
+                    self.videoProgressDisposable?.dispose()
+                    self.videoProgressDisposable = nil
+                    
                     self.videoNode = nil
                     videoNode.view.removeFromSuperview()
                 }

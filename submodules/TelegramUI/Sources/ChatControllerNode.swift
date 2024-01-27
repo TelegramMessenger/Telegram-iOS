@@ -921,10 +921,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return true
             }
             
-            if strongSelf.chatPresentationInterfaceState.search != nil {
-                return true
-            }
-            
             return false
         }
         

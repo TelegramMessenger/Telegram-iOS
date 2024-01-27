@@ -62,6 +62,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
         reactions: ReactionsMessageAttribute,
         accountPeer: EnginePeer?,
         message: Message,
+        associatedData: ChatMessageItemAssociatedData,
         alignment: DisplayAlignment,
         constrainedWidth: CGFloat,
         type: DisplayType
@@ -77,7 +78,8 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 deselectedForeground: themeColors.reactionInactiveForeground.argb,
                 selectedForeground: themeColors.reactionActiveForeground.argb,
                 extractedBackground: presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb,
+                extractedForeground: presentationData.theme.theme.contextMenu.primaryColor.argb,
+                extractedSelectedForeground: presentationData.theme.theme.contextMenu.primaryColor.argb,
                 deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                 selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
             )
@@ -89,7 +91,8 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 deselectedForeground: themeColors.reactionInactiveForeground.argb,
                 selectedForeground: themeColors.reactionActiveForeground.argb,
                 extractedBackground: presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb,
+                extractedForeground: presentationData.theme.theme.contextMenu.primaryColor.argb,
+                extractedSelectedForeground: presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
                 deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                 selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
             )
@@ -106,7 +109,8 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 deselectedForeground: themeColors.reactionInactiveForeground.argb,
                 selectedForeground: themeColors.reactionActiveForeground.argb,
                 extractedBackground: presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb,
+                extractedForeground: presentationData.theme.theme.contextMenu.primaryColor.argb,
+                extractedSelectedForeground: presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
                 deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                 selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
             )
@@ -121,15 +125,11 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
         
         let reactionButtonsResult = self.container.update(
             context: context,
-            action: { [weak self] itemView, value in
+            action: { [weak self] _, value in
                 guard let self else {
                     return
                 }
-                if reactions.isTags {
-                    self.openReactionPreview?(nil, itemView.containerView, value)
-                } else {
-                    self.reactionSelected?(value)
-                }
+                self.reactionSelected?(value)
             },
             reactions: reactions.reactions.map { reaction in
                 var centerAnimation: TelegramMediaFile?
@@ -350,7 +350,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                     let itemValue = item.value
                     let itemNode = item.node
                     item.node.view.isGestureEnabled = true
-                    let canViewReactionList = canViewMessageReactionList(message: message)
+                    let canViewReactionList = canViewMessageReactionList(message: message, isInline: associatedData.isInline)
                     item.node.view.activateAfterCompletion = !canViewReactionList
                     item.node.view.activated = { [weak itemNode] gesture, _ in
                         guard let strongSelf = self, let itemNode = itemNode else {
@@ -490,7 +490,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
         }
         
         self.buttonsNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
@@ -526,7 +526,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
                     context: item.context,
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
-                    availableReactions: item.associatedData.availableReactions, savedMessageTags: item.associatedData.savedMessageTags, reactions: reactionsAttribute, accountPeer: item.associatedData.accountPeer, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
+                    availableReactions: item.associatedData.availableReactions, savedMessageTags: item.associatedData.savedMessageTags, reactions: reactionsAttribute, accountPeer: item.associatedData.accountPeer, message: item.message, associatedData: item.associatedData, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
                      
                 return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { boundingWidth in
                     var boundingSize = CGSize()
@@ -607,6 +607,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         public let savedMessageTags: SavedMessageTags?
         public let reactions: ReactionsMessageAttribute
         public let message: Message
+        public let associatedData: ChatMessageItemAssociatedData
         public let accountPeer: EnginePeer?
         public let isIncoming: Bool
         public let constrainedWidth: CGFloat
@@ -619,6 +620,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             savedMessageTags: SavedMessageTags?,
             reactions: ReactionsMessageAttribute,
             message: Message,
+            associatedData: ChatMessageItemAssociatedData,
             accountPeer: EnginePeer?,
             isIncoming: Bool,
             constrainedWidth: CGFloat
@@ -630,6 +632,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             self.savedMessageTags = savedMessageTags
             self.reactions = reactions
             self.message = message
+            self.associatedData = associatedData
             self.accountPeer = accountPeer
             self.isIncoming = isIncoming
             self.constrainedWidth = constrainedWidth
@@ -670,6 +673,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
                 reactions: arguments.reactions,
                 accountPeer: arguments.accountPeer,
                 message: arguments.message,
+                associatedData: arguments.associatedData,
                 alignment: arguments.isIncoming ? .left : .right,
                 constrainedWidth: arguments.constrainedWidth,
                 type: .freeform

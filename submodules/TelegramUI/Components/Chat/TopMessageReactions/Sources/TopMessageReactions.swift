@@ -5,7 +5,65 @@ import Postbox
 import AccountContext
 import ReactionSelectionNode
 
-func tagMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
+public enum AllowedReactions {
+    case set(Set<MessageReaction.Reaction>)
+    case all
+}
+
+public func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
+    if message.id.peerId == context.account.peerId {
+        return .single(.all)
+    }
+    
+    if message.containsSecretMedia {
+        return .single(AllowedReactions.set(Set()))
+    }
+    
+    return combineLatest(
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
+            TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: message.id.peerId)
+        ),
+        context.engine.stickers.availableReactions() |> take(1)
+    )
+    |> map { data, availableReactions -> AllowedReactions? in
+        let (peer, allowedReactions) = data
+        
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= 11 {
+            return .set(Set(effectiveReactions.map(\.value)))
+        }
+        
+        switch allowedReactions {
+        case .unknown:
+            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                if let availableReactions = availableReactions {
+                    return .set(Set(availableReactions.reactions.map(\.value)))
+                } else {
+                    return .set(Set())
+                }
+            }
+            return .all
+        case let .known(value):
+            switch value {
+            case .all:
+                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                    if let availableReactions = availableReactions {
+                        return .set(Set(availableReactions.reactions.map(\.value)))
+                    } else {
+                        return .set(Set())
+                    }
+                }
+                return .all
+            case let .limited(reactions):
+                return .set(Set(reactions))
+            case .empty:
+                return .set(Set())
+            }
+        }
+    }
+}
+
+public func tagMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
     return combineLatest(
         context.engine.stickers.availableReactions(),
         context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudDefaultTagReactions], namespaces: [ItemCollectionId.Namespace.max - 1], aroundIndex: nil, count: 10000000)
@@ -79,7 +137,7 @@ func tagMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoEr
     }
 }
 
-func topMessageReactions(context: AccountContext, message: Message) -> Signal<[ReactionItem], NoError> {
+public func topMessageReactions(context: AccountContext, message: Message) -> Signal<[ReactionItem], NoError> {
     if message.id.peerId == context.account.peerId {
         var loadTags = false
         if let effectiveReactionsAttribute = message.effectiveReactionsAttribute(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {

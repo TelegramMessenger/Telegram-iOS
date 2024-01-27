@@ -455,7 +455,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     
     public var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
     public var activatePinch: ((PinchSourceContainerNode) -> Void)?
-    public var updateMessageReaction: ((Message, ChatControllerInteractionReaction) -> Void)?
+    public var updateMessageReaction: ((Message, ChatControllerInteractionReaction, Bool) -> Void)?
         
     override public init() {
         self.pinchContainerNode = PinchSourceContainerNode()
@@ -877,7 +877,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
                     hasAutoremove: message.isSelfExpiring,
-                    canViewReactionList: canViewMessageReactionList(message: message),
+                    canViewReactionList: canViewMessageReactionList(message: message, isInline: associatedData.isInline),
                     animationCache: presentationContext.animationCache,
                     animationRenderer: presentationContext.animationRenderer
                 ))

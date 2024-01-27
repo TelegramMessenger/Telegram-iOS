@@ -34,6 +34,7 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
             items: reactionItems.map(ReactionContextItem.reaction),
             selectedItems: Set(),
             title: presentationData.strings.Chat_ContextMenuTagsTitle,
+            reactionsLocked: false,
             alwaysAllowPremiumReactions: false,
             allPresetReactionsAreAvailable: true,
             getEmojiContent: { animationCache, animationRenderer in

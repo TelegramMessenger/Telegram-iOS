@@ -55,7 +55,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var crashOnMemoryPressure: Bool
     public var dustEffect: Bool
     public var callV2: Bool
-    public var alternativeStoryMedia: Bool
     public var allowWebViewInspection: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
@@ -90,7 +89,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
             crashOnMemoryPressure: false,
             dustEffect: false,
             callV2: false,
-            alternativeStoryMedia: false,
             allowWebViewInspection: false
         )
     }
@@ -126,7 +124,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         crashOnMemoryPressure: Bool,
         dustEffect: Bool,
         callV2: Bool,
-        alternativeStoryMedia: Bool,
         allowWebViewInspection: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
@@ -159,7 +156,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.crashOnMemoryPressure = crashOnMemoryPressure
         self.dustEffect = dustEffect
         self.callV2 = callV2
-        self.alternativeStoryMedia = alternativeStoryMedia
         self.allowWebViewInspection = allowWebViewInspection
     }
     
@@ -196,7 +192,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.crashOnMemoryPressure = try container.decodeIfPresent(Bool.self, forKey: "crashOnMemoryPressure") ?? false
         self.dustEffect = try container.decodeIfPresent(Bool.self, forKey: "dustEffect") ?? false
         self.callV2 = try container.decodeIfPresent(Bool.self, forKey: "callV2") ?? false
-        self.alternativeStoryMedia = try container.decodeIfPresent(Bool.self, forKey: "alternativeStoryMedia") ?? false
         self.allowWebViewInspection = try container.decodeIfPresent(Bool.self, forKey: "allowWebViewInspection") ?? false
     }
     
@@ -233,7 +228,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.crashOnMemoryPressure, forKey: "crashOnMemoryPressure")
         try container.encode(self.dustEffect, forKey: "dustEffect")
         try container.encode(self.callV2, forKey: "callV2")
-        try container.encode(self.alternativeStoryMedia, forKey: "alternativeStoryMedia")
         try container.encode(self.allowWebViewInspection, forKey: "allowWebViewInspection")
     }
 }

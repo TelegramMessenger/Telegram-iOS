@@ -287,7 +287,9 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         break
     }
     if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation, replyThreadMessage.peerId == accountPeerId {
-        return false
+        if replyThreadMessage.threadId != accountPeerId.toInt64() {
+            return false
+        }
     }
     
     if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
@@ -769,7 +771,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
-        context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })),
+        context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id }), keepUpdated: false),
         context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> take(1),
         infoSummaryData,
@@ -810,10 +812,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             canSelect: canSelect && !isEmbeddedMode,
             resourceStatus: resourceStatus,
             messageActions: isEmbeddedMode ? ChatAvailableMessageActions(
-                options: messageActions.options.intersection([.deleteLocally, .deleteGlobally]),
+                options: messageActions.options.intersection([.deleteLocally, .deleteGlobally, .forward]),
                 banAuthor: nil,
                 disableDelete: true,
-                isCopyProtected: messageActions.isCopyProtected
+                isCopyProtected: messageActions.isCopyProtected,
+                setTag: false,
+                editTags: Set()
             ) : messageActions
         ), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
     }
@@ -1891,13 +1895,22 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
     return false
 }
 
-func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
-    return engine.data.get(
+func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:], keepUpdated: Bool) -> Signal<ChatAvailableMessageActions, NoError> {
+    return engine.data.subscribe(
         TelegramEngine.EngineData.Item.Configuration.Limits(),
         EngineDataMap(Set(messageIds.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)),
-        EngineDataMap(Set(messageIds).map(TelegramEngine.EngineData.Item.Messages.Message.init))
+        EngineDataMap(Set(messageIds).map(TelegramEngine.EngineData.Item.Messages.Message.init)),
+        TelegramEngine.EngineData.Item.Peer.Peer(id: accountPeerId)
     )
-    |> map { limitsConfiguration, peerMap, messageMap -> ChatAvailableMessageActions in
+    |> take(keepUpdated ? Int.max : 1)
+    |> map { limitsConfiguration, peerMap, messageMap, accountPeer -> ChatAvailableMessageActions in
+        let isPremium: Bool
+        if let accountPeer {
+            isPremium = accountPeer.isPremium
+        } else {
+            isPremium = false
+        }
+        
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadPersonalIncoming = false
@@ -1905,6 +1918,9 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         var disableDelete = false
         var isCopyProtected = false
         var isShareProtected = false
+        
+        var setTag = false
+        var commonTags: Set<MessageReaction.Reaction>?
         
         func getPeer(_ peerId: PeerId) -> Peer? {
             if let maybePeer = peerMap[peerId], let peer = maybePeer {
@@ -1933,6 +1949,25 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                 optionsMap[id] = []
             }
             if let message = getMessage(id) {
+                if message.areReactionsTags(accountPeerId: accountPeerId) {
+                    setTag = true
+                    
+                    var messageReactions = Set<MessageReaction.Reaction>()
+                    if let reactionsAttribute = mergedMessageReactions(attributes: message.attributes, isTags: message.areReactionsTags(accountPeerId: accountPeerId)) {
+                        for reaction in reactionsAttribute.reactions {
+                            messageReactions.insert(reaction.value)
+                        }
+                    }
+                    if let commonTagsValue = commonTags {
+                        if commonTagsValue == messageReactions {
+                        } else {
+                            commonTags?.removeAll()
+                        }
+                    } else {
+                        commonTags = messageReactions
+                    }
+                }
+                
                 if message.isCopyProtected() || message.containsSecretMedia {
                     isCopyProtected = true
                 }
@@ -2144,9 +2179,15 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
             if hadPersonalIncoming && optionsMap.values.contains(where: { $0.contains(.deleteGlobally) }) && !reducedOptions.contains(.deleteGlobally) {
                 reducedOptions.insert(.unsendPersonal)
             }
-            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, disableDelete: disableDelete, isCopyProtected: isCopyProtected)
+            
+            if !isPremium {
+                setTag = false
+                commonTags = nil
+            }
+            
+            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, disableDelete: disableDelete, isCopyProtected: isCopyProtected, setTag: setTag, editTags: commonTags ?? Set())
         } else {
-            return ChatAvailableMessageActions(options: [], banAuthor: nil, disableDelete: false, isCopyProtected: isCopyProtected)
+            return ChatAvailableMessageActions(options: [], banAuthor: nil, disableDelete: false, isCopyProtected: isCopyProtected, setTag: false, editTags: Set())
         }
     }
 }

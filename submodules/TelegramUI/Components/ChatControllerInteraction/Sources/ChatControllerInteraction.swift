@@ -144,7 +144,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     public let openPeerMention: (String, Promise<Bool>?) -> Void
     public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
-    public let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
+    public let updateMessageReaction: (Message, ChatControllerInteractionReaction, Bool) -> Void
     public let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void
     public let activateMessagePinch: (PinchSourceContainerNode) -> Void
     public let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
@@ -267,7 +267,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openPeerMention: @escaping (String, Promise<Bool>?) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void,
-        updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,
+        updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction, Bool) -> Void,
         activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId, NavigateToMessageParams) -> Void,

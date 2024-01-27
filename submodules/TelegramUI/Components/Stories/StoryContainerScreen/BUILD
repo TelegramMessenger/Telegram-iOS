@@ -94,7 +94,8 @@ swift_library(
         "//submodules/Components/BalancedTextComponent",
         "//submodules/AnimatedCountLabelNode",
         "//submodules/StickerResources",
-        "//submodules/TelegramUI/Components/Stories/ForwardInfoPanelComponent"
+        "//submodules/TelegramUI/Components/Stories/ForwardInfoPanelComponent",
+        "//submodules/TelegramUI/Components/Stories/StoryQualityUpgradeSheetScreen",
     ],
     visibility = [
         "//visibility:public",

@@ -158,7 +158,11 @@ public struct ChatMessageItemLayoutConstants {
     }
 }
 
-public func canViewMessageReactionList(message: Message) -> Bool {
+public func canViewMessageReactionList(message: Message, isInline: Bool) -> Bool {
+    if isInline {
+        return false
+    }
+    
     var found = false
     var canViewList = false
     for attribute in message.attributes {

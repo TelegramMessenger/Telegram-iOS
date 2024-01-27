@@ -18,7 +18,6 @@ public final class StoryPreloadInfo {
     public let peer: PeerReference
     public let storyId: Int32
     public let media: EngineMedia
-    public let alternativeMedia: EngineMedia?
     public let reactions: [MessageReaction.Reaction]
     public let priority: Priority
     
@@ -26,14 +25,12 @@ public final class StoryPreloadInfo {
         peer: PeerReference,
         storyId: Int32,
         media: EngineMedia,
-        alternativeMedia: EngineMedia?,
         reactions: [MessageReaction.Reaction],
         priority: Priority
     ) {
         self.peer = peer
         self.storyId = storyId
         self.media = media
-        self.alternativeMedia = alternativeMedia
         self.reactions = reactions
         self.priority = priority
     }
@@ -1062,16 +1059,19 @@ public extension TelegramEngine {
             }
         }
         
-        public func preloadStorySubscriptions(isHidden: Bool) -> Signal<[EngineMedia.Id: StoryPreloadInfo], NoError> {
+        public func preloadStorySubscriptions(isHidden: Bool, preferHighQuality: Signal<Bool, NoError>) -> Signal<[EngineMedia.Id: StoryPreloadInfo], NoError> {
             let basicPeerKey = PostboxViewKey.basicPeer(self.account.peerId)
             let subscriptionsKey: PostboxStorySubscriptionsKey = isHidden ? .hidden : .filtered
             let storySubscriptionsKey = PostboxViewKey.storySubscriptions(key: subscriptionsKey)
-            return self.account.postbox.combinedView(keys: [
-                basicPeerKey,
-                storySubscriptionsKey,
-                PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))
-            ])
-            |> mapToSignal { views -> Signal<[EngineMedia.Id: StoryPreloadInfo], NoError> in
+            return combineLatest(
+                self.account.postbox.combinedView(keys: [
+                    basicPeerKey,
+                    storySubscriptionsKey,
+                    PostboxViewKey.storiesState(key: .subscriptions(subscriptionsKey))
+                ]),
+                preferHighQuality
+            )
+            |> mapToSignal { views, preferHighQuality -> Signal<[EngineMedia.Id: StoryPreloadInfo], NoError> in
                 guard let basicPeerView = views.views[basicPeerKey] as? BasicPeerView, let accountPeer = basicPeerView.peer else {
                     return .single([:])
                 }
@@ -1178,11 +1178,17 @@ public extension TelegramEngine {
                             }
                         }
                         
+                        var selectedMedia: EngineMedia
+                        if let alternativeMedia = itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init), !preferHighQuality {
+                            selectedMedia = alternativeMedia
+                        } else {
+                            selectedMedia = EngineMedia(media)
+                        }
+                        
                         resultResources[mediaId] = StoryPreloadInfo(
                             peer: peerReference,
                             storyId: itemAndPeer.item.id,
-                            media: EngineMedia(media),
-                            alternativeMedia: itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init),
+                            media: selectedMedia,
                             reactions: reactions,
                             priority: .top(position: nextPriority)
                         )

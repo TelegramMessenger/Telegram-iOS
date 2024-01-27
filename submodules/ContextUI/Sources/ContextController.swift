@@ -2255,6 +2255,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var reactionItems: [ReactionContextItem]
         public var selectedReactionItems: Set<MessageReaction.Reaction>
         public var reactionsTitle: String?
+        public var reactionsLocked: Bool
         public var animationCache: AnimationCache?
         public var alwaysAllowPremiumReactions: Bool
         public var allPresetReactionsAreAvailable: Bool
@@ -2271,6 +2272,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             reactionItems: [ReactionContextItem] = [],
             selectedReactionItems: Set<MessageReaction.Reaction> = Set(),
             reactionsTitle: String? = nil,
+            reactionsLocked: Bool = false,
             animationCache: AnimationCache? = nil,
             alwaysAllowPremiumReactions: Bool = false,
             allPresetReactionsAreAvailable: Bool = false,
@@ -2287,6 +2289,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.reactionItems = reactionItems
             self.selectedReactionItems = selectedReactionItems
             self.reactionsTitle = reactionsTitle
+            self.reactionsLocked = reactionsLocked
             self.alwaysAllowPremiumReactions = alwaysAllowPremiumReactions
             self.allPresetReactionsAreAvailable = allPresetReactionsAreAvailable
             self.getEmojiContent = getEmojiContent
@@ -2303,6 +2306,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.reactionItems = []
             self.selectedReactionItems = Set()
             self.reactionsTitle = nil
+            self.reactionsLocked = false
             self.alwaysAllowPremiumReactions = false
             self.allPresetReactionsAreAvailable = false
             self.getEmojiContent = nil

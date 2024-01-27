@@ -578,7 +578,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && (!item.associatedData.isInPinnedListMode || isReplyThread),
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
@@ -719,7 +719,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                         guard let strongSelf, let item = strongSelf.item else {
                                             return
                                         }
-                                        item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                                        item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
                                     }
                                     statusNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
                                         guard let strongSelf, let item = strongSelf.item else {

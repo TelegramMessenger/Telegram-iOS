@@ -12,13 +12,15 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
         return nil
     }
-    if let search = chatPresentationInterfaceState.search, chatPresentationInterfaceState.hasSearchTags {
+    if let search = chatPresentationInterfaceState.search {
         var matches = false
         if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId {
-            if case .everything = search.domain {
-                matches = true
-            } else if case .tag = search.domain, search.query.isEmpty {
-                matches = true
+            if chatPresentationInterfaceState.hasSearchTags || !chatPresentationInterfaceState.isPremium {
+                if case .everything = search.domain {
+                    matches = true
+                } else if case .tag = search.domain, search.query.isEmpty {
+                    matches = true
+                }
             }
         }
         

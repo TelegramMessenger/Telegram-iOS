@@ -121,6 +121,7 @@ import MediaEditorScreen
 import WallpaperGalleryScreen
 import WallpaperGridScreen
 import VideoMessageCameraScreen
+import TopMessageReactions
 
 public enum ChatControllerPeekActions {
     case standard
@@ -1253,7 +1254,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openMessageReactionContextMenu(message: message, sourceView: sourceView, gesture: gesture, value: value)
-        }, updateMessageReaction: { [weak self] initialMessage, reaction in
+        }, updateMessageReaction: { [weak self] initialMessage, reaction, force in
             guard let strongSelf = self else {
                 return
             }
@@ -1261,6 +1262,74 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             guard let message = messages.first else {
+                return
+            }
+            
+            if !force && message.areReactionsTags(accountPeerId: strongSelf.context.account.peerId) {
+                if case .pinnedMessages = strongSelf.subject {
+                    return
+                }
+                
+                if !strongSelf.presentationInterfaceState.isPremium {
+                    //TODO:localize
+                    let context = strongSelf.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                        let controller = PremiumIntroScreen(context: context, source: .reactions)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    strongSelf.push(controller)
+                    return
+                }
+                
+                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                    guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item else {
+                        return
+                    }
+                    guard item.message.id == message.id else {
+                        return
+                    }
+                    
+                    let chosenReaction: MessageReaction.Reaction?
+                    
+                    switch reaction {
+                    case .default:
+                        switch item.associatedData.defaultReaction {
+                        case .none:
+                            chosenReaction = nil
+                        case let .builtin(value):
+                            chosenReaction = .builtin(value)
+                        case let .custom(fileId):
+                            chosenReaction = .custom(fileId)
+                        }
+                    case let .reaction(value):
+                        switch value {
+                        case let .builtin(value):
+                            chosenReaction = .builtin(value)
+                        case let .custom(fileId):
+                            chosenReaction = .custom(fileId)
+                        }
+                    }
+                    
+                    guard let chosenReaction = chosenReaction else {
+                        return
+                    }
+                    
+                    let tags: [EngineMessage.CustomTag] = [ReactionsMessageAttribute.messageTag(reaction: chosenReaction)]
+                    if strongSelf.presentationInterfaceState.historyFilter?.customTags == tags {
+                        strongSelf.interfaceInteraction?.updateHistoryFilter { _ in
+                            return nil
+                        }
+                    } else {
+                        strongSelf.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
+                        strongSelf.interfaceInteraction?.updateHistoryFilter { _ in
+                            return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
+                        }
+                    }
+                }
                 return
             }
             
@@ -1275,16 +1344,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     guard item.message.id == message.id else {
-                        return
-                    }
-                    
-                    if !canAddMessageReactions(message: message) {
-                        itemNode.openMessageContextMenu()
-                        return
-                    }
-                    
-                    if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
-                        itemNode.openMessageContextMenu()
                         return
                     }
                     
@@ -1328,6 +1387,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if removedReaction == nil {
+                        if !canAddMessageReactions(message: message) {
+                            itemNode.openMessageContextMenu()
+                            return
+                        }
+                        
+                        if strongSelf.context.sharedContext.immediateExperimentalUISettings.disableQuickReaction {
+                            itemNode.openMessageContextMenu()
+                            return
+                        }
+                        
                         guard let allowedReactions = allowedReactions else {
                             itemNode.openMessageContextMenu()
                             return
@@ -2742,7 +2811,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return .none
                 }
                 if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.peerId == strongSelf.context.account.peerId {
-                    return .none
+                    if replyThreadMessage.threadId != strongSelf.context.account.peerId.toInt64() {
+                        return .none
+                    }
                 }
                 if case .peer = strongSelf.chatLocation, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
                     if message.threadId == nil {
@@ -3908,7 +3979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                 }
-            case let .join(_, joinHash):
+            case let .join(_, joinHash, _):
                 self.controllerInteraction?.openJoinLink(joinHash)
             case let .webPage(_, url):
                 self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: true))
@@ -8551,7 +8622,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
-                    strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
+                    strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, keepUpdated: false)
                     |> deliverOnMainQueue).startStrict(next: { actions in
                         if let strongSelf = self, !actions.options.isEmpty {
                             if let banAuthor = actions.banAuthor {
@@ -8665,7 +8736,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
                 let messageIds = Set(messages.map { $0.id })
-                strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds)
+                strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, keepUpdated: false)
                 |> deliverOnMainQueue).startStrict(next: { actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
@@ -17997,64 +18068,6 @@ final class ChatControllerContextReferenceContentSource: ContextReferenceContent
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets)
-    }
-}
-
-enum AllowedReactions {
-    case set(Set<MessageReaction.Reaction>)
-    case all
-}
-
-func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
-    if message.id.peerId == context.account.peerId {
-        return .single(.all)
-    }
-    
-    if message.containsSecretMedia {
-        return .single(AllowedReactions.set(Set()))
-    }
-    
-    return combineLatest(
-        context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
-            TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: message.id.peerId)
-        ),
-        context.engine.stickers.availableReactions() |> take(1)
-    )
-    |> map { data, availableReactions -> AllowedReactions? in
-        let (peer, allowedReactions) = data
-        
-        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= 11 {
-            return .set(Set(effectiveReactions.map(\.value)))
-        }
-        
-        switch allowedReactions {
-        case .unknown:
-            if case let .channel(channel) = peer, case .broadcast = channel.info {
-                if let availableReactions = availableReactions {
-                    return .set(Set(availableReactions.reactions.map(\.value)))
-                } else {
-                    return .set(Set())
-                }
-            }
-            return .all
-        case let .known(value):
-            switch value {
-            case .all:
-                if case let .channel(channel) = peer, case .broadcast = channel.info {
-                    if let availableReactions = availableReactions {
-                        return .set(Set(availableReactions.reactions.map(\.value)))
-                    } else {
-                        return .set(Set())
-                    }
-                }
-                return .all
-            case let .limited(reactions):
-                return .set(Set(reactions))
-            case .empty:
-                return .set(Set())
-            }
-        }
     }
 }
 
