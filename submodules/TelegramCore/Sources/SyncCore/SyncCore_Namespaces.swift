@@ -120,6 +120,7 @@ public struct Namespaces {
         public static let recommendedChannels: Int8 = 33
         public static let peerColorOptions: Int8 = 34
         public static let savedMessageTags: Int8 = 35
+        public static let applicationIcons: Int8 = 36
     }
     
     public struct UnorderedItemList {
