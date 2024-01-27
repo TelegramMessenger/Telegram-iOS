@@ -1656,13 +1656,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: backgroundEffectNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         }
         
-        transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
+        let wallpaperBounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width - wrappingInsets.left - wrappingInsets.right, height: layout.size.height)
+        
+        transition.updateFrame(node: self.backgroundNode, frame: wallpaperBounds)
         
         var displayMode: WallpaperDisplayMode = .aspectFill
         if case .regular = layout.metrics.widthClass, layout.size.height == layout.deviceMetrics.screenSize.width {
             displayMode = .aspectFit
         }
-        self.backgroundNode.updateLayout(size: contentBounds.size, displayMode: displayMode, transition: transition)
+        self.backgroundNode.updateLayout(size: wallpaperBounds.size, displayMode: displayMode, transition: transition)
 
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
@@ -1795,6 +1797,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var inputBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - bottomOverflowOffset - inputPanelsHeight), size: CGSize(width: layout.size.width, height: inputPanelsHeight + inputBackgroundInset))
         if self.dismissedAsOverlay {
             inputBackgroundFrame.origin.y = layout.size.height
+        }
+        if case .standard(.embedded) = self.chatPresentationInterfaceState.mode {
+            if self.inputPanelNode == nil {
+                inputBackgroundFrame.origin.y = layout.size.height
+            }
         }
         
         let additionalScrollDistance: CGFloat = 0.0
@@ -2033,11 +2040,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             inputPanelUpdateTransition = .immediate
         }
         
-        if case .standard(.embedded) = self.chatPresentationInterfaceState.mode {
-            self.inputPanelBackgroundNode.isHidden = true
-            self.inputPanelBackgroundSeparatorNode.isHidden = true
-            self.inputPanelBottomBackgroundSeparatorNode.isHidden = true
-        }
         self.inputPanelBackgroundNode.update(size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), transition: inputPanelUpdateTransition, beginWithCurrentState: true)
         self.inputPanelBottomBackgroundSeparatorBaseOffset = intrinsicInputPanelBackgroundNodeSize.height
         inputPanelUpdateTransition.updateFrame(node: self.inputPanelBottomBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: intrinsicInputPanelBackgroundNodeSize.height + inputPanelBackgroundExtension), size: CGSize(width: intrinsicInputPanelBackgroundNodeSize.width, height: UIScreenPixel)), beginWithCurrentState: true)
@@ -2661,13 +2663,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     self.searchNavigationNode = ChatSearchNavigationContentNode(context: self.context, theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, chatLocation: self.chatPresentationInterfaceState.chatLocation, interaction: interfaceInteraction, presentationInterfaceState: self.chatPresentationInterfaceState)
                 }
-                self.navigationBar?.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+                if let navigationBar = self.navigationBar {
+                    navigationBar.setContentNode(self.searchNavigationNode, animated: transitionIsAnimated)
+                } else {
+                    self.controller?.customNavigationBarContentNode = self.searchNavigationNode
+                }
                 self.searchNavigationNode?.update(presentationInterfaceState: self.chatPresentationInterfaceState)
                 if activate {
                     self.searchNavigationNode?.activate()
                 }
             } else if let _ = self.searchNavigationNode {
                 self.searchNavigationNode = nil
+                self.controller?.customNavigationBarContentNode = nil
                 self.navigationBar?.setContentNode(nil, animated: transitionIsAnimated)
             }
             

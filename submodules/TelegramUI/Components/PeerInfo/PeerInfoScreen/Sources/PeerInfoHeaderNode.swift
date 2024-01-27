@@ -169,6 +169,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var emojiStatusPackDisposable = MetaDisposable()
     var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, LoadedStickerPack)?>()
     
+    var customNavigationContentNode: PeerInfoPanelNodeNavigationContentNode?
+    private var appliedCustomNavigationContentNode: PeerInfoPanelNodeNavigationContentNode?
+    
     private var validLayout: (width: CGFloat, deviceMetrics: DeviceMetrics)?
     
     init(context: AccountContext, controller: PeerInfoScreenImpl, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
@@ -451,6 +454,24 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private var currentPanelStatusData: PeerInfoStatusData?
     func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
+        if self.appliedCustomNavigationContentNode !== self.customNavigationContentNode {
+            if let previous = self.appliedCustomNavigationContentNode {
+                transition.updateAlpha(node: previous, alpha: 0.0, completion: { [weak previous] _ in
+                    previous?.removeFromSupernode()
+                })
+            }
+            
+            self.appliedCustomNavigationContentNode = self.customNavigationContentNode
+            if let customNavigationContentNode = self.customNavigationContentNode {
+                self.addSubnode(customNavigationContentNode)
+                customNavigationContentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: navigationHeight))
+                customNavigationContentNode.alpha = 0.0
+                transition.updateAlpha(node: customNavigationContentNode, alpha: 1.0)
+            }
+        } else if let customNavigationContentNode = self.customNavigationContentNode {
+            transition.updateFrame(node: customNavigationContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: navigationHeight)))
+        }
+        
         var threadData = threadData
         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
             threadData = nil
@@ -516,7 +537,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             isForum = true
         }
         
-        self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
+        transition.updateAlpha(node: self.regularContentNode, alpha: (state.isEditing || self.customNavigationContentNode != nil) ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.navigationButtonContainer, alpha: self.customNavigationContentNode != nil ? 0.0 : 1.0)
+        
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
         let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings, presentationData: presentationData, transition: transition)
@@ -1362,6 +1385,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.navigationTransition == nil && !self.isSettings && effectiveSeparatorAlpha == 1.0 && secondarySeparatorAlpha < 1.0 {
             effectiveSeparatorAlpha = secondarySeparatorAlpha
         }
+        if self.customNavigationContentNode != nil {
+            effectiveSeparatorAlpha = 0.0
+        }
         transition.updateAlpha(node: self.separatorNode, alpha: effectiveSeparatorAlpha)
         
         self.titleNode.update(stateFractions: [
@@ -1984,6 +2010,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.regularContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: resolvedHeight)))
+        
         transition.updateFrameAdditive(node: self.buttonsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentBackgroundHeight - backgroundHeight), size: CGSize(width: width, height: 1000.0)))
         
         navigationTransition.updateAlpha(node: self.buttonsContainerNode, alpha: backgroundBannerAlpha)
@@ -2076,6 +2103,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         if !self.backgroundNode.frame.contains(point) {
             return nil
+        }
+        
+        if let customNavigationContentNode = self.customNavigationContentNode {
+            if let result = customNavigationContentNode.view.hitTest(self.view.convert(point, to: customNavigationContentNode.view), with: event) {
+                return result
+            }
+            return self.view
         }
         
         let setByFrame = self.avatarListNode.listContainerNode.setByYouNode.view.convert(self.avatarListNode.listContainerNode.setByYouNode.bounds, to: self.view).insetBy(dx: -44.0, dy: 0.0)

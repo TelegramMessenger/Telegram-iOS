@@ -79,6 +79,12 @@ public struct PresentationResourcesRootController {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigationSearchTagsIcon"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
+    
+    public static func navigationCompactTagsSearchWhiteIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationCompactTagsSearchIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigationSearchTagsIcon"), color: .white)
+        })
+    }
 
     public static func navigationCalendarIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationCalendarIcon.rawValue, { theme in

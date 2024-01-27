@@ -39,6 +39,10 @@ public struct PeerInfoStatusData: Equatable {
     }
 }
 
+public protocol PeerInfoPanelNodeNavigationContentNode: ASDisplayNode {
+    func update(width: CGFloat, defaultHeight: CGFloat, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) -> CGFloat
+}
+
 public protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
     
@@ -47,6 +51,9 @@ public protocol PeerInfoPaneNode: ASDisplayNode {
     var status: Signal<PeerInfoStatusData?, NoError> { get }
     var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
     var tabBarOffset: CGFloat { get }
+    
+    var navigationContentNode: PeerInfoPanelNodeNavigationContentNode? { get }
+    var externalDataUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
     
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
@@ -58,4 +65,16 @@ public protocol PeerInfoPaneNode: ASDisplayNode {
     func updateHiddenMedia()
     func updateSelectedMessages(animated: Bool)
     func ensureMessageIsVisible(id: MessageId)
+}
+
+public extension PeerInfoPaneNode {
+    var navigationContentNode: PeerInfoPanelNodeNavigationContentNode? {
+        return nil
+    }
+    var externalDataUpdated: ((ContainedViewLayoutTransition) -> Void)? {
+        get {
+            return nil
+        } set(value) {
+        }
+    }
 }

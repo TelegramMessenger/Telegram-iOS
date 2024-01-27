@@ -13,6 +13,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case select
     case selectionDone
     case search
+    case searchWithTags
     case editPhoto
     case editVideo
     case more
@@ -210,7 +211,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 if wasAdded {
                     buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: self.canBeExpanded, transition: .immediate)
                     
-                    if key == .moreToSearch {
+                    if key == .moreToSearch || key == .searchWithTags {
                         buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                     }
                     
@@ -236,7 +237,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
             }
             for key in removeKeys {
                 if let buttonNode = self.rightButtonNodes.removeValue(forKey: key) {
-                    if key == .moreToSearch {
+                    if key == .moreToSearch || key == .searchWithTags {
                         buttonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonNode] _ in
                             buttonNode?.removeFromSupernode()
                         })

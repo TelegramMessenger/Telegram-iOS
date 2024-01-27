@@ -11,6 +11,83 @@ import TelegramUIPreferences
 import AppBundle
 import PeerInfoPaneNode
 
+private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNodeNavigationContentNode {
+    private struct Params: Equatable {
+        var width: CGFloat
+        var defaultHeight: CGFloat
+        var insets: UIEdgeInsets
+        
+        init(width: CGFloat, defaultHeight: CGFloat, insets: UIEdgeInsets) {
+            self.width = width
+            self.defaultHeight = defaultHeight
+            self.insets = insets
+        }
+    }
+    
+    weak var chatController: ChatController?
+    let contentNode: NavigationBarContentNode
+    
+    var panelNode: ChatControllerCustomNavigationPanelNode?
+    private var appliedPanelNode: ChatControllerCustomNavigationPanelNode?
+    
+    private var params: Params?
+    
+    init(chatController: ChatController, contentNode: NavigationBarContentNode) {
+        self.chatController = chatController
+        self.contentNode = contentNode
+        
+        super.init()
+        
+        self.addSubnode(self.contentNode)
+    }
+    
+    func update(transition: ContainedViewLayoutTransition) {
+        if let params = self.params {
+            let _ = self.update(width: params.width, defaultHeight: params.defaultHeight, insets: params.insets, transition: transition)
+        }
+    }
+    
+    func update(width: CGFloat, defaultHeight: CGFloat, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.params = Params(width: width, defaultHeight: defaultHeight, insets: insets)
+        
+        let size = CGSize(width: width, height: defaultHeight)
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 10.0), size: size))
+        self.contentNode.updateLayout(size: size, leftInset: insets.left, rightInset: insets.right, transition: transition)
+        
+        var contentHeight: CGFloat = size.height + 10.0
+        
+        if self.appliedPanelNode !== self.panelNode {
+            if let previous = self.appliedPanelNode {
+                transition.updateAlpha(node: previous, alpha: 0.0, completion: { [weak previous] _ in
+                    previous?.removeFromSupernode()
+                })
+            }
+            
+            self.appliedPanelNode = self.panelNode
+            if let panelNode = self.panelNode, let chatController = self.chatController {
+                self.addSubnode(panelNode)
+                let panelLayout = panelNode.updateLayout(width: width, leftInset: insets.left, rightInset: insets.right, transition: .immediate, chatController: chatController)
+                let panelHeight = panelLayout.backgroundHeight
+                let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: panelHeight))
+                panelNode.frame = panelFrame
+                panelNode.alpha = 0.0
+                transition.updateAlpha(node: panelNode, alpha: 1.0)
+                
+                contentHeight += panelHeight - 1.0
+            }
+        } else if let panelNode = self.panelNode, let chatController = self.chatController {
+            let panelLayout = panelNode.updateLayout(width: width, leftInset: insets.left, rightInset: insets.right, transition: transition, chatController: chatController)
+            let panelHeight = panelLayout.backgroundHeight
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: panelHeight))
+            transition.updateFrame(node: panelNode, frame: panelFrame)
+            
+            contentHeight += panelHeight - 1.0
+        }
+        
+        return contentHeight
+    }
+}
+
 public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
@@ -51,6 +128,12 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     public var tabBarOffset: CGFloat {
         return 0.0
     }
+    
+    private var searchNavigationContentNode: SearchNavigationContentNode?
+    public var navigationContentNode: PeerInfoPanelNodeNavigationContentNode? {
+        return self.searchNavigationContentNode
+    }
+    public var externalDataUpdated: ((ContainedViewLayoutTransition) -> Void)?
 
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -77,6 +160,29 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
         self.addSubnode(self.chatController.displayNode)
         self.chatController.displayNode.clipsToBounds = true
+        
+        self.chatController.stateUpdated = { [weak self] transition in
+            guard let self else {
+                return
+            }
+            if let contentNode = self.chatController.customNavigationBarContentNode {
+                if self.searchNavigationContentNode?.contentNode !== contentNode {
+                    self.searchNavigationContentNode = SearchNavigationContentNode(chatController: self.chatController, contentNode: contentNode)
+                    self.searchNavigationContentNode?.panelNode = self.chatController.customNavigationPanelNode
+                    self.externalDataUpdated?(transition)
+                } else if self.searchNavigationContentNode?.panelNode !== self.chatController.customNavigationPanelNode {
+                    self.searchNavigationContentNode?.panelNode = self.chatController.customNavigationPanelNode
+                    self.externalDataUpdated?(transition)
+                } else {
+                    self.searchNavigationContentNode?.update(transition: transition)
+                }
+            } else {
+                if self.searchNavigationContentNode !== nil {
+                    self.searchNavigationContentNode = nil
+                    self.externalDataUpdated?(transition)
+                }
+            }
+        }
     }
     
     deinit {
@@ -124,6 +230,9 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         super.didLoad()
     }
     
+    public func activateSearch() {
+        self.chatController.activateSearch(domain: .everything, query: "")
+    }
     
     override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         return true

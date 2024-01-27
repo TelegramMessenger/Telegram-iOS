@@ -427,15 +427,15 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             if let tagButton {
                 buttons = [
                     self.deleteButton,
-                    self.forwardButton,
                     tagButton,
+                    self.forwardButton,
                     self.shareButton
                 ]
             } else {
                 buttons = [
                     self.deleteButton,
-                    self.forwardButton,
-                    self.shareButton
+                    self.shareButton,
+                    self.forwardButton
                 ]
             }
         } else if !self.deleteButton.isHidden {
@@ -459,17 +459,17 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             if let tagButton {
                 buttons = [
                     self.deleteButton,
-                    self.forwardButton,
                     self.reportButton,
                     tagButton,
-                    self.shareButton
+                    self.shareButton,
+                    self.forwardButton
                 ]
             } else {
                 buttons = [
                     self.deleteButton,
-                    self.forwardButton,
                     self.reportButton,
-                    self.shareButton
+                    self.shareButton,
+                    self.forwardButton
                 ]
             }
         }

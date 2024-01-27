@@ -3,13 +3,10 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import ChatPresentationInterfaceState
+import AccountContext
 
 class ChatTitleAccessoryPanelNode: ASDisplayNode {
-    struct LayoutResult {
-        var backgroundHeight: CGFloat
-        var insetHeight: CGFloat
-        var hitTestSlop: CGFloat
-    }
+    typealias LayoutResult = ChatControllerCustomNavigationPanelNode.LayoutResult
 
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     

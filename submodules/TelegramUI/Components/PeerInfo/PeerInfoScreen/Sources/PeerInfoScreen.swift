@@ -102,6 +102,7 @@ import PeerInfoPaneNode
 import MediaPickerUI
 import AttachmentUI
 import BoostLevelIconComponent
+import PeerInfoChatPaneNode
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -3145,6 +3146,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
         
+        self.paneContainerNode.requestUpdate = { [weak self] transition in
+            guard let self else {
+                return
+            }
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: false)
+            }
+        }
+        
         self.paneContainerNode.ensurePaneRectVisible = { [weak self] sourceView, rect in
             guard let self else {
                 return
@@ -3748,8 +3758,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
-            case .search:
-                strongSelf.headerNode.navigationButtonContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            case .search, .searchWithTags:
                 strongSelf.activateSearch()
             case .more:
                 if let source = source {
@@ -9269,6 +9278,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         
+        if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessages = currentPaneKey, let paneNode = self.paneContainerNode.currentPane?.node as? PeerInfoChatPaneNode {
+            paneNode.activateSearch()
+            return
+        }
+        
+        self.headerNode.navigationButtonContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+        
         if self.isSettings {
             (self.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.3, curve: .linear))
             
@@ -9803,8 +9819,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    private func updateNavigationHeight(width: CGFloat, defaultHeight: CGFloat, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) -> CGFloat {
+        var navigationHeight = defaultHeight
+        if let customNavigationContentNode = self.headerNode.customNavigationContentNode {
+            var mappedTransition = transition
+            if customNavigationContentNode.supernode == nil {
+                mappedTransition = .immediate
+            }
+            let contentHeight = customNavigationContentNode.update(width: width, defaultHeight: defaultHeight, insets: insets, transition: mappedTransition)
+            navigationHeight = contentHeight
+        }
+        return navigationHeight
+    }
+    
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
         self.validLayout = (layout, navigationHeight)
+        
+        self.headerNode.customNavigationContentNode = self.paneContainerNode.currentPane?.node.navigationContentNode
+        
+        let isScrollEnabled = !self.isMediaOnly && self.headerNode.customNavigationContentNode == nil
+        if self.scrollNode.view.isScrollEnabled != isScrollEnabled {
+            self.scrollNode.view.isScrollEnabled = isScrollEnabled
+        }
+        
+        let navigationHeight = self.updateNavigationHeight(width: layout.size.width, defaultHeight: navigationHeight, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), transition: transition)
         
         if self.headerNode.isAvatarExpanded && layout.size.width > layout.size.height {
             self.headerNode.updateIsAvatarExpanded(false, transition: transition)
@@ -10188,6 +10226,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
                 
         if let (layout, navigationHeight) = self.validLayout {
+            let navigationHeight = self.updateNavigationHeight(width: layout.size.width, defaultHeight: navigationHeight, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), transition: transition)
+            
             if !additive {
                 let sectionInset: CGFloat
                 if layout.size.width >= 375.0 {
@@ -10222,7 +10262,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
                         
             let navigationBarHeight: CGFloat = !self.isSettings && layout.isModalOverlay ? 56.0 : 44.0
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, transition: transition)
           
             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
             
@@ -10249,6 +10289,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         switch currentPaneKey {
                         case .files, .music, .links, .members, .savedMessagesChats:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
+                        case .savedMessages:
+                            if let data = self.data, data.hasSavedMessageTags {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .searchWithTags, isForExpandedView: true))
+                            } else {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
+                            }
                         case .media:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
                         default:

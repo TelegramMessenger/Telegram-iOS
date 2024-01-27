@@ -506,6 +506,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var currentWebAppController: ViewController?
     
     weak var currentImportMessageTooltip: UndoOverlayController?
+    
+    public var customNavigationBarContentNode: NavigationBarContentNode?
+    public var customNavigationPanelNode: ChatControllerCustomNavigationPanelNode?
+    public var stateUpdated: ((ContainedViewLayoutTransition) -> Void)?
 
     public override var customData: Any? {
         return self.chatLocation

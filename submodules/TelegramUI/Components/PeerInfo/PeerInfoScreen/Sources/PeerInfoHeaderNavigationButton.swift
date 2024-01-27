@@ -178,7 +178,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         
         transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
-        transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
+        transition.updateTintColor(view: self.iconNode.view, color: self.contentsColor)
         transition.updateStrokeColor(layer: self.backIconLayer, strokeColor: self.contentsColor)
         
         switch self.key {
@@ -247,9 +247,13 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             case .search:
                 text = ""
                 accessibilityText = presentationData.strings.Common_Search
-                icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                icon = nil
                 isAnimation = true
                 animationState = .search
+            case .searchWithTags:
+                text = ""
+                accessibilityText = presentationData.strings.Common_Search
+                icon = PresentationResourcesRootController.navigationCompactTagsSearchWhiteIcon(presentationData.theme)
             case .editPhoto:
                 text = presentationData.strings.Settings_EditPhoto
                 accessibilityText = text

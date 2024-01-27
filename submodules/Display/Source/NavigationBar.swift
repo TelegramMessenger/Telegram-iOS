@@ -493,6 +493,8 @@ open class NavigationBar: ASDisplayNode {
     public var makeCustomTransitionNode: ((NavigationBar, Bool) -> CustomNavigationTransitionNode?)?
     public var allowsCustomTransition: (() -> Bool)?
     
+    public var customSetContentNode: ((NavigationBarContentNode?, Bool) -> Void)?
+    
     private var collapsed: Bool {
         get {
             return self.frame.size.height.isLess(than: 44.0)
@@ -1649,6 +1651,11 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public func setContentNode(_ contentNode: NavigationBarContentNode?, animated: Bool) {
+        if let customSetContentNode = self.customSetContentNode {
+            customSetContentNode(contentNode, animated)
+            return
+        }
+        
         if self.contentNode !== contentNode {
             if let previous = self.contentNode {
                 if animated {
