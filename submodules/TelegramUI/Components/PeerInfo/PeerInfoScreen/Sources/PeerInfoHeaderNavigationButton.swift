@@ -287,7 +287,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.textNode.attributedText = NSAttributedString(string: text, font: font, textColor: .white)
             transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
             self.iconNode.image = icon
-            transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
+            transition.updateTintColor(view: self.iconNode.view, color: self.contentsColor)
             
             if isAnimation {
                 self.iconNode.isHidden = true
