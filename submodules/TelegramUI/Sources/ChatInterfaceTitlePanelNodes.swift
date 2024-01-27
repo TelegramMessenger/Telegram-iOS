@@ -5,7 +5,11 @@ import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 
-func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
+func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool) -> ChatTitleAccessoryPanelNode? {
+    if !force, case .standard(.embedded) = chatPresentationInterfaceState.mode {
+        return nil
+    }
+    
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
