@@ -274,7 +274,7 @@ private final class VideoRecorderImpl {
                 return
             }
                                     
-            if self.recordingStartSampleTime != .invalid { //self.assetWriter.status == .writing {
+            if self.recordingStartSampleTime != .invalid {
                 if sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
                     return
                 }
@@ -336,7 +336,7 @@ private final class VideoRecorderImpl {
     
     public func maybeFinish() {
         self.queue.async {
-            guard self.hasAllVideoBuffers && self.hasAllVideoBuffers else {
+            guard self.hasAllVideoBuffers && self.hasAllVideoBuffers && !self.stopped else {
                 return
             }
             self.stopped = true
@@ -345,49 +345,47 @@ private final class VideoRecorderImpl {
     }
     
     public func finish() {
-        self.queue.async {
-            let completion = self.completion
-            if self.recordingStopSampleTime == .invalid {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-                return
+        let completion = self.completion
+        if self.recordingStopSampleTime == .invalid {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
-                        
-            if let _ = self.error.with({ $0 }) {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-                return
+            return
+        }
+                    
+        if let _ = self.error.with({ $0 }) {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
-            
-            if !self.tryAppendingPendingAudioBuffers() {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-                return
+            return
+        }
+        
+        if !self.tryAppendingPendingAudioBuffers() {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
-            
-            if self.assetWriter.status == .writing {
-                self.assetWriter.finishWriting {
-                    if let _ = self.assetWriter.error {
-                        DispatchQueue.main.async {
-                            completion(false, nil, nil)
-                        }
-                    } else {
-                        DispatchQueue.main.async {
-                            completion(true, self.transitionImage, self.positionChangeTimestamps)
-                        }
+            return
+        }
+        
+        if self.assetWriter.status == .writing {
+            self.assetWriter.finishWriting {
+                if let _ = self.assetWriter.error {
+                    DispatchQueue.main.async {
+                        completion(false, nil, nil)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(true, self.transitionImage, self.positionChangeTimestamps)
                     }
                 }
-            } else if let _ = self.assetWriter.error {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-            } else {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
+            }
+        } else if let _ = self.assetWriter.error {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
+            }
+        } else {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
         }
     }
