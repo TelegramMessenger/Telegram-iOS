@@ -31,6 +31,7 @@ public final class StoryContentItem: Equatable {
     
     public final class SharedState {
         public var replyDrafts: [StoryId: NSAttributedString] = [:]
+        public var baseRate: Double = 1.0
         
         public init() {
         }
@@ -53,6 +54,9 @@ public final class StoryContentItem: Equatable {
         }
         
         open func enterAmbientMode(ambient: Bool) {
+        }
+        
+        open func setBaseRate(_ baseRate: Double) {
         }
         
         open var videoPlaybackPosition: Double? {

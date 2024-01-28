@@ -83,13 +83,13 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
         })
     }
     
-    public typealias AsyncLayout = (_ width: CGFloat, _ iconImage: UIImage?, _ cornerIcon: Bool, _ title: String, _ titleColor: UIColor, _ inProgress: Bool, _ drawBackground: Bool) -> (CGFloat, (CGFloat, CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageAttachedContentButtonNode))
+    public typealias AsyncLayout = (_ width: CGFloat, _ sideInset: CGFloat?, _ iconImage: UIImage?, _ cornerIcon: Bool, _ title: String, _ titleColor: UIColor, _ inProgress: Bool, _ drawBackground: Bool) -> (CGFloat, (CGFloat, CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageAttachedContentButtonNode))
     public static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> AsyncLayout {
         let previousRegularIconImage = current?.regularIconImage
         
         let maybeMakeTextLayout = (current?.textNode).flatMap(TextNode.asyncLayout)
         
-        return { width, iconImage, cornerIcon, title, titleColor, inProgress, drawBackground in
+        return { width, sideInset, iconImage, cornerIcon, title, titleColor, inProgress, drawBackground in
             let targetNode: ChatMessageAttachedContentButtonNode
             if let current = current {
                 targetNode = current
@@ -114,7 +114,7 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
                 iconWidth = iconImage.size.width + 5.0
             }
             
-            let labelInset: CGFloat = 8.0
+            let labelInset: CGFloat = sideInset ?? 8.0
             
             let (textSize, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: buttonFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, width - labelInset * 2.0 - iconWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
             
@@ -146,7 +146,7 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
                     
                     let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: refinedWidth, height: size.height))
                     
-                    var textFrame = CGRect(origin: CGPoint(x: floor((refinedWidth - textSize.size.width) / 2.0), y: floor((backgroundFrame.height - textSize.size.height) / 2.0)), size: textSize.size)
+                    var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((refinedWidth - textSize.size.width) / 2.0), y: floorToScreenPixels((backgroundFrame.height - textSize.size.height) / 2.0)), size: textSize.size)
                     if drawBackground {
                         textFrame.origin.y += 1.0
                     }
