@@ -307,6 +307,8 @@ final class CameraOutput: NSObject {
             return .complete()
         }
         
+        Logger.shared.log("CameraOutput", "startRecording")
+        
         self.currentMode = mode
         self.lastSampleTimestamp = nil
         self.captureOrientation = orientation
@@ -451,20 +453,19 @@ final class CameraOutput: NSObject {
                             transitionFactor = 1.0 - max(0.0, (currentTimestamp - self.lastSwitchTimestamp) / duration)
                         }
                     }
-                    if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
-                        let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
-                        if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
-                            
-                        } else {
-                            if (transitionFactor == 1.0 && fromAdditionalOutput) 
-                                || (transitionFactor == 0.0 && !fromAdditionalOutput)
-                                || (transitionFactor > 0.0 && transitionFactor < 1.0) {
+                    
+                    if (transitionFactor == 1.0 && fromAdditionalOutput)
+                        || (transitionFactor == 0.0 && !fromAdditionalOutput)
+                        || (transitionFactor > 0.0 && transitionFactor < 1.0) {                        
+                        if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
+                            let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
+                            if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
+                                
+                            } else {
                                 videoRecorder.appendSampleBuffer(processedSampleBuffer)
                                 self.lastSampleTimestamp = presentationTime
                             }
                         }
-                    } else {
-                        videoRecorder.appendSampleBuffer(sampleBuffer)
                     }
                 } else {
                     var additional = self.currentPosition == .front
@@ -544,8 +545,9 @@ final class CameraOutput: NSObject {
             self.roundVideoFilter = filter
         }
         if !filter.isPrepared {
-            filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 3)
+            filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 4)
         }
+
         guard let newPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, additional: additional, captureOrientation: self.captureOrientation, transitionFactor: transitionFactor) else {
             self.semaphore.signal()
             return nil
