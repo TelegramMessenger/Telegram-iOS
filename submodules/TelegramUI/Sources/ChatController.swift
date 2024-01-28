@@ -454,6 +454,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var slowmodeTooltipController: ChatSlowmodeHintController?
     
     weak var currentContextController: ContextController?
+    public var visibleContextController: ViewController? {
+        return self.currentContextController
+    }
     
     weak var sendMessageActionsController: ChatSendMessageActionSheetController?
     var searchResultsController: ChatSearchResultsController?
@@ -7075,7 +7078,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if isTracking {
                 strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
             }
-            strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+            strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: strongSelf.chatDisplayNode.historyNode.rotated)
             
         }
         

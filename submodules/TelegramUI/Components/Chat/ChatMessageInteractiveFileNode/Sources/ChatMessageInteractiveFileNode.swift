@@ -1066,18 +1066,15 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
                             }
                                 
-                                /*switch updatedAudioTranscriptionState {
+                            switch updatedAudioTranscriptionState {
                                 case .expanded:
                                     info?.setInvertOffsetDirection()
                                 default:
-                                    break
-                                }
-                            } else if strongSelf.isWaitingForCollapse {
-                                strongSelf.isWaitingForCollapse = false
-                                info?.setInvertOffsetDirection()
-                            }*/
-                            
-                            info?.setInvertOffsetDirection()
+                                    if strongSelf.isWaitingForCollapse {
+                                        strongSelf.isWaitingForCollapse = false
+                                        info?.setInvertOffsetDirection()
+                                    }
+                            }
                             
                             if let consumableContentIcon = consumableContentIcon {
                                 if strongSelf.consumableContentNode.supernode == nil {

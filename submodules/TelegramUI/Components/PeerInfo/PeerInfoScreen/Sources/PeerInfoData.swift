@@ -845,7 +845,16 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 |> distinctUntilChanged
                 
                 if peerId == context.account.peerId {
-                    hasSavedMessagesChats = context.engine.messages.savedMessagesHasPeersOtherThanSaved()
+                    hasSavedMessagesChats = combineLatest(
+                        context.engine.messages.savedMessagesHasPeersOtherThanSaved(),
+                        context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Peer.DisplaySavedChatsAsTopics()
+                        )
+                    )
+                    |> map { hasChats, displayAsTopics -> Bool in
+                        return hasChats || displayAsTopics
+                    }
+                    |> distinctUntilChanged
                 } else {
                     hasSavedMessagesChats = context.engine.messages.savedMessagesPeerListHead()
                     |> map { headPeerId -> Bool in
@@ -861,13 +870,23 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let hasSavedMessageTags: Signal<Bool, NoError>
             if let peerId = chatLocation.peerId {
                 if case .peer = chatLocation {
-                    hasSavedMessageTags = context.engine.data.subscribe(
-                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: nil)
-                    )
-                    |> map { tags -> Bool in
-                        return !tags.isEmpty
+                    if peerId != context.account.peerId {
+                        hasSavedMessageTags = context.engine.data.subscribe(
+                            TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: peerId.toInt64())
+                        )
+                        |> map { tags -> Bool in
+                            return !tags.isEmpty
+                        }
+                        |> distinctUntilChanged
+                    } else {
+                        hasSavedMessageTags = context.engine.data.subscribe(
+                            TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: nil)
+                        )
+                        |> map { tags -> Bool in
+                            return !tags.isEmpty
+                        }
+                        |> distinctUntilChanged
                     }
-                    |> distinctUntilChanged
                 } else {
                     hasSavedMessageTags = context.engine.data.subscribe(
                         TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: peerId.toInt64())

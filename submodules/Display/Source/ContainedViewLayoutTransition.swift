@@ -995,7 +995,7 @@ public extension ContainedViewLayoutTransition {
     }
     
     func updateTintColor(view: UIView, color: UIColor, completion: ((Bool) -> Void)? = nil) {
-        if let current = view.tintColor, current == color {
+        if let current = view.layer.layerTintColor, UIColor(cgColor: current) == color {
             completion?(true)
             return
         }
@@ -1003,10 +1003,12 @@ public extension ContainedViewLayoutTransition {
         switch self {
         case .immediate:
             view.tintColor = color
+            view.layer.layerTintColor = color.cgColor
             completion?(true)
         case let .animated(duration, curve):
             let previousColor: CGColor = view.layer.layerTintColor ?? UIColor.clear.cgColor
             view.tintColor = color
+            view.layer.layerTintColor = color.cgColor
             
             view.layer.animate(
                 from: previousColor,

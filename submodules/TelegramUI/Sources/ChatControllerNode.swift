@@ -1984,7 +1984,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if !self.historyNode.rotated {
-            apparentNavigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: 6.0), size: navigateButtonsSize)
+            apparentNavigateButtonsFrame = CGRect(origin: CGPoint(x: layout.size.width - layout.safeInsets.right - navigateButtonsSize.width - 6.0, y: insets.top + 6.0), size: navigateButtonsSize)
         }
         
         var isInputExpansionEnabled = false

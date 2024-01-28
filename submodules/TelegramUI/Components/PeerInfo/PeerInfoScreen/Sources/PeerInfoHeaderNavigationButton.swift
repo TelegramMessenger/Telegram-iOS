@@ -253,7 +253,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             case .standaloneSearch:
                 text = ""
                 accessibilityText = presentationData.strings.Common_Search
-                icon = PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                icon = PresentationResourcesRootController.navigationCompactSearchWhiteIcon(presentationData.theme)
             case .searchWithTags:
                 text = ""
                 accessibilityText = presentationData.strings.Common_Search

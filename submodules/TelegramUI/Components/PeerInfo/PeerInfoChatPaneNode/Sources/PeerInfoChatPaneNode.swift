@@ -10,6 +10,7 @@ import ComponentFlow
 import TelegramUIPreferences
 import AppBundle
 import PeerInfoPaneNode
+import ContextUI
 
 private final class SearchNavigationContentNode: ASDisplayNode, PeerInfoPanelNodeNavigationContentNode {
     private struct Params: Equatable {
@@ -95,6 +96,8 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     private let chatController: ChatController
     
+    private let coveringView: UIView
+    
     public weak var parentController: ViewController? {
         didSet {
             if self.parentController !== oldValue {
@@ -144,9 +147,13 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.navigationController = navigationController
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
+        self.coveringView = UIView()
+        
         self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .replyThread(message: ChatReplyThreadMessage(peerId: context.account.peerId, threadId: peerId.toInt64(), channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)), subject: nil, botStart: nil, mode: .standard(.embedded(invertDirection: true)))
         
         super.init()
+        
+        self.clipsToBounds = true
         
         self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -161,6 +168,8 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.addSubnode(self.chatController.displayNode)
         self.chatController.displayNode.clipsToBounds = true
         
+        self.view.addSubview(self.coveringView)
+        
         self.chatController.stateUpdated = { [weak self] transition in
             guard let self else {
                 return
@@ -172,7 +181,7 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     self.externalDataUpdated?(transition)
                 } else if self.searchNavigationContentNode?.panelNode !== self.chatController.customNavigationPanelNode {
                     self.searchNavigationContentNode?.panelNode = self.chatController.customNavigationPanelNode
-                    self.externalDataUpdated?(transition)
+                    self.externalDataUpdated?(transition.isAnimated ? transition : .animated(duration: 0.4, curve: .spring))
                 } else {
                     self.searchNavigationContentNode?.update(transition: transition)
                 }
@@ -250,14 +259,27 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     public func updateSelectedMessages(animated: Bool) {
     }
     
-    public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
-        let chatFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: size.height - topInset))
+        
+        let fullHeight = navigationHeight + size.height
+        
+        let chatFrame = CGRect(origin: CGPoint(x: 0.0, y: -navigationHeight), size: CGSize(width: size.width, height: fullHeight))
+        
+        if !self.chatController.displayNode.bounds.isEmpty {
+            if let contextController = self.chatController.visibleContextController as? ContextController {
+                let deltaY = chatFrame.minY - self.chatController.displayNode.frame.minY
+                contextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -deltaY * 0.0), transition: transition)
+            }
+        }
+        
+        self.coveringView.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        transition.updateFrame(view: self.coveringView, frame: CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: size.width, height: topInset + 1.0)))
         
         let combinedBottomInset = bottomInset
         transition.updateFrame(node: self.chatController.displayNode, frame: chatFrame)
         self.chatController.updateIsScrollingLockedAtTop(isScrollingLockedAtTop: isScrollingLockedAtTop)
-        self.chatController.containerLayoutUpdated(ContainerViewLayout(size: chatFrame.size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), safeInsets: UIEdgeInsets(top: 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+        self.chatController.containerLayoutUpdated(ContainerViewLayout(size: chatFrame.size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact, orientation: nil), deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: topInset + navigationHeight, left: sideInset, bottom: combinedBottomInset, right: sideInset), safeInsets: UIEdgeInsets(top: navigationHeight + topInset + 4.0, left: sideInset, bottom: combinedBottomInset, right: sideInset), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

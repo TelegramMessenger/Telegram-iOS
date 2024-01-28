@@ -945,6 +945,8 @@ public protocol ChatController: ViewController {
     var customNavigationBarContentNode: NavigationBarContentNode? { get }
     var customNavigationPanelNode: ChatControllerCustomNavigationPanelNode? { get }
     
+    var visibleContextController: ViewController? { get }
+    
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)

@@ -18,11 +18,6 @@ import PremiumUI
 
 extension ChatControllerImpl {
     func openMessageReactionContextMenu(message: Message, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?, value: MessageReaction.Reaction) {
-        if !self.chatDisplayNode.historyNode.rotated {
-            gesture?.cancel()
-            return
-        }
-        
         if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
             if !self.presentationInterfaceState.isPremium {
                 //TODO:localize

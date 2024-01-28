@@ -55,7 +55,7 @@ public protocol PeerInfoPaneNode: ASDisplayNode {
     var navigationContentNode: PeerInfoPanelNodeNavigationContentNode? { get }
     var externalDataUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
     
-    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
+    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func transferVelocity(_ velocity: CGFloat)
     func cancelPreviewGestures()
