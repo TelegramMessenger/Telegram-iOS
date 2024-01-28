@@ -513,6 +513,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                 strongSelf.selectionState = strongSelf.selectionState.withSelectedContactId(id)
                 strongSelf.requestDeactivateSearch?()
             }
+        }, openDisabledPeer: { _, _ in
         }, contextAction: nil), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

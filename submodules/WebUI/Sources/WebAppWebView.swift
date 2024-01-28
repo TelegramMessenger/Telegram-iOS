@@ -94,18 +94,29 @@ final class WebAppWebView: WKWebView {
     
     init(account: Account) {
         let configuration = WKWebViewConfiguration()
-        
-        let uuid: UUID
-        
-        if let current = UserDefaults.standard.object(forKey: "TelegramWebStoreUUID_\(account.id.int64)") as? String {
-            uuid = UUID(uuidString: current)!
-        } else {
-            uuid = UUID()
-            UserDefaults.standard.set(uuid.uuidString, forKey: "TelegramWebStoreUUID_\(account.id.int64)")
-        }
                 
         if #available(iOS 17.0, *) {
-            configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: uuid)
+            var uuid: UUID?
+            if let current = UserDefaults.standard.object(forKey: "TelegramWebStoreUUID_\(account.id.int64)") as? String {
+                uuid = UUID(uuidString: current)!
+            } else {
+                let mainAccountId: Int64
+                if let current = UserDefaults.standard.object(forKey: "TelegramWebStoreMainAccountId") as? Int64 {
+                    mainAccountId = current
+                } else {
+                    mainAccountId = account.id.int64
+                    UserDefaults.standard.set(mainAccountId, forKey: "TelegramWebStoreMainAccountId")
+                }
+                
+                if account.id.int64 != mainAccountId {
+                    uuid = UUID()
+                    UserDefaults.standard.set(uuid!.uuidString, forKey: "TelegramWebStoreUUID_\(account.id.int64)")
+                }
+            }
+            
+            if let uuid {
+                configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: uuid)
+            }
         }
         
         let contentController = WKUserContentController()

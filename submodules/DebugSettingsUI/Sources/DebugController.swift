@@ -71,7 +71,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case redactSensitiveData(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
-    case unidirectionalSwipeToReply(Bool)
+    case dustEffect(Bool)
     case callV2(Bool)
     case alternativeStoryMedia(Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
@@ -79,10 +79,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case clearTips(PresentationTheme)
     case resetNotifications
     case crash(PresentationTheme)
-    case resetData(PresentationTheme)
+    case fillLocalSavedMessageCache
     case resetDatabase(PresentationTheme)
     case resetDatabaseAndCache(PresentationTheme)
     case resetHoles(PresentationTheme)
+    case resetTagHoles
     case reindexUnread(PresentationTheme)
     case resetCacheIndex
     case reindexCache
@@ -125,9 +126,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .webViewInspection, .resetWebViewCache:
             return DebugControllerSection.web.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .callV2, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
+        case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .callV2, .alternativeStoryMedia, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -176,7 +177,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 15
         case .skipReadHistory:
             return 16
-        case .unidirectionalSwipeToReply:
+        case .dustEffect:
             return 17
         case .callV2:
             return 18
@@ -192,7 +193,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 23
         case .crash:
             return 24
-        case .resetData:
+        case .fillLocalSavedMessageCache:
             return 25
         case .resetDatabase:
             return 26
@@ -200,50 +201,52 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 27
         case .resetHoles:
             return 28
-        case .reindexUnread:
+        case .resetTagHoles:
             return 29
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 30
-        case .reindexCache:
+        case .resetCacheIndex:
             return 31
-        case .resetBiometricsData:
+        case .reindexCache:
             return 32
-        case .optimizeDatabase:
+        case .resetBiometricsData:
             return 33
-        case .photoPreview:
+        case .optimizeDatabase:
             return 34
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 35
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 36
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 37
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 38
-        case .inlineForums:
+        case .acceleratedStickers:
             return 39
-        case .localTranscription:
+        case .inlineForums:
             return 40
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 41
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 42
-        case .logTranslationRecognition:
+        case .restorePurchases:
             return 43
-        case .resetTranslationStates:
+        case .logTranslationRecognition:
             return 44
-        case .storiesExperiment:
+        case .resetTranslationStates:
             return 45
-        case .storiesJpegExperiment:
+        case .storiesExperiment:
             return 46
-        case .playlistPlayback:
+        case .storiesJpegExperiment:
             return 47
-        case .enableQuickReactionSwitch:
+        case .playlistPlayback:
             return 48
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 49
+        case .voiceConference:
+            return 50
         case let .preferredVideoCodec(index, _, _, _):
-            return 50 + index
+            return 51 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -943,11 +946,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
-        case let .unidirectionalSwipeToReply(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Legacy swipe to reply", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .dustEffect(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Dust Debug", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
                     var settings = settings
-                    settings.unidirectionalSwipeToReply = value
+                    settings.dustEffect = value
                     return settings
                 }).start()
             })
@@ -1026,24 +1029,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListActionItem(presentationData: presentationData, title: "Crash", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 preconditionFailure()
             })
-        case .resetData:
-            return ItemListActionItem(presentationData: presentationData, title: "Reset Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+        case .fillLocalSavedMessageCache:
+            return ItemListActionItem(presentationData: presentationData, title: "Reload Saved Messages", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: "All data will be lost."),
-                    ActionSheetButtonItem(title: "Reset Data", color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        let databasePath = arguments.sharedContext.accountManager.basePath + "/db"
-                        let _ = try? FileManager.default.removeItem(atPath: databasePath)
-                        preconditionFailure()
-                    }),
-                    ]), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                        ])])
-                arguments.presentController(actionSheet, nil)
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                arguments.presentController(controller, nil)
+                let _ = (_internal_fillSavedMessageHistory(accountPeerId: context.account.peerId, postbox: context.account.postbox, network: context.account.network)
+                |> deliverOnMainQueue).start(completed: {
+                    controller.dismiss()
+                })
             })
         case .resetDatabase:
             return ItemListActionItem(presentationData: presentationData, title: "Clear Database", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -1098,6 +1095,19 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
                 let _ = (context.engine.messages.debugAddHoles()
+                |> deliverOnMainQueue).start(completed: {
+                    controller.dismiss()
+                })
+            })
+        case .resetTagHoles:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Tag Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                arguments.presentController(controller, nil)
+                let _ = (context.engine.messages.debugResetTagHoles()
                 |> deliverOnMainQueue).start(completed: {
                     controller.dismiss()
                 })
@@ -1425,7 +1435,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         #if DEBUG
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
         #endif
-        entries.append(.unidirectionalSwipeToReply(experimentalSettings.unidirectionalSwipeToReply))
+        entries.append(.dustEffect(experimentalSettings.dustEffect))
         entries.append(.callV2(experimentalSettings.callV2))
         entries.append(.alternativeStoryMedia(experimentalSettings.alternativeStoryMedia))
     }
@@ -1436,10 +1446,11 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.resetNotifications)
     }
     entries.append(.crash(presentationData.theme))
-    entries.append(.resetData(presentationData.theme))
+    entries.append(.fillLocalSavedMessageCache)
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetDatabaseAndCache(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
+    entries.append(.resetTagHoles)
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
         entries.append(.resetCacheIndex)

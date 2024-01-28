@@ -22,6 +22,7 @@ enum ShareExternalState {
 }
 
 final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private weak var controller: ShareController?
     private let environment: ShareControllerEnvironment
     private var context: ShareControllerAccountContext?
     private var presentationData: PresentationData
@@ -67,6 +68,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var openStats: (() -> Void)?
     var completed: (([PeerId]) -> Void)?
     var present: ((ViewController) -> Void)?
+    var disabledPeerSelected: ((EnginePeer) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -87,7 +89,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let showNames = ValuePromise<Bool>(true)
     
-    init(environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?) {
+    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?) {
+        self.controller = controller
         self.environment = environment
         self.presentationData = presentationData
         self.forceTheme = forceTheme
@@ -272,9 +275,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 
                 if search && added {
                     strongSelf.controllerInteraction!.foundPeers = strongSelf.controllerInteraction!.foundPeers.filter { otherPeer in
-                        return peer.peerId != otherPeer.peerId
+                        return peer.peerId != otherPeer.peer.peerId
                     }
-                    strongSelf.controllerInteraction!.foundPeers.append(peer)
+                    strongSelf.controllerInteraction!.foundPeers.append((peer, false))
                     strongSelf.peersContentNode?.updateFoundPeers()
                 }
                 
@@ -324,6 +327,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     self?.dismiss?(false)
                 })
                 shareStory()
+            }
+        }, disabledPeerSelected: { [weak self] peer in
+            guard let self else {
+                return
+            }
+            if let peer = peer.peer {
+                self.disabledPeerSelected?(peer)
             }
         })
         
@@ -708,6 +718,22 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             
             topicsContentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: self.contentNode === self.peersContentNode ? bottomGridInset : 0.0, transition: transition)
         }
+        
+        if let controller = self.controller {
+            let subLayout = ContainerViewLayout(
+                size: layout.size,
+                metrics: layout.metrics,
+                deviceMetrics: layout.deviceMetrics,
+                intrinsicInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: layout.size.height - contentFrame.maxY - 6.0, right: 4.0),
+                safeInsets: layout.safeInsets,
+                additionalInsets: UIEdgeInsets(),
+                statusBarHeight: nil,
+                inputHeight: nil,
+                inputHeightIsInteractivellyChanging: false,
+                inVoiceOver: false
+            )
+            controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition)
+        }
     }
     
     private func contentNodeOffsetUpdated(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1031,7 +1057,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
     }
     
-    func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(EngineRenderedPeer, EnginePeer.Presence?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
+    func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
         
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {
@@ -1077,11 +1103,38 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues, fromPublicChannel: self.fromPublicChannel)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
-            let _ = (_internal_recentlySearchedPeers(postbox: context.stateManager.postbox)
+            let signal: Signal<([RecentlySearchedPeer], [EnginePeer.Id: Bool]), NoError> = _internal_recentlySearchedPeers(postbox: context.stateManager.postbox)
             |> take(1)
-            |> deliverOnMainQueue).start(next: { peers in
+            |> mapToSignal { peers -> Signal<([RecentlySearchedPeer], [EnginePeer.Id: Bool]), NoError> in
+                var possiblePremiumRequiredPeers = Set<EnginePeer.Id>()
+                for peer in peers {
+                    if let user = peer.peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                        possiblePremiumRequiredPeers.insert(user.id)
+                    }
+                }
+                
+                if let context = context as? ShareControllerAppAccountContext {
+                    context.context.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: Array(possiblePremiumRequiredPeers))
+                }
+                
+                return context.engineData.subscribe(
+                    EngineDataMap(
+                        possiblePremiumRequiredPeers.map(TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.init(id:))
+                    )
+                )
+                |> map { peerRequiresPremiumForMessaging -> ([RecentlySearchedPeer], [EnginePeer.Id: Bool]) in
+                    return (peers, peerRequiresPremiumForMessaging)
+                }
+            }
+            |> take(1)
+            let _ = (signal
+            |> deliverOnMainQueue).startStandalone(next: { peers, peerRequiresPremiumForMessaging in
                 if let strongSelf = self {
-                    let searchContentNode = ShareSearchContainerNode(environment: strongSelf.environment, context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({ EngineRenderedPeer($0.peer) }))
+                    let recentPeers: [(peer: EngineRenderedPeer, requiresPremiumForMessaging: Bool)] = peers.filter({ $0.peer.peerId.namespace != Namespaces.Peer.SecretChat }).map({
+                        (EngineRenderedPeer($0.peer), peerRequiresPremiumForMessaging[$0.peer.peerId] ?? false)
+                    })
+                    
+                    let searchContentNode = ShareSearchContainerNode(environment: strongSelf.environment, context: context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, controllerInteraction: strongSelf.controllerInteraction!, recentPeers: recentPeers)
                     searchContentNode.cancel = {
                         if let strongSelf = self, let peersContentNode = strongSelf.peersContentNode {
                             strongSelf.transitionToContentNode(peersContentNode)

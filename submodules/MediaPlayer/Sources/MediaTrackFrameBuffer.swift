@@ -33,10 +33,10 @@ public final class MediaTrackFrameBuffer {
     private let decoder: MediaTrackFrameDecoder
     private let type: MediaTrackFrameType
     public let duration: CMTime
-    let rotationAngle: Double
-    let aspect: Double
+    public let rotationAngle: Double
+    public let aspect: Double
     
-    var statusUpdated: () -> Void = { }
+    public var statusUpdated: () -> Void = { }
     
     private var frameSourceSinkIndex: Int?
     

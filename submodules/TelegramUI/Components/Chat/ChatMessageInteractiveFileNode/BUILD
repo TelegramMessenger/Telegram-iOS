@@ -20,7 +20,6 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/PhotoResources",
         "//submodules/TelegramStringFormatting",
-        "//submodules/RadialStatusNode",
         "//submodules/SemanticStatusNode",
         "//submodules/FileMediaResourceStatus",
         "//submodules/CheckNode",
@@ -42,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
         "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/AnimatedCountLabelNode",
     ],
     visibility = [
         "//visibility:public",

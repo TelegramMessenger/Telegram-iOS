@@ -10,6 +10,7 @@ private let badgeFont = Font.with(size: 13.0, traits: [.monospacedNumbers])
 
 enum ChatHistoryNavigationButtonType {
     case down
+    case up
     case mentions
     case reactions
 }
@@ -60,6 +61,8 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         switch type {
             case .down:
                 self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+            case .up:
+                self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationUpButtonImage(theme)
             case .mentions:
                 self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
             case .reactions:
@@ -113,6 +116,8 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
             switch self.type {
                 case .down:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
+                case .up:
+                    self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationUpButtonImage(theme)
                 case .mentions:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
                 case .reactions:

@@ -213,6 +213,7 @@ public enum PresentationResourceKey: Int32 {
     case chatInputSearchPanelMembersImage
         
     case chatHistoryNavigationButtonImage
+    case chatHistoryNavigationUpButtonImage
     case chatHistoryMentionsButtonImage
     case chatHistoryReactionsButtonImage
     case chatHistoryNavigationButtonBadgeImage
@@ -297,6 +298,11 @@ public enum PresentationResourceKey: Int32 {
     case chatReplyServiceBackgroundTemplateImage
     
     case chatBubbleCloseIcon
+    
+    case avatarPremiumLockBadgeBackground
+    case avatarPremiumLockBadge
+    case shareAvatarPremiumLockBadgeBackground
+    case shareAvatarPremiumLockBadge
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {

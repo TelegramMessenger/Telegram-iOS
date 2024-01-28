@@ -68,10 +68,10 @@ extension StickerPackReference {
             self = .emojiGenericAnimations
         case .inputStickerSetEmojiDefaultStatuses:
             self = .iconStatusEmoji
+        case .inputStickerSetEmojiChannelDefaultStatuses:
+            self = .iconChannelStatusEmoji
         case .inputStickerSetEmojiDefaultTopicIcons:
             self = .iconTopicEmoji
-        case .inputStickerSetEmojiChannelDefaultStatuses:
-            return nil
         }
     }
 }

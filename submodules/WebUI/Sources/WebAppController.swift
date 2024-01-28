@@ -649,13 +649,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
             transition.updateFrame(node: self.topOverscrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -1000.0), size: CGSize(width: layout.size.width, height: 1000.0)))
             
             if let webView = self.webView {
-                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
+                var scrollInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
+                var frameBottomInset: CGFloat = 0.0
+                if scrollInset.bottom > 40.0 {
+                    frameBottomInset = scrollInset.bottom
+                    scrollInset.bottom = 0.0
+                }
+                
+                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - frameBottomInset)))
                 
                 var bottomInset = layout.intrinsicInsets.bottom + layout.additionalInsets.bottom
                 if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
                     bottomInset = max(bottomInset, inputHeight)
                 }
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - bottomInset)))
+                
+                if webView.scrollView.contentInset != scrollInset {
+                    webView.scrollView.contentInset = scrollInset
+                    webView.scrollView.scrollIndicatorInsets = scrollInset
+                }
                 
                 if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
                     webView.scrollToActiveElement(layout: layout, completion: { [weak self] contentOffset in

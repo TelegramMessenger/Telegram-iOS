@@ -992,7 +992,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     if let selectedMediaArea {
-                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: selectedMediaArea)
+                        self.sendMessageContext.activateMediaArea(view: self, mediaArea: selectedMediaArea, position: point)
                     } else {
                         var direction: NavigationDirection?
                         if point.x < itemLayout.containerSize.width * 0.25 {
@@ -2737,12 +2737,16 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             var isUnsupported = false
-            var disabledPlaceholder: String?
-            if component.slice.peer.isService {
-                disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
+            var disabledPlaceholder: MessageInputPanelComponent.DisabledPlaceholder?
+            if component.slice.additionalPeerData.isPremiumRequiredForMessaging {
+                disabledPlaceholder = .premiumRequired(title: component.strings.Story_MessagingRestrictedPlaceholder(component.slice.peer.compactDisplayTitle).string, subtitle: component.strings.Story_MessagingRestrictedPlaceholderAction, action: { [weak self] in
+                    self?.presentPremiumRequiredForMessaging()
+                })
+            } else if component.slice.peer.isService {
+                disabledPlaceholder = .text(component.strings.Story_FooterReplyUnavailable)
             } else if case .unsupported = component.slice.item.storyItem.media {
                 isUnsupported = true
-                disabledPlaceholder = component.strings.Story_FooterReplyUnavailable
+                disabledPlaceholder = .text(component.strings.Story_FooterReplyUnavailable)
             }
             
             let inputPlaceholder: MessageInputPanelComponent.Placeholder
@@ -4376,6 +4380,7 @@ public final class StoryItemSetContainerComponent: Component {
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
                         title: self.displayLikeReactions ? nil : component.strings.Story_SendReactionAsMessage,
                         alwaysAllowPremiumReactions: false,
+                        allPresetReactionsAreAvailable: false,
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
                             guard let self, let component = self.component else {
                                 preconditionFailure()
@@ -5613,6 +5618,28 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
             })
+        }
+        
+        private func presentPremiumRequiredForMessaging() {
+            guard let component = self.component else {
+                return
+            }
+
+            let controller = PremiumIntroScreen(context: component.context, source: .settings, forceDark: true)
+            self.sendMessageContext.actionSheet = controller
+            controller.wasDismissed = { [weak self, weak controller]in
+                guard let self else {
+                    return
+                }
+                
+                if self.sendMessageContext.actionSheet === controller {
+                    self.sendMessageContext.actionSheet = nil
+                }
+                self.updateIsProgressPaused()
+            }
+            
+            self.updateIsProgressPaused()
+            component.controller()?.push(controller)
         }
         
         private func presentStoriesUpgradeScreen(source: PremiumSource) {

@@ -854,6 +854,44 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
     }
 }
 
+public func savedMessagesPeerMenuItems(context: AccountContext, threadId: Int64, parentController: ViewController) -> Signal<[ContextMenuItem], NoError> {
+    let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+    let strings = presentationData.strings
+
+    return combineLatest(
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: PeerId(threadId))
+        ),
+        context.account.postbox.transaction { transaction -> [Int64] in
+            return transaction.getPeerPinnedThreads(peerId: context.account.peerId)
+        }
+    )
+    |> mapToSignal { [weak parentController] peer, pinnedThreadIds -> Signal<[ContextMenuItem], NoError> in
+        var items: [ContextMenuItem] = []
+        
+        let isPinned = pinnedThreadIds.contains(threadId)
+        
+        items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
+            
+            let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: context.account.peerId, threadId: threadId)
+            |> deliverOnMainQueue).startStandalone(error: { error in
+                switch error {
+                case let .limitReached(count):
+                    let controller = PremiumLimitScreen(context: context, subject: .pinnedSavedPeers, count: Int32(count), action: {
+                        return true
+                    })
+                    parentController?.push(controller)
+                default:
+                    break
+                }
+            })
+        })))
+        
+        return .single(items)
+    }
+}
+
 private func openCustomMute(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, baseController: ViewController) {
     let controller = ChatTimerScreen(context: context, updatedPresentationData: nil, style: .default, mode: .mute, currentTime: nil, dismissByTapOutside: true, completion: { [weak baseController] value in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

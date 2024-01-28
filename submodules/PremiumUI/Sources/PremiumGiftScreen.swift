@@ -21,11 +21,7 @@ import TextFormat
 import UniversalMediaPlayer
 import InstantPageCache
 
-public enum PremiumGiftSource: Equatable {
-    case profile
-    case attachMenu
-    case settings
-    
+extension PremiumGiftSource {
     var identifier: String? {
         switch self {
         case .profile:
@@ -34,6 +30,16 @@ public enum PremiumGiftSource: Equatable {
             return "attach"
         case .settings:
             return "settings"
+        case .chatList:
+            return "chats"
+        case .channelBoost:
+            return "channel_boost"
+        case let .deeplink(reference):
+            if let reference = reference {
+                return "deeplink_\(reference)"
+            } else {
+                return "deeplink"
+            }
         }
     }
 }
@@ -879,14 +885,14 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                         
             let purpose: AppStoreTransactionPurpose
             var quantity: Int32 = 1
-            if case .settings = self.source {
-                purpose = .giftCode(peerIds: self.peerIds, boostPeer: nil, currency: currency, amount: amount)
-                quantity = Int32(self.peerIds.count)
-            } else if let peerId = self.peerIds.first {
+            
+            if self.source == .profile || self.source == .attachMenu, let peerId = self.peerIds.first {
                 purpose = .gift(peerId: peerId, currency: currency, amount: amount)
             } else {
-                fatalError()
+                purpose = .giftCode(peerIds: self.peerIds, boostPeer: nil, currency: currency, amount: amount)
+                quantity = Int32(self.peerIds.count)
             }
+            
             let _ = (self.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {

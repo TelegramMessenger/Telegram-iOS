@@ -125,6 +125,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var subtitleBackgroundNode: ASDisplayNode?
     var subtitleBackgroundButton: HighlightTrackingButtonNode?
     var subtitleArrowNode: ASImageNode?
+    var subtitleBadgeView: PeerInfoSubtitleBadgeView?
     let panelSubtitleNode: MultiScaleTextNode
     let usernameNodeContainer: ASDisplayNode
     let usernameNodeRawContainer: ASDisplayNode
@@ -153,6 +154,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayEmojiPackTooltip: (() -> Void)?
     
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
+    var displayStatusPremiumIntro: (() -> Void)?
     
     var navigateToForum: (() -> Void)?
     
@@ -450,7 +452,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentPanelStatusData: PeerInfoStatusData?
     func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
         var threadData = threadData
-        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId.peerId == self.context.account.peerId {
+        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
             threadData = nil
         }
         
@@ -968,6 +970,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             var title: String
             if peer.id == self.context.account.peerId && !self.isSettings {
                 title = presentationData.strings.Conversation_SavedMessages
+            } else if peer.id.isAnonymousSavedMessages {
+                title = presentationData.strings.ChatList_AuthorHidden
             } else if let threadData = threadData {
                 title = threadData.info.title
             } else {
@@ -1207,8 +1211,29 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
         let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
+        var subtitleBadgeSize: CGSize?
         let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
+        
+        if let statusData, statusData.isHiddenStatus {
+            let subtitleBadgeView: PeerInfoSubtitleBadgeView
+            if let current = self.subtitleBadgeView {
+                subtitleBadgeView = current
+            } else {
+                subtitleBadgeView = PeerInfoSubtitleBadgeView(action: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.displayStatusPremiumIntro?()
+                })
+                self.subtitleBadgeView = subtitleBadgeView
+                self.subtitleNodeContainer.view.addSubview(subtitleBadgeView)
+            }
+            
+            subtitleBadgeSize = subtitleBadgeView.update(title: presentationData.strings.PeerInfo_HiddenStatusBadge, fillColor: contentButtonBackgroundColor, foregroundColor: contentButtonForegroundColor)
+        } else if let subtitleBadgeView = self.subtitleBadgeView {
+            subtitleBadgeView.removeFromSuperview()
+        }
         
         var titleHorizontalOffset: CGFloat = 0.0
         var nextIconX: CGFloat = titleSize.width
@@ -1257,6 +1282,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: bottomShadowFrame, beginWithCurrentState: true)
         self.avatarListNode.listContainerNode.bottomShadowNode.update(size: bottomShadowFrame.size, transition: transition)
         
+        let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
+        
+        let titleLockOffset: CGFloat = 7.0 + singleTitleLockOffset
+        let titleMaxLockOffset: CGFloat = 7.0
+        let titleOffset: CGFloat
+        let titleCollapseFraction: CGFloat
+        
         if self.isAvatarExpanded {
             let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)
             var minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
@@ -1265,31 +1297,40 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
 
             titleFrame = CGRect(origin: CGPoint(x: minTitleFrame.midX - titleSize.width / 2.0, y: minTitleFrame.midY - titleSize.height / 2.0), size: titleSize)
+            
+            var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
+            if case .regular = metrics.widthClass, !isSettings {
+                titleCollapseOffset -= 7.0
+            }
+            titleOffset = -min(titleCollapseOffset, contentOffset)
+            titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
+            
             subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0), size: subtitleSize)
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
             titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 9.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
+            
+            var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
+            if case .regular = metrics.widthClass, !isSettings {
+                titleCollapseOffset -= 7.0
+            }
+            titleOffset = -min(titleCollapseOffset, contentOffset)
+            titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
                         
-            let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
+            var effectiveSubtitleWidth = subtitleSize.width
+            if let subtitleBadgeSize {
+                effectiveSubtitleWidth += (subtitleBadgeSize.width + 7.0) * (1.0 - titleCollapseFraction)
+            }
+            
+            let totalSubtitleWidth = effectiveSubtitleWidth + usernameSpacing + usernameSize.width
             if usernameSize.width == 0.0 {
-                subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
+                subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - effectiveSubtitleWidth) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
                 usernameFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - usernameSize.width) / 2.0), y: subtitleFrame.maxY + 1.0), size: usernameSize)
             } else {
                 subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - totalSubtitleWidth) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
                 usernameFrame = CGRect(origin: CGPoint(x: subtitleFrame.maxX + usernameSpacing, y: titleFrame.maxY + 1.0), size: usernameSize)
             }
         }
-        
-        let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
-        
-        let titleLockOffset: CGFloat = 7.0 + singleTitleLockOffset
-        let titleMaxLockOffset: CGFloat = 7.0
-        var titleCollapseOffset = titleFrame.midY - statusBarHeight - titleLockOffset
-        if case .regular = metrics.widthClass, !isSettings {
-            titleCollapseOffset -= 7.0
-        }
-        let titleOffset = -min(titleCollapseOffset, contentOffset)
-        let titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
         
         let titleMinScale: CGFloat = 0.6
         let subtitleMinScale: CGFloat = 0.8
@@ -1606,7 +1647,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings {
                 expandablePart += 20.0
             } else {
-                if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId.peerId == self.context.account.peerId {
+                if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
                     expandablePart = 0.0
                 } else if peer?.id == self.context.account.peerId {
                     expandablePart = 0.0
@@ -1656,17 +1697,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScale(node: self.usernameNodeContainer, scale: subtitleScale)
+                
+                if let subtitleBadgeView = self.subtitleBadgeView, let subtitleBadgeSize {
+                    let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (subtitleSize.width + 8.0) * 0.5, y: floor((-subtitleBadgeSize.height) * 0.5)), size: subtitleBadgeSize)
+                    transition.updateFrameAdditive(view: subtitleBadgeView, frame: subtitleBadgeFrame)
+                    transition.updateAlpha(layer: subtitleBadgeView.layer, alpha: (1.0 - transitionFraction))
+                }
             } else {
                 let titleScale: CGFloat
                 let subtitleScale: CGFloat
                 var subtitleOffset: CGFloat = 0.0
+                let subtitleBadgeFraction: CGFloat
                 if self.isAvatarExpanded {
                     titleScale = expandedTitleScale
                     subtitleScale = 1.0
+                    subtitleBadgeFraction = 1.0
                 } else {
                     titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
                     subtitleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * subtitleMinScale
                     subtitleOffset = titleCollapseFraction * -1.0
+                    subtitleBadgeFraction = (1.0 - titleCollapseFraction)
                 }
                 
                 let rawTitleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
@@ -1698,6 +1748,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.usernameNodeContainer, scale: subtitleScale)
+                
+                if let subtitleBadgeView = self.subtitleBadgeView, let subtitleBadgeSize {
+                    let subtitleBadgeFrame = CGRect(origin: CGPoint(x: (subtitleSize.width + 8.0) * 0.5, y: floor((-subtitleBadgeSize.height) * 0.5)), size: subtitleBadgeSize)
+                    transition.updateFrameAdditive(view: subtitleBadgeView, frame: subtitleBadgeFrame)
+                    transition.updateAlpha(layer: subtitleBadgeView.layer, alpha: (1.0 - transitionFraction) * subtitleBadgeFraction)
+                }
             }
         }
         
@@ -2040,6 +2096,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let result = subtitleBackgroundButton.view.hitTest(self.view.convert(point, to: subtitleBackgroundButton.view), with: event) {
                 return result
             }
+        }
+        
+        if let subtitleBadgeView = self.subtitleBadgeView, let result = subtitleBadgeView.hitTest(self.view.convert(point, to: subtitleBadgeView), with: event) {
+            return result
         }
         
         if result.isDescendant(of: self.navigationButtonContainer.view) {

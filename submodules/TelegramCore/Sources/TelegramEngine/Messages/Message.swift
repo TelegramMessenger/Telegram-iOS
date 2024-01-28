@@ -10,6 +10,12 @@ public final class EngineMessage: Equatable {
     public typealias GlobalTags = GlobalMessageTags
     public typealias LocalTags = LocalMessageTags
     public typealias ForwardInfo = MessageForwardInfo
+    public typealias CustomTag = MemoryBuffer
+    
+    public enum InputTag: Hashable {
+        case tag(Tags)
+        case custom(CustomTag)
+    }
     
     private let impl: Message
     
@@ -102,6 +108,7 @@ public final class EngineMessage: Equatable {
         tags: EngineMessage.Tags,
         globalTags: EngineMessage.GlobalTags,
         localTags: EngineMessage.LocalTags,
+        customTags: [EngineMessage.CustomTag],
         forwardInfo: EngineMessage.ForwardInfo?,
         author: EnginePeer?,
         text: String,
@@ -137,6 +144,7 @@ public final class EngineMessage: Equatable {
             tags: tags,
             globalTags: globalTags,
             localTags: localTags,
+            customTags: customTags,
             forwardInfo: forwardInfo,
             author: author?._asPeer(),
             text: text,

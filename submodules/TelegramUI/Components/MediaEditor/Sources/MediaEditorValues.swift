@@ -136,7 +136,7 @@ public enum MediaQualityPreset: Int32 {
         case .compressedVeryHigh:
             return 1920.0
         case .videoMessage:
-            return 384.0
+            return 400.0
         case .profileLow:
             return 720.0
         case .profile, .profileHigh, .profileVeryHigh:

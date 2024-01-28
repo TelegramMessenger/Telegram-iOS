@@ -53,13 +53,13 @@ private enum ContactListSearchEntryId: Hashable {
 
 private enum ContactListSearchEntry: Comparable, Identifiable {
     case addContact(PresentationTheme, PresentationStrings, String)
-    case peer(Int, PresentationTheme, PresentationStrings, ContactListPeer, EnginePeer.Presence?, ContactListSearchGroup, Bool)
+    case peer(Int, PresentationTheme, PresentationStrings, ContactListPeer, EnginePeer.Presence?, ContactListSearchGroup, Bool, Bool)
     
     var stableId: ContactListSearchEntryId {
         switch self {
             case .addContact:
                 return .addContact
-            case let .peer(_, _, _, peer, _, _, _):
+            case let .peer(_, _, _, peer, _, _, _, _):
                 return .peerId(peer.id)
         }
     }
@@ -72,9 +72,9 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsPresence, lhsGroup, lhsEnabled):
+            case let .peer(lhsIndex, lhsTheme, lhsStrings, lhsPeer, lhsPresence, lhsGroup, lhsEnabled, lhsRequiresPremiumForMessaging):
                 switch rhs {
-                    case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsPresence, rhsGroup, rhsEnabled):
+                    case let .peer(rhsIndex, rhsTheme, rhsStrings, rhsPeer, rhsPresence, rhsGroup, rhsEnabled, rhsRequiresPremiumForMessaging):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -100,6 +100,9 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
                         if lhsEnabled != rhsEnabled {
                             return false
                         }
+                        if lhsRequiresPremiumForMessaging != rhsRequiresPremiumForMessaging {
+                            return false
+                        }
                         return true
                     default:
                         return false
@@ -109,25 +112,25 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
 
     static func <(lhs: ContactListSearchEntry, rhs: ContactListSearchEntry) -> Bool {
         switch lhs {
+        case .addContact:
+            return true
+        case let .peer(lhsIndex, _, _, _, _, _, _, _):
+            switch rhs {
             case .addContact:
-                return true
-            case let .peer(lhsIndex, _, _, _, _, _, _):
-                switch rhs {
-                    case .addContact:
-                        return false
-                    case let .peer(rhsIndex, _, _, _, _, _, _):
-                        return lhsIndex < rhsIndex
-                }
+                return false
+            case let .peer(rhsIndex, _, _, _, _, _, _, _):
+                return lhsIndex < rhsIndex
+            }
         }
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ListViewItem {
         switch self {
             case let .addContact(theme, strings, phoneNumber):
                 return ContactsAddItem(context: context, theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     addContact?(phoneNumber)
                 })
-            case let .peer(_, theme, strings, peer, presence, group, enabled):
+            case let .peer(_, theme, strings, peer, presence, group, enabled, requiresPremiumForMessaging):
                 let header: ListViewItemHeader
                 let status: ContactsPeerItemStatus
                 switch group {
@@ -158,8 +161,12 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
                     case let .deviceContact(stableId, contact):
                         peerItem = .deviceContact(stableId: stableId, contact: contact)
                 }
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: peerItem, status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: peerItem, status: status, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     openPeer(peer)
+                }, disabledAction: { _ in
+                    if case let .peer(peer, _, _) = peer {
+                        openDisabledPeer(EnginePeer(peer), requiresPremiumForMessaging ? .premiumRequired : .generic)
+                    }
                 }, contextAction: contextAction.flatMap { contextAction in
                     return nativePeer.flatMap { nativePeer in
                         return { node, gesture, location in
@@ -180,12 +187,12 @@ struct ContactListSearchContainerTransition {
     let query: String
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, addContact: addContact, openPeer: openPeer, contextAction: contextAction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, addContact: addContact, openPeer: openPeer, contextAction: contextAction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, addContact: addContact, openPeer: openPeer, openDisabledPeer: openDisabledPeer, contextAction: contextAction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, addContact: addContact, openPeer: openPeer, openDisabledPeer: openDisabledPeer, contextAction: contextAction), directionHint: nil) }
     
     return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, emptyResults: emptyResults, query: query)
 }
@@ -206,6 +213,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     private let context: AccountContext
     private let addContact: ((String) -> Void)?
     private let openPeer: (ContactListPeer) -> Void
+    private let openDisabledPeer: (EnginePeer, ChatListDisabledPeerReason) -> Void
     private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     
     private let dimNode: ASDisplayNode
@@ -229,10 +237,11 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         return true
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, openDisabledPeer: @escaping (EnginePeer, ChatListDisabledPeerReason) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) {
         self.context = context
         self.addContact = addContact
         self.openPeer = openPeer
+        self.openDisabledPeer = openDisabledPeer
         self.contextAction = contextAction
         
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -314,9 +323,71 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     foundDeviceContacts = .single([:])
                 }
                 
-                return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, themeAndStringsPromise.get())
+                struct FoundPeers {
+                    var foundLocalContacts: ([EnginePeer], [EnginePeer.Id: EnginePeer.Presence])
+                    var foundRemoteContacts: ([FoundPeer], [FoundPeer])?
+                }
+                let foundPeers = Promise<FoundPeers>()
+                foundPeers.set(combineLatest(
+                    foundLocalContacts,
+                    foundRemoteContacts
+                )
+                |> map { foundLocalContacts, foundRemoteContacts -> FoundPeers in
+                    return FoundPeers(
+                        foundLocalContacts: foundLocalContacts,
+                        foundRemoteContacts: foundRemoteContacts
+                    )
+                })
+                
+                let peerRequiresPremiumForMessaging: Signal<[EnginePeer.Id: Bool], NoError>
+                if onlyWriteable {
+                    peerRequiresPremiumForMessaging = foundPeers.get()
+                    |> map { foundPeers -> Set<EnginePeer.Id> in
+                        var result = Set<EnginePeer.Id>()
+                        
+                        for peer in foundPeers.foundLocalContacts.0 {
+                            if case let .user(user) = peer, user.flags.contains(.requirePremium) {
+                                result.insert(user.id)
+                            }
+                        }
+                        
+                        if let foundRemoteContacts = foundPeers.foundRemoteContacts {
+                            for peer in foundRemoteContacts.0 {
+                                if let user = peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                                    result.insert(user.id)
+                                }
+                            }
+                            for peer in foundRemoteContacts.1 {
+                                if let user = peer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
+                                    result.insert(user.id)
+                                }
+                            }
+                        }
+                        
+                        return result
+                    }
+                    |> distinctUntilChanged
+                    |> mapToSignal { peerIds -> Signal<[EnginePeer.Id: Bool], NoError> in
+                        return context.engine.data.subscribe(
+                            EngineDataMap(
+                                peerIds.map(TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.init(id:))
+                            )
+                        )
+                    }
+                } else {
+                    peerRequiresPremiumForMessaging = .single([:])
+                }
+                
+                return combineLatest(foundPeers.get(), peerRequiresPremiumForMessaging, foundDeviceContacts, themeAndStringsPromise.get())
                 |> delay(0.1, queue: Queue.concurrentDefaultQueue())
-                |> map { localPeersAndPresences, remotePeers, deviceContacts, themeAndStrings -> ([ContactListSearchEntry], String) in
+                |> map { foundPeers, peerRequiresPremiumForMessaging, deviceContacts, themeAndStrings -> ([ContactListSearchEntry], String) in
+                    let localPeersAndPresences = foundPeers.foundLocalContacts
+                    let remotePeers = foundPeers.foundRemoteContacts
+                    
+                    if !peerRequiresPremiumForMessaging.isEmpty {
+                        context.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: Array(peerRequiresPremiumForMessaging.keys))
+                    }
+                    
                     let _ = previousFoundRemoteContacts.swap(remotePeers)
                     
                     var entries: [ContactListSearchEntry] = []
@@ -351,10 +422,15 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                         
                         existingPeerIds.insert(peer.id)
                         var enabled = true
+                        var requiresPremiumForMessaging = false
                         if onlyWriteable {
                             enabled = canSendMessagesToPeer(peer._asPeer())
+                            if let value = peerRequiresPremiumForMessaging[peer.id], value {
+                                requiresPremiumForMessaging = true
+                                enabled = false
+                            }
                         }
-                        entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), localPeersAndPresences.1[peer.id], .contacts, enabled))
+                        entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), localPeersAndPresences.1[peer.id], .contacts, enabled, requiresPremiumForMessaging))
                         if searchDeviceContacts, case let .user(user) = peer, let phone = user.phone {
                             existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                         }
@@ -377,11 +453,16 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                                 existingPeerIds.insert(peer.peer.id)
                                 
                                 var enabled = true
+                                var requiresPremiumForMessaging = false
                                 if onlyWriteable {
                                     enabled = canSendMessagesToPeer(peer.peer)
+                                    if let value = peerRequiresPremiumForMessaging[peer.peer.id], value {
+                                        requiresPremiumForMessaging = true
+                                        enabled = false
+                                    }
                                 }
                                 
-                                entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers), nil, .global, enabled))
+                                entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers), nil, .global, enabled, requiresPremiumForMessaging))
                                 if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
                                     existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                 }
@@ -404,11 +485,16 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                                 existingPeerIds.insert(peer.peer.id)
                                 
                                 var enabled = true
+                                var requiresPremiumForMessaging = false
                                 if onlyWriteable {
                                     enabled = canSendMessagesToPeer(peer.peer)
+                                    if let value = peerRequiresPremiumForMessaging[peer.peer.id], value {
+                                        requiresPremiumForMessaging = true
+                                        enabled = false
+                                    }
                                 }
                                 
-                                entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers), nil, .global, enabled))
+                                entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers), nil, .global, enabled, requiresPremiumForMessaging))
                                 if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
                                     existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                 }
@@ -429,7 +515,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                                     continue outer
                                 }
                             }
-                            entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .deviceContact(stableId, contact.0), nil, .deviceContacts, true))
+                            entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .deviceContact(stableId, contact.0), nil, .deviceContacts, true, false))
                             index += 1
                         }
                     }
@@ -464,6 +550,12 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                 let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, emptyResults: items?.isEmpty ?? false, query: query, context: context, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, addContact: addContact, openPeer: { peer in
                     self?.listNode.clearHighlightAnimated(true)
                     self?.openPeer(peer)
+                }, openDisabledPeer: { peer, reason in
+                    guard let self else {
+                        return
+                    }
+                    self.listNode.clearHighlightAnimated(true)
+                    self.openDisabledPeer(peer, reason)
                 }, contextAction: strongSelf.contextAction)
                 
                 strongSelf.enqueueTransition(transition)

@@ -27,6 +27,7 @@ public func makeTempContext(
         encryptionParameters: encryptionParameters,
         accountManager: accountManager,
         appLockContext: appLockContext,
+        notificationController: nil,
         applicationBindings: applicationBindings,
         initialPresentationDataAndSettings: initialPresentationDataAndSettings,
         networkArguments: networkArguments,

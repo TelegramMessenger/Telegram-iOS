@@ -87,6 +87,7 @@ private final class ShareControllerAccountContextExtension: ShareControllerAccou
     let accountId: AccountRecordId
     let accountPeerId: EnginePeer.Id
     let stateManager: AccountStateManager
+    let engineData: TelegramEngine.EngineData
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     let contentSettings: ContentSettings
@@ -101,6 +102,7 @@ private final class ShareControllerAccountContextExtension: ShareControllerAccou
         self.accountId = accountId
         self.accountPeerId = stateManager.accountPeerId
         self.stateManager = stateManager
+        self.engineData = TelegramEngine.EngineData(accountPeerId: stateManager.accountPeerId, postbox: stateManager.postbox)
         let cacheStorageBox = stateManager.postbox.mediaBox.cacheStorageBox
         self.animationCache = AnimationCacheImpl(basePath: stateManager.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
             return TempBox.shared.tempFile(fileName: "file").path
@@ -463,7 +465,7 @@ public class ShareRootControllerImpl {
             |> mapToSignal { data -> Signal<(ShareControllerEnvironment, ShareControllerAccountContext, PostboxAccessChallengeData, [ShareControllerSwitchableAccount]), ShareAuthorizationError> in
                 let (environment, context, otherAccounts) = data
                 
-                let limitsConfigurationAndContentSettings = TelegramEngine.EngineData(postbox: context.stateManager.postbox).get(
+                let limitsConfigurationAndContentSettings = TelegramEngine.EngineData(accountPeerId: context.stateManager.accountPeerId, postbox: context.stateManager.postbox).get(
                     TelegramEngine.EngineData.Item.Configuration.Limits(),
                     TelegramEngine.EngineData.Item.Configuration.ContentSettings(),
                     TelegramEngine.EngineData.Item.Configuration.App()
@@ -891,7 +893,7 @@ private func attemptChatImport(
                 var attemptSelectionImpl: ((EnginePeer) -> Void)?
                 var createNewGroupImpl: (() -> Void)?
                 
-                let controller = PeerSelectionControllerImpl(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled, .doNotSearchMessages], hasContactSelector: false, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
+                let controller = PeerSelectionControllerImpl(PeerSelectionControllerParams(context: context, filter: [.onlyGroups, .onlyManageable, .excludeDisabled, .doNotSearchMessages], hasContactSelector: false, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _, _ in
                     attemptSelectionImpl?(peer)
                 }, createNewGroup: {
                     createNewGroupImpl?()
@@ -1058,7 +1060,7 @@ private func attemptChatImport(
                 navigationController.viewControllers = [controller]
             case let .privateChat(title):
                 var attemptSelectionImpl: ((EnginePeer) -> Void)?
-                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages, .excludeSecretChats], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
+                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages, .excludeSecretChats], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _, _ in
                     attemptSelectionImpl?(peer)
                 }, pretendPresentedInModal: true, selectForumThreads: true))
                 
@@ -1131,7 +1133,7 @@ private func attemptChatImport(
             case let .unknown(peerTitle):
                 var attemptSelectionImpl: ((EnginePeer) -> Void)?
                 var createNewGroupImpl: (() -> Void)?
-                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeDisabled, .doNotSearchMessages], hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
+                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.excludeDisabled, .doNotSearchMessages], hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _, _ in
                     attemptSelectionImpl?(peer)
                 }, createNewGroup: {
                     createNewGroupImpl?()

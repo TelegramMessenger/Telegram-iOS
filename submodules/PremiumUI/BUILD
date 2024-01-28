@@ -111,6 +111,7 @@ swift_library(
         "//submodules/InvisibleInkDustNode",
         "//submodules/AlertUI",
         "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

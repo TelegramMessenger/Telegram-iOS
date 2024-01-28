@@ -114,7 +114,21 @@ public extension Message {
         return nil
     }
     
+    var sourceAuthorInfo: SourceAuthorInfoMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? SourceAuthorInfoMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
     var effectiveAuthor: Peer? {
+        if let sourceAuthorInfo = self.sourceAuthorInfo {
+            if let sourceAuthorId = sourceAuthorInfo.originalAuthor, let peer = self.peers[sourceAuthorId] {
+                return peer
+            }
+        }
         if let forwardInfo = self.forwardInfo, let sourceReference = self.sourceReference, forwardInfo.author?.id == sourceReference.messageId.peerId {
             if let peer = self.peers[sourceReference.messageId.peerId] {
                 return peer
@@ -220,7 +234,7 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associ
     let second = UInt32(hashValue & 0xffffffff)
     let stableId = first &+ second
         
-    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo, associatedStories: [:])
+    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, customTags: [], forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo, associatedStories: [:])
 }
 
 func locallyRenderedMessage(message: StoreMessage, peers: AccumulatedPeers, associatedThreadInfo: Message.AssociatedThreadInfo? = nil) -> Message? {
@@ -276,12 +290,24 @@ func locallyRenderedMessage(message: StoreMessage, peers: AccumulatedPeers, asso
     let second = UInt32(hashValue & 0xffffffff)
     let stableId = first &+ second
         
-    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo, associatedStories: [:])
+    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, customTags: [], forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo, associatedStories: [:])
 }
 
 public extension Message {
     func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
         if self.id.peerId == accountPeerId {
+            if let sourceAuthorInfo = self.sourceAuthorInfo {
+                if sourceAuthorInfo.originalOutgoing {
+                    return false
+                } else if let originalAuthor = sourceAuthorInfo.originalAuthor, originalAuthor == accountPeerId {
+                    return false
+                }
+            } else if let forwardInfo = self.forwardInfo {
+                if let author = forwardInfo.author, author.id == accountPeerId {
+                    return false
+                }
+            }
+            
             if self.forwardInfo != nil {
                 return true
             } else {
@@ -391,12 +417,23 @@ public extension Message {
         }
         return nil
     }
-    var effectiveReactions: [MessageReaction]? {
+    func effectiveReactionsAttribute(isTags: Bool) -> ReactionsMessageAttribute? {
         if !self.hasReactions {
             return nil
         }
         
-        if let result = mergedMessageReactions(attributes: self.attributes) {
+        if let result = mergedMessageReactions(attributes: self.attributes, isTags: isTags) {
+            return result
+        } else {
+            return nil
+        }
+    }
+    func effectiveReactions(isTags: Bool) -> [MessageReaction]? {
+        if !self.hasReactions {
+            return nil
+        }
+        
+        if let result = mergedMessageReactions(attributes: self.attributes, isTags: isTags) {
             return result.reactions
         } else {
             return nil
@@ -447,6 +484,19 @@ public extension Message {
             }
         }
         return nil
+    }
+}
+
+public extension Message {
+    func areReactionsTags(accountPeerId: PeerId) -> Bool {
+        /*if self.id.peerId == accountPeerId {
+            if let reactionsAttribute = self.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
+                return reactionsAttribute.isTags
+            } else {
+                return true
+            }
+        }*/
+        return false
     }
 }
 

@@ -185,6 +185,8 @@ public final class PrincipalThemeEssentialGraphics {
     public let radialIndicatorFileIconIncoming: UIImage
     public let radialIndicatorFileIconOutgoing: UIImage
     
+    public let radialIndicatorViewOnceIcon: UIImage
+    
     public let incomingBubbleGradientImage: UIImage?
     public let outgoingBubbleGradientImage: UIImage?
     
@@ -370,6 +372,8 @@ public final class PrincipalThemeEssentialGraphics {
             
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
+            
+            self.radialIndicatorViewOnceIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ViewOnce"), color: .black)!
         } else {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
             self.chatMessageBackgroundIncomingExtractedMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .extracted, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
@@ -489,6 +493,8 @@ public final class PrincipalThemeEssentialGraphics {
             
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
+            
+            self.radialIndicatorViewOnceIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ViewOnce"), color: .black)!
         }
         
         let chatDateSize: CGFloat = 20.0

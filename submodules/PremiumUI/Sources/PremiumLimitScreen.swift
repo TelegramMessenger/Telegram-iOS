@@ -1025,6 +1025,22 @@ private final class LimitSheetContent: CombinedComponent {
                     badgeText = "\(limit)"
                     string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
                 }
+            case .pinnedSavedPeers:
+                let limit = state.limits.maxPinnedSavedChatCount
+                let premiumLimit = state.premiumLimits.maxPinnedSavedChatCount
+                iconName = "Premium/Pin"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxSavedPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxSavedPinsText("\(limit)", "\(premiumLimit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = max(0.15, min(0.85, CGFloat(component.count) / CGFloat(premiumLimit)))
+                badgeGraphPosition = badgePosition
+                buttonAnimationName = nil
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxSavedPinsNoPremiumText("\(limit)").string
+                }
             case .files:
                 let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
                 let premiumLimit = Int64(state.premiumLimits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
@@ -1771,6 +1787,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case folders
         case chatsPerFolder
         case pins
+        case pinnedSavedPeers
         case files
         case accounts
         case linksPerSharedFolder

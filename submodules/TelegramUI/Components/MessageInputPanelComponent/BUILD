@@ -40,6 +40,7 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/TelegramUI/Components/ContextReferenceButtonComponent",
         "//submodules/TelegramUI/Components/Stories/ForwardInfoPanelComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
     ],
     visibility = [
         "//visibility:public",

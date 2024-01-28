@@ -1,11 +1,30 @@
 import Foundation
 import UIKit
+import Darwin
 
 public protocol SharedDisplayLinkDriverLink: AnyObject {
     var isPaused: Bool { get set }
     
     func invalidate()
 }
+
+private let isIpad: Bool = {
+    var systemInfo = utsname()
+    uname(&systemInfo)
+    let modelCode = withUnsafePointer(to: &systemInfo.machine) {
+        $0.withMemoryRebound(to: CChar.self, capacity: 1) {
+            ptr in String.init(validatingUTF8: ptr)
+        }
+    }
+    
+    if let modelCode {
+        if modelCode.lowercased().hasPrefix("ipad") {
+            return true
+        }
+    }
+    
+    return false
+}()
 
 public final class SharedDisplayLinkDriver {
     public enum FramesPerSecond: Comparable {
@@ -146,7 +165,7 @@ public final class SharedDisplayLinkDriver {
             if #available(iOS 15.0, *) {
                 let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
                 if maxFps > 61.0 {
-                    let frameRateRange: CAFrameRateRange
+                    var frameRateRange: CAFrameRateRange
                     switch maxFramesPerSecond {
                     case let .fps(fps):
                         if fps > 60 {
@@ -157,6 +176,11 @@ public final class SharedDisplayLinkDriver {
                     case .max:
                         frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
                     }
+                    
+                    if isIpad {
+                        frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
+                    }
+                    
                     if displayLink.preferredFrameRateRange != frameRateRange {
                         displayLink.preferredFrameRateRange = frameRateRange
                         print("SharedDisplayLinkDriver: switch to \(frameRateRange)")

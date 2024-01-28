@@ -21,6 +21,7 @@ func chatHistoryEntriesForView(
     selectedMessages: Set<MessageId>?,
     presentationData: ChatPresentationData,
     historyAppearsCleared: Bool,
+    skipViewOnceMedia: Bool,
     pendingUnpinnedAllMessages: Bool,
     pendingRemovedMessages: Set<MessageId>,
     associatedData: ChatMessageItemAssociatedData,
@@ -71,6 +72,7 @@ func chatHistoryEntriesForView(
                 tags: [],
                 globalTags: [],
                 localTags: [],
+                customTags: [],
                 forwardInfo: nil,
                 author: channelPeer,
                 text: "",
@@ -97,6 +99,7 @@ func chatHistoryEntriesForView(
                 tags: [],
                 globalTags: [],
                 localTags: [],
+                customTags: [],
                 forwardInfo: nil,
                 author: channelPeer,
                 text: "",
@@ -150,6 +153,10 @@ func chatHistoryEntriesForView(
                     break attibuteLoop
                 }
             }
+        }
+        
+        if skipViewOnceMedia, message.minAutoremoveOrClearTimeout != nil {
+            continue loop
         }
         
         var contentTypeHint: ChatMessageEntryContentType = .generic
@@ -423,6 +430,7 @@ func chatHistoryEntriesForView(
                     tags: message.tags,
                     globalTags: message.globalTags,
                     localTags: message.localTags,
+                    customTags: message.customTags,
                     forwardInfo: message.forwardInfo,
                     author: message.author,
                     text: /*"\(message.adAttribute!.opaqueId.hashValue)" + */message.text,

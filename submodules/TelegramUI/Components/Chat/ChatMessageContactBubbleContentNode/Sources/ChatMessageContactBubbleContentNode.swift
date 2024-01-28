@@ -14,13 +14,17 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageAttachedContentButtonNode
 import ChatControllerInteraction
+import MessageInlineBlockBackgroundView
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
-private let titleFont = Font.medium(14.0)
+private let titleFont = Font.semibold(14.0)
 private let textFont = Font.regular(14.0)
 
 public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
+    private var backgroundView: MessageInlineBlockBackgroundView?
+    private var actionButtonSeparator: SimpleLayer?
+    
     private let avatarNode: AvatarNode
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private let titleNode: TextNode
@@ -29,23 +33,27 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private var contact: TelegramMediaContact?
     private var contactInfo : String?
     
-    private let buttonNode: ChatMessageAttachedContentButtonNode
+    private let addButtonNode: ChatMessageAttachedContentButtonNode
+    private let messageButtonNode: ChatMessageAttachedContentButtonNode
     
     required public init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.titleNode = TextNode()
         self.textNode = TextNode()
-        self.buttonNode = ChatMessageAttachedContentButtonNode()
+        self.addButtonNode = ChatMessageAttachedContentButtonNode()
+        self.messageButtonNode = ChatMessageAttachedContentButtonNode()
         
         super.init()
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
-        self.addSubnode(self.buttonNode)
+        self.addSubnode(self.addButtonNode)
+        self.addSubnode(self.messageButtonNode)
         
-        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.addButtonNode.addTarget(self, action: #selector(self.addButtonPressed), forControlEvents: .touchUpInside)
+        self.messageButtonNode.addTarget(self, action: #selector(self.messageButtonPressed), forControlEvents: .touchUpInside)
         
         self.dateAndStatusNode.reactionSelected = { [weak self] value in
             guard let strongSelf = self, let item = strongSelf.item else {
@@ -65,7 +73,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func accessibilityActivate() -> Bool {
-        self.buttonPressed()
+        self.addButtonPressed()
         return true
     }
     
@@ -84,7 +92,8 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
-        let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
+        let makeMessageButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.messageButtonNode)
+        let makeAddButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.addButtonNode)
         
         let previousContact = self.contact
         let previousContactInfo = self.contactInfo
@@ -102,9 +111,45 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 incoming = false
             }
             
+            
+            var contactPeer: Peer?
+            if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
+                contactPeer = peer
+            }
+            
+            let nameColors = contactPeer?.nameColor.flatMap { item.context.peerNameColors.get($0, dark: item.presentationData.theme.theme.overallDarkAppearance) }
+            
+            let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
+            let mainColor: UIColor
+            var secondaryColor: UIColor?
+            var tertiaryColor: UIColor?
+            if !incoming {
+                mainColor = messageTheme.accentTextColor
+                if let _ = nameColors?.secondary {
+                    secondaryColor = .clear
+                }
+                if let _ = nameColors?.tertiary {
+                    tertiaryColor = .clear
+                }
+            } else {
+                var authorNameColor: UIColor?
+                authorNameColor = nameColors?.main
+                secondaryColor = nameColors?.secondary
+                tertiaryColor = nameColors?.tertiary
+                
+                if let authorNameColor {
+                    mainColor = authorNameColor
+                } else {
+                    mainColor = messageTheme.accentTextColor
+                }
+            }
+            
             var titleString: NSAttributedString?
             var textString: NSAttributedString?
             var updatedContactInfo: String?
+            
+            var canMessage = false
+            var canAdd = false
             
             var displayName: String = ""
             if let selectedContact = selectedContact {
@@ -117,6 +162,10 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 if displayName.isEmpty {
                     displayName = item.presentationData.strings.Message_Contact
+                }
+                
+                if selectedContact.peerId != nil {
+                    canMessage = true
                 }
                 
                 let info: String
@@ -157,10 +206,12 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
+                canAdd = !item.associatedData.deviceContactsNumbers.contains(selectedContact.phoneNumber)
+                    
                 updatedContactInfo = info
                 
-                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor)
-                textString = NSAttributedString(string: info, font: textFont, textColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor)
+                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: mainColor)
+                textString = NSAttributedString(string: info, font: textFont, textColor: messageTheme.primaryTextColor)
             } else {
                 updatedContactInfo = nil
             }
@@ -182,7 +233,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
+                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: item.associatedData.accountPeer, message: item.message)
                 if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
                 }
@@ -238,6 +289,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
+                        areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
@@ -247,42 +299,67 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     ))
                 }
                 
-                let titleColor: UIColor
                 let avatarPlaceholderColor: UIColor
                 if incoming {
-                    titleColor = item.presentationData.theme.theme.chat.message.incoming.accentTextColor
                     avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor
                 } else {
-                    titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, false, true)
+                let (messageButtonWidth, messageContinueLayout) = makeMessageButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Conversation_ContactMessage.uppercased(), mainColor, false, false)
                 
+                let addTitle: String
+                if !canMessage && !canAdd  {
+                    addTitle = item.presentationData.strings.Conversation_ViewContactDetails
+                } else {
+                    if canMessage {
+                        addTitle = item.presentationData.strings.Conversation_ContactAddContact
+                    } else {
+                        addTitle = item.presentationData.strings.Conversation_ContactAddContactLong
+                    }
+                }
+                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, nil, false, addTitle.uppercased(), mainColor, false, false)
+                
+                let maxButtonWidth = max(messageButtonWidth, addButtonWidth)
                 var maxContentWidth: CGFloat = avatarSize.width + 7.0
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                     maxContentWidth = max(maxContentWidth, statusSuggestedWidthAndContinue.0)
                 }
-                maxContentWidth = max(maxContentWidth, avatarSize.width + 7.0 + titleLayout.size.width)
-                maxContentWidth = max(maxContentWidth, avatarSize.width + 7.0 + textLayout.size.width)
-                maxContentWidth = max(maxContentWidth, buttonWidth)
+                maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + titleLayout.size.width + 7.0)
+                maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + textLayout.size.width + 7.0)
+                maxContentWidth = max(maxContentWidth, maxButtonWidth * 2.0)
+                maxContentWidth = max(maxContentWidth, 220.0)
                 
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
                 return (contentWidth, { boundingWidth in
                     let baseAvatarFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutConstants.text.bubbleInsets.top), size: avatarSize)
                     
-                    let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, 33.0)
+                    let lineWidth: CGFloat = 3.0
+                    
+                    var buttonCount = 1
+                    if canMessage && canAdd {
+                        buttonCount += 1
+                    }
+                    var buttonWidth = floor((boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0 - lineWidth))
+                    if buttonCount > 1 {
+                        buttonWidth /= CGFloat(buttonCount)
+                    }
+                    
+                    let (messageButtonSize, messageButtonApply) = messageContinueLayout(buttonWidth, 33.0)
+                    let (addButtonSize, addButtonApply) = addContinueLayout(buttonWidth, 33.0)
+                  
                     let buttonSpacing: CGFloat = 4.0
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
-                    var layoutSize = CGSize(width: contentWidth, height: 49.0 + textLayout.size.height + buttonSize.height + buttonSpacing)
+                    var layoutSize = CGSize(width: contentWidth, height: 64.0 + textLayout.size.height + addButtonSize.height + buttonSpacing)
                     if let statusSizeAndApply = statusSizeAndApply {
                         layoutSize.height += statusSizeAndApply.0.height - 4.0
                     }
-                    let buttonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutSize.height - 9.0 - buttonSize.height), size: buttonSize)
-                    let avatarFrame = baseAvatarFrame.offsetBy(dx: 0.0, dy: 5.0)
+                    let messageButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth, y: layoutSize.height - 24.0 - messageButtonSize.height), size: messageButtonSize)
+                    let addButtonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right + lineWidth + (canMessage ? buttonWidth : 0.0), y: layoutSize.height - 24.0 - addButtonSize.height), size: addButtonSize)
+                    let avatarFrame = baseAvatarFrame.offsetBy(dx: 9.0, dy: 14.0)
                     
                     var customLetters: [String] = []
                     if let selectedContact = selectedContact, selectedContact.peerId == nil {
@@ -309,14 +386,22 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let _ = titleApply()
                             let _ = textApply()
-                            let _ = buttonApply(animation)
+                            let _ = messageButtonApply(animation)
+                            let _ = addButtonApply(animation)
                             
                             strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 1.0), size: titleLayout.size)
                             strongSelf.textNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
-                            strongSelf.buttonNode.frame = buttonFrame
+                            
+                            strongSelf.addButtonNode.frame = addButtonFrame
+                            strongSelf.addButtonNode.isHidden = !canAdd && canMessage
+                            strongSelf.messageButtonNode.frame = messageButtonFrame
+                            strongSelf.messageButtonNode.isHidden = !canMessage
+                            
+                            let backgroundInsets = layoutConstants.text.bubbleInsets
+                            let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top + 5.0), size: CGSize(width: boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, height: layoutSize.height - 34.0))
                             
                             if let statusSizeAndApply = statusSizeAndApply {
-                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: strongSelf.textNode.frame.maxY + 2.0), size: statusSizeAndApply.0)
+                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: backgroundFrame.maxY + 3.0), size: statusSizeAndApply.0)
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.dateAndStatusNode)
                                     statusSizeAndApply.1(.None)
@@ -359,6 +444,48 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             } else {
                                 strongSelf.dateAndStatusNode.pressed = nil
                             }
+                            
+                            var pattern: MessageInlineBlockBackgroundView.Pattern?
+                            if let contactPeer, let backgroundEmojiId = contactPeer.backgroundEmojiId {
+                                pattern = MessageInlineBlockBackgroundView.Pattern(
+                                    context: item.context,
+                                    fileId: backgroundEmojiId,
+                                    file: item.message.associatedMedia[MediaId(
+                                        namespace: Namespaces.Media.CloudFile,
+                                        id: backgroundEmojiId
+                                    )] as? TelegramMediaFile
+                                )
+                            }
+                            
+                            let patternTopRightPosition = CGPoint()
+                            
+                            let backgroundView: MessageInlineBlockBackgroundView
+                            if let current = strongSelf.backgroundView {
+                                backgroundView = current
+                                animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
+                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: pattern, patternTopRightPosition: patternTopRightPosition, animation: animation)
+                            } else {
+                                backgroundView = MessageInlineBlockBackgroundView()
+                                strongSelf.backgroundView = backgroundView
+                                backgroundView.frame = backgroundFrame
+                                strongSelf.view.insertSubview(backgroundView, at: 0)
+                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: pattern, patternTopRightPosition: patternTopRightPosition, animation: .None)
+                            }
+                            
+                            let separatorFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + 9.0, y: backgroundFrame.maxY - 36.0), size: CGSize(width: backgroundFrame.width - 18.0, height: UIScreenPixel))
+                            
+                            let actionButtonSeparator: SimpleLayer
+                            if let current = strongSelf.actionButtonSeparator {
+                                actionButtonSeparator = current
+                                animation.animator.updateFrame(layer: actionButtonSeparator, frame: separatorFrame, completion: nil)
+                            } else {
+                                actionButtonSeparator = SimpleLayer()
+                                strongSelf.actionButtonSeparator = actionButtonSeparator
+                                strongSelf.layer.addSublayer(actionButtonSeparator)
+                                actionButtonSeparator.frame = separatorFrame
+                            }
+                            
+                            actionButtonSeparator.backgroundColor = mainColor.withMultipliedAlpha(0.2).cgColor
                         }
                     })
                 })
@@ -379,8 +506,11 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if self.buttonNode.frame.contains(point) {
-            return ChatMessageBubbleContentTapAction(content: .openMessage)
+        if self.messageButtonNode.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
+        if self.addButtonNode.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
@@ -391,14 +521,38 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc private func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                var selectedContact: TelegramMediaContact?
+                for media in item.message.media {
+                    if let media = media as? TelegramMediaContact {
+                        selectedContact = media
+                    }
+                }
+                if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
+                    item.controllerInteraction.openPeer(EnginePeer(peer), .info(nil), nil, .default)
+                } else {
+                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+                }
             }
         }
     }
     
-    @objc private func buttonPressed() {
+    @objc private func addButtonPressed() {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
+        }
+    }
+    
+    @objc private func messageButtonPressed() {
+        if let item = self.item {
+            var selectedContact: TelegramMediaContact?
+            for media in item.message.media {
+                if let media = media as? TelegramMediaContact {
+                    selectedContact = media
+                }
+            }
+            if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
+                item.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+            }
         }
     }
     

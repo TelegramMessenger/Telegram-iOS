@@ -17,6 +17,8 @@ import ChatMessageItemView
 import ChatMessageBubbleItemNode
 import TelegramNotices
 import ChatMessageWebpageBubbleContentNode
+import PremiumUI
+import UndoUI
 
 private enum OptionsId: Hashable {
     case reply
@@ -100,7 +102,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
     }
     |> distinctUntilChanged
     
-    let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .forward(ChatControllerSubject.MessageOptionsInfo.Forward(options: forwardOptions))), botStart: nil, mode: .standard(previewing: true))
+    let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .forward(ChatControllerSubject.MessageOptionsInfo.Forward(options: forwardOptions))), botStart: nil, mode: .standard(.previewing))
     chatController.canReadHistory.set(false)
     
     let messageIds = selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
@@ -417,7 +419,9 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                 canReplyInAnotherChat = false
             }
-            
+            if message.minAutoremoveOrClearTimeout == viewOnceTimeout {
+                canReplyInAnotherChat = false
+            }
         }
         
         if canReplyInAnotherChat {
@@ -508,7 +512,7 @@ private func chatReplyOptions(selfController: ChatControllerImpl, sourceNode: AS
     }
     |> distinctUntilChanged)
     
-    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [replySubject.messageId.peerId], ids: [replySubject.messageId], info: .reply(ChatControllerSubject.MessageOptionsInfo.Reply(quote: replyQuote, selectionState: selectionState))), botStart: nil, mode: .standard(previewing: true)) as? ChatControllerImpl else {
+    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [replySubject.messageId.peerId], ids: [replySubject.messageId], info: .reply(ChatControllerSubject.MessageOptionsInfo.Reply(quote: replyQuote, selectionState: selectionState))), botStart: nil, mode: .standard(.previewing)) as? ChatControllerImpl else {
         return nil
     }
     chatController.canReadHistory.set(false)
@@ -543,27 +547,48 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
             return
         }
         let filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled, .doNotSearchMessages]
-        var attemptSelectionImpl: ((EnginePeer) -> Void)?
+        var attemptSelectionImpl: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
         let controller = selfController.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(
             context: selfController.context,
             updatedPresentationData: selfController.updatedPresentationData,
             filter: filter,
             hasFilters: true,
             title: selfController.presentationData.strings.Conversation_MoveReplyToAnotherChatTitle,
-            attemptSelection: { peer, _ in
-                attemptSelectionImpl?(peer)
+            attemptSelection: { peer, _, reason in
+                attemptSelectionImpl?(peer, reason)
             },
             multipleSelection: false,
             forwardedMessageIds: [],
             selectForumThreads: true
         ))
         let context = selfController.context
-        attemptSelectionImpl = { [weak selfController, weak controller] peer in
+        attemptSelectionImpl = { [weak selfController, weak controller] peer, reason in
             guard let selfController, let controller = controller else {
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            controller.present(textAlertController(context: context, updatedPresentationData: selfController.updatedPresentationData, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            switch reason {
+            case .generic:
+                controller.present(textAlertController(context: context, updatedPresentationData: selfController.updatedPresentationData, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            case .premiumRequired:
+                controller.forEachController { c in
+                    if let c = c as? UndoOverlayController {
+                        c.dismiss()
+                    }
+                    return true
+                }
+                controller.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action, timeout: nil, linkAction: { _ in
+                }), elevatedLayout: false, animateInAsReplacement: true, action: { [weak selfController, weak controller] action in
+                    guard let selfController, let controller else {
+                        return false
+                    }
+                    if case .undo = action {
+                        let premiumController = PremiumIntroScreen(context: selfController.context, source: .settings)
+                        controller.push(premiumController)
+                    }
+                    return false
+                }), in: .current)
+            }
         }
         controller.peerSelected = { [weak selfController, weak controller] peer, threadId in
             guard let selfController, let strongController = controller else {
@@ -736,7 +761,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
     }
     |> distinctUntilChanged
     
-    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .link(ChatControllerSubject.MessageOptionsInfo.Link(options: linkOptions))), botStart: nil, mode: .standard(previewing: true)) as? ChatControllerImpl else {
+    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .link(ChatControllerSubject.MessageOptionsInfo.Link(options: linkOptions))), botStart: nil, mode: .standard(.previewing)) as? ChatControllerImpl else {
         return nil
     }
     chatController.canReadHistory.set(false)

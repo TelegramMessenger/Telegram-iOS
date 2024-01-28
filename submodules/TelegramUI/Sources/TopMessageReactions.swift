@@ -6,6 +6,98 @@ import AccountContext
 import ReactionSelectionNode
 
 func topMessageReactions(context: AccountContext, message: Message) -> Signal<[ReactionItem], NoError> {
+    if message.id.peerId == context.account.peerId {
+        var loadTags = false
+        if let effectiveReactionsAttribute = message.effectiveReactionsAttribute(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
+            loadTags = true
+            if !effectiveReactionsAttribute.reactions.isEmpty {
+                if !effectiveReactionsAttribute.isTags {
+                    loadTags = false
+                }
+            }
+        } else {
+            loadTags = true
+        }
+        
+        if "".isEmpty {
+            loadTags = false
+        }
+        
+        if loadTags {
+            return combineLatest(
+                context.engine.stickers.availableReactions(),
+                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudDefaultTagReactions], namespaces: [ItemCollectionId.Namespace.max - 1], aroundIndex: nil, count: 10000000)
+            )
+            |> take(1)
+            |> map { availableReactions, view -> [ReactionItem] in
+                var defaultTagReactions: OrderedItemListView?
+                for orderedView in view.orderedItemListsViews {
+                    if orderedView.collectionId == Namespaces.OrderedItemList.CloudDefaultTagReactions {
+                        defaultTagReactions = orderedView
+                    }
+                }
+                
+                var result: [ReactionItem] = []
+                var existingIds = Set<MessageReaction.Reaction>()
+                
+                if let defaultTagReactions {
+                    for item in defaultTagReactions.items {
+                        guard let topReaction = item.contents.get(RecentReactionItem.self) else {
+                            continue
+                        }
+                        switch topReaction.content {
+                        case let .builtin(value):
+                            if let reaction = availableReactions?.reactions.first(where: { $0.value == .builtin(value) }) {
+                                guard let centerAnimation = reaction.centerAnimation else {
+                                    continue
+                                }
+                                guard let aroundAnimation = reaction.aroundAnimation else {
+                                    continue
+                                }
+                                
+                                if existingIds.contains(reaction.value) {
+                                    continue
+                                }
+                                existingIds.insert(reaction.value)
+                                
+                                result.append(ReactionItem(
+                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                    appearAnimation: reaction.appearAnimation,
+                                    stillAnimation: reaction.selectAnimation,
+                                    listAnimation: centerAnimation,
+                                    largeListAnimation: reaction.activateAnimation,
+                                    applicationAnimation: aroundAnimation,
+                                    largeApplicationAnimation: reaction.effectAnimation,
+                                    isCustom: false
+                                ))
+                            } else {
+                                continue
+                            }
+                        case let .custom(file):
+                            if existingIds.contains(.custom(file.fileId.id)) {
+                                continue
+                            }
+                            existingIds.insert(.custom(file.fileId.id))
+                            
+                            result.append(ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
+                                appearAnimation: file,
+                                stillAnimation: file,
+                                listAnimation: file,
+                                largeListAnimation: file,
+                                applicationAnimation: nil,
+                                largeApplicationAnimation: nil,
+                                isCustom: true
+                            ))
+                        }
+                    }
+                }
+                
+                return result
+            }
+        }
+    }
+    
     let viewKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudTopReactions)
     let topReactions = context.account.postbox.combinedView(keys: [viewKey])
     |> map { views -> [RecentReactionItem] in
@@ -51,7 +143,6 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
         }
         
         var result: [ReactionItem] = []
-        
         var existingIds = Set<MessageReaction.Reaction>()
         
         for topReaction in topReactions {

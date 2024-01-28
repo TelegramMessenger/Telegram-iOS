@@ -925,7 +925,11 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     std::unique_ptr<tgcalls::Instance> _tgVoip;
     bool _didStop;
     
+    OngoingCallStateWebrtc _pendingState;
     OngoingCallStateWebrtc _state;
+    bool _didPushStateOnce;
+    GroupCallDisposable *_pushStateDisposable;
+    
     OngoingCallVideoStateWebrtc _videoState;
     bool _connectedOnce;
     OngoingCallRemoteBatteryLevelWebrtc _remoteBatteryLevel;
@@ -1356,6 +1360,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .directConnectionChannel = directConnectionChannel
         });
         _state = OngoingCallStateInitializing;
+        _pendingState = OngoingCallStateInitializing;
         _signalBars = 4;
     }
     return self;
@@ -1373,6 +1378,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         });
         _currentAudioDeviceModuleThread = nullptr;
     }
+    
+    [_pushStateDisposable dispose];
     
     if (_tgVoip != NULL) {
         [self stop:nil];
@@ -1469,6 +1476,18 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)pushPendingState {
+    _didPushStateOnce = true;
+    
+    if (_state != _pendingState) {
+        _state = _pendingState;
+        
+        if (_stateChanged) {
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
+        }
+    }
+}
+
 - (void)controllerStateChanged:(tgcalls::State)state {
     OngoingCallStateWebrtc callState = OngoingCallStateInitializing;
     switch (state) {
@@ -1485,11 +1504,32 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             break;
     }
     
-    if (_state != callState) {
-        _state = callState;
+    if (_pendingState != callState) {
+        _pendingState = callState;
         
-        if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
+        [_pushStateDisposable dispose];
+        _pushStateDisposable = nil;
+        
+        bool maybeDelayPush = false;
+        if (!_didPushStateOnce) {
+            maybeDelayPush = false;
+        } else if (callState == OngoingCallStateReconnecting) {
+            maybeDelayPush = true;
+        } else {
+            maybeDelayPush = false;
+        }
+        
+        if (!maybeDelayPush) {
+            [self pushPendingState];
+        } else {
+            __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
+            _pushStateDisposable = [_queue scheduleBlock:^{
+                __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                if (!strongSelf) {
+                    return;
+                }
+                [strongSelf pushPendingState];
+            } after:1.0];
         }
     }
 }

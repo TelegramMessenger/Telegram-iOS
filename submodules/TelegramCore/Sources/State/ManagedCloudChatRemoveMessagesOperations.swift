@@ -387,7 +387,50 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
 private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudGroup || peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
-            return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true, minTimestamp: operation.minTimestamp, maxTimestamp: operation.maxTimestamp, type: operation.type)
+            if peer.id == stateManager.accountPeerId, let threadId = operation.threadId {
+                guard let inputSubPeer = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer) else {
+                    return .complete()
+                }
+                
+                var flags: Int32 = 0
+                var updatedMaxId = operation.topMessageId.id
+                if operation.minTimestamp != nil {
+                    flags |= 1 << 2
+                    updatedMaxId = 0
+                }
+                if operation.maxTimestamp != nil {
+                    flags |= 1 << 3
+                    updatedMaxId = 0
+                }
+                let signal = network.request(Api.functions.messages.deleteSavedHistory(flags: flags, peer: inputSubPeer, maxId: updatedMaxId, minDate: operation.minTimestamp, maxDate: operation.maxTimestamp))
+                |> map { result -> Api.messages.AffectedHistory? in
+                    return result
+                }
+                |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+                    return .fail(true)
+                }
+                |> mapToSignal { result -> Signal<Void, Bool> in
+                    if let result = result {
+                        switch result {
+                        case let .affectedHistory(pts, ptsCount, offset):
+                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                            if offset == 0 {
+                                return .fail(true)
+                            } else {
+                                return .complete()
+                            }
+                        }
+                    } else {
+                        return .fail(true)
+                    }
+                }
+                return (signal |> restart)
+                |> `catch` { _ -> Signal<Void, NoError> in
+                    return .complete()
+                }
+            } else {
+                return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId.id, justClear: true, minTimestamp: operation.minTimestamp, maxTimestamp: operation.maxTimestamp, type: operation.type)
+            }
         } else {
             return .complete()
         }

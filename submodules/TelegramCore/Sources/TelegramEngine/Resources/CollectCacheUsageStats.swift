@@ -272,6 +272,7 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
     return account.postbox.transaction { transaction -> [EngineMessage.Id: Message] in
         var result: [EngineMessage.Id: Message] = [:]
         var peerInChatList: [EnginePeer.Id: Bool] = [:]
+        var messageIsHidden: [EngineMessage.Id: Bool] = [:]
         for (category, value) in stats.categories {
             if !categories.contains(category) {
                 continue
@@ -279,8 +280,19 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
             
             for (id, _) in value.messages.sorted(by: { $0.value >= $1.value }).prefix(1000) {
                 if result[id] == nil {
+                    if let value = messageIsHidden[id] {
+                        if value {
+                            continue
+                        }
+                    }
+                    
                     if let message = existingMessages[id] {
-                        result[id] = message
+                        if message.isSelfExpiring {
+                            messageIsHidden[id] = true
+                        } else {
+                            messageIsHidden[id] = false
+                            result[id] = message
+                        }
                     } else {
                         var matches = false
                         if let peerInChatListValue = peerInChatList[id.peerId] {
@@ -296,7 +308,12 @@ func _internal_renderStorageUsageStatsMessages(account: Account, stats: StorageU
                         }
                         
                         if matches, let message = transaction.getMessage(id) {
-                            result[id] = message
+                            if message.isSelfExpiring {
+                                messageIsHidden[id] = true
+                            } else {
+                                messageIsHidden[id] = false
+                                result[id] = message
+                            }
                         }
                     }
                 }

@@ -206,10 +206,10 @@ func openResolvedUrlImpl(
         case let .channelMessage(peer, messageId, timecode):
             openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode), peekData: nil))
         case let .replyThreadMessage(replyThreadMessage, messageId):
-            if let navigationController = navigationController {
+            if let navigationController = navigationController, let effectiveMessageId = replyThreadMessage.effectiveMessageId {
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
                     present(c, a)
-                }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).startStandalone()
+                }, messageId: effectiveMessageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).startStandalone()
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {
@@ -581,7 +581,13 @@ func openResolvedUrlImpl(
             }
         case let .premiumOffer(reference):
             dismissInput()
-            let controller = PremiumIntroScreen(context: context, source: .deeplink(reference))
+            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .deeplink(reference), forceDark: false, dismissed: nil)
+            if let navigationController = navigationController {
+                navigationController.pushViewController(controller, animated: true)
+            }
+        case let .premiumMultiGift(reference):
+            dismissInput()
+            let controller = context.sharedContext.makePremiumGiftController(context: context, source: .deeplink(reference))
             if let navigationController = navigationController {
                 navigationController.pushViewController(controller, animated: true)
             }

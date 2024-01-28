@@ -67,7 +67,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
             }
             
             if storeAsRecentlyUsed {
-                let effectiveReactions = currentMessage.effectiveReactions ?? []
+                let effectiveReactions = currentMessage.effectiveReactions(isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId)) ?? []
                 for updatedReaction in reactions {
                     if !effectiveReactions.contains(where: { $0.value == updatedReaction.reaction && $0.isSelected }) {
                         let recentReactionItem: RecentReactionItem
@@ -92,7 +92,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
             
             var mappedReactions = mappedReactions
             
-            let updatedReactions = mergedMessageReactions(attributes: attributes + [PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed)])?.reactions ?? []
+            let updatedReactions = mergedMessageReactions(attributes: attributes + [PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed, isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId))], isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId))?.reactions ?? []
             let updatedOutgoingReactions = updatedReactions.filter(\.isSelected)
             if updatedOutgoingReactions.count > maxCount {
                 let sortedOutgoingReactions = updatedOutgoingReactions.sorted(by: { $0.chosenOrder! < $1.chosenOrder! })
@@ -101,7 +101,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
                 })
             }
             
-            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed))
+            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, reactions: mappedReactions, isLarge: isLarge, storeAsRecentlyUsed: storeAsRecentlyUsed, isTags: currentMessage.areReactionsTags(accountPeerId: account.peerId)))
             
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
@@ -171,7 +171,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
                     if let forwardInfo = currentMessage.forwardInfo {
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                     }
-                    let reactions = mergedMessageReactions(attributes: currentMessage.attributes)
+                    let reactions = mergedMessageReactions(attributes: currentMessage.attributes, isTags: currentMessage.areReactionsTags(accountPeerId: stateManager.accountPeerId))
                     var attributes = currentMessage.attributes
                     for j in (0 ..< attributes.count).reversed() {
                         if attributes[j] is PendingReactionsMessageAttribute || attributes[j] is ReactionsMessageAttribute {

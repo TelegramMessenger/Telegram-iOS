@@ -839,6 +839,8 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         }
                         if let updatedResource = findUpdatedMediaResource(media: media, previousMedia: nil, resource: resource) {
                             return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                        } else if let alternativeMedia = item.alternativeMedia, let updatedResource = findUpdatedMediaResource(media: alternativeMedia, previousMedia: nil, resource: resource) {
+                            return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                         } else {
                             return .fail(.generic)
                         }

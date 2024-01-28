@@ -110,7 +110,7 @@ private func updateMessagePeers(_ message: Message, updatedPeers: [PeerId: Peer]
                 peers[peerId] = currentPeer
             }
         }
-        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds, associatedMedia: message.associatedMedia, associatedThreadInfo: message.associatedThreadInfo, associatedStories: message.associatedStories)
+        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, customTags: message.customTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds, associatedMedia: message.associatedMedia, associatedThreadInfo: message.associatedThreadInfo, associatedStories: message.associatedStories)
     }
     return nil
 }
@@ -790,7 +790,7 @@ private final class ChatListViewSpaceState {
                     return nil
                 }
                 
-                let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, threadId: nil, namespace: filterMessageTagSummary.addCount.namespace)]
+                let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, threadId: nil, namespace: filterMessageTagSummary.addCount.namespace, customTag: nil)]
                 let updatedActionsSummary = transaction.currentUpdatedMessageActionsSummaries[PendingMessageActionsSummaryKey(type: filterMessageTagSummary.subtractCount.type, peerId: entryPeer.id, namespace: filterMessageTagSummary.subtractCount.namespace)]
                 
                 if updatedMessageSummary != nil || updatedActionsSummary != nil {
@@ -923,7 +923,7 @@ private final class ChatListViewSpaceState {
                     for (key, component) in self.summaryComponents.components {
                         var updatedTagSummaryCount: Int32?
                         if let tagSummary = component.tagSummary {
-                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: entryData.index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace)
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: entryData.index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace, customTag: nil)
                             if let summary = transaction.currentUpdatedMessageTagSummaries[key] {
                                 updatedTagSummaryCount = summary.count
                             }
@@ -1534,7 +1534,7 @@ struct ChatListViewState {
                         var actionsSummaryCount: Int32?
                         
                         if let tagSummary = component.tagSummary {
-                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace)
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace, customTag: nil)
                             if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
                                 tagSummaryCount = summary.count
                             }
@@ -1621,6 +1621,7 @@ struct ChatListViewState {
                             peerId: associatedMessageId.peerId,
                             namespace: associatedMessageId.namespace,
                             tag: nil,
+                            customTag: nil,
                             threadId: nil,
                             from: .absoluteUpperBound().withPeerId(associatedMessageId.peerId).withNamespace(associatedMessageId.namespace),
                             includeFrom: true,

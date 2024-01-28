@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 private final class ManagedSynchronizePinnedChatsOperationsHelper {
     var operationDisposables: [Int32: Disposable] = [:]
     
@@ -49,10 +48,10 @@ private final class ManagedSynchronizePinnedChatsOperationsHelper {
     }
 }
 
-private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+private func withTakenOperation(postbox: Postbox, tag: PeerOperationLogTag, peerId: PeerId, tagLocalIndex: Int32, _ f: @escaping (Transaction, PeerMergedOperationLogEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
-        transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: tagLocalIndex, { entry in
+        transaction.operationLogUpdateEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, { entry in
             if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizePinnedChatsOperation  {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
@@ -65,11 +64,11 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
         } |> switchToLatest
 }
 
-func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, tag: PeerOperationLogTag) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedSynchronizePinnedChatsOperationsHelper>(value: ManagedSynchronizePinnedChatsOperationsHelper())
         
-        let disposable = postbox.mergedOperationLogView(tag: OperationLogTags.SynchronizePinnedChats, limit: 10).start(next: { view in
+        let disposable = postbox.mergedOperationLogView(tag: tag, limit: 10).start(next: { view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
                 return helper.update(view.entries)
             }
@@ -79,10 +78,14 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
+                let signal = withTakenOperation(postbox: postbox, tag: tag, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizePinnedChatsOperation {
-                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, groupId: PeerGroupId(rawValue: Int32(entry.peerId.id._internalGetInt64Value())), operation: operation)
+                            if tag == OperationLogTags.SynchronizePinnedChats {
+                                return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, groupId: PeerGroupId(rawValue: Int32(entry.peerId.id._internalGetInt64Value())), operation: operation)
+                            } else if tag == OperationLogTags.SynchronizePinnedSavedChats {
+                                return synchronizePinnedSavedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, operation: operation)
+                            }
                         } else {
                             assertionFailure()
                         }
@@ -90,7 +93,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
                     return .complete()
                 })
                 |> then(postbox.transaction { transaction -> Void in
-                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: entry.tagLocalIndex)
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
                 })
                 
                 disposable.set((signal |> delay(2.0, queue: Queue.concurrentDefaultQueue())).start())
@@ -277,5 +280,67 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
             |> switchToLatest
         }
         |> switchToLatest
+    }
+}
+
+private func synchronizePinnedSavedChats(transaction: Transaction, postbox: Postbox, network: Network, accountPeerId: PeerId, stateManager: AccountStateManager, operation: SynchronizePinnedChatsOperation) -> Signal<Void, NoError> {
+    return network.request(Api.functions.messages.getPinnedSavedDialogs())
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.SavedDialogs?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { dialogs -> Signal<Void, NoError> in
+        guard let dialogs = dialogs else {
+            return .never()
+        }
+        
+        let _ = dialogs
+        
+        /*return postbox.transaction { transaction -> Signal<Void, NoError> in
+            var storeMessages: [StoreMessage] = []
+            var remoteItemIds: [PeerId] = []
+            
+            let parsedPeers: AccumulatedPeers
+            
+            switch dialogs {
+            case .savedDialogs(let dialogs, let messages, let chats, let users), .savedDialogs(_, let dialogs, let messages, let chats, let users):
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                
+                loop: for dialog in dialogs {
+                    switch dialog {
+                    case let .savedDialog(_, peer, _):
+                        remoteItemIds.append(peer.peerId)
+                    }
+                }
+                
+                for message in messages {
+                    var peerIsForum = false
+                    if let peerId = message.peerId, let peer = parsedPeers.get(peerId), peer.isForum {
+                        peerIsForum = true
+                    }
+                    if let storeMessage = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
+                        storeMessages.append(storeMessage)
+                    }
+                }
+            case .savedDialogsNotModified:
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: [])
+            }
+            
+            let resultingItemIds: [PeerId] = remoteItemIds
+            
+            return postbox.transaction { transaction -> Signal<Void, NoError> in
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                
+                transaction.setPeerPinnedThreads(peerId: accountPeerId, threadIds: resultingItemIds.map { $0.toInt64() })
+                
+                let _ = transaction.addMessages(storeMessages, location: .UpperHistoryBlock)
+                
+                return .complete()
+            }
+            |> switchToLatest
+        }
+        |> switchToLatest*/
+        
+        return .complete()
     }
 }

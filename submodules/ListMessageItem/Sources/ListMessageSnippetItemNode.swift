@@ -509,7 +509,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             var forumThreadTitle: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
             
             var authorString = ""
-            if let message = item.message, let _ = message.threadId, let threadInfo = message.associatedThreadInfo {
+            if let message = item.message, let _ = message.threadId, item.message?.id.peerId.namespace == Namespaces.Peer.CloudChannel, let threadInfo = message.associatedThreadInfo {
                 let fullAuthorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                 authorString = fullAuthorString.first ?? ""
                 forumThreadTitle = (NSAttributedString(string: threadInfo.title, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), true, threadInfo.icon, threadInfo.iconColor)

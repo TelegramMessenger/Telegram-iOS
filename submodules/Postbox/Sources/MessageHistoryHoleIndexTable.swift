@@ -4,9 +4,9 @@ struct MessageHistoryIndexHoleOperationKey: Hashable {
     let peerId: PeerId
     let namespace: MessageId.Namespace
     let threadId: Int64?
-    let space: MessageHistoryHoleSpace
+    let space: MessageHistoryHoleOperationSpace
     
-    init(peerId: PeerId, namespace: MessageId.Namespace, threadId: Int64?, space: MessageHistoryHoleSpace) {
+    init(peerId: PeerId, namespace: MessageId.Namespace, threadId: Int64?, space: MessageHistoryHoleOperationSpace) {
         self.peerId = peerId
         self.namespace = namespace
         self.threadId = threadId
@@ -33,7 +33,35 @@ public enum MessageHistoryHoleSpace: Equatable, Hashable, CustomStringConvertibl
     }
 }
 
-func addMessageHistoryHoleOperation(_ operation: MessageHistoryIndexHoleOperation, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, to operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
+public enum MessageHistoryHoleOperationSpace: Equatable, Hashable, CustomStringConvertible {
+    case everywhere
+    case tag(MessageTags)
+    case customTag(MemoryBuffer)
+    
+    public var description: String {
+        switch self {
+        case .everywhere:
+            return ".everywhere"
+        case let .tag(tags):
+            return ".tag\(tags.rawValue)"
+        case let .customTag(customTag):
+            return ".customTag\(customTag)"
+        }
+    }
+}
+
+public extension MessageHistoryHoleOperationSpace {
+    init(_ space: MessageHistoryHoleSpace) {
+        switch space {
+        case .everywhere:
+            self = .everywhere
+        case let .tag(tag):
+            self = .tag(tag)
+        }
+    }
+}
+
+func addMessageHistoryHoleOperation(_ operation: MessageHistoryIndexHoleOperation, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, space: MessageHistoryHoleOperationSpace, to operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
     let key = MessageHistoryIndexHoleOperationKey(peerId: peerId, namespace: namespace, threadId: threadId, space: space)
     if operations[key] == nil {
         operations[key] = []
@@ -373,7 +401,7 @@ final class MessageHistoryHoleIndexTable: Table {
             self.valueBox.set(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: closedRange.upperBound), space: space), value: MemoryBuffer(memory: &lowerBound, capacity: 4, length: 4, freeWhenDone: false))
         }
         
-        addMessageHistoryHoleOperation(.insert(clippedRange), peerId: peerId, threadId: nil, namespace: namespace, space: space, to: &operations)
+        addMessageHistoryHoleOperation(.insert(clippedRange), peerId: peerId, threadId: nil, namespace: namespace, space: MessageHistoryHoleOperationSpace(space), to: &operations)
     }
     
     func remove(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
@@ -437,7 +465,7 @@ final class MessageHistoryHoleIndexTable: Table {
         }
         
         if !removeKeys.isEmpty {
-            addMessageHistoryHoleOperation(.remove(range), peerId: peerId, threadId: nil, namespace: namespace, space: space, to: &operations)
+            addMessageHistoryHoleOperation(.remove(range), peerId: peerId, threadId: nil, namespace: namespace, space: MessageHistoryHoleOperationSpace(space), to: &operations)
             postboxLog("MessageHistoryHoleIndexTable: removeInternal peerId: \(peerId) namespace: \(namespace) space: \(space) range: \(range)")
         }
     }

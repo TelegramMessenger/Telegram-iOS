@@ -262,6 +262,36 @@ func managedFeaturedStatusEmoji(postbox: Postbox, network: Network) -> Signal<Vo
     return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
+func managedFeaturedChannelStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedChannelStatusEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getChannelDefaultEmojiStatuses(hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiStatusesNotModified:
+                return .single(nil)
+            case let .emojiStatuses(_, statuses):
+                let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
+                
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.map(\.fileId))
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for status in parsedStatuses {
+                        guard let file = files[status.fileId] else {
+                            continue
+                        }
+                        if let entry = CodableEntry(RecentMediaItem(file)) {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
 func managedProfilePhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getDefaultProfilePhotoEmojis(hash: hash))
@@ -321,6 +351,34 @@ func managedGroupPhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, 
 func managedBackgroundIconEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedBackgroundIconEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getDefaultBackgroundEmojis(hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiListNotModified:
+                return .single(nil)
+            case let .emojiList(_, documentIds):
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: documentIds)
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for fileId in documentIds {
+                        guard let file = files[fileId] else {
+                            continue
+                        }
+                        if let entry = CodableEntry(RecentMediaItem(file)) {
+                            items.append(OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func managedDisabledChannelStatusIconEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudDisabledChannelStatusEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getChannelRestrictedStatusEmojis(hash: hash))
         |> retryRequest
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
             switch result {
@@ -407,6 +465,57 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getTopReactions(limit: 32, hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .reactionsNotModified:
+                return .single(nil)
+            case let .reactions(_, reactions):
+                let parsedReactions = reactions.compactMap(MessageReaction.Reaction.init(apiReaction:))
+                
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedReactions.compactMap { reaction -> Int64? in
+                    switch reaction {
+                    case .builtin:
+                        return nil
+                    case let .custom(fileId):
+                        return fileId
+                    }
+                })
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for reaction in parsedReactions {
+                        let item: RecentReactionItem
+                        switch reaction {
+                        case let .builtin(value):
+                            item = RecentReactionItem(.builtin(value))
+                        case let .custom(fileId):
+                            guard let file = files[fileId] else {
+                                continue
+                            }
+                            item = RecentReactionItem(.custom(file))
+                        }
+                        if let entry = CodableEntry(item) {
+                            items.append(OrderedItemListEntry(id: item.id.rawValue, contents: entry))
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
+func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudDefaultTagReactions, extractItemId: { rawId in
+        switch RecentReactionItemId(rawId).id {
+        case .builtin:
+            return 0
+        case let .custom(fileId):
+            return fileId.id
+        }
+    }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.messages.getDefaultTagReactions(hash: hash))
         |> retryRequest
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
             switch result {

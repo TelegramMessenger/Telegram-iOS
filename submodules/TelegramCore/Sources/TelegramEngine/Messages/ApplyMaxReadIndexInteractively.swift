@@ -195,7 +195,7 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, netwo
         }
         
         if !hasUnread && peerId.namespace == Namespaces.Peer.SecretChat {
-            let unseenSummary = transaction.getMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+            let unseenSummary = transaction.getMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, customTag: nil)
             let actionSummary = transaction.getPendingMessageActionsSummary(peerId: peerId, type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)
             if (unseenSummary?.count ?? 0) - (actionSummary ?? 0) > 0 {
                 hasUnread = true

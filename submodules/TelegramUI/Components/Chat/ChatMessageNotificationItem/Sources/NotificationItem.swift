@@ -13,7 +13,9 @@ public protocol NotificationItem {
 }
 
 public class NotificationItemNode: ASDisplayNode {
-    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         return 32.0
     }
+    
+    public var acceptsTouches: Bool = false
 }

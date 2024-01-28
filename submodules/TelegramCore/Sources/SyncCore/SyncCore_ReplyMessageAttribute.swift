@@ -109,7 +109,7 @@ public class QuotedReplyMessageAttribute: MessageAttribute {
 extension QuotedReplyMessageAttribute {
     convenience init(apiHeader: Api.MessageFwdHeader, quote: EngineMessageReplyQuote?, isQuote: Bool) {
         switch apiHeader {
-        case let .messageFwdHeader(_, fromId, fromName, _, _, _, _, _, _):
+        case let .messageFwdHeader(_, fromId, fromName, _, _, _, _, _, _, _, _, _):
             self.init(peerId: fromId?.peerId, authorName: fromName, quote: quote, isQuote: isQuote)
         }
     }
@@ -136,14 +136,5 @@ public class ReplyStoryAttribute: MessageAttribute {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encode(self.storyId, forKey: "i")
-    }
-}
-
-public extension Message {
-    var effectiveReplyThreadMessageId: MessageId? {
-        if let threadId = self.threadId {
-            return makeThreadIdMessageId(peerId: self.id.peerId, threadId: threadId)
-        }
-        return nil
     }
 }

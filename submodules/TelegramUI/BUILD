@@ -419,6 +419,12 @@ swift_library(
         "//submodules/TelegramUI/Components/SavedMessages/SavedMessagesScreen",
         "//submodules/TelegramUI/Components/Settings/WallpaperGalleryScreen",
         "//submodules/TelegramUI/Components/Settings/WallpaperGridScreen",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageNotificationItem",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
+        "//submodules/Components/BalancedTextComponent",
+        "//submodules/TelegramUI/Components/VideoMessageCameraScreen",
+        "//submodules/TelegramUI/Components/MediaScrubberComponent",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

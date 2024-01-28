@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ChatMessageNotificationItem
 
 final class NotificationItemContainerNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
@@ -45,7 +46,9 @@ final class NotificationItemContainerNode: ASDisplayNode {
     
     var cancelledTimeout = false
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, contentNode: NotificationItemNode?) {
+        self.contentNode = contentNode
+        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
@@ -54,16 +57,21 @@ final class NotificationItemContainerNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.backgroundNode)
+        if let contentNode {
+            self.addSubnode(contentNode)
+        }
     }
     
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-        let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        panRecognizer.delaysTouchesBegan = false
-        panRecognizer.cancelsTouchesInView = false
-        self.view.addGestureRecognizer(panRecognizer)
+        if let contentNode = self.contentNode, !contentNode.acceptsTouches {
+            self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+            panRecognizer.delaysTouchesBegan = false
+            panRecognizer.cancelsTouchesInView = false
+            self.view.addGestureRecognizer(panRecognizer)
+        }
     }
     
     func animateIn() {
@@ -113,6 +121,11 @@ final class NotificationItemContainerNode: ASDisplayNode {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let contentNode = self.contentNode, contentNode.frame.contains(point) {
+            if contentNode.acceptsTouches {
+                if let result = contentNode.view.hitTest(self.view.convert(point, to: contentNode.view), with: event) {
+                    return result
+                }
+            }
             return self.view
         }
         return nil

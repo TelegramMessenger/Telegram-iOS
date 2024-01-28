@@ -122,7 +122,7 @@ public protocol ChatMessageItem: ListViewItem {
     var sending: Bool { get }
     var failed: Bool { get }
     
-    func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool)
+    func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool)
 }
 
 public func hasCommentButton(item: ChatMessageItem) -> Bool {

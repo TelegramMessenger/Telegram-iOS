@@ -179,6 +179,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     private let context: AccountContext
     private var theme: PresentationTheme
     private let useDarkTheme: Bool
+    private let pause: Bool
     private let strings: PresentationStrings
     
     public var mode: ChatTextInputMediaRecordingButtonMode = .audio
@@ -252,7 +253,6 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 if let audioRecorder = self.audioRecorder {
                     self.micLevelDisposable?.set(audioRecorder.micLevel.start(next: { [weak self] level in
                         Queue.mainQueue().async {
-                            //self?.recordingOverlay?.addImmediateMicLevel(CGFloat(level))
                             self?.addMicLevel(CGFloat(level))
                         }
                     }))
@@ -275,7 +275,6 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 if let videoRecordingStatus = self.videoRecordingStatus {
                     self.micLevelDisposable?.set(videoRecordingStatus.micLevel.start(next: { [weak self] level in
                         Queue.mainQueue().async {
-                            //self?.recordingOverlay?.addImmediateMicLevel(CGFloat(level))
                             self?.addMicLevel(CGFloat(level))
                         }
                     }))
@@ -324,17 +323,18 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
         if let current = self.micLockValue {
             return current
         } else {
-            let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, useDarkTheme: self.useDarkTheme, strings: self.strings)
+            let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, useDarkTheme: self.useDarkTheme, pause: self.pause, strings: self.strings)
             lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
             self.micLockValue = lockView
             return lockView
         }
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, useDarkTheme: Bool = false, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, useDarkTheme: Bool = false, pause: Bool = false, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.context = context
         self.theme = theme
         self.useDarkTheme = useDarkTheme
+        self.pause = pause
         self.strings = strings
         self.animationView = ComponentView<Empty>()
         self.presentController = presentController
@@ -411,7 +411,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
                 animationName = "anim_micToVideo"
         }
 
-        let _ = animationView.update(
+        let _ = self.animationView.update(
             transition: .immediate,
             component: AnyComponent(LottieComponent(
                 content: LottieComponent.AppBundleContent(name: animationName),
@@ -421,7 +421,7 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
             containerSize: animationFrame.size
         )
 
-        if let view = animationView.view as? LottieComponent.View {
+        if let view = self.animationView.view as? LottieComponent.View {
             view.isUserInteractionEnabled = false
             if view.superview == nil {
                 self.insertSubview(view, at: 0)
@@ -535,6 +535,10 @@ public final class ChatTextInputMediaRecordingButton: TGModernConversationInputM
     
     @objc private func handleStopTap() {
         micButtonInteractionStopped()
+    }
+    
+    public func lock() {
+        super._commitLocked()
     }
     
     override public func animateIn() {

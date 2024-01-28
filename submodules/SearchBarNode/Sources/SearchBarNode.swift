@@ -9,6 +9,8 @@ import ActivityIndicator
 import AppBundle
 import AvatarNode
 import AccountContext
+import ComponentFlow
+import EmojiStatusComponent
 
 private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)
@@ -43,18 +45,26 @@ public struct SearchBarToken {
     }
     
     public let id: AnyHashable
+    public let context: AccountContext?
     public let icon: UIImage?
     public let iconOffset: CGFloat?
     public let peer: (EnginePeer, AccountContext, PresentationTheme)?
+    public let isTag: Bool
+    public let reaction: MessageReaction.Reaction?
+    public let emojiFile: TelegramMediaFile?
     public let title: String
     public let style: Style?
     public let permanent: Bool
     
-    public init(id: AnyHashable, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, title: String, style: Style? = nil, permanent: Bool) {
+    public init(id: AnyHashable, context: AccountContext? = nil, icon: UIImage?, iconOffset: CGFloat? = 0.0, peer: (EnginePeer, AccountContext, PresentationTheme)? = nil, isTag: Bool = false, reaction: MessageReaction.Reaction? = nil, emojiFile: TelegramMediaFile? = nil, title: String, style: Style? = nil, permanent: Bool) {
         self.id = id
+        self.context = context
         self.icon = icon
         self.iconOffset = iconOffset
         self.peer = peer
+        self.isTag = isTag
+        self.emojiFile = emojiFile
+        self.reaction = reaction
         self.title = title
         self.style = style
         self.permanent = permanent
@@ -69,6 +79,7 @@ private final class TokenNode: ASDisplayNode {
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
     let avatarNode: AvatarNode?
+    var emojiView: ComponentView<Empty>?
     
     var isSelected: Bool = false
     var isCollapsed: Bool = false
@@ -108,15 +119,20 @@ private final class TokenNode: ASDisplayNode {
         } else {
             self.containerNode.addSubnode(self.backgroundNode)
             
-            let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
+            let backgroundColor = token.isTag ? theme.inputIcon.withMultipliedAlpha(0.2) : (token.style?.backgroundColor ?? theme.inputIcon)
             let strokeColor = token.style?.strokeColor ?? backgroundColor
-            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
             
-            let foregroundColor = token.style?.foregroundColor ?? .white
+            if token.isTag {
+                self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SearchTagTokenBackground"), color: backgroundColor)?.stretchableImage(withLeftCapWidth: 7, topCapHeight: 0)
+            } else {
+                self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+            }
+            
+            let foregroundColor = token.isTag ? theme.primaryText : (token.style?.foregroundColor ?? .white)
             self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
             self.containerNode.addSubnode(self.iconNode)
             
-            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
+            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(token.isTag ? 14.0 : 17.0), textColor: foregroundColor)
             self.containerNode.addSubnode(self.titleNode)
         }
     }
@@ -132,19 +148,24 @@ private final class TokenNode: ASDisplayNode {
     }
     
     func animateIn() {
-        let targetFrame = self.containerNode.frame
-        self.containerNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        self.backgroundNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        
-        if let avatarNode = self.avatarNode {
-            avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-            avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        if self.token.isTag {
+            self.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        } else {
+            let targetFrame = self.containerNode.frame
+            self.containerNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            self.backgroundNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            if let avatarNode = self.avatarNode {
+                avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            }
+            
+            self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            self.titleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+            self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         }
-        
-        self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-        self.titleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
     }
     
     func animateOut() {
@@ -160,11 +181,21 @@ private final class TokenNode: ASDisplayNode {
         self.isCollapsed = isCollapsed
         
         if theme !== self.theme || isSelected != wasSelected {
-            let backgroundColor = isSelected ? self.theme.accent : (token.style?.backgroundColor ?? self.theme.inputIcon)
-            let strokeColor = isSelected ? backgroundColor : (token.style?.strokeColor ?? backgroundColor)
-            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+            let backgroundColor: UIColor
+            if isSelected {
+                backgroundColor = self.theme.accent
+            } else {
+                backgroundColor = token.isTag ? theme.inputIcon.withMultipliedAlpha(0.2) : (token.style?.backgroundColor ?? self.theme.inputIcon)
+            }
             
-            var foregroundColor = isSelected ? .white : (token.style?.foregroundColor ?? .white)
+            let strokeColor = isSelected ? backgroundColor : (token.style?.strokeColor ?? backgroundColor)
+            if token.isTag {
+                self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SearchTagTokenBackground"), color: backgroundColor)?.stretchableImage(withLeftCapWidth: 7, topCapHeight: 0)
+            } else {
+                self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+            }
+            
+            var foregroundColor = isSelected ? .white : (token.isTag ? self.theme.primaryText : (token.style?.foregroundColor ?? .white))
             if foregroundColor.distance(to: backgroundColor) < 1 {
                 foregroundColor = .black
             }
@@ -172,13 +203,17 @@ private final class TokenNode: ASDisplayNode {
             if let image = token.icon {
                 self.iconNode.image = generateTintedImage(image: image, color: foregroundColor)
             }
-            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
+            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(token.isTag ? 14.0 : 17.0), textColor: foregroundColor)
         }
     }
     
     func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        let height: CGFloat = 24.0
+        var height: CGFloat = 24.0
+        if self.token.isTag {
+            height += 2.0
+        }
         
+        var emojiFileSize: CGSize?
         var leftInset: CGFloat = 3.0
         if let icon = self.iconNode.image {
             leftInset += 1.0
@@ -189,12 +224,65 @@ private final class TokenNode: ASDisplayNode {
             transition.updateFrame(node: self.iconNode, frame: iconFrame)
             leftInset += icon.size.width + 3.0
         }
+        if let emojiFile = self.token.emojiFile, let context = self.token.context {
+            let emojiView: ComponentView<Empty>
+            if let current = self.emojiView {
+                emojiView = current
+            } else {
+                emojiView = ComponentView()
+                self.emojiView = emojiView
+            }
+            let emojiSize = CGSize(width: 14.0, height: 14.0)
+            var visibleEmojiSize = emojiSize
+            if case .builtin = self.token.reaction {
+                visibleEmojiSize = CGSize(width: visibleEmojiSize.width * 2.0, height: visibleEmojiSize.height * 2.0)
+            }
+            let _ = emojiView.update(
+                transition: .immediate,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: .animation(
+                        content: .file(file: emojiFile),
+                        size: visibleEmojiSize,
+                        placeholderColor: self.theme.primaryText.withMultipliedAlpha(0.2),
+                        themeColor: self.theme.primaryText,
+                        loopMode: .forever
+                    ),
+                    isVisibleForAnimations: false,
+                    useSharedAnimation: true,
+                    action: nil,
+                    emojiFileUpdated: nil
+                )),
+                environment: {},
+                containerSize: visibleEmojiSize
+            )
+            if let emojiComponentView = emojiView.view {
+                if emojiComponentView.superview == nil {
+                    self.containerNode.view.addSubview(emojiComponentView)
+                }
+                let emojiFrame = CGRect(origin: CGPoint(x: leftInset + 2.0, y: floor((height - emojiSize.height) * 0.5)), size: emojiSize)
+                emojiComponentView.frame = visibleEmojiSize.centered(around: emojiFrame.center)
+            }
+            emojiFileSize = emojiSize
+        }
+        if self.token.isTag {
+            leftInset += 2.0
+        }
 
         let iconSize = self.token.icon?.size ?? CGSize()
         let titleSize = self.titleNode.measure(CGSize(width: constrainedSize.width - 6.0, height: constrainedSize.height))
         var width = titleSize.width + 6.0
         if !iconSize.width.isZero {
             width += iconSize.width + 7.0
+        }
+        if let emojiFileSize {
+            leftInset += emojiFileSize.width + 6.0
+            width += emojiFileSize.width + 6.0
+        }
+        if self.token.isTag {
+            width += 16.0
         }
         
         let size: CGSize
@@ -357,6 +445,10 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             }
         }
         longTitlesWidth += resolvedSideInset
+        
+        if !tokenSizes.isEmpty {
+            leftOffset -= 8.0
+        }
         
         let verticalOffset: CGFloat = 0.0
         var horizontalOffset: CGFloat = 0.0

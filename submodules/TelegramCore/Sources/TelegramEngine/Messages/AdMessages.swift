@@ -364,6 +364,7 @@ private class AdMessagesHistoryContextImpl {
                 tags: [],
                 globalTags: [],
                 localTags: [],
+                customTags: [],
                 forwardInfo: nil,
                 author: author,
                 text: self.text,

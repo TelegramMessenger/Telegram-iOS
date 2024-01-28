@@ -51,7 +51,7 @@ public func persistentHash32(_ string: String) -> Int32 {
 
 private let emptyMemory = malloc(1)!
 
-public class MemoryBuffer: Equatable, CustomStringConvertible {
+public class MemoryBuffer: Comparable, Hashable, CustomStringConvertible {
     public internal(set) var memory: UnsafeMutableRawPointer
     var capacity: Int
     public internal(set) var length: Int
@@ -122,8 +122,24 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
         f(Data(bytesNoCopy: self.memory, count: self.length, deallocator: .none))
     }
     
+    public func hash(into hasher: inout Hasher) {
+        if self.length == 0 {
+            hasher.combine(0 as Int)
+        } else {
+            hasher.combine(bytes: UnsafeRawBufferPointer(start: self.memory, count: self.length))
+        }
+    }
+    
+    public func withRawBufferPointer(_ f: (UnsafeRawBufferPointer) -> Void) {
+        f(UnsafeRawBufferPointer(start: self.memory, count: self.length))
+    }
+    
     public static func ==(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
         return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
+    }
+    
+    public static func <(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
+        return mdb_cmp_memn(lhs.memory, lhs.length, rhs.memory, rhs.length) < 0
     }
 }
 
@@ -132,6 +148,10 @@ public final class WriteBuffer: MemoryBuffer {
     
     public override init() {
         super.init(memory: malloc(32), capacity: 32, length: 0, freeWhenDone: true)
+    }
+    
+    public init(capacity: Int) {
+        super.init(memory: malloc(capacity), capacity: capacity, length: 0, freeWhenDone: true)
     }
     
     public func makeReadBufferAndReset() -> ReadBuffer {
@@ -219,6 +239,12 @@ public final class ReadBuffer: MemoryBuffer {
         result.withUnsafeMutableBytes { buffer in
             self.read(buffer.baseAddress!, offset: 0, length: length)
         }
+        return result
+    }
+    
+    public func readMemoryBuffer(length: Int) -> MemoryBuffer {
+        let result = MemoryBuffer(memory: malloc(length)!, capacity: length, length: length, freeWhenDone: true)
+        self.read(result.memory, offset: 0, length: length)
         return result
     }
     

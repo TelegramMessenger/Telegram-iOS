@@ -4418,6 +4418,7 @@ Sorry for the inconvenience.";
 
 "Call.Mute" = "mute";
 "Call.Camera" = "camera";
+"Call.Video" = "video";
 "Call.Flip" = "flip";
 "Call.End" = "end";
 "Call.Speaker" = "speaker";
@@ -5646,6 +5647,7 @@ Sorry for the inconvenience.";
 "Call.CameraConfirmationText" = "Switch to video call?";
 "Call.CameraConfirmationConfirm" = "Switch";
 
+"Call.YourCameraOff" = "Your camera is off";
 "Call.YourMicrophoneOff" = "Your microphone is off";
 "Call.MicrophoneOff" = "%@'s microphone is off";
 "Call.CameraOff" = "%@'s camera is off";
@@ -10379,6 +10381,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.PrizeText" = "%1$@ for %2$@.";
 "Chat.Giveaway.Message.Subscriptions_1" = "**%@** Telegram Premium Subscription";
 "Chat.Giveaway.Message.Subscriptions_any" = "**%@** Telegram Premium Subscriptions";
+"Chat.Giveaway.Message.WithSubscriptions_1" = "**%@** Telegram Premium Subscription";
+"Chat.Giveaway.Message.WithSubscriptions_any" = "**%@** Telegram Premium Subscriptions";
 "Chat.Giveaway.Message.Months_1" = "**%@** month";
 "Chat.Giveaway.Message.Months_any" = "**%@** months";
 "Chat.Giveaway.Message.ParticipantsTitle" = "Participants";
@@ -10392,6 +10396,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.DateTitle" = "Winners Selection Date";
 "Chat.Giveaway.Message.LearnMore" = "LEARN MORE";
 "Chat.Giveaway.Message.With" = "with";
+"Chat.Giveaway.Message.CustomPrizeQuantity_1" = "%@";
+"Chat.Giveaway.Message.CustomPrizeQuantity_any" = "%@";
 
 "GiftLink.Title" = "Gift Link";
 "GiftLink.UsedTitle" = "Used Gift Link";
@@ -10835,3 +10841,134 @@ Sorry for the inconvenience.";
 "RequestPeer.SelectUsers.SearchPlaceholder" = "Search";
 "RequestPeer.ReachedMaximum_1" = "You can select up to %@ user.";
 "RequestPeer.ReachedMaximum_any" = "You can select up to %@ users.";
+
+"ChatList.DeleteSavedPeerConfirmation" = "Are you sure you want to delete saved messages from %@?";
+
+"Message.VoiceMessageExpired" = "Expired voice message";
+"Message.VideoMessageExpired" = "Expired video message";
+
+"Chat.PlayOnceVoiceMessageTooltip" = "This voice message can only be played once.";
+"Chat.PlayOnceVoiceMessageYourTooltip" = "This message will disappear once **%@** plays it once.";
+
+"Chat.TapToPlayVoiceMessageOnceTooltip" = "Tap to set this message to **Play Once**";
+"Chat.PlayVoiceMessageOnceTooltip" = "The recipients will be able to listen to it only once.";
+
+"ChatList.AuthorHidden" = "Author Hidden";
+"SavedMessages.SubChatDeleted" = "Saved messages deleted.";
+"PeerInfo.SavedMessagesTabTitle" = "Saved";
+
+"Chat.PanelStatusAuthorHidden" = "Senders of these messages restricted to link\ntheir name when forwarding.";
+"Chat.SavedMessagesChatsTooltip" = "Tap to view your Saved Messages organized by type or source";
+
+"Chat.ConfirmationRemoveFromSavedMessages" = "Remove from Saved Messages";
+
+"Premium.MaxSavedPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some that are currently pinned or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxSavedPinsNoPremiumText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
+"Premium.MaxSavedPinsFinalText" = "Sorry, you can't pin more than **%@** chats to the top. Unpin some that are currently pinned.";
+
+"Chat.PlayOnceMesasgeClose" = "Close";
+"Chat.PlayOnceMesasgeCloseAndDelete" = "Close and Delete";
+"Chat.PlayOnceMesasge.DisableScreenCapture" = "Sorry, you can't play this message while screen recording is active.";
+
+"Call.EncryptedAlertTitle" = "This call is end-to-end encrypted";
+"Call.EncryptedAlertText" = "If the emoji on %@'s screen are the same, this call is 100% secure.";
+"Call.EncryptionKeyTooltip" = "Encryption key of this call";
+"Call.StatusBusy" = "Line Busy";
+"Call.StatusDeclined" = "Call Declined";
+"Call.StatusFailed" = "Call Failed";
+"Call.StatusEnded" = "Call Ended";
+"Call.StatusMissed" = "Call Missed";
+
+"Call.WaitingStatusRequesting" = "Requesting";
+"Call.WaitingStatusRinging" = "Ringing";
+"Call.WaitingStatusConnecting" = "Connecting";
+"Call.WaitingStatusReconnecting" = "Reconnecting";
+"Call.StatusWeakSignal" = "Weak network signal";
+
+"Conversation.ContactAddContact" = "ADD";
+"Conversation.ContactAddContactLong" = "ADD CONTACT";
+"Conversation.ContactMessage" = "MESSAGE";
+
+"Chat.PlayOnceVideoMessageTooltip" = "This video message can only be played once.";
+"Chat.PlayOnceVideoMessageYourTooltip" = "This message will disappear once **%@** plays it once.";
+
+"Chat.TapToPlayVideoMessageOnceTooltip" = "Tap to set this message to **Play Once**";
+"Chat.PlayVideoMessageOnceTooltip" = "The recipient will be able to play it only once.";
+
+"PeerInfo.HiddenStatusBadge" = "when?";
+
+"Conversation.DiscardRecordedVoiceMessageDescription" = "Are you sure you want to discard\nyour voice message?";
+"Conversation.DiscardRecordedVoiceMessageAction" = "Discard";
+
+"DialogList.MyNotes" = "My Notes";
+"Conversation.MyNotes" = "My Notes";
+
+"Privacy.Messages.Title" = "Messages";
+"Privacy.Messages.SectionTitle" = "WHO CAN SEND ME MESSAGES?";
+"Privacy.Messages.ValueEveryone" = "Everybody";
+"Privacy.Messages.ValueContactsAndPremium" = "My Contacts and Premium Users";
+"Privacy.Messages.SectionFooter" = "You can restrict incoming messages to only contacts and Premium users.";
+"Privacy.Messages.PremiumInfoFooter" = "[What is Telegram Premium?]()";
+"Privacy.Messages.PremiumToast.Title" = "Premium Required";
+"Privacy.Messages.PremiumToast.Text" = "Subscribe to **Telegram Premium** to select this option";
+"Privacy.Messages.PremiumToast.Action" = "Add";
+
+"Settings.Privacy.Messages" = "Messages";
+"Settings.Privacy.Messages.ValueEveryone" = "Everybody";
+"Settings.Privacy.Messages.ValueContactsAndPremium" = "Contacts and Premium";
+
+"Settings.Privacy.ReadTime" = "Hide Read Time";
+"Settings.Privacy.ReadTimeFooter" = "Hide the time when you read messages from people who can't see your last seen. If you turn this on, their read time will also be hidden from you.\nThis setting does not affect group chats.";
+
+"Settings.Privacy.LastSeenRevealedToast" = "Your last seen time is now visible.";
+"Settings.Privacy.MessageReadTimeRevealedToast" = "Your read times are now visible.";
+
+"Settings.Privacy.ReadTimePremium" = "Subscribe to Telegram Premium";
+"Settings.Privacy.ReadTimePremiumFooter" = "It you subscribe to Telegram Premium, you will still see other users' last seen and read time even if you hid yours from them (unless they specifically restricted it).";
+
+"Chat.ToastMessagingRestrictedToPremium.Text" = "**%@** only accepts messages from contacts and **Premium** users.";
+"Chat.ToastMessagingRestrictedToPremium.Action" = "View";
+
+"Story.MessagingRestrictedPlaceholder" = "Only Premium users can message %@.";
+"Story.MessagingRestrictedPlaceholderAction" = "Learn more...";
+
+"Chat.ContextMenuTagsTitle" = "Tag the message with an emoji for quick access later";
+
+"Chat.ReactionContextMenu.FilterByTag" = "Fiter by Tag";
+"Chat.ReactionContextMenu.RemoveTag" = "Remove Tag";
+
+"Chat.EmptyStateMessagingRestrictedToPremium.Text" = "Subscribe to **Premium**\nto message **%@**.";
+"Chat.EmptyStateMessagingRestrictedToPremium.Action" = "Get Premium";
+
+"Chat.ContextMenuReadDate.ReadAvailablePrefix" = "read";
+"Chat.ContextMenuReadDate.ReadAvailableBadge" = "show when";
+"Chat.ContextMenuReadDate.ReadFormat" = "read %@";
+
+"Chat.MessagingRestrictedPlaceholder" = "Only Premium users can message %@.";
+"Chat.MessagingRestrictedPlaceholderAction" = "Learn more...";
+
+"Chat.SearchTagsPlaceholder" = "Search messages or tags";
+
+"Chat.TagSearchShowMessages" = "Show Other Messages";
+"Chat.TagSearchHideMessages" = "Hide Other Messages";
+
+"PrivacyInfo.UpgradeToPremium.Title" = "Upgrade to Premium";
+"PrivacyInfo.UpgradeToPremium.ButtonTitle" = "Subscribe to Telegram Premium";
+
+"PrivacyInfo.ShowLastSeen.Title" = "Show Your Last Seen";
+"PrivacyInfo.ShowLastSeen.Text" = "To see **%@'s** Last Seen time, either start showing your own Last Seen Time...";
+"PrivacyInfo.ShowLastSeen.ButtonTitle" = "Show My Last Seen to Everyone";
+"PrivacyInfo.ShowLastSeen.PremiumInfo" = "Subscription will let you see **%@'s** Last Seen status without showing yours.";
+
+"PrivacyInfo.ShowReadTime.Title" = "Show Your Read Time";
+"PrivacyInfo.ShowReadTime.Text" = "To see when **%@** read the message, either start showing your own read time:";
+"PrivacyInfo.ShowReadTime.ButtonTitle" = "Show My Read Time";
+"PrivacyInfo.ShowReadTime.PremiumInfo" = "Subscription will let you see **%@'s** read time without showing yours.";
+"PrivacyInfo.ShowReadTime.AlwaysToast.Text" = "Set **Last Seen** privacy to 'Nobody' or 'My Contacts.'";
+
+"Chat.PrivateMessageSeenTimestamp.Date" = "read %@";
+"Chat.PrivateMessageSeenTimestamp.TodayAt" = "read today at %@";
+"Chat.PrivateMessageSeenTimestamp.YesterdayAt" = "read yesterday at %@";
+
+"Settings.Privacy.ReadTimePremiumActive" = "Subcribed to Telegram Premium";
+"Settings.Privacy.ReadTimePremiumActiveFooter" = "Because you are a Telegram Premium subscriber, you will see the last seen and read time of all users who are sharing it with you – even if you are hiding yours.";

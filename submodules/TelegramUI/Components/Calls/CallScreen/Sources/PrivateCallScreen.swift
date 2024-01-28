@@ -7,6 +7,7 @@ import MetalEngine
 import ComponentFlow
 import SwiftSignalKit
 import UIKitRuntimeUtils
+import TelegramPresentationData
 
 public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictureControllerDelegate {
     public struct State: Equatable {
@@ -60,8 +61,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         public enum AudioOutput: Equatable {
             case internalSpeaker
             case speaker
+            case headphones
+            case airpods
+            case airpodsPro
+            case airpodsMax
+            case bluetooth
         }
         
+        public var strings: PresentationStrings
         public var lifecycleState: LifecycleState
         public var name: String
         public var shortName: String
@@ -72,8 +79,10 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         public var localVideo: VideoSource?
         public var remoteVideo: VideoSource?
         public var isRemoteBatteryLow: Bool
+        public var displaySnowEffect: Bool
         
         public init(
+            strings: PresentationStrings,
             lifecycleState: LifecycleState,
             name: String,
             shortName: String,
@@ -83,8 +92,10 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             isRemoteAudioMuted: Bool,
             localVideo: VideoSource?,
             remoteVideo: VideoSource?,
-            isRemoteBatteryLow: Bool
+            isRemoteBatteryLow: Bool,
+            displaySnowEffect: Bool = false
         ) {
+            self.strings = strings
             self.lifecycleState = lifecycleState
             self.name = name
             self.shortName = shortName
@@ -95,9 +106,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.localVideo = localVideo
             self.remoteVideo = remoteVideo
             self.isRemoteBatteryLow = isRemoteBatteryLow
+            self.displaySnowEffect = displaySnowEffect
         }
         
         public static func ==(lhs: State, rhs: State) -> Bool {
+            if lhs.strings !== rhs.strings {
+                return false
+            }
             if lhs.lifecycleState != rhs.lifecycleState {
                 return false
             }
@@ -126,6 +141,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 return false
             }
             if lhs.isRemoteBatteryLow != rhs.isRemoteBatteryLow {
+                return false
+            }
+            if lhs.displaySnowEffect != rhs.displaySnowEffect {
                 return false
             }
             return true
@@ -213,6 +231,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     private var pipVideoCallViewController: UIViewController?
     private var pipController: AVPictureInPictureController?
     
+    private var snowEffectView: SnowEffectView?
+    
     public override init(frame: CGRect) {
         self.overlayContentsView = UIView()
         self.overlayContentsView.isUserInteractionEnabled = false
@@ -235,7 +255,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         self.titleView = TextView()
         self.statusView = StatusView()
         
-        self.backButtonView = BackButtonView(text: "Back")
+        self.backButtonView = BackButtonView(frame: CGRect())
         
         self.pipView = PrivateCallPictureInPictureView(frame: CGRect(origin: CGPoint(), size: CGSize()))
         
@@ -354,6 +374,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if !self.isUpdating {
             let wereControlsHidden = self.areControlsHidden
             self.areControlsHidden = true
+            self.displayEmojiTooltip = false
             self.update(transition: .immediate)
             
             if !wereControlsHidden {
@@ -417,6 +438,24 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if self.activeRemoteVideoSource != nil || self.activeLocalVideoSource != nil {
                 self.areControlsHidden = !self.areControlsHidden
                 update = true
+                
+                if self.areControlsHidden {
+                    self.displayEmojiTooltip = false
+                    self.hideControlsTimer?.invalidate()
+                    self.hideControlsTimer = nil
+                } else {
+                    self.hideControlsTimer?.invalidate()
+                    self.hideControlsTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        if !self.areControlsHidden {
+                            self.areControlsHidden = true
+                            self.displayEmojiTooltip = false
+                            self.update(transition: .spring(duration: 0.4))
+                        }
+                    })
+                }
             }
             
             if update {
@@ -515,7 +554,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if let previousParams = self.params, case .active = params.state.lifecycleState {
             switch previousParams.state.lifecycleState {
             case .requesting, .ringing, .connecting, .reconnecting:
-                if self.hideEmojiTooltipTimer == nil {
+                if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden {
                     self.displayEmojiTooltip = true
                     
                     self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
@@ -592,6 +631,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 }
                 if !self.areControlsHidden {
                     self.areControlsHidden = true
+                    self.displayEmojiTooltip = false
                     self.update(transition: .spring(duration: 0.4))
                 }
             })
@@ -704,7 +744,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 self.flipCameraAction?()
             }), at: 0)
         } else {
-            buttons.insert(ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), isEnabled: !isTerminated, action: { [weak self] in
+            buttons.insert(ButtonGroupView.Button(content: .speaker(audioOutput: params.state.audioOutput), isEnabled: !isTerminated, action: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -715,16 +755,16 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         var notices: [ButtonGroupView.Notice] = []
         if !isTerminated {
             if params.state.isLocalAudioMuted {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), icon: "Call/CallToastMicrophone", text: "Your microphone is turned off"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(0 as Int), icon: "Call/CallToastMicrophone", text: params.state.strings.Call_YourMicrophoneOff))
             }
             if params.state.isRemoteAudioMuted {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), icon: "Call/CallToastMicrophone", text: "\(params.state.shortName)'s microphone is turned off"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(1 as Int), icon: "Call/CallToastMicrophone", text: params.state.strings.Call_MicrophoneOff(params.state.shortName).string))
             }
             if params.state.remoteVideo != nil && params.state.localVideo == nil {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: "Your camera is turned off"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(2 as Int), icon: "Call/CallToastCamera", text: params.state.strings.Call_YourCameraOff))
             }
             if params.state.isRemoteBatteryLow {
-                notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), icon: "Call/CallToastBattery", text: "\(params.state.shortName)'s battery is low"))
+                notices.append(ButtonGroupView.Notice(id: AnyHashable(3 as Int), icon: "Call/CallToastBattery", text: params.state.strings.Call_BatteryLow(params.state.shortName).string))
             }
         }
         
@@ -734,7 +774,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }*/
         let displayClose = false
         
-        let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, minWidth: wideContentWidth, controlsHidden: currentAreControlsHidden, displayClose: displayClose, buttons: buttons, notices: notices, transition: transition)
+        let contentBottomInset = self.buttonGroupView.update(size: params.size, insets: params.insets, minWidth: wideContentWidth, controlsHidden: currentAreControlsHidden, displayClose: displayClose, strings: params.state.strings, buttons: buttons, notices: notices, transition: transition)
         
         var expandedEmojiKeyRect: CGRect?
         if self.isEmojiKeyExpanded {
@@ -752,7 +792,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                     alphaTransition = genericAlphaTransition
                 }
                 
-                emojiExpandedInfoView = EmojiExpandedInfoView(title: "This call is end-to-end encrypted", text: "If the emoji on \(params.state.shortName)'s screen are the same, this call is 100% secure.")
+                emojiExpandedInfoView = EmojiExpandedInfoView(title: params.state.strings.Call_EncryptedAlertTitle, text: params.state.strings.Call_EncryptedAlertText(params.state.shortName).string)
                 self.emojiExpandedInfoView = emojiExpandedInfoView
                 emojiExpandedInfoView.alpha = 0.0
                 Transition.immediate.setScale(view: emojiExpandedInfoView, scale: 0.5)
@@ -799,13 +839,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         }
         
+        let backButtonSize = self.backButtonView.update(text: params.state.strings.Common_Back)
+        
         let backButtonY: CGFloat
         if currentAreControlsHidden {
-            backButtonY = -self.backButtonView.size.height - 12.0
+            backButtonY = -backButtonSize.height - 12.0
         } else {
             backButtonY = params.insets.top + 12.0
         }
-        let backButtonFrame = CGRect(origin: CGPoint(x: params.insets.left + 10.0, y: backButtonY), size: self.backButtonView.size)
+        let backButtonFrame = CGRect(origin: CGPoint(x: params.insets.left + 10.0, y: backButtonY), size: backButtonSize)
         transition.setFrame(view: self.backButtonView, frame: backButtonFrame)
         transition.setAlpha(view: self.backButtonView, alpha: currentAreControlsHidden ? 0.0 : 1.0)
         
@@ -889,7 +931,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                         emojiTooltipView = current
                     } else {
                         emojiTooltipTransition = emojiTooltipTransition.withAnimation(.none)
-                        emojiTooltipView = EmojiTooltipView(text: "Encryption key of this call")
+                        emojiTooltipView = EmojiTooltipView(text: params.state.strings.Call_EncryptionKeyTooltip)
                         animateIn = true
                         self.emojiTooltipView = emojiTooltipView
                         self.addSubview(emojiTooltipView)
@@ -1157,23 +1199,34 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         transition.setPosition(layer: self.blobLayer, position: CGPoint(x: blobFrame.width * 0.5, y: blobFrame.height * 0.5))
         transition.setBounds(layer: self.blobLayer, bounds: CGRect(origin: CGPoint(), size: blobFrame.size))
         
+        let displayAudioLevelBlob: Bool
         let titleString: String
         switch params.state.lifecycleState {
         case let .terminated(terminatedState):
+            displayAudioLevelBlob = false
+            
             self.titleView.contentMode = .center
             
             switch terminatedState.reason {
             case .busy:
-                titleString = "Line Busy"
+                titleString = params.state.strings.Call_StatusBusy
             case .declined:
-                titleString = "Call Declined"
+                titleString = params.state.strings.Call_StatusDeclined
             case .failed:
-                titleString = "Call Failed"
+                titleString = params.state.strings.Call_StatusFailed
             case .hangUp:
-                titleString = "Call Ended"
+                titleString = params.state.strings.Call_StatusEnded
             case .missed:
-                titleString = "Call Missed"
+                titleString = params.state.strings.Call_StatusMissed
             }
+        default:
+            displayAudioLevelBlob = !params.state.isRemoteAudioMuted
+            
+            self.titleView.contentMode = .scaleToFill
+            titleString = params.state.name
+        }
+        
+        if !displayAudioLevelBlob {
             genericAlphaTransition.setScale(layer: self.blobLayer, scale: 0.3)
             genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: 0.0)
             self.canAnimateAudioLevel = false
@@ -1181,11 +1234,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.currentAvatarAudioScale = 1.0
             transition.setScale(layer: self.avatarTransformLayer, scale: 1.0)
             transition.setScale(layer: self.blobTransformLayer, scale: 1.0)
-        default:
-            self.titleView.contentMode = .scaleToFill
-            titleString = params.state.name
+        } else {
             genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo) ? 0.0 : 1.0)
             transition.setScale(layer: self.blobLayer, scale: expandedEmojiKeyOverlapsAvatar ? 0.001 : 1.0)
+            if !havePrimaryVideo {
+                self.canAnimateAudioLevel = true
+            }
         }
         
         let titleSize = self.titleView.update(
@@ -1244,7 +1298,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         }
         
-        let statusSize = self.statusView.update(state: statusState, transition: .immediate)
+        let statusSize = self.statusView.update(strings: params.state.strings, state: statusState, transition: .immediate)
         
         let titleY: CGFloat
         if currentAreControlsHidden {
@@ -1293,7 +1347,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 self.weakSignalView = weakSignalView
                 self.addSubview(weakSignalView)
             }
-            let weakSignalSize = weakSignalView.update(constrainedSize: CGSize(width: params.size.width - 32.0, height: 100.0))
+            let weakSignalSize = weakSignalView.update(strings: params.state.strings, constrainedSize: CGSize(width: params.size.width - 32.0, height: 100.0))
             let weakSignalY: CGFloat
             if currentAreControlsHidden {
                 weakSignalY = params.insets.top + 2.0
@@ -1321,5 +1375,75 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 })
             }
         }
+        
+        /*if params.state.displaySnowEffect {
+            let snowEffectView: SnowEffectView
+            if let current = self.snowEffectView {
+                snowEffectView = current
+            } else {
+                snowEffectView = SnowEffectView(frame: CGRect())
+                self.snowEffectView = snowEffectView
+                self.maskContents.addSubview(snowEffectView)
+            }
+            transition.setFrame(view: snowEffectView, frame: CGRect(origin: CGPoint(), size: params.size))
+            snowEffectView.update(size: params.size)
+        } else {
+            if let snowEffectView = self.snowEffectView {
+                self.snowEffectView = nil
+                snowEffectView.removeFromSuperview()
+            }
+        }*/
+    }
+}
+
+final class SnowEffectView: UIView {
+    private let particlesLayer: CAEmitterLayer
+    
+    override init(frame: CGRect) {
+        let particlesLayer = CAEmitterLayer()
+        self.particlesLayer = particlesLayer
+        self.particlesLayer.backgroundColor = nil
+        self.particlesLayer.isOpaque = false
+
+        particlesLayer.emitterShape = .circle
+        particlesLayer.emitterMode = .surface
+        particlesLayer.renderMode = .oldestLast
+
+        let image1 = UIImage(named: "Call/Snow")?.cgImage
+
+        let cell1 = CAEmitterCell()
+        cell1.contents = image1
+        cell1.name = "Snow"
+        cell1.birthRate = 92.0
+        cell1.lifetime = 20.0
+        cell1.velocity = 59.0
+        cell1.velocityRange = -15.0
+        cell1.xAcceleration = 5.0
+        cell1.yAcceleration = 40.0
+        cell1.emissionRange = 90.0 * (.pi / 180.0)
+        cell1.spin = -28.6 * (.pi / 180.0)
+        cell1.spinRange = 57.2 * (.pi / 180.0)
+        cell1.scale = 0.06
+        cell1.scaleRange = 0.3
+        cell1.color = UIColor(red: 255.0/255.0, green: 255.0/255.0, blue: 255.0/255.0, alpha: 1.0).cgColor
+
+        particlesLayer.emitterCells = [cell1]
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(particlesLayer)
+        self.clipsToBounds = true
+        self.backgroundColor = nil
+        self.isOpaque = false
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize) {
+        self.particlesLayer.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height)
+        self.particlesLayer.emitterSize = CGSize(width: size.width * 3.0, height: size.height * 2.0)
+        self.particlesLayer.emitterPosition = CGPoint(x: size.width * 0.5, y: -325.0)
     }
 }

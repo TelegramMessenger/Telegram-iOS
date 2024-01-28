@@ -98,6 +98,7 @@ func messageContentToUpload(accountPeerId: PeerId, network: Network, postbox: Po
     } else if let media = media.first as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
         return .signal(postbox.transaction { transaction -> PendingMessageUploadedContentResult in
             var flags: Int32 = 0
+            flags |= 1 << 2
             if let attribute = attributes.first(where: { $0 is WebpagePreviewMessageAttribute }) as? WebpagePreviewMessageAttribute {
                 if let forceLargeMedia = attribute.forceLargeMedia {
                     if forceLargeMedia {
@@ -241,6 +242,7 @@ func mediaContentToUpload(accountPeerId: PeerId, network: Network, postbox: Post
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(inputDice, text), reuploadInfo: nil, cacheReferenceKey: nil)))
     } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
         var flags: Int32 = 0
+        flags |= 1 << 2
         if let attribute = attributes.first(where: { $0 is WebpagePreviewMessageAttribute }) as? WebpagePreviewMessageAttribute {
             if let forceLargeMedia = attribute.forceLargeMedia {
                 if forceLargeMedia {

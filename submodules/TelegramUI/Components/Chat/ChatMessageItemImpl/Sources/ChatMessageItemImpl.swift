@@ -56,10 +56,22 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
             break
         }
     }
+    let lhsSourceAuthorInfo = lhs.sourceAuthorInfo
+    if let sourceAuthorInfo = lhsSourceAuthorInfo {
+        if let originalAuthor = sourceAuthorInfo.originalAuthor {
+            lhsEffectiveAuthor = lhs.peers[originalAuthor]
+        }
+    }
     for attribute in rhs.attributes {
         if let attribute = attribute as? SourceReferenceMessageAttribute {
             rhsEffectiveAuthor = rhs.peers[attribute.messageId.peerId]
             break
+        }
+    }
+    let rhsSourceAuthorInfo = rhs.sourceAuthorInfo
+    if let sourceAuthorInfo = rhsSourceAuthorInfo {
+        if let originalAuthor = sourceAuthorInfo.originalAuthor {
+            rhsEffectiveAuthor = rhs.peers[originalAuthor]
         }
     }
     
@@ -71,6 +83,16 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     var sameAuthor = false
     if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
         sameAuthor = true
+    }
+    
+    if let lhsSourceAuthorInfo, let rhsSourceAuthorInfo {
+        if lhsSourceAuthorInfo.originalAuthor != rhsSourceAuthorInfo.originalAuthor {
+            sameAuthor = false
+        } else if lhsSourceAuthorInfo.originalAuthorName != rhsSourceAuthorInfo.originalAuthorName {
+            sameAuthor = false
+        }
+    } else if (lhsSourceAuthorInfo == nil) != (rhsSourceAuthorInfo == nil) {
+        sameAuthor = false
     }
     
     var lhsEffectiveTimestamp = lhs.timestamp
@@ -237,7 +259,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         self.associatedData = associatedData
         self.controllerInteraction = controllerInteraction
         self.content = content
-        self.disableDate = disableDate
+        self.disableDate = disableDate || !controllerInteraction.chatIsRotated
         self.additionalContent = additionalContent
         
         var avatarHeader: ChatMessageAvatarHeader?
@@ -254,6 +276,13 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 if let forwardInfo = content.firstMessage.forwardInfo {
                     effectiveAuthor = forwardInfo.author
                     if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                    }
+                }
+                if let sourceAuthorInfo = content.firstMessage.sourceAuthorInfo {
+                    if let originalAuthor = sourceAuthorInfo.originalAuthor, let peer = content.firstMessage.peers[originalAuthor] {
+                        effectiveAuthor = peer
+                    } else if let authorSignature = sourceAuthorInfo.originalAuthorName {
                         effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
                     }
                 }
@@ -340,6 +369,9 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         if case .messageOptions = associatedData.subject {
             headers = []
         }
+        if !controllerInteraction.chatIsRotated {
+            headers = []
+        }
         if let avatarHeader = self.avatarHeader {
             headers.append(avatarHeader)
         }
@@ -421,11 +453,11 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
         
         let configure = {
-            let node = (viewClassName as! ChatMessageItemView.Type).init()
+            let node = (viewClassName as! ChatMessageItemView.Type).init(rotated: self.controllerInteraction.chatIsRotated)
             node.setupItem(self, synchronousLoad: synchronousLoads)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
+            let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem, isRotated:  self.controllerInteraction.chatIsRotated)
             
             var disableDate = self.disableDate
             if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {
@@ -461,7 +493,15 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
     }
     
-    public func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
+    public func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?, isRotated: Bool) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
+        var top = top
+        var bottom = bottom
+        if !isRotated {
+            let previousTop = top
+            top = bottom
+            bottom = previousTop
+        }
+        
         var mergedTop: ChatMessageMerge = .none
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false
@@ -501,8 +541,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 
                 let nodeLayout = nodeValue.asyncLayout()
                 
+                let isRotated = self.controllerInteraction.chatIsRotated
+                
                 async {
-                    let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
+                    let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem, isRotated: isRotated)
                     
                     var disableDate = self.disableDate
                     if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {

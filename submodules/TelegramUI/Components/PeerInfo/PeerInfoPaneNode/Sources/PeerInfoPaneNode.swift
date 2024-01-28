@@ -17,20 +17,24 @@ public enum PeerInfoPaneKey: Int32 {
     case groupsInCommon
     case recommended
     case savedMessagesChats
+    case savedMessages
 }
 
 public struct PeerInfoStatusData: Equatable {
     public var text: String
     public var isActivity: Bool
+    public var isHiddenStatus: Bool
     public var key: PeerInfoPaneKey?
     
     public init(
         text: String,
         isActivity: Bool,
+        isHiddenStatus: Bool = false,
         key: PeerInfoPaneKey?
     ) {
         self.text = text
         self.isActivity = isActivity
+        self.isHiddenStatus = isHiddenStatus
         self.key = key
     }
 }
@@ -44,7 +48,7 @@ public protocol PeerInfoPaneNode: ASDisplayNode {
     var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
     var tabBarOffset: CGFloat { get }
     
-    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
+    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
     func transferVelocity(_ velocity: CGFloat)
     func cancelPreviewGestures()

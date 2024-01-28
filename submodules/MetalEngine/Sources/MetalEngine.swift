@@ -686,17 +686,7 @@ public final class MetalEngine {
             }
             library = try? device.makeDefaultLibrary(bundle: bundle)
             #else
-            let mainBundle = Bundle(for: Impl.self)
-            guard let path = mainBundle.path(forResource: "MetalEngineMetalSourcesBundle", ofType: "bundle") else {
-                return nil
-            }
-            guard let bundle = Bundle(path: path) else {
-                return nil
-            }
-            guard let path = bundle.path(forResource: "MetalEngineShaders", ofType: "metallib") else {
-                return nil
-            }
-            library = try? device.makeLibrary(URL: .init(fileURLWithPath: path))
+            library = try? device.makeDefaultLibrary(bundle: Bundle.module)
             #endif
             
             

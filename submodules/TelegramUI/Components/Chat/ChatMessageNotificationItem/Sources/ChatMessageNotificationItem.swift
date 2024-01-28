@@ -20,14 +20,14 @@ import AnimationCache
 import MultiAnimationRenderer
 
 public final class ChatMessageNotificationItem: NotificationItem {
-    let context: AccountContext
-    let strings: PresentationStrings
-    let dateTimeFormat: PresentationDateTimeFormat
-    let nameDisplayOrder: PresentationPersonNameOrder
-    let messages: [Message]
-    let threadData: MessageHistoryThreadData?
-    let tapAction: () -> Bool
-    let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
+    public let context: AccountContext
+    public let strings: PresentationStrings
+    public let dateTimeFormat: PresentationDateTimeFormat
+    public let nameDisplayOrder: PresentationPersonNameOrder
+    public let messages: [Message]
+    public let threadData: MessageHistoryThreadData?
+    public let tapAction: () -> Bool
+    public let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
     
     public var groupingKey: AnyHashable? {
         return messages.first?.id.peerId
@@ -380,7 +380,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = width
         let compact = self.compact ?? false
         

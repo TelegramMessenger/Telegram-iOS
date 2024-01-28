@@ -228,6 +228,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var reactions: [MessageReaction]
         var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
         var displayAllReactionPeers: Bool
+        var areReactionsTags: Bool
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
@@ -248,6 +249,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             reactions: [MessageReaction],
             reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
             displayAllReactionPeers: Bool,
+            areReactionsTags: Bool,
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool,
@@ -267,6 +269,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.reactions = reactions
             self.reactionPeers = reactionPeers
             self.displayAllReactionPeers = displayAllReactionPeers
+            self.areReactionsTags = areReactionsTags
             self.replyCount = replyCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
@@ -744,6 +747,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     },
                     reactions: [],
                     colors: reactionColors,
+                    isTag: arguments.areReactionsTags,
                     constrainedWidth: arguments.constrainedSize.width
                 )
             case let .trailingContent(contentWidth, reactionSettings):
@@ -800,11 +804,12 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     animationFileId: animationFileId
                                 ),
                                 count: Int(reaction.count),
-                                peers: peers,
+                                peers: arguments.areReactionsTags ? [] : peers,
                                 chosenOrder: reaction.chosenOrder
                             )
                         },
                         colors: reactionColors,
+                        isTag: arguments.areReactionsTags,
                         constrainedWidth: arguments.constrainedSize.width
                     )
                 } else {
@@ -818,6 +823,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                         },
                         reactions: [],
                         colors: reactionColors,
+                        isTag: arguments.areReactionsTags,
                         constrainedWidth: arguments.constrainedSize.width
                     )
                 }

@@ -213,7 +213,7 @@ public struct OngoingCallContextState: Equatable {
     public let remoteBatteryLevel: RemoteBatteryLevel
 }
 
-private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc /*, OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
+private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
     
     init(queue: Queue) {
@@ -234,6 +234,17 @@ private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCal
     
     func isCurrent() -> Bool {
         return self.queue.isCurrent()
+    }
+    
+    func scheduleBlock(_ f: @escaping () -> Void, after timeout: Double) -> GroupCallDisposable {
+        let timer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: {
+            f()
+        }, queue: self.queue)
+        timer.start()
+        
+        return GroupCallDisposable(block: {
+            timer.invalidate()
+        })
     }
 }
 

@@ -16,6 +16,10 @@ import ChatControllerInteraction
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 
+private let tagImage: UIImage? = {
+    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/ReactionTagBackground"), color: .white)?.stretchableImage(withLeftCapWidth: 8, topCapHeight: 15)
+}()
+
 public final class MessageReactionButtonsNode: ASDisplayNode {
     public enum DisplayType {
         case incoming
@@ -112,6 +116,8 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
             totalReactionCount += Int(reaction.count)
         }
         
+        let isTag = message.areReactionsTags(accountPeerId: context.account.peerId)
+        
         let reactionButtonsResult = self.container.update(
             context: context,
             action: { [weak self] value in
@@ -178,6 +184,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 )
             },
             colors: reactionColors,
+            isTag: isTag,
             constrainedWidth: constrainedWidth
         )
         
@@ -301,10 +308,15 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                     if let current = strongSelf.backgroundMaskButtons[item.value] {
                         itemMaskView = current
                     } else {
-                        itemMaskView = UIView()
-                        itemMaskView.backgroundColor = .black
-                        itemMaskView.clipsToBounds = true
-                        itemMaskView.layer.cornerRadius = 15.0
+                        if isTag {
+                            itemMaskView = UIImageView(image: tagImage)
+                        } else {
+                            itemMaskView = UIView()
+                            itemMaskView.backgroundColor = .black
+                            
+                            itemMaskView.clipsToBounds = true
+                            itemMaskView.layer.cornerRadius = 15.0
+                        }
                         strongSelf.backgroundMaskButtons[item.value] = itemMaskView
                     }
                     
@@ -486,18 +498,15 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
         return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
-            //let displaySeparator: Bool
             let topOffset: CGFloat
             if case let .linear(top, _) = preparePosition, case .Neighbour(_, .media, _) = top {
-                //displaySeparator = false
                 topOffset = 4.0
             } else {
-                //displaySeparator = true
                 topOffset = 0.0
             }
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
+                let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)) ?? ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
                 let buttonsUpdate = buttonsNode.prepareUpdate(
                     context: item.context,
                     presentationData: item.presentationData,

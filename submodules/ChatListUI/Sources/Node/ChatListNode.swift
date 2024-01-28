@@ -22,6 +22,7 @@ import StoryContainerScreen
 import ChatListHeaderComponent
 import UndoUI
 import NewSessionInfoScreen
+import PresentationDataUtils
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -73,7 +74,7 @@ public final class ChatListNodeInteraction {
     
     let activateSearch: () -> Void
     let peerSelected: (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void
-    let disabledPeerSelected: (EnginePeer, Int64?) -> Void
+    let disabledPeerSelected: (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void
     let togglePeerSelected: (EnginePeer, Int64?) -> Void
     let togglePeersSelection: ([PeerEntry], Bool) -> Void
     let additionalCategorySelected: (Int) -> Void
@@ -125,7 +126,7 @@ public final class ChatListNodeInteraction {
         animationRenderer: MultiAnimationRenderer,
         activateSearch: @escaping () -> Void,
         peerSelected: @escaping (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void,
-        disabledPeerSelected: @escaping (EnginePeer, Int64?) -> Void,
+        disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
         togglePeerSelected: @escaping (EnginePeer, Int64?) -> Void,
         togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void,
         additionalCategorySelected: @escaping (Int) -> Void,
@@ -425,7 +426,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                         stats: storyState.stats,
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
-                                }
+                                },
+                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -450,6 +452,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             if filter.contains(.onlyWriteable) {
                                 if let peer = peer.peers[peer.peerId] {
                                     if !canSendMessagesToPeer(peer._asPeer()) {
+                                        enabled = false
+                                    }
+                                    if peerEntry.requiresPremiumForMessaging {
                                         enabled = false
                                     }
                                 } else {
@@ -579,7 +584,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             sortOrder: presentationData.nameSortOrder,
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
-                            peerMode: .generalSearch,
+                            peerMode: .generalSearch(isSavedMessages: false),
                             peer: peerContent,
                             status: status,
                             enabled: enabled,
@@ -597,7 +602,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 }
                             }, disabledAction: isForum && editing ? nil : { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, .generic)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -618,7 +623,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         sortOrder: presentationData.nameSortOrder,
                         displayOrder: presentationData.nameDisplayOrder,
                         context: context,
-                        peerMode: .generalSearch,
+                        peerMode: .generalSearch(isSavedMessages: false),
                         peer: peerContent,
                         status: status,
                         enabled: true,
@@ -680,7 +685,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
                     context: context,
-                    peerMode: .generalSearch,
+                    peerMode: .generalSearch(isSavedMessages: false),
                     peer: peerContent,
                     status: status,
                     enabled: true,
@@ -790,7 +795,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                         stats: storyState.stats,
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
-                                }
+                                },
+                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -815,6 +821,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             if filter.contains(.onlyWriteable) {
                                 if let peer = peer.peers[peer.peerId] {
                                     if !canSendMessagesToPeer(peer._asPeer()) {
+                                        enabled = false
+                                    }
+                                    if peerEntry.requiresPremiumForMessaging {
                                         enabled = false
                                     }
                                 } else {
@@ -898,7 +907,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             sortOrder: presentationData.nameSortOrder,
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
-                            peerMode: .generalSearch,
+                            peerMode: .generalSearch(isSavedMessages: false),
                             peer: peerContent,
                             status: status,
                             enabled: enabled,
@@ -916,7 +925,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 }
                             }, disabledAction: isForum && editing ? nil : { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, .generic)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -937,7 +946,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             sortOrder: presentationData.nameSortOrder,
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
-                            peerMode: .generalSearch,
+                            peerMode: .generalSearch(isSavedMessages: false),
                             peer: peerContent,
                             status: status,
                             enabled: true,
@@ -999,7 +1008,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
                     context: context,
-                    peerMode: .generalSearch,
+                    peerMode: .generalSearch(isSavedMessages: false),
                     peer: peerContent,
                     status: status,
                     enabled: true,
@@ -1136,7 +1145,7 @@ public final class ChatListNode: ListView {
     }
     
     public var peerSelected: ((EnginePeer, Int64?, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
-    public var disabledPeerSelected: ((EnginePeer, Int64?) -> Void)?
+    public var disabledPeerSelected: ((EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void)?
     public var additionalCategorySelected: ((Int) -> Void)?
     public var groupSelected: ((EngineChatList.Group) -> Void)?
     public var addContact: ((String) -> Void)?
@@ -1315,9 +1324,9 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peer, threadId, true, true, promoInfo)
             }
-        }, disabledPeerSelected: { [weak self] peer, threadId in
+        }, disabledPeerSelected: { [weak self] peer, threadId, reason in
             if let strongSelf = self, let disabledPeerSelected = strongSelf.disabledPeerSelected {
-                disabledPeerSelected(peer, threadId)
+                disabledPeerSelected(peer, threadId, reason)
             }
         }, togglePeerSelected: { [weak self] peer, _ in
             guard let strongSelf = self else {
@@ -1420,70 +1429,90 @@ public final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-            |> deliverOnMainQueue).startStandalone(next: { peer in
-                guard let strongSelf = self else {
-                    return
-                }
-                guard case let .chatList(groupId) = strongSelf.location else {
-                    return
-                }
-                        
-                let isPremium = peer?.isPremium ?? false
-                let location: TogglePeerChatPinnedLocation
-                if let chatListFilter = chatListFilter {
-                    location = .filter(chatListFilter.id)
-                } else {
-                    location = .group(groupId._asGroup())
-                }
-                let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
-                |> deliverOnMainQueue).startStandalone(next: { result in
-                    if let strongSelf = self {
-                        switch result {
-                        case .done:
+            if case .savedMessagesChats = location {
+                if case let .peer(itemPeerId) = itemId {
+                    let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: context.account.peerId, threadId: itemPeerId.toInt64())
+                    |> deliverOnMainQueue).start(error: { error in
+                        guard let self else {
+                            return
+                        }
+                        switch error {
+                        case let .limitReached(count):
+                            let controller = PremiumLimitScreen(context: context, subject: .pinnedSavedPeers, count: Int32(count), action: {
+                                return true
+                            })
+                            self.push?(controller)
+                        default:
                             break
-                        case let .limitExceeded(count, _):
-                            if isPremium {
-                                if case .filter = location {
-                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
-                                        return true
-                                    })
-                                    strongSelf.push?(controller)
-                                } else {
-                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
-                                        return true
-                                    })
-                                    strongSelf.push?(controller)
-                                }
-                            } else {
-                                if case .filter = location {
-                                    var replaceImpl: ((ViewController) -> Void)?
-                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
-                                        let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
-                                        replaceImpl?(premiumScreen)
-                                        return true
-                                    })
-                                    strongSelf.push?(controller)
-                                    replaceImpl = { [weak controller] c in
-                                        controller?.replace(with: c)
+                        }
+                    })
+                }
+            } else {
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> deliverOnMainQueue).startStandalone(next: { peer in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard case let .chatList(groupId) = strongSelf.location else {
+                        return
+                    }
+                    
+                    let isPremium = peer?.isPremium ?? false
+                    let location: TogglePeerChatPinnedLocation
+                    if let chatListFilter = chatListFilter {
+                        location = .filter(chatListFilter.id)
+                    } else {
+                        location = .group(groupId._asGroup())
+                    }
+                    let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
+                    |> deliverOnMainQueue).startStandalone(next: { result in
+                        if let strongSelf = self {
+                            switch result {
+                            case .done:
+                                break
+                            case let .limitExceeded(count, _):
+                                if isPremium {
+                                    if case .filter = location {
+                                        let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                            return true
+                                        })
+                                        strongSelf.push?(controller)
+                                    } else {
+                                        let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                            return true
+                                        })
+                                        strongSelf.push?(controller)
                                     }
                                 } else {
-                                    var replaceImpl: ((ViewController) -> Void)?
-                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
-                                        let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
-                                        replaceImpl?(premiumScreen)
-                                        return true
-                                    })
-                                    strongSelf.push?(controller)
-                                    replaceImpl = { [weak controller] c in
-                                        controller?.replace(with: c)
+                                    if case .filter = location {
+                                        var replaceImpl: ((ViewController) -> Void)?
+                                        let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                            let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                            replaceImpl?(premiumScreen)
+                                            return true
+                                        })
+                                        strongSelf.push?(controller)
+                                        replaceImpl = { [weak controller] c in
+                                            controller?.replace(with: c)
+                                        }
+                                    } else {
+                                        var replaceImpl: ((ViewController) -> Void)?
+                                        let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                            let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                            replaceImpl?(premiumScreen)
+                                            return true
+                                        })
+                                        strongSelf.push?(controller)
+                                        replaceImpl = { [weak controller] c in
+                                            controller?.replace(with: c)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
+                    })
                 })
-            })
+            }
         }, setPeerMuted: { [weak self] peerId, _ in
             guard let strongSelf = self else {
                 return
@@ -1612,7 +1641,7 @@ public final class ChatListNode: ListView {
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList)
             self.push?(controller)
         }, openActiveSessions: { [weak self] in
             guard let self else {

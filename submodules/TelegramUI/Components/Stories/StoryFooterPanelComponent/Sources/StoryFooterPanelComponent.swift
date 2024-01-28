@@ -400,7 +400,7 @@ public final class StoryFooterPanelComponent: Component {
             
             var displayViewLists = false
             if case let .channel(channel) = component.peer, channel.flags.contains(.isCreator) || component.canViewChannelStats {
-                displayViewLists = reactionCount != 0 || forwardCount != 0
+                displayViewLists = true
             } else {
                 displayViewLists = viewCount != 0 && !component.isChannel
             }

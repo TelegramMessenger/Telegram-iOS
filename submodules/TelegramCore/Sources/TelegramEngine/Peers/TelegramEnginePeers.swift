@@ -1063,13 +1063,23 @@ public extension TelegramEngine {
         
         public func toggleForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, SetForumChannelTopicPinnedError> {
             return self.account.postbox.transaction { transaction -> ([Int64], Int) in
-                var limit = 5
-                let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-                if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
-                    limit = Int(value)
+                if id == self.account.peerId {
+                    var limit = 5
+                    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                    if let data = appConfiguration.data, let value = data["saved_pinned_limit"] as? Double {
+                        limit = Int(value)
+                    }
+                    
+                    return (transaction.getPeerPinnedThreads(peerId: id), limit)
+                } else {
+                    var limit = 5
+                    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                    if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
+                        limit = Int(value)
+                    }
+                    
+                    return (transaction.getPeerPinnedThreads(peerId: id), limit)
                 }
-                
-                return (transaction.getPeerPinnedThreads(peerId: id), limit)
             }
             |> castError(SetForumChannelTopicPinnedError.self)
             |> mapToSignal { threadIds, limit -> Signal<Never, SetForumChannelTopicPinnedError> in
@@ -1262,6 +1272,79 @@ public extension TelegramEngine {
         
         public func requestRecommendedChannels(peerId: EnginePeer.Id, forceUpdate: Bool = false) -> Signal<Never, NoError> {
             return _internal_requestRecommendedChannels(account: self.account, peerId: peerId, forceUpdate: forceUpdate)
+        }
+        
+        public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {
+            return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
+        }
+        
+        public func subscribeIsPremiumRequiredForMessaging(id: EnginePeer.Id) -> Signal<Bool, NoError> {
+            if id.namespace != Namespaces.Peer.CloudUser {
+                return .single(false)
+            }
+            
+            return self.account.postbox.combinedView(keys: [
+                PostboxViewKey.basicPeer(self.account.peerId),
+                PostboxViewKey.basicPeer(id),
+                PostboxViewKey.cachedPeerData(peerId: id)
+            ])
+            |> map { views -> Bool in
+                guard let basicAccountPeerView = views.views[PostboxViewKey.basicPeer(self.account.peerId)] as? BasicPeerView else {
+                    return false
+                }
+                guard let accountPeer = basicAccountPeerView.peer else {
+                    return false
+                }
+                if accountPeer.isPremium {
+                    return false
+                }
+                
+                guard let basicPeerView = views.views[PostboxViewKey.basicPeer(id)] as? BasicPeerView else {
+                    return false
+                }
+                guard let user = basicPeerView.peer as? TelegramUser else {
+                    return false
+                }
+                guard let cachedDataView = views.views[PostboxViewKey.cachedPeerData(peerId: id)] as? CachedPeerDataView else {
+                    return false
+                }
+                if !user.flags.contains(.requirePremium) {
+                    return false
+                }
+                
+                /*#if DEBUG
+                if "".isEmpty {
+                    return true
+                }
+                #endif*/
+                
+                if let cachedData = cachedDataView.cachedPeerData as? CachedUserData {
+                    if cachedData.flags.contains(.premiumRequired) {
+                        return true
+                    } else {
+                        return false
+                    }
+                } else {
+                    return true
+                }
+            }
+            |> distinctUntilChanged
+            |> mapToSignal { maybeValue -> Signal<Bool, NoError> in
+                if !maybeValue {
+                    return .single(false)
+                }
+                
+                return self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 44, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: [])
+                |> map { view -> Bool in
+                    for entry in view.0.entries {
+                        if entry.message.flags.contains(.Incoming) {
+                            return false
+                        }
+                    }
+                    return true
+                }
+                |> distinctUntilChanged
+            }
         }
     }
 }

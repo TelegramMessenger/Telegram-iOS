@@ -26,6 +26,8 @@ extension StickerPackReference {
             return .inputStickerSetEmojiGenericAnimations
         case .iconStatusEmoji:
             return .inputStickerSetEmojiDefaultStatuses
+        case .iconChannelStatusEmoji:
+            return .inputStickerSetEmojiChannelDefaultStatuses
         case .iconTopicEmoji:
             return .inputStickerSetEmojiDefaultTopicIcons
         }

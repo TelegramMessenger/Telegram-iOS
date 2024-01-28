@@ -13,23 +13,32 @@ public final class PlainButtonComponent: Component {
     public let content: AnyComponent<Empty>
     public let effectAlignment: EffectAlignment
     public let minSize: CGSize?
+    public let contentInsets: UIEdgeInsets
     public let action: () -> Void
     public let isEnabled: Bool
+    public let animateAlpha: Bool
+    public let tag: AnyObject?
     
     public init(
         content: AnyComponent<Empty>,
         effectAlignment: EffectAlignment,
         minSize: CGSize? = nil,
+        contentInsets: UIEdgeInsets = UIEdgeInsets(),
         action: @escaping () -> Void,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        animateAlpha: Bool = true,
+        tag : AnyObject? = nil
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
         self.minSize = minSize
+        self.contentInsets = contentInsets
         self.action = action
         self.isEnabled = isEnabled
+        self.animateAlpha = animateAlpha
+        self.tag = tag
     }
-
+    
     public static func ==(lhs: PlainButtonComponent, rhs: PlainButtonComponent) -> Bool {
         if lhs.content != rhs.content {
             return false
@@ -40,13 +49,32 @@ public final class PlainButtonComponent: Component {
         if lhs.minSize != rhs.minSize {
             return false
         }
+        if lhs.contentInsets != rhs.contentInsets {
+            return false
+        }
         if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
+        if lhs.animateAlpha != rhs.animateAlpha {
+            return false
+        }
+        if lhs.tag !== rhs.tag {
             return false
         }
         return true
     }
 
-    public final class View: HighlightTrackingButton {
+    public final class View: HighlightTrackingButton, ComponentTaggedView {
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
         private var component: PlainButtonComponent?
         private weak var componentState: EmptyComponentState?
 
@@ -60,6 +88,8 @@ public final class PlainButtonComponent: Component {
         override init(frame: CGRect) {
             super.init(frame: frame)
             
+            self.isExclusiveTouch = true
+            
             self.contentContainer.isUserInteractionEnabled = false
             self.addSubview(self.contentContainer)
             
@@ -67,18 +97,25 @@ public final class PlainButtonComponent: Component {
             
             self.highligthedChanged = { [weak self] highlighted in
                 if let self, self.bounds.width > 0.0 {
+                    let animateAlpha = self.component?.animateAlpha ?? true
+                    
                     let topScale: CGFloat = (self.bounds.width - 8.0) / self.bounds.width
                     let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
                     
                     if highlighted {
                         self.contentContainer.layer.removeAnimation(forKey: "opacity")
                         self.contentContainer.layer.removeAnimation(forKey: "sublayerTransform")
-                        self.contentContainer.alpha = 0.7
+                        
+                        if animateAlpha {
+                            self.contentContainer.alpha = 0.7
+                        }
                         let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
                         transition.setScale(layer: self.contentContainer.layer, scale: topScale)
                     } else {
-                        self.contentContainer.alpha = 1.0
-                        self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                        if animateAlpha {
+                            self.contentContainer.alpha = 1.0
+                            self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
+                        }
                         
                         let transition = Transition(animation: .none)
                         transition.setScale(layer: self.contentContainer.layer, scale: 1.0)
@@ -143,6 +180,8 @@ public final class PlainButtonComponent: Component {
                 size.width = max(size.width, minSize.width)
                 size.height = max(size.height, minSize.height)
             }
+            size.width += component.contentInsets.left + component.contentInsets.right
+            size.height += component.contentInsets.top + component.contentInsets.bottom
 
             if let contentView = self.content.view {
                 var contentTransition = transition
@@ -151,7 +190,7 @@ public final class PlainButtonComponent: Component {
                     contentView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(contentView)
                 }
-                let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) * 0.5), y: floor((size.height - contentSize.height) * 0.5)), size: contentSize)
+                let contentFrame = CGRect(origin: CGPoint(x: component.contentInsets.left + floor((size.width - component.contentInsets.left - component.contentInsets.right - contentSize.width) * 0.5), y: component.contentInsets.top + floor((size.height - component.contentInsets.top - component.contentInsets.bottom - contentSize.height) * 0.5)), size: contentSize)
                 
                 contentTransition.setFrame(view: contentView, frame: contentFrame)
                 contentTransition.setAlpha(view: contentView, alpha: contentAlpha)

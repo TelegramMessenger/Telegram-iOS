@@ -71,7 +71,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         }
     }
     
-    if case let .replyThread(message) = presentationInterfaceState.chatLocation, message.messageId.peerId == context.account.peerId {
+    if case let .replyThread(message) = presentationInterfaceState.chatLocation, message.peerId == context.account.peerId {
         return chatInfoNavigationButton
     }
     
@@ -142,7 +142,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
         return chatInfoNavigationButton
     }
     
-    if case .standard(true) = presentationInterfaceState.mode {
+    if case .standard(.previewing) = presentationInterfaceState.mode {
         return chatInfoNavigationButton
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {

@@ -235,6 +235,26 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let voiceCallsAvailable = (userFullFlags & (1 << 4)) != 0
                                         let videoCallsAvailable = (userFullFlags & (1 << 13)) != 0
                                         let voiceMessagesAvailable = (userFullFlags & (1 << 20)) == 0
+                                        let readDatesPrivate = (userFullFlags & (1 << 30)) != 0
+                                        let premiumRequired = (userFullFlags & (1 << 29)) != 0
+                                        let translationsDisabled = (userFullFlags & (1 << 23)) != 0
+
+                                        var flags: CachedUserFlags = previous.flags
+                                        if premiumRequired {
+                                            flags.insert(.premiumRequired)
+                                        } else {
+                                            flags.remove(.premiumRequired)
+                                        }
+                                        if readDatesPrivate {
+                                            flags.insert(.readDatesPrivate)
+                                        } else {
+                                            flags.remove(.readDatesPrivate)
+                                        }
+                                        if translationsDisabled {
+                                            flags.insert(.translationHidden)
+                                        } else {
+                                            flags.remove(.translationHidden)
+                                        }
                                     
                                         let callsPrivate = (userFullFlags & (1 << 5)) != 0
                                         let canPinMessages = (userFullFlags & (1 << 7)) != 0
@@ -286,6 +306,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedPremiumGiftOptions(premiumGiftOptions)
                                             .withUpdatedVoiceMessagesAvailable(voiceMessagesAvailable)
                                             .withUpdatedWallpaper(wallpaper)
+                                            .withUpdatedFlags(flags)
                                 }
                             })
                         }

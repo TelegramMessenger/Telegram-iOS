@@ -46,7 +46,9 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         
         var iconImage: UIImage?
         
-        if let threadData = interfaceState.threadData, threadData.isClosed {
+        if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == self.context?.account.peerId {
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelStatusAuthorHidden, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+        } else if let threadData = interfaceState.threadData, threadData.isClosed {
             iconImage = PresentationResourcesChat.chatPanelLockIcon(interfaceState.theme)
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelTopicClosedText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case .peer = interfaceState.chatLocation {

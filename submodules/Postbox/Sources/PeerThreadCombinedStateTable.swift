@@ -241,7 +241,7 @@ class PeerThreadsSummaryTable: Table {
                 }
                 
                 for tag in self.seedConfiguration.messageTagsWithThreadSummary {
-                    if let value = tagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: item.threadId, namespace: 0)) {
+                    if let value = tagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: item.threadId, namespace: 0, customTag: nil)) {
                         tagSummaries.append(StoredPeerThreadsSummary.ThreadsTagSummary(tag: tag, count: value.count))
                     }
                 }

@@ -49,6 +49,9 @@ extension TelegramUser {
             }
             
             var userFlags: UserInfoFlags = []
+            if (flags & (1 << 12)) != 0 {
+                userFlags.insert(.mutualContact)
+            }
             if (flags & (1 << 17)) != 0 {
                 userFlags.insert(.isVerified)
             }
@@ -67,7 +70,9 @@ extension TelegramUser {
             if (flags2 & (1 << 2)) != 0 {
                 userFlags.insert(.isCloseFriend)
             }
-            
+            if (flags2 & (1 << 10)) != 0 {
+                userFlags.insert(.requirePremium)
+            }
             var storiesHidden: Bool?
             if !isMin {
                 storiesHidden = (flags2 & (1 << 3)) != 0
@@ -142,6 +147,9 @@ extension TelegramUser {
 
                     if let lhs = lhs {
                         var userFlags: UserInfoFlags = []
+                        if (flags & (1 << 12)) != 0 {
+                            userFlags.insert(.mutualContact)
+                        }
                         if (flags & (1 << 17)) != 0 {
                             userFlags.insert(.isVerified)
                         }
@@ -161,7 +169,9 @@ extension TelegramUser {
                         if lhs.flags.contains(.isCloseFriend) {
                             userFlags.insert(.isCloseFriend)
                         }
-                        
+                        if lhs.flags.contains(.requirePremium) {
+                            userFlags.insert(.requirePremium)
+                        }
                         var botInfo: BotUserInfo?
                         if (flags & (1 << 14)) != 0 {
                             var botFlags = BotUserInfoFlags()

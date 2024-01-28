@@ -34,12 +34,12 @@ struct ReplyThreadUserMessage {
     var isOutgoing: Bool
 }
 
-func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, removedCount: Int, addedMessagePeers: [ReplyThreadUserMessage]) {
-    updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: threadMessageId, removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: false)
+func updateMessageThreadStats(transaction: Transaction, threadKey: MessageThreadKey, removedCount: Int, addedMessagePeers: [ReplyThreadUserMessage]) {
+    updateMessageThreadStatsInternal(transaction: transaction, threadKey: threadKey, removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: false)
 }
     
-private func updateMessageThreadStatsInternal(transaction: Transaction, threadMessageId: MessageId, removedCount: Int, addedMessagePeers: [ReplyThreadUserMessage], allowChannel: Bool) {
-    guard let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel else {
+private func updateMessageThreadStatsInternal(transaction: Transaction, threadKey: MessageThreadKey, removedCount: Int, addedMessagePeers: [ReplyThreadUserMessage], allowChannel: Bool) {
+    guard let channel = transaction.getPeer(threadKey.peerId) as? TelegramChannel else {
         return
     }
     var isGroup = true
@@ -75,7 +75,7 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
         return current
     }
     
-    transaction.updateMessage(threadMessageId, update: { currentMessage in
+    transaction.updateMessage(MessageId(peerId: threadKey.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadKey.threadId)), update: { currentMessage in
         var attributes = currentMessage.attributes
         loop: for j in 0 ..< attributes.count {
             if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
@@ -117,6 +117,6 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
     })
     
     if let channelThreadMessageId = channelThreadMessageId {
-        updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: channelThreadMessageId, removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: true)
+        updateMessageThreadStatsInternal(transaction: transaction, threadKey: MessageThreadKey(peerId: channelThreadMessageId.peerId, threadId: Int64(channelThreadMessageId.id)), removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: true)
     }
 }

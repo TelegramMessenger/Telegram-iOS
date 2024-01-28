@@ -138,14 +138,22 @@ final class HistoryViewStateValidationContexts {
     }
     
     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput?) {
-        /*#if DEBUG
-        if "".isEmpty {
+        assert(self.queue.isCurrent())
+        
+        guard let view else {
+            if self.contexts[id] != nil {
+                self.contexts.removeValue(forKey: id)
+            }
             return
         }
-        #endif*/
+        if case .customTag = view.tag {
+            if self.contexts[id] != nil {
+                self.contexts.removeValue(forKey: id)
+            }
+            return
+        }
         
-        assert(self.queue.isCurrent())
-        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.unseenReaction || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
+        guard view.tag == nil || view.tag == .tag(MessageTags.unseenPersonalMessage) || view.tag == .tag(MessageTags.unseenReaction) || view.tag == .tag(MessageTags.music) || view.tag == .tag(MessageTags.pinned) else {
             if self.contexts[id] != nil {
                 self.contexts.removeValue(forKey: id)
             }
@@ -180,7 +188,7 @@ final class HistoryViewStateValidationContexts {
             
             for entry in view.entries {
                 if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
-                    if let tag = view.tagMask {
+                    if case let .tag(tag) = view.tag {
                         if !entry.message.tags.contains(tag) {
                             continue
                         }
@@ -234,7 +242,12 @@ final class HistoryViewStateValidationContexts {
                             context.batchReferences[messageId] = batch
                         }
                         
-                        disposable.set((validateReplyThreadMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: peerId, threadMessageId: makeThreadIdMessageId(peerId: peerId, threadId: threadId).id, tag: view.tagMask, messageIds: messages)
+                        var tag: MessageTags?
+                        if case let .tag(value) = view.tag {
+                            tag = value
+                        }
+                        
+                        disposable.set((validateReplyThreadMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, peerId: peerId, threadMessageId: Int32(clamping: threadId), tag: tag, messageIds: messages)
                         |> deliverOn(self.queue)).start(completed: { [weak self, weak batch] in
                             if let strongSelf = self, let context = strongSelf.contexts[id], let batch = batch {
                                 var completedMessageIds: [MessageId] = []
@@ -283,7 +296,7 @@ final class HistoryViewStateValidationContexts {
             
             for entry in view.entries {
                 if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
-                    if let tag = view.tagMask {
+                    if case let .tag(tag) = view.tag {
                         if !entry.message.tags.contains(tag) {
                             continue
                         }
@@ -337,7 +350,12 @@ final class HistoryViewStateValidationContexts {
                             context.batchReferences[messageId] = batch
                         }
                         
-                        disposable.set((validateChannelMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, tag: view.tagMask, messageIds: messages, historyState: historyState)
+                        var tag: MessageTags?
+                        if case let .tag(value) = view.tag {
+                            tag = value
+                        }
+                        
+                        disposable.set((validateChannelMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, tag: tag, messageIds: messages, historyState: historyState)
                         |> deliverOn(self.queue)).start(completed: { [weak self, weak batch] in
                             if let strongSelf = self, let context = strongSelf.contexts[id], let batch = batch {
                                 var completedMessageIds: [MessageId] = []
@@ -512,7 +530,7 @@ private func validateChannelMessagesBatch(postbox: Postbox, network: Network, ac
                         } else if tag == MessageTags.unseenReaction {
                             requestSignal = network.request(Api.functions.messages.getUnreadReactions(flags: 0, peer: inputPeer, topMsgId: nil, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1))
                         } else if let filter = messageFilterForTagMask(tag) {
-                            requestSignal = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, topMsgId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
+                            requestSignal = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, savedPeerId: nil, savedReaction: nil, topMsgId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
                         } else {
                             assertionFailure()
                             requestSignal = .complete()
@@ -582,7 +600,7 @@ private func validateReplyThreadMessagesBatch(postbox: Postbox, network: Network
                     var flags: Int32 = 0
                     flags |= (1 << 1)
                     
-                    requestSignal = network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, topMsgId: threadMessageId, filter: filter, minDate: 0, maxDate: 0, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
+                    requestSignal = network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, savedPeerId: nil, savedReaction: nil, topMsgId: threadMessageId, filter: filter, minDate: 0, maxDate: 0, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
                 } else {
                     return .complete()
                 }
@@ -621,7 +639,7 @@ private func validateReplyThreadMessagesBatch(postbox: Postbox, network: Network
             return .complete()
         }
         
-        return validateReplyThreadBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, peerId: peerId, threadId: makeMessageThreadId(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadMessageId)), signal: signal, previous: previous, messageNamespace: Namespaces.Message.Cloud)
+        return validateReplyThreadBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, peerId: peerId, threadId: Int64(threadMessageId), signal: signal, previous: previous, messageNamespace: Namespaces.Message.Cloud)
     }
     |> switchToLatest
 }

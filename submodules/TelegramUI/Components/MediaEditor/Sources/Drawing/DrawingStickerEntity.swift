@@ -33,7 +33,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case animatedImage(Data, UIImage)
         case video(TelegramMediaFile)
         case dualVideoReference(Bool)
-        case message([MessageId], TelegramMediaFile?, CGSize)
+        case message([MessageId], CGSize, TelegramMediaFile?, CGRect?, CGFloat?)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -67,9 +67,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
-            case let .message(messageIds, innerFile, size):
-                if case .message(messageIds, innerFile, size) = rhs {
-                    return true
+            case let .message(lhsMessageIds, lhsSize, lhsFile, lhsMediaFrame, lhsCornerRadius):
+                if case let .message(rhsMessageIds, rhsSize, rhsFile, rhsMediaFrame, rhsCornerRadius) = rhs {
+                    return lhsMessageIds == rhsMessageIds && lhsSize == rhsSize && lhsFile?.fileId == rhsFile?.fileId && lhsMediaFrame == rhsMediaFrame && lhsCornerRadius == rhsCornerRadius
                 } else {
                     return false
                 }
@@ -89,14 +89,19 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case dualVideo
         case isAdditionalVideo
         case messageIds
-        case explicitSize
+        case messageFile
+        case messageSize
+        case messageMediaRect
+        case messageMediaCornerRadius
         case referenceDrawingSize
         case position
         case scale
         case rotation
         case mirrored
         case isExplicitlyStatic
+        case canCutOut
         case renderImage
+        case renderSubEntities
     }
     
     public var uuid: UUID
@@ -116,12 +121,15 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public var rotation: CGFloat
     public var mirrored: Bool
     
+    public var canCutOut = false
+    
     public var isExplicitlyStatic: Bool
         
     public var color: DrawingColor = DrawingColor.clear
     public var lineWidth: CGFloat = 0.0
     
     public var secondaryRenderImage: UIImage?
+    public var overlayRenderImage: UIImage?
     
     public var center: CGPoint {
         return self.position
@@ -146,7 +154,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:
             dimensions = CGSize(width: 512.0, height: 512.0)
-        case let .message(_, _, size):
+        case let .message(_, size, _, _, _):
             dimensions = size
         }
         
@@ -217,8 +225,11 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         if let messageIds = try container.decodeIfPresent([MessageId].self, forKey: .messageIds) {
-            let size = try container.decodeIfPresent(CGSize.self, forKey: .explicitSize) ?? .zero
-            self.content = .message(messageIds, nil, size)
+            let size = try container.decodeIfPresent(CGSize.self, forKey: .messageSize) ?? .zero
+            let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .messageFile)
+            let mediaRect = try container.decodeIfPresent(CGRect.self, forKey: .messageMediaRect)
+            let mediaCornerRadius = try container.decodeIfPresent(CGFloat.self, forKey: .messageMediaCornerRadius)
+            self.content = .message(messageIds, size, file, mediaRect, mediaCornerRadius)
         } else if let _ = try container.decodeIfPresent(Bool.self, forKey: .dualVideo) {
             let isAdditional = try container.decodeIfPresent(Bool.self, forKey: .isAdditionalVideo) ?? false
             self.content = .dualVideoReference(isAdditional)
@@ -260,8 +271,13 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.mirrored = try container.decode(Bool.self, forKey: .mirrored)
         self.isExplicitlyStatic = try container.decodeIfPresent(Bool.self, forKey: .isExplicitlyStatic) ?? false
         
+        self.canCutOut = try container.decodeIfPresent(Bool.self, forKey: .canCutOut) ?? false
+        
         if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
             self.renderImage = UIImage(data: renderImageData)
+        }
+        if let renderSubEntities = try? container.decodeIfPresent([CodableDrawingEntity].self, forKey: .renderSubEntities) {
+            self.renderSubEntities = renderSubEntities.compactMap { $0.entity as? DrawingStickerEntity }
         }
     }
     
@@ -313,10 +329,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case let .dualVideoReference(isAdditional):
             try container.encode(true, forKey: .dualVideo)
             try container.encode(isAdditional, forKey: .isAdditionalVideo)
-        case let .message(messageIds, innerFile, size):
+        case let .message(messageIds, size, file, mediaRect, mediaCornerRadius):
             try container.encode(messageIds, forKey: .messageIds)
-            let _ = innerFile
-            try container.encode(size, forKey: .explicitSize)
+            try container.encode(size, forKey: .messageSize)
+            try container.encodeIfPresent(file, forKey: .messageFile)
+            try container.encodeIfPresent(mediaRect, forKey: .messageMediaRect)
+            try container.encodeIfPresent(mediaCornerRadius, forKey: .messageMediaCornerRadius)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)
@@ -325,8 +343,14 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         try container.encode(self.mirrored, forKey: .mirrored)
         try container.encode(self.isExplicitlyStatic, forKey: .isExplicitlyStatic)
         
+        try container.encode(self.canCutOut, forKey: .canCutOut)
+        
         if let renderImage, let data = renderImage.pngData() {
             try container.encode(data, forKey: .renderImage)
+        }
+        if let renderSubEntities = self.renderSubEntities {
+            let codableEntities: [CodableDrawingEntity] = renderSubEntities.compactMap { CodableDrawingEntity(entity: $0) }
+            try container.encode(codableEntities, forKey: .renderSubEntities)
         }
     }
         
@@ -341,6 +365,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         newEntity.rotation = self.rotation
         newEntity.mirrored = self.mirrored
         newEntity.isExplicitlyStatic = self.isExplicitlyStatic
+        newEntity.canCutOut = self.canCutOut
         return newEntity
     }
     
@@ -370,6 +395,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return false
         }
         if self.isExplicitlyStatic != other.isExplicitlyStatic {
+            return false
+        }
+        if self.canCutOut != other.canCutOut {
             return false
         }
         return true

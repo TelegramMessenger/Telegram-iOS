@@ -844,6 +844,40 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct MessageReadStatsAreHidden: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Bool?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                
+                if self.id.namespace == Namespaces.Peer.CloudUser {
+                    if let cachedData = view.cachedPeerData as? CachedUserData, cachedData.flags.contains(.readDatesPrivate) {
+                        return true
+                    } else {
+                        return false
+                    }
+                } else {
+                    return false
+                }
+            }
+        }
+
+        
         public struct CanDeleteHistory: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Bool
 
@@ -982,6 +1016,63 @@ public extension TelegramEngine.EngineData.Item {
                     return cachedData.flags.contains(.translationHidden)
                 } else if let cachedData = view.cachedPeerData as? CachedChannelData {
                     return cachedData.flags.contains(.translationHidden)
+                } else {
+                    return false
+                }
+            }
+        }
+        
+        public struct IsPremiumRequiredForMessaging: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, AnyPostboxViewDataItem {
+            public typealias Result = Bool
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            func keys(data: TelegramEngine.EngineData) -> [PostboxViewKey] {
+                return [
+                    .cachedPeerData(peerId: self.id),
+                    .basicPeer(data.accountPeerId),
+                    .basicPeer(self.id)
+                ]
+            }
+
+            func _extract(data: TelegramEngine.EngineData, views: [PostboxViewKey: PostboxView]) -> Any {
+                guard let basicPeerView = views[.basicPeer(data.accountPeerId)] as? BasicPeerView else {
+                    assertionFailure()
+                    return false
+                }
+                guard let basicTargetPeerView = views[.basicPeer(self.id)] as? BasicPeerView else {
+                    assertionFailure()
+                    return false
+                }
+                guard let view = views[.cachedPeerData(peerId: self.id)] as? CachedPeerDataView else {
+                    assertionFailure()
+                    return false
+                }
+                
+                if let peer = basicPeerView.peer, peer.isPremium {
+                    return false
+                }
+                
+                guard let targetPeer = basicTargetPeerView.peer as? TelegramUser else {
+                    return false
+                }
+                if !targetPeer.flags.contains(.requirePremium) {
+                    return false
+                }
+                
+                if self.id.namespace == Namespaces.Peer.CloudUser {
+                    if let cachedData = view.cachedPeerData as? CachedUserData {
+                        return cachedData.flags.contains(.premiumRequired)
+                    } else {
+                        return true
+                    }
                 } else {
                     return false
                 }
@@ -1153,5 +1244,6 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
     }
 }

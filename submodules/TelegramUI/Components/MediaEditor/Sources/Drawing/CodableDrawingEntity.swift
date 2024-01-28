@@ -134,7 +134,7 @@ public enum CodableDrawingEntity: Equatable {
                     reaction: reaction,
                     flags: flags
                 )
-            } else if case let .message(messageIds, _, _) = entity.content, let messageId = messageIds.first {
+            } else if case let .message(messageIds, _, _, _, _) = entity.content, let messageId = messageIds.first {
                 return .channelMessage(coordinates: coordinates, messageId: messageId)
             } else {
                 return nil

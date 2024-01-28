@@ -9,7 +9,7 @@ public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     public let digest: MemoryBuffer
     public let isStory: Bool
     
-    public init(data: MemoryBuffer, digest: MemoryBuffer, isStory: Bool) {
+    public init(data: MemoryBuffer, digest: MemoryBuffer, isStory: Bool = false) {
         self.data = data
         self.digest = digest
         self.isStory = isStory
@@ -161,7 +161,7 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     }
     
     public let randomId: Int64
-    public let path: String
+    public let paths: [String]
     public let adjustments: VideoMediaResourceAdjustments?
     
     public var headerSize: Int32 {
@@ -170,19 +170,30 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     
     public init(randomId: Int64, path: String, adjustments: VideoMediaResourceAdjustments?) {
         self.randomId = randomId
-        self.path = path
+        self.paths = [path]
+        self.adjustments = adjustments
+    }
+    
+    public init(randomId: Int64, paths: [String], adjustments: VideoMediaResourceAdjustments?) {
+        self.randomId = randomId
+        self.paths = paths
         self.adjustments = adjustments
     }
     
     public required init(decoder: PostboxDecoder) {
         self.randomId = decoder.decodeInt64ForKey("i", orElse: 0)
-        self.path = decoder.decodeStringForKey("p", orElse: "")
+        let paths = decoder.decodeStringArrayForKey("ps")
+        if !paths.isEmpty {
+            self.paths = paths
+        } else {
+            self.paths = [decoder.decodeStringForKey("p", orElse: "")]
+        }
         self.adjustments = decoder.decodeObjectForKey("a", decoder: { VideoMediaResourceAdjustments(decoder: $0) }) as? VideoMediaResourceAdjustments
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.randomId, forKey: "i")
-        encoder.encodeString(self.path, forKey: "p")
+        encoder.encodeStringArray(self.paths, forKey: "ps")
         if let adjustments = self.adjustments {
             encoder.encodeObject(adjustments, forKey: "a")
         } else {
@@ -196,7 +207,7 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileVideoMediaResource {
-            return self.randomId == to.randomId && self.path == to.path && self.adjustments == to.adjustments
+            return self.randomId == to.randomId && self.paths == to.paths && self.adjustments == to.adjustments
         } else {
             return false
         }

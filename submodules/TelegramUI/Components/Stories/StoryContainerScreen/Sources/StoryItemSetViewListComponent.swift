@@ -584,6 +584,9 @@ final class StoryItemSetViewListComponent: Component {
                                 guard let self, let component = self.component else {
                                     return
                                 }
+                                guard peer.id != component.context.account.peerId else {
+                                    return
+                                }
                                 if let messageId {
                                     component.openMessage(peer, messageId)
                                 } else if let storyItem, let sourceView {
@@ -592,7 +595,7 @@ final class StoryItemSetViewListComponent: Component {
                                     component.openPeer(peer)
                                 }
                             },
-                            contextAction: { peer, view, gesture in
+                            contextAction: component.peerId.isGroupOrChannel || item.peer.id == component.context.account.peerId ? nil : { peer, view, gesture in
                                 component.peerContextAction(peer, view, gesture)
                             },
                             openStories: { [weak self] peer, avatarNode in
@@ -954,7 +957,7 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             var premiumFooterSize: CGSize?
-            if self.configuration.listMode == .everyone, let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
+            if self.configuration.listMode == .everyone, let viewListState = self.viewListState, viewListState.loadMoreToken == nil, !viewListState.items.isEmpty, let views = component.storyItem.views, views.seenCount > viewListState.totalCount, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970), !component.peerId.isGroupOrChannel {
                 let premiumFooterText: ComponentView<Empty>
                 if let current = self.premiumFooterText {
                     premiumFooterText = current

@@ -3082,7 +3082,6 @@ public final class DrawingToolsInteraction {
                 return
             }
             
-            var isRectangleImage = false
             var isVideo = false
             var isAdditional = false
             var isMessage = false
@@ -3090,8 +3089,6 @@ public final class DrawingToolsInteraction {
                 if case let .dualVideoReference(isAdditionalValue) = entity.content {
                     isVideo = true
                     isAdditional = isAdditionalValue
-                } else if case let .image(_, type) = entity.content, case .rectangle = type {
-                    isRectangleImage = true
                 } else if case .message = entity.content {
                     isMessage = true
                 }
@@ -3154,7 +3151,7 @@ public final class DrawingToolsInteraction {
             }
             
             
-            if #available(iOS 17.0, *), isRectangleImage {
+            if #available(iOS 17.0, *), let stickerEntity = entityView.entity as? DrawingStickerEntity, stickerEntity.canCutOut {
                 actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_CutOut, accessibilityLabel: presentationData.strings.Paint_CutOut), action: { [weak self, weak entityView] in
                     if let self, let entityView, let entity = entityView.entity as? DrawingStickerEntity, case let .image(image, _) = entity.content {
                         let _ = (cutoutStickerImage(from: image)

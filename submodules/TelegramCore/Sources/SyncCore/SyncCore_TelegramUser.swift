@@ -17,6 +17,8 @@ public struct UserInfoFlags: OptionSet {
     public static let isFake = UserInfoFlags(rawValue: (1 << 3))
     public static let isPremium = UserInfoFlags(rawValue: (1 << 4))
     public static let isCloseFriend = UserInfoFlags(rawValue: (1 << 5))
+    public static let requirePremium = UserInfoFlags(rawValue: (1 << 6))
+    public static let mutualContact = UserInfoFlags(rawValue: (1 << 7))
 }
 
 public struct BotUserInfoFlags: OptionSet {

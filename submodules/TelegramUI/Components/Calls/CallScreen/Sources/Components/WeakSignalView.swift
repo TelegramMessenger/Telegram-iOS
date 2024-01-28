@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import TelegramPresentationData
 
 final class WeakSignalView: OverlayMaskContainerView {
     private struct Params: Equatable {
@@ -39,7 +40,7 @@ final class WeakSignalView: OverlayMaskContainerView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(constrainedSize: CGSize) -> CGSize {
+    func update(strings: PresentationStrings, constrainedSize: CGSize) -> CGSize {
         let params = Params(constrainedSize: constrainedSize)
         if let currentLayout = self.currentLayout, currentLayout.params == params {
             return currentLayout.size
@@ -48,7 +49,7 @@ final class WeakSignalView: OverlayMaskContainerView {
         let sideInset: CGFloat = 11.0
         let height: CGFloat = 30.0
         
-        let titleSize = self.titleView.update(string: "Weak network signal", fontSize: 16.0, fontWeight: 0.0, color: .white, constrainedWidth: constrainedSize.width - sideInset * 2.0, transition: .immediate)
+        let titleSize = self.titleView.update(string: strings.Call_StatusWeakSignal, fontSize: 16.0, fontWeight: 0.0, color: .white, constrainedWidth: constrainedSize.width - sideInset * 2.0, transition: .immediate)
         let size = CGSize(width: titleSize.width + sideInset * 2.0, height: height)
         self.titleView.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - titleSize.height) * 0.5)), size: titleSize)
         

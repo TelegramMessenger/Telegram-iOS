@@ -810,6 +810,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             if let _ = self.openActiveTextItem, let textComponentView = self.textView.view, let result = textComponentView.hitTest(self.view.convert(point, to: textComponentView), with: event) {
                 return result
             }
+            if let closeButtonNode = self.closeButtonNode, let result = closeButtonNode.hitTest(self.view.convert(point, to: closeButtonNode.view), with: event) {
+                return result
+            }
             
             var eventIsPresses = false
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {

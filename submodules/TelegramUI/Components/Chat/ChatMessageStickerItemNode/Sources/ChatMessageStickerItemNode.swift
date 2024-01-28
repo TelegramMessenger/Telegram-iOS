@@ -95,7 +95,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
     
-    required public init() {
+    required public init(rotated: Bool) {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
@@ -104,7 +104,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false)
+        super.init(rotated: rotated)
         
         var firstTime = true
         self.imageNode.imageUpdated = { [weak self] image in
@@ -253,7 +253,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     return false
                 }
                 
-                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId.peerId != item.content.firstMessage.id.peerId {
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.peerId != item.content.firstMessage.id.peerId {
                     return false
                 }
                 
@@ -466,8 +466,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     hasAvatar = true
                 }
             case let .replyThread(replyThreadMessage):
-                if replyThreadMessage.messageId.peerId != item.context.account.peerId {
-                    if replyThreadMessage.messageId.peerId.isGroupOrChannel && item.message.author != nil {
+                if replyThreadMessage.peerId != item.context.account.peerId {
+                    if replyThreadMessage.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                             isBroadcastChannel = true
@@ -586,7 +586,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
+            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: item.associatedData.accountPeer, message: item.message)
             if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                 dateReactionsAndPeers = ([], [])
             }
@@ -628,6 +628,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 reactions: dateReactionsAndPeers.reactions,
                 reactionPeers: dateReactionsAndPeers.peers,
                 displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
+                areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
@@ -689,7 +690,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 
               
                 if let replyAttribute = attribute as? ReplyMessageAttribute {
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, Int32(clamping: replyThreadMessage.threadId) == replyAttribute.messageId.id {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
@@ -822,9 +823,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let reactions: ReactionsMessageAttribute
             if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) {
-                reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
+                reactions = ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
             } else {
-                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
+                reactions = mergedMessageReactions(attributes: item.message.attributes, isTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId)) ?? ReactionsMessageAttribute(canViewList: false, isTags: false, reactions: [], recentPeers: [])
             }
             
             var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
@@ -2064,7 +2065,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
         let context = UIGraphicsGetCurrentContext()!
         
         context.translateBy(x: -self.imageNode.frame.minX, y: -self.imageNode.frame.minY)
-        self.view.layer.render(in: context)
+        self.contextSourceNode.contentNode.view.layer.render(in: context)
         
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
