@@ -937,7 +937,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
                     storyState: nil,
-                    requiresPremiumForMessaging: false
+                    requiresPremiumForMessaging: false,
+                    displayAsTopicList: false
                 )),
                 editing: false,
                 hasActiveRevealControls: false,

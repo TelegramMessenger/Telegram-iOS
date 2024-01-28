@@ -235,7 +235,8 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             }
             
             return result
-        }
+        },
+        displaySavedMessagesAsTopicListPreferencesKey: PreferencesKeys.displaySavedChatsAsTopics()
     )
 }()
 

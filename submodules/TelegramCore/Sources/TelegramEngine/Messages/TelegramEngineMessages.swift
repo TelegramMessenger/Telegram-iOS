@@ -328,9 +328,10 @@ public extension TelegramEngine {
         }
 
         public func chatList(group: EngineChatList.Group, count: Int) -> Signal<EngineChatList, NoError> {
+            let accountPeerId = self.account.peerId
             return self.account.postbox.tailChatListView(groupId: group._asGroup(), count: count, summaryComponents: ChatListEntrySummaryComponents())
             |> map { view -> EngineChatList in
-                return EngineChatList(view.0)
+                return EngineChatList(view.0, accountPeerId: accountPeerId)
             }
         }
 

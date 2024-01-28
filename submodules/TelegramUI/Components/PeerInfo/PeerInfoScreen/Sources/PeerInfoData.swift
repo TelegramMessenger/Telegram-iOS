@@ -860,13 +860,23 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             
             let hasSavedMessageTags: Signal<Bool, NoError>
             if let peerId = chatLocation.peerId {
-                hasSavedMessageTags = context.engine.data.subscribe(
-                    TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: peerId.toInt64())
-                )
-                |> map { tags -> Bool in
-                    return !tags.isEmpty
+                if case .peer = chatLocation {
+                    hasSavedMessageTags = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: nil)
+                    )
+                    |> map { tags -> Bool in
+                        return !tags.isEmpty
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    hasSavedMessageTags = context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.SavedMessageTagStats(peerId: context.account.peerId, threadId: peerId.toInt64())
+                    )
+                    |> map { tags -> Bool in
+                        return !tags.isEmpty
+                    }
+                    |> distinctUntilChanged
                 }
-                |> distinctUntilChanged
             } else {
                 hasSavedMessageTags = .single(false)
             }

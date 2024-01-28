@@ -278,6 +278,7 @@ private enum PreferencesKeyValues: Int32 {
     case storiesConfiguration = 32
     case audioTranscriptionTrialState = 33
     case didCacheSavedMessageTagsPrefix = 34
+    case displaySavedChatsAsTopics = 35
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -453,6 +454,12 @@ public struct PreferencesKeys {
         let key = ValueBoxKey(length: 4 + 8)
         key.setInt32(0, value: PreferencesKeyValues.didCacheSavedMessageTagsPrefix.rawValue)
         key.setInt64(4, value: threadId ?? 0)
+        return key
+    }
+    
+    public static func displaySavedChatsAsTopics() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.displaySavedChatsAsTopics.rawValue)
         return key
     }
 }

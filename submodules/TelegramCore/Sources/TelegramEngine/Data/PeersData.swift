@@ -18,6 +18,14 @@ public enum EnginePeerCachedInfoItem<T> {
     }
 }
 
+public struct EngineDisplaySavedChatsAsTopics: Codable, Equatable {
+    public var value: Bool
+    
+    public init(value: Bool) {
+        self.value = value
+    }
+}
+
 extension EnginePeerCachedInfoItem: Equatable where T: Equatable {
     public static func ==(lhs: EnginePeerCachedInfoItem<T>, rhs: EnginePeerCachedInfoItem<T>) -> Bool {
         switch lhs {
@@ -1245,5 +1253,28 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct DisplaySavedChatsAsTopics: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Bool
+
+            public init() {
+            }
+
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.displaySavedChatsAsTopics()]))
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                
+                if let value = view.values[PreferencesKeys.displaySavedChatsAsTopics()]?.get(EngineDisplaySavedChatsAsTopics.self) {
+                    return value.value
+                } else {
+                    return false
+                }
+            }
+        }
+
     }
 }

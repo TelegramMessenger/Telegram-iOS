@@ -79,6 +79,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
             autoSetReady: false,
             isMainTab: nil
         )
+        self.chatListNode.synchronousDrawingWhenNotAnimated = true
         
         super.init()
         

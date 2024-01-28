@@ -37,6 +37,7 @@ import ChatAvatarNavigationNode
 import MultiScaleTextNode
 import PeerInfoCoverComponent
 import PeerInfoPaneNode
+import MultilineTextComponent
 
 final class PeerInfoHeaderNavigationTransition {
     let sourceNavigationBar: NavigationBar
@@ -108,6 +109,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let titleNodeContainer: ASDisplayNode
     let titleNodeRawContainer: ASDisplayNode
     let titleNode: MultiScaleTextNode
+    var standardTitle: ComponentView<Empty>?
     
     let titleCredibilityIconView: ComponentHostView<Empty>
     var credibilityIconSize: CGSize?
@@ -991,12 +993,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let titleShadowColor: UIColor? = nil
         
+        var displayStandardTitle = false
+        
         if let peer = peer {
             var title: String
             if peer.id == self.context.account.peerId && !self.isSettings {
                 if case .replyThread = self.chatLocation {
                     title = presentationData.strings.Conversation_MyNotes
                 } else {
+                    displayStandardTitle = true
                     title = presentationData.strings.Conversation_SavedMessages
                 }
             } else if peer.id.isAnonymousSavedMessages {
@@ -1786,6 +1791,41 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     transition.updateFrameAdditive(view: subtitleBadgeView, frame: subtitleBadgeFrame)
                     transition.updateAlpha(layer: subtitleBadgeView.layer, alpha: (1.0 - transitionFraction) * subtitleBadgeFraction)
                 }
+            }
+        }
+        
+        if displayStandardTitle {
+            self.titleNode.isHidden = true
+            
+            let standardTitle: ComponentView<Empty>
+            if let current = self.standardTitle {
+                standardTitle = current
+            } else {
+                standardTitle = ComponentView()
+                self.standardTitle = standardTitle
+            }
+            
+            let titleSize = standardTitle.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: titleStringText, font: Font.semibold(17.0), textColor: navigationContentsPrimaryColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: width, height: navigationHeight)
+            )
+            if let standardTitleView = standardTitle.view {
+                if standardTitleView.superview == nil {
+                    self.regularContentNode.view.addSubview(standardTitleView)
+                }
+                let standardTitleFrame = titleSize.centered(in: self.titleNodeContainer.frame).offsetBy(dx: 2.0, dy: 0.0)
+                standardTitleView.frame = standardTitleFrame
+            }
+        } else {
+            if let standardTitle = self.standardTitle {
+                self.standardTitle = nil
+                standardTitle.view?.removeFromSuperview()
+                
+                self.titleNode.isHidden = false
             }
         }
         

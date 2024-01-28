@@ -97,6 +97,7 @@ public enum ChatListItemContent {
         public var autoremoveTimeout: Int32?
         public var storyState: StoryState?
         public var requiresPremiumForMessaging: Bool
+        public var displayAsTopicList: Bool
         
         public init(
             messages: [EngineMessage],
@@ -117,7 +118,8 @@ public enum ChatListItemContent {
             topForumTopicItems: [EngineChatList.ForumTopicData],
             autoremoveTimeout: Int32?,
             storyState: StoryState?,
-            requiresPremiumForMessaging: Bool
+            requiresPremiumForMessaging: Bool,
+            displayAsTopicList: Bool
         ) {
             self.messages = messages
             self.peer = peer
@@ -138,6 +140,7 @@ public enum ChatListItemContent {
             self.autoremoveTimeout = autoremoveTimeout
             self.storyState = storyState
             self.requiresPremiumForMessaging = requiresPremiumForMessaging
+            self.displayAsTopicList = displayAsTopicList
         }
     }
     
@@ -1417,11 +1420,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            var isForum = false
+            var isForumAvatar = false
             if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                isForum = true
+                isForumAvatar = true
             }
-            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            if case let .peer(data) = item.content {
+                if data.displayAsTopicList {
+                    isForumAvatar = true
+                }
+            }
+                
+            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForumAvatar ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
             
             if peer.isPremium && peer.id != item.context.account.peerId {
                 let context = item.context

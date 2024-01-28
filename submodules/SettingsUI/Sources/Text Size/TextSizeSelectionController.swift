@@ -295,7 +295,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
                     storyState: nil,
-                    requiresPremiumForMessaging: false
+                    requiresPremiumForMessaging: false,
+                    displayAsTopicList: false
                 )),
                 editing: false,
                 hasActiveRevealControls: false,

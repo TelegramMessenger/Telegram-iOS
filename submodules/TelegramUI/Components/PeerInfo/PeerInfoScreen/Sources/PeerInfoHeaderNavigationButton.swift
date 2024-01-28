@@ -250,6 +250,10 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                 icon = nil
                 isAnimation = true
                 animationState = .search
+            case .standaloneSearch:
+                text = ""
+                accessibilityText = presentationData.strings.Common_Search
+                icon = PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
             case .searchWithTags:
                 text = ""
                 accessibilityText = presentationData.strings.Common_Search

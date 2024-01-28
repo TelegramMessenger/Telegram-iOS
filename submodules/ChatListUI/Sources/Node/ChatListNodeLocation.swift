@@ -114,6 +114,8 @@ public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: E
 }
 
 func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+    let accountPeerId = account.peerId
+    
     switch chatListLocation {
     case let .chatList(groupId):
         let filterPredicate: ChatListFilterPredicate?
@@ -129,7 +131,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             signal = account.viewTracker.tailChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, count: count)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
-                return ChatListNodeViewUpdate(list: EngineChatList(view), type: updateType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: updateType, scrollPosition: nil)
             }
         case let .navigation(index, _):
             guard case let .chatList(index) = index else {
@@ -145,7 +147,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(list: EngineChatList(view), type: genericType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: genericType, scrollPosition: nil)
             }
         case let .scroll(index, sourceIndex, scrollPosition, animated, _):
             guard case let .chatList(index) = index else {
@@ -165,7 +167,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(list: EngineChatList(view), type: genericType, scrollPosition: scrollPosition)
+                return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: genericType, scrollPosition: scrollPosition)
             }
         }
     case let .forum(peerId):
@@ -292,7 +294,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     hasFailed: false,
                     isContact: false,
                     autoremoveTimeout: nil,
-                    storyStats: nil
+                    storyStats: nil,
+                    displayAsTopicList: false
                 ))
             }
             
@@ -356,7 +359,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     hasFailed: false,
                     isContact: false,
                     autoremoveTimeout: nil,
-                    storyStats: nil
+                    storyStats: nil,
+                    displayAsTopicList: false
                 ))
             }
             

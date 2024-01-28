@@ -104,7 +104,8 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         topForumTopicItems: [],
                         autoremoveTimeout: nil,
                         storyState: nil,
-                        requiresPremiumForMessaging: false
+                        requiresPremiumForMessaging: false,
+                        displayAsTopicList: false
                     )),
                     editing: false,
                     hasActiveRevealControls: false,
