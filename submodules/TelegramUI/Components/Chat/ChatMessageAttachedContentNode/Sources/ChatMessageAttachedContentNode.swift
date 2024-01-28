@@ -587,6 +587,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                                 
                     let (buttonWidth, continueLayout) = makeActionButtonLayout(
                         maxContentsWidth,
+                        nil
                         buttonIconImage,
                         cornerIcon,
                         actionTitle,
