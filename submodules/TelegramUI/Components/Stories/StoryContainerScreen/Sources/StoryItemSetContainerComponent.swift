@@ -1566,6 +1566,7 @@ public final class StoryItemSetContainerComponent: Component {
                             availableReactions: component.availableReactions,
                             entityFiles: item.entityFiles,
                             audioMode: component.audioMode,
+                            baseRate: component.storyItemSharedState.baseRate,
                             isVideoBuffering: visibleItem.isBuffering,
                             isCurrent: index == centralIndex,
                             preferHighQuality: component.slice.additionalPeerData.preferHighQualityStories,
