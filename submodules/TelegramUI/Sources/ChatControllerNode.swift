@@ -39,6 +39,9 @@ import ChatMessageTransitionNode
 import ChatLoadingNode
 import ChatRecentActionsController
 import UIKitRuntimeUtils
+import ChatInlineSearchResultsListComponent
+import ComponentDisplayAdapters
+import ComponentFlow
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -132,6 +135,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let loadingNode: ChatLoadingNode
     private(set) var loadingPlaceholderNode: ChatLoadingPlaceholderNode?
     
+    var inlineSearchResults: ComponentView<Empty>?
+    private var inlineSearchResultsReadyDisposable: Disposable?
+    private var inlineSearchResultsReady: Bool = false
+    
     var isScrollingLockedAtTop: Bool = false
     
     private var emptyNode: ChatEmptyNode?
@@ -169,10 +176,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var chatTranslationPanel: ChatTranslationPanelNode?
     
-    private var inputPanelNode: ChatInputPanelNode?
+    private(set) var inputPanelNode: ChatInputPanelNode?
     private(set) var inputPanelOverscrollNode: ChatInputPanelOverscrollNode?
     private weak var currentDismissedInputPanelNode: ChatInputPanelNode?
-    private var secondaryInputPanelNode: ChatInputPanelNode?
+    private(set) var secondaryInputPanelNode: ChatInputPanelNode?
     private(set) var accessoryPanelNode: AccessoryPanelNode?
     private var inputContextPanelNode: ChatInputContextPanelNode?
     let inputContextPanelContainer: ChatControllerTitlePanelNodeContainer
@@ -873,6 +880,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.openStickersDisposable?.dispose()
         self.displayVideoUnmuteTipDisposable?.dispose()
         self.inputMediaNodeDataDisposable?.dispose()
+        self.inlineSearchResultsReadyDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -1866,9 +1874,16 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         var listInsets = UIEdgeInsets(top: containerInsets.bottom + contentBottomInset, left: containerInsets.right, bottom: containerInsets.top, right: containerInsets.left)
         let listScrollIndicatorInsets = UIEdgeInsets(top: containerInsets.bottom + inputPanelsHeight, left: containerInsets.right, bottom: containerInsets.top, right: containerInsets.left)
+        
+        var childContentInsets: UIEdgeInsets = containerInsets
+        childContentInsets.bottom += inputPanelsHeight
+        
         if case .standard = self.chatPresentationInterfaceState.mode {
             listInsets.left += layout.safeInsets.left
             listInsets.right += layout.safeInsets.right
+            
+            childContentInsets.left += layout.safeInsets.left
+            childContentInsets.right += layout.safeInsets.right
             
             if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
                 listInsets.left += 6.0
@@ -1941,7 +1956,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         var childrenLayout = layout
-        childrenLayout.intrinsicInsets = UIEdgeInsets(top: listInsets.bottom, left: listInsets.right, bottom: listInsets.top, right: listInsets.left)
+        if self.historyNode.rotated {
+            childrenLayout.intrinsicInsets = UIEdgeInsets(top: listInsets.bottom, left: listInsets.right, bottom: listInsets.top, right: listInsets.left)
+        } else {
+            childrenLayout.intrinsicInsets = UIEdgeInsets(top: listInsets.top, left: listInsets.left, bottom: listInsets.bottom, right: listInsets.right)
+        }
         self.controller?.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
         
         listViewTransaction(ListViewUpdateSizeAndInsets(size: contentBounds.size, insets: listInsets, scrollIndicatorInsets: listScrollIndicatorInsets, duration: duration, curve: curve, ensureTopInsetForOverlayHighlightedItems: ensureTopInsetForOverlayHighlightedItems), additionalScrollDistance, scrollToTop, { [weak self] in
@@ -2410,6 +2429,140 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.updatePlainInputSeparator(transition: transition)
+        
+        if self.chatPresentationInterfaceState.displayHistoryFilterAsList, let peerId = self.chatPresentationInterfaceState.chatLocation.peerId, let historyFilter = self.chatPresentationInterfaceState.historyFilter {
+            let inlineSearchResults: ComponentView<Empty>
+            var inlineSearchResultsTransition = Transition(transition)
+            if let current = self.inlineSearchResults {
+                inlineSearchResults = current
+            } else {
+                inlineSearchResultsTransition = inlineSearchResultsTransition.withAnimation(.none)
+                inlineSearchResults = ComponentView()
+                self.inlineSearchResults = inlineSearchResults
+            }
+            
+            let context = self.context
+            let _ = inlineSearchResults.update(
+                transition: inlineSearchResultsTransition,
+                component: AnyComponent(ChatInlineSearchResultsListComponent(
+                    context: self.context,
+                    presentation: ChatInlineSearchResultsListComponent.Presentation(
+                        theme: self.chatPresentationInterfaceState.theme,
+                        strings: self.chatPresentationInterfaceState.strings,
+                        chatListFontSize: self.chatPresentationInterfaceState.fontSize,
+                        dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat,
+                        nameSortOrder: self.chatPresentationInterfaceState.nameDisplayOrder,
+                        nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder
+                    ),
+                    peerId: peerId,
+                    contents: .tag(historyFilter.customTag),
+                    insets: childContentInsets,
+                    messageSelected: { [weak self] message in
+                        guard let self else {
+                            return
+                        }
+                        self.controller?.navigateToMessage(
+                            from: nil,
+                            to: .index(message.index),
+                            scrollPosition: .center(.bottom),
+                            rememberInStack: false,
+                            forceInCurrentChat: true,
+                            animated: true
+                        )
+                        self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            return state.updatedDisplayHistoryFilterAsList(false)
+                        })
+                    },
+                    loadTagMessages: { tag, index in
+                        let input: ChatHistoryLocationInput
+                        if let index {
+                            input = ChatHistoryLocationInput(
+                                content: .Navigation(
+                                    index: .message(index),
+                                    anchorIndex: .message(index),
+                                    count: 45,
+                                    highlight: false
+                                ),
+                                id: 0
+                            )
+                        } else {
+                            input = ChatHistoryLocationInput(
+                                content: .Initial(count: 45),
+                                id: 0
+                            )
+                        }
+                        
+                        return chatHistoryViewForLocation(
+                            input,
+                            ignoreMessagesInTimestampRange: nil,
+                            context: context,
+                            chatLocation: .peer(id: peerId),
+                            chatLocationContextHolder: Atomic(value: nil),
+                            scheduled: false,
+                            fixedCombinedReadStates: nil,
+                            tag: .customTag(tag),
+                            appendMessagesFromTheSameGroup: false,
+                            additionalData: []
+                        )
+                        |> mapToSignal { viewUpdate -> Signal<MessageHistoryView, NoError> in
+                            switch viewUpdate {
+                            case .Loading:
+                                return .complete()
+                            case let .HistoryView(view, _, _, _, _, _, _):
+                                return .single(view)
+                            }
+                        }
+                    }
+                )),
+                environment: {},
+                containerSize: layout.size
+            )
+            if let inlineSearchResultsView = inlineSearchResults.view as? ChatInlineSearchResultsListComponent.View {
+                var animateIn = false
+                if inlineSearchResultsView.superview == nil {
+                    animateIn = true
+                    inlineSearchResultsView.alpha = 0.0
+                    inlineSearchResultsView.layer.allowsGroupOpacity = true
+                    self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
+                }
+                inlineSearchResultsTransition.setFrame(view: inlineSearchResultsView, frame: CGRect(origin: CGPoint(), size: layout.size))
+                
+                if animateIn {
+                    self.inlineSearchResultsReadyDisposable = (inlineSearchResultsView.isReady
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        guard let inlineSearchResultsView = self.inlineSearchResults?.view as? ChatInlineSearchResultsListComponent.View else {
+                            return
+                        }
+                        inlineSearchResultsView.alpha = 1.0
+                        inlineSearchResultsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        inlineSearchResultsView.animateIn()
+                        
+                        transition.updateSublayerTransformScale(node: self.historyNodeContainer, scale: CGPoint(x: 0.95, y: 0.95))
+                    })
+                }
+            }
+        } else {
+            if let inlineSearchResults = self.inlineSearchResults {
+                self.inlineSearchResults = nil
+                if let inlineSearchResultsView = inlineSearchResults.view as? ChatInlineSearchResultsListComponent.View {
+                    transition.updateAlpha(layer: inlineSearchResultsView.layer, alpha: 0.0, completion: { [weak inlineSearchResultsView] _ in
+                        inlineSearchResultsView?.removeFromSuperview()
+                    })
+                    inlineSearchResultsView.animateOut()
+                }
+                transition.updateSublayerTransformScale(node: self.historyNodeContainer, scale: CGPoint(x: 1.0, y: 1.0))
+            }
+            if let inlineSearchResultsReadyDisposable = self.inlineSearchResultsReadyDisposable {
+                self.inlineSearchResultsReadyDisposable = nil
+                inlineSearchResultsReadyDisposable.dispose()
+            }
+            self.inlineSearchResultsReady = false
+        }
 
         let listBottomInset = self.historyNode.insets.top
         if let previousListBottomInset = previousListBottomInset, listBottomInset != previousListBottomInset {

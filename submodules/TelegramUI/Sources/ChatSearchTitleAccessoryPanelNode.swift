@@ -634,24 +634,22 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     animateIn = true
                     let reaction = item.reaction
                     itemView = ItemView(context: self.context, action: { [weak self] in
-                        guard let self else {
+                        guard let self, let params = self.params else {
                             return
                         }
                         
                         let tag = ReactionsMessageAttribute.messageTag(reaction: reaction)
                         
+                        var updatedFilter: ChatPresentationInterfaceState.HistoryFilter?
+                        let currentTag = params.interfaceState.historyFilter?.customTag
+                        if currentTag == tag {
+                            updatedFilter = nil
+                        } else {
+                            updatedFilter = ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
+                        }
+                        
                         self.interfaceInteraction?.updateHistoryFilter({ filter in
-                            var tags: [EngineMessage.CustomTag] = filter?.customTags ?? []
-                            if let index = tags.firstIndex(of: tag) {
-                                tags.remove(at: index)
-                            } else {
-                                tags.append(tag)
-                            }
-                            if tags.isEmpty {
-                                return nil
-                            } else {
-                                return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: filter?.isActive ?? true)
-                            }
+                            return updatedFilter
                         })
                     }, contextGesture: { [weak self] gesture, sourceNode in
                         guard let self, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
@@ -688,7 +686,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                 
                 var isSelected = false
                 if let historyFilter = params.interfaceState.historyFilter {
-                    if historyFilter.customTags.contains(ReactionsMessageAttribute.messageTag(reaction: item.reaction)) {
+                    if historyFilter.customTag == ReactionsMessageAttribute.messageTag(reaction: item.reaction) {
                         isSelected = true
                     }
                 }
@@ -735,7 +733,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             self.scrollView.contentSize = contentSize
         }
         
-        let currentFilterTag = params.interfaceState.historyFilter?.customTags.first
+        let currentFilterTag = params.interfaceState.historyFilter?.customTag
         if self.appliedScrollToTag != currentFilterTag {
             if let tag = currentFilterTag {
                 if let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: tag), let itemView = self.itemViews[reaction] {

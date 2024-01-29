@@ -343,6 +343,10 @@ public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             }
         }
     }
+    
+    override public func getEffectiveAlpha() -> CGFloat {
+        return self.backgroundNode.alpha
+    }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {

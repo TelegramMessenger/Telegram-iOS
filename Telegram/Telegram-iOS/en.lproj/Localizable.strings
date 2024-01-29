@@ -10949,9 +10949,6 @@ Sorry for the inconvenience.";
 
 "Chat.SearchTagsPlaceholder" = "Search messages or tags";
 
-"Chat.TagSearchShowMessages" = "Show Other Messages";
-"Chat.TagSearchHideMessages" = "Hide Other Messages";
-
 "PrivacyInfo.UpgradeToPremium.Title" = "Upgrade to Premium";
 "PrivacyInfo.UpgradeToPremium.ButtonTitle" = "Subscribe to Telegram Premium";
 

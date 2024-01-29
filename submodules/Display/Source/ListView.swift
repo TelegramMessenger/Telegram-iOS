@@ -2691,10 +2691,23 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             )))
         }
         
-        var previousHeaderNodeFrames: [(ListViewItemHeaderNode, CGRect)] = []
+        struct PreviousHeaderNodeFrame {
+            var frame: CGRect
+            var alpha: CGFloat
+            
+            init(frame: CGRect, alpha: CGFloat) {
+                self.frame = frame
+                self.alpha = alpha
+            }
+        }
+        
+        var previousHeaderNodeFrames: [(ListViewItemHeaderNode, PreviousHeaderNodeFrame)] = []
         if animateFullTransition {
             for (_, itemHeaderNode) in self.itemHeaderNodes {
-                previousHeaderNodeFrames.append((itemHeaderNode, itemHeaderNode.frame))
+                previousHeaderNodeFrames.append((itemHeaderNode, PreviousHeaderNodeFrame(
+                    frame: itemHeaderNode.frame,
+                    alpha: itemHeaderNode.getEffectiveAlpha()
+                )))
             }
         }
         
@@ -3330,6 +3343,33 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
         
+        let applyHeaderNodesFullTransition: () -> Void = {
+            if animateFullTransition {
+                for (_, itemHeaderNode) in self.itemHeaderNodes {
+                    var found = false
+                    inner: for (previousHeaderNode, previousFrame) in previousHeaderNodeFrames {
+                        if itemHeaderNode === previousHeaderNode && previousHeaderNode.supernode === self {
+                            found = true
+                            
+                            if previousFrame.frame.maxY < self.insets.top || previousFrame.frame.minY > self.visibleSize.height - self.insets.bottom || previousFrame.alpha == 0.0 {
+                                itemHeaderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                                itemHeaderNode.layer.animateScale(from: 0.7, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                            } else {
+                                itemHeaderNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.frame.minY - itemHeaderNode.frame.minY), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            }
+                            
+                            break inner
+                        }
+                    }
+                    
+                    if !found {
+                        itemHeaderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        itemHeaderNode.layer.animateScale(from: 0.7, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                }
+            }
+        }
+        
         if let scrollToItem = scrollToItem, scrollToItem.animated {
             if self.itemNodes.count != 0 {
                 var offset: CGFloat?
@@ -3406,7 +3446,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     previousItemHeaderNodes.append(headerNode)
                 }
                 
-                self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
+                self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty, animateFullTransition: animateFullTransition)
                 
                 if let offset = offset, !offset.isZero {
                     //self.didScrollWithOffset?(-offset, headerNodesTransition.0, nil)
@@ -3616,13 +3656,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: CGPoint(x: 0.0, y: -headerNodesTransition.2))
             }
             
-            if animateFullTransition {
-                for (previousHeaderNode, previousFrame) in previousHeaderNodeFrames {
-                    if previousHeaderNode.supernode === self {
-                        previousHeaderNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.minY - previousHeaderNode.frame.minY), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                    }
-                }
-            }
+            applyHeaderNodesFullTransition()
             
             self.setNeedsAnimations()
             
@@ -3635,26 +3669,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             completion()
         } else {
-            self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
+            self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty, animateFullTransition: animateFullTransition)
             self.updateItemNodesVisibilities(onlyPositive: deferredUpdateVisible)
             
-            if animateFullTransition {
-                for (_, headerNode) in self.itemHeaderNodes {
-                    var found = false
-                    for (previousHeaderNode, previousFrame) in previousHeaderNodeFrames {
-                        if previousHeaderNode === headerNode {
-                            found = true
-                            if previousHeaderNode.supernode === self {
-                                previousHeaderNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.minY - previousHeaderNode.frame.minY), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            }
-                        }
-                    }
-                    if !found {
-                        headerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                        headerNode.layer.animateScale(from: 0.7, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                }
-            }
+            applyHeaderNodesFullTransition()
             
             if animated {
                 self.setNeedsAnimations()
@@ -3796,7 +3814,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false) {        
+    private func updateItemHeaders(leftInset: CGFloat, rightInset: CGFloat, synchronousLoad: Bool, transition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0), animateInsertion: Bool = false, animateFullTransition: Bool = false) {
         self.assignHeaderSpaceAffinities()
 
         let upperDisplayBound = self.headerInsets.top
@@ -4003,7 +4021,17 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         let currentIds = Set(self.itemHeaderNodes.keys)
         for id in currentIds.subtracting(Set(visibleHeaderNodes)) {
             if let headerNode = self.itemHeaderNodes.removeValue(forKey: id) {
-                headerNode.removeFromSupernode()
+                if animateFullTransition {
+                    headerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak headerNode] _ in
+                        guard let headerNode else {
+                            return
+                        }
+                        headerNode.removeFromSupernode()
+                    })
+                    headerNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                } else {
+                    headerNode.removeFromSupernode()
+                }
             }
         }
     }

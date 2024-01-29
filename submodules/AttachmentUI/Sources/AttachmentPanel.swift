@@ -982,6 +982,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
         }, updateHistoryFilter: { _ in
+        }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
             return nil

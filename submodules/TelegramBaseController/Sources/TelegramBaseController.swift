@@ -29,7 +29,7 @@ public enum LocationBroadcastPanelSource {
 private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
     let presentImpl: (EngineMessage?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
-            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
+            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatFilterTag: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)

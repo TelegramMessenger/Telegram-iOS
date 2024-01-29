@@ -210,7 +210,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     }
                 }
                 let gallerySource = GalleryControllerItemSource.standaloneMessage(message)
-                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
+                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatFilterTag: nil, chatLocationContextHolder: nil, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
                     self?.presentController(c, .window(.root), a)

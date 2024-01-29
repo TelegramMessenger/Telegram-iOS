@@ -403,13 +403,9 @@ public extension TelegramEngine {
             return SparseMessageList(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag)
         }
 
-        public func sparseMessageCalendar(peerId: EnginePeer.Id, threadId: Int64?, tag: EngineMessage.Tags) -> SparseMessageCalendar {
-            return SparseMessageCalendar(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag)
+        public func sparseMessageCalendar(peerId: EnginePeer.Id, threadId: Int64?, tag: EngineMessage.Tags, displayMedia: Bool) -> SparseMessageCalendar {
+            return SparseMessageCalendar(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag, displayMedia: displayMedia)
         }
-
-        /*public func sparseMessageScrollingContext(peerId: EnginePeer.Id) -> SparseMessageScrollingContext {
-            return SparseMessageScrollingContext(account: self.account, peerId: peerId)
-        }*/
 
         public func refreshMessageTagStats(peerId: EnginePeer.Id, threadId: Int64?, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {
             let account = self.account

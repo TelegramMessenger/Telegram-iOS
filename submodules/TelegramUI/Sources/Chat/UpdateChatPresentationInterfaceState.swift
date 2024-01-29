@@ -397,6 +397,12 @@ func updateChatPresentationInterfaceStateImpl(
         selfController.updateNextChannelToReadVisibility()
     }
     
+    if updatedChatPresentationInterfaceState.displayHistoryFilterAsList {
+        if updatedChatPresentationInterfaceState.search == nil || updatedChatPresentationInterfaceState.historyFilter == nil {
+            updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedDisplayHistoryFilterAsList(false)
+        }
+    }
+    
     selfController.presentationInterfaceState = updatedChatPresentationInterfaceState
     
     selfController.updateSlowmodeStatus()
@@ -551,8 +557,8 @@ func updateChatPresentationInterfaceStateImpl(
     
     if case .tag = selfController.chatDisplayNode.historyNode.tag {
     } else {
-        if let historyFilter = selfController.presentationInterfaceState.historyFilter, historyFilter.isActive, !historyFilter.customTags.isEmpty {
-            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTags[0]))
+        if let historyFilter = selfController.presentationInterfaceState.historyFilter {
+            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTag))
         } else {
             selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
         }

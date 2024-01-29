@@ -17,6 +17,8 @@ public final class PlainButtonComponent: Component {
     public let action: () -> Void
     public let isEnabled: Bool
     public let animateAlpha: Bool
+    public let animateScale: Bool
+    public let animateContents: Bool
     public let tag: AnyObject?
     
     public init(
@@ -27,7 +29,9 @@ public final class PlainButtonComponent: Component {
         action: @escaping () -> Void,
         isEnabled: Bool = true,
         animateAlpha: Bool = true,
-        tag : AnyObject? = nil
+        animateScale: Bool = true,
+        animateContents: Bool = true,
+        tag: AnyObject? = nil
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
@@ -36,6 +40,8 @@ public final class PlainButtonComponent: Component {
         self.action = action
         self.isEnabled = isEnabled
         self.animateAlpha = animateAlpha
+        self.animateScale = animateScale
+        self.animateContents = animateContents
         self.tag = tag
     }
     
@@ -56,6 +62,12 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.animateAlpha != rhs.animateAlpha {
+            return false
+        }
+        if lhs.animateScale != rhs.animateScale {
+            return false
+        }
+        if lhs.animateContents != rhs.animateContents {
             return false
         }
         if lhs.tag !== rhs.tag {
@@ -98,35 +110,40 @@ public final class PlainButtonComponent: Component {
             self.highligthedChanged = { [weak self] highlighted in
                 if let self, self.bounds.width > 0.0 {
                     let animateAlpha = self.component?.animateAlpha ?? true
+                    let animateScale = self.component?.animateScale ?? true
                     
                     let topScale: CGFloat = (self.bounds.width - 8.0) / self.bounds.width
                     let maxScale: CGFloat = (self.bounds.width + 2.0) / self.bounds.width
                     
                     if highlighted {
                         self.contentContainer.layer.removeAnimation(forKey: "opacity")
-                        self.contentContainer.layer.removeAnimation(forKey: "sublayerTransform")
+                        self.contentContainer.layer.removeAnimation(forKey: "transform.scale")
                         
                         if animateAlpha {
                             self.contentContainer.alpha = 0.7
                         }
-                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-                        transition.setScale(layer: self.contentContainer.layer, scale: topScale)
+                        if animateScale {
+                            let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
+                            transition.setScale(layer: self.contentContainer.layer, scale: topScale)
+                        }
                     } else {
                         if animateAlpha {
                             self.contentContainer.alpha = 1.0
                             self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                         }
                         
-                        let transition = Transition(animation: .none)
-                        transition.setScale(layer: self.contentContainer.layer, scale: 1.0)
-                        
-                        self.contentContainer.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
-                            guard let self else {
-                                return
-                            }
+                        if animateScale {
+                            let transition = Transition(animation: .none)
+                            transition.setScale(layer: self.contentContainer.layer, scale: 1.0)
                             
-                            self.contentContainer.layer.animateScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
-                        })
+                            self.contentContainer.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.contentContainer.layer.animateScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
+                            })
+                        }
                     }
                 }
             }
@@ -169,7 +186,7 @@ public final class PlainButtonComponent: Component {
             let contentAlpha: CGFloat = 1.0
 
             let contentSize = self.content.update(
-                transition: transition,
+                transition: component.animateContents ? transition : transition.withAnimation(.none),
                 component: component.content,
                 environment: {},
                 containerSize: availableSize
@@ -186,13 +203,30 @@ public final class PlainButtonComponent: Component {
             if let contentView = self.content.view {
                 var contentTransition = transition
                 if contentView.superview == nil {
+                    let anchorX: CGFloat
+                    switch component.effectAlignment {
+                    case .left:
+                        anchorX = 0.0
+                    case .center:
+                        anchorX = 0.5
+                    case .right:
+                        anchorX = 1.0
+                    }
+                    contentView.layer.anchorPoint = CGPoint(x: anchorX, y: 0.5)
+                    
                     contentTransition = .immediate
                     contentView.isUserInteractionEnabled = false
                     self.contentContainer.addSubview(contentView)
                 }
                 let contentFrame = CGRect(origin: CGPoint(x: component.contentInsets.left + floor((size.width - component.contentInsets.left - component.contentInsets.right - contentSize.width) * 0.5), y: component.contentInsets.top + floor((size.height - component.contentInsets.top - component.contentInsets.bottom - contentSize.height) * 0.5)), size: contentSize)
                 
-                contentTransition.setFrame(view: contentView, frame: contentFrame)
+                contentTransition.setPosition(view: contentView, position: CGPoint(x: contentFrame.minX + contentFrame.width * contentView.layer.anchorPoint.x, y: contentFrame.minY + contentFrame.height * contentView.layer.anchorPoint.y))
+                
+                if component.animateContents {
+                    contentTransition.setBounds(view: contentView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
+                } else {
+                    contentView.bounds = CGRect(origin: CGPoint(), size: contentFrame.size)
+                }
                 contentTransition.setAlpha(view: contentView, alpha: contentAlpha)
             }
             

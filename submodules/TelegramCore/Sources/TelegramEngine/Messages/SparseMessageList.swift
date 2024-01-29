@@ -726,6 +726,7 @@ public final class SparseMessageCalendar {
         private let peerId: PeerId
         private let threadId: Int64?
         private let messageTag: MessageTags
+        private let displayMedia: Bool
 
         private var state: InternalState
         let statePromise = Promise<InternalState>()
@@ -742,12 +743,13 @@ public final class SparseMessageCalendar {
             return self.isLoadingMorePromise.get()
         }
 
-        init(queue: Queue, account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags) {
+        init(queue: Queue, account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags, displayMedia: Bool) {
             self.queue = queue
             self.account = account
             self.peerId = peerId
             self.threadId = threadId
             self.messageTag = messageTag
+            self.displayMedia = displayMedia
 
             self.state = InternalState(nextRequestOffset: 0, minTimestamp: nil, messagesByDay: [:])
             self.statePromise.set(.single(self.state))
@@ -789,6 +791,9 @@ public final class SparseMessageCalendar {
                 return
             }
             if self.threadId != nil {
+                return
+            }
+            if !self.displayMedia {
                 return
             }
 
@@ -905,11 +910,11 @@ public final class SparseMessageCalendar {
     public var minTimestamp: Int32?
     private var disposable: Disposable?
 
-    init(account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags) {
+    init(account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags, displayMedia: Bool) {
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, peerId: peerId, threadId: threadId, messageTag: messageTag)
+            return Impl(queue: queue, account: account, peerId: peerId, threadId: threadId, messageTag: messageTag, displayMedia: displayMedia)
         })
 
         self.disposable = self.state.start(next: { [weak self] state in

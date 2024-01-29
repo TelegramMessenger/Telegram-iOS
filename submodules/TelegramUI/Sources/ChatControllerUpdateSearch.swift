@@ -38,9 +38,9 @@ extension ChatControllerImpl {
             }
             
             var reactions: [MessageReaction.Reaction]?
-            if !search.query.isEmpty, let historyFilter = interfaceState.historyFilter, !historyFilter.customTags.isEmpty {
-                reactions = historyFilter.customTags.compactMap {
-                    ReactionsMessageAttribute.reactionFromMessageTag(tag: $0)
+            if !search.query.isEmpty, let historyFilter = interfaceState.historyFilter {
+                reactions = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag).flatMap {
+                    [$0]
                 }
             }
             

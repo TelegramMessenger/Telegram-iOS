@@ -42,9 +42,9 @@ private struct SearchMessagesPeerState: Equatable {
     }
 }
 
-public struct SearchMessagesResult {
+public struct SearchMessagesResult: Equatable {
     public let messages: [Message]
-    public let threadInfo:[MessageId : MessageHistoryThreadData]
+    public let threadInfo: [MessageId: MessageHistoryThreadData]
     public let readStates: [PeerId: CombinedPeerReadState]
     public let totalCount: Int32
     public let completed: Bool
@@ -55,6 +55,21 @@ public struct SearchMessagesResult {
         self.readStates = readStates
         self.totalCount = totalCount
         self.completed = completed
+    }
+    
+    public static func ==(lhs: SearchMessagesResult, rhs: SearchMessagesResult) -> Bool {
+        if lhs.messages.count != rhs.messages.count {
+            return false
+        }
+        for i in 0 ..< lhs.messages.count {
+            if lhs.messages[i].index != rhs.messages[i].index {
+                return false
+            }
+            if lhs.messages[i].stableVersion != rhs.messages[i].stableVersion {
+                return false
+            }
+        }
+        return true
     }
 }
 

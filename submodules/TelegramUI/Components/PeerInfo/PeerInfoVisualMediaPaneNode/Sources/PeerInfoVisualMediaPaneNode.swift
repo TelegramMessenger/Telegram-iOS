@@ -1219,7 +1219,7 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
         if threadId == nil {
             switch contentType {
             case .photoOrVideo, .photo, .video:
-                self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
+                self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType), displayMedia: true)
             default:
                 self.calendarSource = nil
             }

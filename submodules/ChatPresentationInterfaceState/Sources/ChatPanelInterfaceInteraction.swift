@@ -173,6 +173,7 @@ public final class ChatPanelInterfaceInteraction {
     public let openPremiumGift: () -> Void
     public let openPremiumRequiredForMessaging: () -> Void
     public let updateHistoryFilter: ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void
+    public let updateDisplayHistoryFilterAsList: (Bool) -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -282,6 +283,7 @@ public final class ChatPanelInterfaceInteraction {
         openPremiumGift: @escaping () -> Void,
         openPremiumRequiredForMessaging: @escaping () -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
+        updateDisplayHistoryFilterAsList: @escaping (Bool) -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
@@ -390,6 +392,7 @@ public final class ChatPanelInterfaceInteraction {
         self.openPremiumGift = openPremiumGift
         self.openPremiumRequiredForMessaging = openPremiumRequiredForMessaging
         self.updateHistoryFilter = updateHistoryFilter
+        self.updateDisplayHistoryFilterAsList = updateDisplayHistoryFilterAsList
         self.requestLayout = requestLayout
 
         self.chatController = chatController
@@ -506,6 +509,7 @@ public final class ChatPanelInterfaceInteraction {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
         }, updateHistoryFilter: { _ in
+        }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
             return nil

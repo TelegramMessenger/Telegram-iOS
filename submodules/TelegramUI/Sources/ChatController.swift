@@ -1075,8 +1075,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let openChatLocation = strongSelf.chatLocation
+            var chatFilterTag: MemoryBuffer?
+            if case let .customTag(value) = strongSelf.chatDisplayNode.historyNode.tag {
+                chatFilterTag = value
+            }
             
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -1328,15 +1332,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    let tags: [EngineMessage.CustomTag] = [ReactionsMessageAttribute.messageTag(reaction: chosenReaction)]
-                    if strongSelf.presentationInterfaceState.historyFilter?.customTags == tags {
+                    let tag = ReactionsMessageAttribute.messageTag(reaction: chosenReaction)
+                    if strongSelf.presentationInterfaceState.historyFilter?.customTag == tag {
                         strongSelf.interfaceInteraction?.updateHistoryFilter { _ in
                             return nil
                         }
                     } else {
                         strongSelf.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
                         strongSelf.interfaceInteraction?.updateHistoryFilter { _ in
-                            return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
+                            return ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
                         }
                     }
                 }
@@ -10900,23 +10904,62 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            self.updateChatPresentationInterfaceState(animated: false, interactive: true, { state in
-                var updatedFilter = update(state.historyFilter)
-                if let value = updatedFilter {
-                    if value.customTags.count == 0 {
-                        updatedFilter = nil
-                    } else if value.customTags.count > 1 {
-                        updatedFilter?.customTags.removeFirst(value.customTags.count - 1)
-                    }
+            
+            let updatedFilter = update(self.presentationInterfaceState.historyFilter)
+            
+            let apply: () -> Void = { [weak self] in
+                guard let self else {
+                    return
                 }
                 
-                var state = state.updatedHistoryFilter(updatedFilter)
-                if let updatedFilter, !updatedFilter.isActive, let reactionData = updatedFilter.customTags.first, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: reactionData) {
-                    state = state.updatedSearch(ChatSearchData(domain: .tag(reaction)))
-                } else {
-                    state = state.updatedSearch(ChatSearchData())
-                }
-                return state
+                self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    var state = state.updatedHistoryFilter(updatedFilter)
+                    if updatedFilter != nil && state.search == nil {
+                        state = state.updatedSearch(ChatSearchData())
+                    }
+                    return state
+                })
+            }
+            
+            if let updatedFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: updatedFilter.customTag) {
+                let tag = updatedFilter.customTag
+                
+                let _ = (self.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: self.context.account.peerId, reaction: reaction)
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] count in
+                    guard let self else {
+                        return
+                    }
+                    
+                    var tagSearchInputPanelNode: ChatTagSearchInputPanelNode?
+                    if let panelNode = self.chatDisplayNode.inputPanelNode as? ChatTagSearchInputPanelNode {
+                        tagSearchInputPanelNode = panelNode
+                    } else if let panelNode = self.chatDisplayNode.secondaryInputPanelNode as? ChatTagSearchInputPanelNode {
+                        tagSearchInputPanelNode = panelNode
+                    }
+                    
+                    if let tagSearchInputPanelNode, let count {
+                        tagSearchInputPanelNode.prepareSwitchToFilter(tag: tag, count: count)
+                    }
+                    
+                    apply()
+                })
+            } else {
+                apply()
+            }
+        }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in
+            guard let self else {
+                return
+            }
+            
+            if let search = self.presentationInterfaceState.search, !search.query.isEmpty {
+                self.interfaceInteraction?.openSearchResults()
+                return
+            }
+            
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                return state.updatedDisplayHistoryFilterAsList(displayAsList)
             })
         }, requestLayout: { [weak self] transition in
             if let strongSelf = self, let layout = strongSelf.validLayout {
@@ -17954,7 +17997,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             contextController?.present(c, in: .current)
         }
         
-        let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .singleMessage(message.id)))
+        let _ = self.context.sharedContext.openChatMessage(OpenChatMessageParams(context: self.context, chatLocation: nil, chatFilterTag: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { }, present: { _, _ in }, transitionNode: { _, _, _ in return nil }, addToTransitionSurface: { _ in }, openUrl: { _ in }, openPeer: { _, _ in }, callPeer: { _, _ in }, enqueueMessage: { _ in }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .singleMessage(message.id)))
     }
     
     func openStorySharing(messages: [Message]) {

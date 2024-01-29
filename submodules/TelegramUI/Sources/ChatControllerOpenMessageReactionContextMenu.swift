@@ -65,7 +65,7 @@ extension ChatControllerImpl {
                 
                 var items: [ContextMenuItem] = []
                 
-                let tags: [EngineMessage.CustomTag] = [ReactionsMessageAttribute.messageTag(reaction: value)]
+                let tag: EngineMessage.CustomTag = ReactionsMessageAttribute.messageTag(reaction: value)
                 
                 var hasTitle = false
                 if let tag = savedMessageTags.tags.first(where: { $0.reaction == value }) {
@@ -115,7 +115,7 @@ extension ChatControllerImpl {
                 
                 if case .pinnedMessages = self.subject {
                 } else {
-                    if self.presentationInterfaceState.historyFilter?.customTags != tags {
+                    if self.presentationInterfaceState.historyFilter?.customTag != tag {
                         items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_ReactionContextMenu_FilterByTag, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagFilter"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, a in
@@ -125,7 +125,7 @@ extension ChatControllerImpl {
                             }
                             self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
                             self.interfaceInteraction?.updateHistoryFilter { _ in
-                                return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: true)
+                                return ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
                             }
                             
                             a(.default)
