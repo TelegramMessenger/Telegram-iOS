@@ -229,6 +229,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .storiesHigherQuality:
+            if case .storiesHigherQuality = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .channelBoost(peerId):
             if case .channelBoost(peerId) = rhs {
                 return true
@@ -261,6 +267,12 @@ public enum PremiumSource: Equatable {
             }
         case .readTime:
             if case .readTime = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .messageTags:
+            if case .messageTags = rhs {
                 return true
             } else {
                 return false
@@ -301,12 +313,14 @@ public enum PremiumSource: Equatable {
     case storiesFormatting
     case storiesExpirationDurations
     case storiesSuggestedReactions
+    case storiesHigherQuality
     case channelBoost(EnginePeer.Id)
     case nameColor
     case similarChannels
     case wallpapers
     case presence
     case readTime
+    case messageTags
     
     var identifier: String? {
         switch self {
@@ -378,6 +392,8 @@ public enum PremiumSource: Equatable {
             return "stories__expiration_durations"
         case .storiesSuggestedReactions:
             return "stories__suggested_reactions"
+        case .storiesHigherQuality:
+            return "stories__quality"
         case let .channelBoost(peerId):
             return "channel_boost__\(peerId.id._internalGetInt64Value())"
         case .nameColor:
@@ -390,6 +406,8 @@ public enum PremiumSource: Equatable {
             return "presence"
         case .readTime:
             return "read_time"
+        case .messageTags:
+            return "saved_tags"
         }
     }
 }
@@ -412,6 +430,7 @@ public enum PremiumPerk: CaseIterable {
     case stories
     case colors
     case wallpapers
+    case messageTags
     
     public static var allCases: [PremiumPerk] {
         return [
@@ -431,7 +450,8 @@ public enum PremiumPerk: CaseIterable {
             .translation,
             .stories,
             .colors,
-            .wallpapers
+            .wallpapers,
+            .messageTags
         ]
     }
     
@@ -481,6 +501,8 @@ public enum PremiumPerk: CaseIterable {
             return "peer_colors"
         case .wallpapers:
             return "wallpapers"
+        case .messageTags:
+            return "saved_tags"
         }
     }
     
@@ -520,6 +542,8 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_Colors
         case .wallpapers:
             return strings.Premium_Wallpapers
+        case .messageTags:
+            return strings.Premium_MessageTags
         }
     }
     
@@ -559,6 +583,8 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_ColorsInfo
         case .wallpapers:
             return strings.Premium_WallpapersInfo
+        case .messageTags:
+            return strings.Premium_MessageTagsInfo
         }
     }
     
@@ -598,6 +624,8 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/Perk/Colors"
         case .wallpapers:
             return "Premium/Perk/Wallpapers"
+        case .messageTags:
+            return "Premium/Perk/MessageTags"
         }
     }
 }
@@ -606,22 +634,23 @@ struct PremiumIntroConfiguration {
     static var defaultValue: PremiumIntroConfiguration {
         return PremiumIntroConfiguration(perks: [
             .stories,
-            .doubleLimits,
             .moreUpload,
+            .doubleLimits,
+            .voiceToText,
             .fasterDownload,
             .translation,
-            .voiceToText,
-            .noAds,
+            .animatedEmoji,
             .emojiStatus,
+            .messageTags,
             .colors,
             .wallpapers,
-            .uniqueReactions,
-            .premiumStickers,
-            .animatedEmoji,
-            .advancedChatManagement,
             .profileBadge,
+            .advancedChatManagement,
+            .noAds,
+            .appIcons,
+            .uniqueReactions,
             .animatedUserpics,
-            .appIcons
+            .premiumStickers
         ])
     }
     
@@ -656,6 +685,9 @@ struct PremiumIntroConfiguration {
             }
             if !perks.contains(.colors) {
                 perks.append(.colors)
+            }
+            if !perks.contains(.messageTags) {
+                perks.append(.messageTags)
             }
             #endif
             return PremiumIntroConfiguration(perks: perks)
@@ -1617,8 +1649,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             self.newPerksDisposable = combineLatest(queue: Queue.mainQueue(),
                 ApplicationSpecificNotice.dismissedPremiumAppIconsBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedPremiumWallpapersBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager)
-            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge in
+                ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedMessageTagsBadge(accountManager: context.sharedContext.accountManager)
+            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge in
                 guard let self else {
                     return
                 }
@@ -1628,6 +1661,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 }
                 if !dismissedPremiumColorsBadge {
                     newPerks.append(PremiumPerk.colors.identifier)
+                }
+                if !dismissedMessageTagsBadge {
+                    newPerks.append(PremiumPerk.messageTags.identifier)
                 }
                 self.newPerks = newPerks
                 self.updated()
@@ -1808,6 +1844,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0xcb3e6d),
                 UIColor(rgb: 0xbc4395),
                 UIColor(rgb: 0xab4ac4),
+                UIColor(rgb: 0xa34cd7),
                 UIColor(rgb: 0x9b4fed),
                 UIColor(rgb: 0x8958ff),
                 UIColor(rgb: 0x676bff),
@@ -2031,6 +2068,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             case .wallpapers:
                                 demoSubject = .wallpapers
                                 let _ = ApplicationSpecificNotice.setDismissedPremiumWallpapersBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .messageTags:
+                                demoSubject = .messageTags
+                                let _ = ApplicationSpecificNotice.setDismissedMessageTagsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             }
                             
                             let isPremium = state?.isPremium == true

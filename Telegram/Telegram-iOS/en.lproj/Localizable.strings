@@ -10983,3 +10983,10 @@ Sorry for the inconvenience.";
 "Login.Announce.Info" = "Notify people on Telegram who know my phone number that I signed up.";
 "Login.Announce.Notify" = "Notify";
 "Login.Announce.DontNotify" = "Do Not Notify";
+
+"Premium.Stories.Quality.Title" = "Higher Quality";
+"Premium.Stories.Quality.Text" = "View video stories in double the resolution.";
+
+"Premium.MessageTags" = "Tags for Messages";
+"Premium.MessageTagsInfo" = "Organize your Saved Messages with tags for quicker access.";
+"Premium.MessageTags.Proceed" = "About Telegram Premium";

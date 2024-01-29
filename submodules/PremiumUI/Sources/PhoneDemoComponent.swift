@@ -370,6 +370,7 @@ final class PhoneDemoComponent: Component {
         case badgeStars
         case emoji
         case hello
+        case tag
     }
     
     enum Model {
@@ -536,6 +537,13 @@ final class PhoneDemoComponent: Component {
                     if let _ = self.decorationView as? HelloView {
                     } else {
                         let starsView = HelloView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
+                    }
+                case .tag:
+                    if let _ = self.decorationView as? TagStarsView {
+                    } else {
+                        let starsView = TagStarsView(frame: self.decorationContainerView.bounds)
                         self.decorationView = starsView
                         self.decorationContainerView.addSubview(starsView)
                     }

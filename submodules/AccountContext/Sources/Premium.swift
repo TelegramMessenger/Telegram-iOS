@@ -30,12 +30,14 @@ public enum PremiumIntroSource {
     case storiesFormatting
     case storiesExpirationDurations
     case storiesSuggestedReactions
+    case storiesHigherQuality
     case channelBoost(EnginePeer.Id)
     case nameColor
     case similarChannels
     case wallpapers
     case presence
     case readTime
+    case messageTags
 }
 
 public enum PremiumGiftSource: Equatable {
@@ -65,6 +67,7 @@ public enum PremiumDemoSubject {
     case stories
     case colors
     case wallpapers
+    case messageTags
 }
 
 public enum PremiumLimitSubject {

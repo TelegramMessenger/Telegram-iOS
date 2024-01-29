@@ -195,6 +195,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case videoMessagesPlayOnceSuggestion = 61
     case incomingVideoMessagePlayOnceTip = 62
     case outgoingVideoMessagePlayOnceTip = 63
+    case dismissedMessageTagsBadge = 64
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -503,6 +504,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func outgoingVideoMessagePlayOnceTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.outgoingVideoMessagePlayOnceTip.key)
+    }
+    
+    static func dismissedMessageTagsBadge() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedMessageTagsBadge.key)
     }
 }
 
@@ -2079,5 +2084,26 @@ public struct ApplicationSpecificNotice {
             
             return Int(previousValue)
         }
+    }
+    
+    public static func setDismissedMessageTagsBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedMessageTagsBadge(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func dismissedMessageTagsBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedMessageTagsBadge())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
     }
 }

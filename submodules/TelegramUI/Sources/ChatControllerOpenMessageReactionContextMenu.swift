@@ -21,8 +21,8 @@ extension ChatControllerImpl {
         //TODO:localize
         let context = self.context
         var replaceImpl: ((ViewController) -> Void)?
-        let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
-            let controller = PremiumIntroScreen(context: context, source: .reactions)
+        let controller = PremiumDemoScreen(context: context, subject: .messageTags, action: {
+            let controller = PremiumIntroScreen(context: context, source: .messageTags)
             replaceImpl?(controller)
         })
         replaceImpl = { [weak controller] c in
