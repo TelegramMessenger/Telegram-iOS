@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
+import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import MediaResources
@@ -1560,6 +1561,59 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 
                 initialData = combinedInitialData
+                
+                if resetScrolling, let previousViewValue = previousView.with({ $0 })?.0 {
+                    let filteredEntries: [ChatHistoryEntry] = []
+                    let processedView = ChatHistoryView(originalView: MessageHistoryView(tag: nil, namespaces: .all, entries: [], holeEarlier: false, holeLater: false, isLoading: true), filteredEntries: filteredEntries, associatedData: previousViewValue.associatedData, lastHeaderId: 0, id: previousViewValue.id, locationInput: previousViewValue.locationInput, ignoreMessagesInTimestampRange: nil)
+                    let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages, allAdMessages.version))
+                    let previous = previousValueAndVersion?.0
+                    let previousSelectedMessages = previousValueAndVersion?.2
+                    
+                    if let previousVersion = previousValueAndVersion?.1 {
+                        assert(update.1 >= previousVersion)
+                    }
+                    
+                    var reason: ChatHistoryViewTransitionReason
+                    reason = ChatHistoryViewTransitionReason.InteractiveChanges
+                    
+                    let disableAnimations = true
+                    let forceSynchronous = true
+                    
+                    let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: false, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: nil, scrollAnimationCurve: nil, initialData: initialData?.initialData, keyboardButtonsMessage: nil, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: false, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode(), allUpdated: false)
+                    var mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: previousViewValue.associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: 0, animateFromPreviousFilter: resetScrolling, transition: rawTransition)
+                    
+                    if disableAnimations {
+                        mappedTransition.options.remove(.AnimateInsertion)
+                        mappedTransition.options.remove(.AnimateAlpha)
+                        mappedTransition.options.remove(.AnimateTopItemPosition)
+                        mappedTransition.options.remove(.RequestItemInsertionAnimations)
+                    }
+                    if forceSynchronous || resetScrolling {
+                        mappedTransition.options.insert(.Synchronous)
+                    }
+                    if resetScrolling {
+                        mappedTransition.options.insert(.AnimateAlpha)
+                        mappedTransition.options.insert(.AnimateFullTransition)
+                    }
+                    
+                    if resetScrolling {
+                        resetScrolling = false
+                    }
+                    
+                    Queue.mainQueue().async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.appliedPlayingMessageId?.0 != currentlyPlayingMessageIdAndType?.0 {
+                            strongSelf.appliedPlayingMessageId = currentlyPlayingMessageIdAndType
+                        }
+                        if strongSelf.appliedScrollToMessageId != scrollToMessageId {
+                            strongSelf.appliedScrollToMessageId = scrollToMessageId
+                        }
+                        strongSelf.enqueueHistoryViewTransition(mappedTransition)
+                    }
+                }
+                
                 Queue.mainQueue().async {
                     if let strongSelf = self {
                         if !strongSelf.didSetInitialData {

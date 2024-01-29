@@ -2539,7 +2539,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             return
                         }
                         inlineSearchResultsView.alpha = 1.0
-                        inlineSearchResultsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        inlineSearchResultsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         inlineSearchResultsView.animateIn()
                         
                         transition.updateSublayerTransformScale(node: self.historyNodeContainer, scale: CGPoint(x: 0.95, y: 0.95))

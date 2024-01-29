@@ -37,6 +37,8 @@ func preloadedChatHistoryViewForLocation(_ location: ChatHistoryLocationInput, c
 }
 
 func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, scheduled: Bool, fixedCombinedReadStates: MessageHistoryViewReadState?, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
+    print("request \(location.content)")
+    
     let account = context.account
     if scheduled {
         var first = true
@@ -93,7 +95,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
                     
-                    if preloaded {                        
+                    if preloaded {
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                     } else {
                         if view.isLoading {

@@ -157,8 +157,11 @@ private final class ManagedMessageHistoryHolesContext {
          }*/
         
         for entry in entries {
-            if self.completedEntries[entry] != nil {
-                continue
+            if let previousTimestamp = self.completedEntries[entry] {
+                if previousTimestamp >= CFAbsoluteTimeGetCurrent() - 20.0 {
+                    Logger.shared.log("ManagedMessageHistoryHoles", "Not adding recently finished entry \(entry)")
+                    continue
+                }
             }
             
             switch entry.hole {
