@@ -18,7 +18,7 @@ public enum UpdateMessageReaction {
     }
 }
 
-public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reactions: [UpdateMessageReaction], isLarge: Bool, storeAsRecentlyUsed: Bool) -> Signal<Never, NoError> {
+public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reactions: [UpdateMessageReaction], isLarge: Bool, storeAsRecentlyUsed: Bool, add: Bool = false) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         var sendAsPeerId = account.peerId
         if let cachedData = transaction.getPeerCachedData(peerId: messageId.peerId) {
@@ -40,6 +40,25 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
         }
         
         var mappedReactions: [PendingReactionsMessageAttribute.PendingReaction] = []
+        
+        var reactions: [UpdateMessageReaction] = reactions
+        if add {
+            if let message = transaction.getMessage(messageId), let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: account.peerId)) {
+                for reaction in effectiveReactions {
+                    if !reactions.contains(where: { $0.reaction == reaction.value }) {
+                        let mappedValue: UpdateMessageReaction
+                        switch reaction.value {
+                        case let .builtin(value):
+                            mappedValue = .builtin(value)
+                        case let .custom(fileId):
+                            mappedValue = .custom(fileId: fileId, file: nil)
+                        }
+                        reactions.append(mappedValue)
+                    }
+                }
+            }
+        }
+        
         for reaction in reactions {
             switch reaction {
             case let .custom(fileId, file):

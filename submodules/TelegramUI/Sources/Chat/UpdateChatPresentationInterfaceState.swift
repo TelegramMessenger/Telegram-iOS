@@ -414,6 +414,8 @@ func updateChatPresentationInterfaceStateImpl(
         selfController.chatDisplayNode.collapseInput()
     }
     
+    selfController.tempHideAccessoryPanels = selfController.presentationInterfaceState.search != nil
+    
     if selfController.isNodeLoaded {
         selfController.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, transition: transition, interactive: interactive, completion: completion)
     } else {

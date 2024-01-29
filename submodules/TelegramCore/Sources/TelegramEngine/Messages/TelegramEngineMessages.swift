@@ -307,7 +307,22 @@ public extension TelegramEngine {
                 messageId: id,
                 reactions: reactions,
                 isLarge: false,
-                storeAsRecentlyUsed: false
+                storeAsRecentlyUsed: false,
+                add: false
+            ).start()
+        }
+        
+        public func addMessageReactions(
+            id: EngineMessage.Id,
+            reactions: [UpdateMessageReaction]
+        ) {
+            let _ = updateMessageReactionsInteractively(
+                account: self.account,
+                messageId: id,
+                reactions: reactions,
+                isLarge: false,
+                storeAsRecentlyUsed: false,
+                add: true
             ).start()
         }
 

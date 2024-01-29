@@ -310,24 +310,29 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     return
                 }
                 
-                var reactions = actions.editTags
-                if reactions.contains(updateReaction.reaction) {
-                    reactions.remove(updateReaction.reaction)
-                } else {
-                    reactions.insert(updateReaction.reaction)
-                }
-                let mappedUpdatedReactions = reactions.map { reaction -> UpdateMessageReaction in
-                    switch reaction {
-                    case let .builtin(value):
-                        return .builtin(value)
-                    case let .custom(fileId):
-                        return .custom(fileId: fileId, file: nil)
-                    }
-                }
+                self.interfaceInteraction?.cancelMessageSelection(.animated(duration: 0.4, curve: .spring))
                 
-                if let selectionState = presentationInterfaceState.interfaceState.selectionState {
-                    for id in selectionState.selectedIds {
-                        context.engine.messages.setMessageReactions(id: id, reactions: mappedUpdatedReactions)
+                if actions.editTags.contains(updateReaction.reaction) {
+                    var reactions = actions.editTags
+                    reactions.remove(updateReaction.reaction)
+                    let mappedUpdatedReactions = reactions.map { reaction -> UpdateMessageReaction in
+                        switch reaction {
+                        case let .builtin(value):
+                            return .builtin(value)
+                        case let .custom(fileId):
+                            return .custom(fileId: fileId, file: nil)
+                        }
+                    }
+                    if let selectionState = presentationInterfaceState.interfaceState.selectionState {
+                        for id in selectionState.selectedIds {
+                            context.engine.messages.setMessageReactions(id: id, reactions: mappedUpdatedReactions)
+                        }
+                    }
+                } else {
+                    if let selectionState = presentationInterfaceState.interfaceState.selectionState {
+                        for id in selectionState.selectedIds {
+                            context.engine.messages.addMessageReactions(id: id, reactions: [updateReaction])
+                        }
                     }
                 }
                 

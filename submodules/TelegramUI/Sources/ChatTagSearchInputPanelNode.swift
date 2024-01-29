@@ -262,7 +262,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             }
         }
         
-        var nextLeftX: CGFloat = 11.0
+        var nextLeftX: CGFloat = 12.0
         
         let calendarButtonSize = self.calendarButton.update(
             transition: .immediate,
@@ -372,7 +372,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 environment: {},
                 containerSize: size
             )
-            let resultsTextFrame = CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - resultsTextSize.height) * 0.5)), size: resultsTextSize)
+            let resultsTextFrame = CGRect(origin: CGPoint(x: nextLeftX - 3.0, y: floor((size.height - resultsTextSize.height) * 0.5)), size: resultsTextSize)
             if let resultsTextView = resultsText.view {
                 if resultsTextView.superview == nil {
                     resultsTextView.alpha = 0.0
@@ -381,7 +381,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 resultsTextTransition.setFrame(view: resultsTextView, frame: resultsTextFrame)
                 transition.setAlpha(view: resultsTextView, alpha: 1.0)
             }
-            nextLeftX += resultsTextSize.width
+            nextLeftX += -3.0 + resultsTextSize.width
         } else {
             if let resultsText = self.resultsText {
                 self.resultsText = nil

@@ -8639,6 +8639,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 completion(.immediate)
             }
+        }, cancelMessageSelection: { [weak self] transition in
+            guard let self else {
+                return
+            }
+            self.updateChatPresentationInterfaceState(transition: transition, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {

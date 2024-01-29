@@ -184,6 +184,9 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
 }
 
 func secondaryRightNavigationButtonForChatInterfaceState(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+    if presentationInterfaceState.interfaceState.selectionState != nil {
+        return nil
+    }
     if case .peer(context.account.peerId) = presentationInterfaceState.chatLocation {
         return moreInfoNavigationButton
     }

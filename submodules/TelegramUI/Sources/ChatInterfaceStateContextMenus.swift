@@ -1656,7 +1656,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 isSending = true
                 title = chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending
             } else {
-                title = chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
+                if case .peer(context.account.peerId) = chatPresentationInterfaceState.chatLocation, message.effectivelyIncoming(context.account.peerId) {
+                    //TODO:localize
+                    title = "Remove"
+                } else {
+                    title = chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
+                }
             }
 
             if let autoremoveDeadline = autoremoveDeadline, !isEditing, !isSending {

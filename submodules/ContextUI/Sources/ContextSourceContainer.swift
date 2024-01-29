@@ -377,10 +377,7 @@ final class ContextSourceContainer: ASDisplayNode {
         
         super.init()
         
-        #if DEBUG
-        #else
         self.addSubnode(self.backgroundNode)
-        #endif
         
         for i in 0 ..< configuration.sources.count {
             let source = configuration.sources[i]

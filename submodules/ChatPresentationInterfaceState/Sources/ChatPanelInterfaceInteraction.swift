@@ -72,6 +72,7 @@ public final class ChatPanelInterfaceInteraction {
     public let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition, @escaping () -> Void) -> Void) -> Void
     public let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     public let beginMessageSelection: ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void
+    public let cancelMessageSelection: (ContainedViewLayoutTransition) -> Void
     public let deleteSelectedMessages: () -> Void
     public let reportSelectedMessages: () -> Void
     public let reportMessages: ([Message], ContextControllerProtocol?) -> Void
@@ -182,6 +183,7 @@ public final class ChatPanelInterfaceInteraction {
         setupReplyMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition, @escaping () -> Void) -> Void) -> Void,
         setupEditMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         beginMessageSelection: @escaping ([MessageId], @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
+        cancelMessageSelection: @escaping (ContainedViewLayoutTransition) -> Void,
         deleteSelectedMessages: @escaping () -> Void,
         reportSelectedMessages: @escaping () -> Void,
         reportMessages: @escaping ([Message], ContextControllerProtocol?) -> Void,
@@ -291,6 +293,7 @@ public final class ChatPanelInterfaceInteraction {
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
         self.beginMessageSelection = beginMessageSelection
+        self.cancelMessageSelection = cancelMessageSelection
         self.deleteSelectedMessages = deleteSelectedMessages
         self.reportSelectedMessages = reportSelectedMessages
         self.reportMessages = reportMessages
@@ -407,6 +410,7 @@ public final class ChatPanelInterfaceInteraction {
         self.init(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
+        }, cancelMessageSelection: { _ in
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
         }, reportMessages: { _, _ in

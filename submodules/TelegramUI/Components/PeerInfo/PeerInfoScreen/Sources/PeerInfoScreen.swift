@@ -305,6 +305,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
+        }, cancelMessageSelection: { _ in
         }, deleteSelectedMessages: {
             deleteMessages()
         }, reportSelectedMessages: {
@@ -11301,7 +11302,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "View as Chats", icon: { theme in
                 if !isViewingAsTopics {
-                    return nil
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .clear)
                 }
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, iconPosition: .left, action: { [weak sourceController] _, a in
@@ -11319,7 +11320,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             })))
             items.append(.action(ContextMenuActionItem(text: strings.Chat_ContextViewAsMessages, icon: { theme in
                 if isViewingAsTopics {
-                    return nil
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .clear)
                 }
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, iconPosition: .left, action: { [weak sourceController] _, a in
