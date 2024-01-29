@@ -2673,9 +2673,22 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             previousTopItemVerticalOrigin = self.topItemVerticalOrigin()
         }
         
-        var previousApparentFrames: [(ListViewItemNode, CGRect)] = []
+        struct PreviousApparentFrame {
+            var frame: CGRect
+            var insets: UIEdgeInsets
+            
+            init(frame: CGRect, insets: UIEdgeInsets) {
+                self.frame = frame
+                self.insets = insets
+            }
+        }
+        
+        var previousApparentFrames: [(ListViewItemNode, PreviousApparentFrame)] = []
         for itemNode in self.itemNodes {
-            previousApparentFrames.append((itemNode, itemNode.apparentFrame))
+            previousApparentFrames.append((itemNode, PreviousApparentFrame(
+                frame: itemNode.apparentFrame,
+                insets: itemNode.insets
+            )))
         }
         
         var takenPreviousNodes = Set<ListViewItemNode>()
@@ -2699,7 +2712,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var previousFrame: CGRect?
                     for (previousNode, frame) in previousApparentFrames {
                         if previousNode === node {
-                            previousFrame = frame
+                            previousFrame = frame.frame
                             break
                         }
                     }
@@ -2764,7 +2777,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     
                     for (node, previousFrame) in previousApparentFrames {
                         if node === referenceNode {
-                            height = previousFrame.size.height
+                            height = previousFrame.frame.size.height
                             previousLayout = ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets)
                             break
                         }
@@ -2830,7 +2843,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         for (previousNode, previousFrame) in previousApparentFrames {
                             if previousNode === self.itemNodes[index] {
                                 removedPreviousNodes.insert(previousNode)
-                                self.itemNodes[index].frame = previousFrame
+                                self.itemNodes[index].frame = previousFrame.frame
                                 break
                             }
                         }
@@ -3026,7 +3039,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if let index = itemNode.index , index == stationaryItemIndex {
                     for (previousNode, previousFrame) in previousApparentFrames {
                         if previousNode === itemNode {
-                            let offset = previousFrame.minY - itemNode.frame.minY
+                            let offset = previousFrame.frame.minY - itemNode.frame.minY
                             
                             if abs(offset) > CGFloat.ulpOfOne {
                                 for itemNode in self.itemNodes {
@@ -3294,7 +3307,18 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if animateFullTransition {
             for (previousNode, previousFrame) in previousApparentFrames {
                 if !takenPreviousNodes.contains(previousNode) && !removedPreviousNodes.contains(previousNode) {
-                    previousNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.minY - previousNode.frame.minY), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    if previousFrame.frame.maxY < self.insets.top || previousFrame.frame.minY > self.visibleSize.height - self.insets.bottom {
+                        previousNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        previousNode.layer.animateScale(from: 0.7, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    } else {
+                        let boundsOffset: CGFloat
+                        if self.rotated {
+                            boundsOffset = previousFrame.insets.bottom - previousNode.insets.bottom
+                        } else {
+                            boundsOffset = previousFrame.insets.top - previousNode.insets.top
+                        }
+                        previousNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.frame.minY - previousNode.frame.minY + boundsOffset), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    }
                 }
             }
         }
@@ -3310,16 +3334,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for (previousNode, previousFrame) in previousApparentFrames {
                         if previousNode.supernode == nil {
                             temporaryPreviousNodes.append(previousNode)
-                            previousNode.updateFrame(previousFrame, within: self.visibleSize)
-                            if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
-                                previousUpperBound = previousFrame.minY
+                            previousNode.updateFrame(previousFrame.frame, within: self.visibleSize)
+                            if previousUpperBound == nil || previousUpperBound! > previousFrame.frame.minY {
+                                previousUpperBound = previousFrame.frame.minY
                             }
-                            if previousLowerBound == nil || previousLowerBound! < previousFrame.maxY {
-                                previousLowerBound = previousFrame.maxY
+                            if previousLowerBound == nil || previousLowerBound! < previousFrame.frame.maxY {
+                                previousLowerBound = previousFrame.frame.maxY
                             }
                         } else {
                             if previousNode.canBeUsedAsScrollToItemAnchor {
-                                offset = previousNode.apparentFrame.minY - previousFrame.minY
+                                offset = previousNode.apparentFrame.minY - previousFrame.frame.minY
                                 break
                             }
                         }
@@ -3328,16 +3352,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     for (previousNode, previousFrame) in previousApparentFrames {
                         if previousNode.supernode == nil {
                             temporaryPreviousNodes.append(previousNode)
-                            previousNode.updateFrame(previousFrame, within: self.visibleSize)
-                            if previousUpperBound == nil || previousUpperBound! > previousFrame.minY {
-                                previousUpperBound = previousFrame.minY
+                            previousNode.updateFrame(previousFrame.frame, within: self.visibleSize)
+                            if previousUpperBound == nil || previousUpperBound! > previousFrame.frame.minY {
+                                previousUpperBound = previousFrame.frame.minY
                             }
-                            if previousLowerBound == nil || previousLowerBound! < previousFrame.maxY {
-                                previousLowerBound = previousFrame.maxY
+                            if previousLowerBound == nil || previousLowerBound! < previousFrame.frame.maxY {
+                                previousLowerBound = previousFrame.frame.maxY
                             }
                         } else {
                             if previousNode.canBeUsedAsScrollToItemAnchor {
-                                offset = previousNode.apparentFrame.minY - previousFrame.minY
+                                offset = previousNode.apparentFrame.minY - previousFrame.frame.minY
                             }
                         }
                     }

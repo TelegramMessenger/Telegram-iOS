@@ -305,6 +305,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var sendAsPeersDisposable: Disposable?
     var preloadAttachBotIconsDisposables: DisposableSet?
     var keepMessageCountersSyncrhonizedDisposable: Disposable?
+    var keepSavedMessagesSyncrhonizedDisposable: Disposable?
     var saveMediaDisposable: MetaDisposable?
     var giveawayStatusDisposable: MetaDisposable?
     var nameColorDisposable: Disposable?
@@ -6617,6 +6618,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.sendAsPeersDisposable?.dispose()
             self.preloadAttachBotIconsDisposables?.dispose()
             self.keepMessageCountersSyncrhonizedDisposable?.dispose()
+            self.keepSavedMessagesSyncrhonizedDisposable?.dispose()
             self.translationStateDisposable?.dispose()
             self.premiumGiftSuggestionDisposable?.dispose()
             self.powerSavingMonitoringDisposable?.dispose()
@@ -11322,9 +11324,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if self.keepMessageCountersSyncrhonizedDisposable == nil {
                 self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: message.peerId, threadId: message.threadId).startStrict()
             }
-        } else if case .peer(self.context.account.peerId) = self.chatLocation {
+        } else if self.chatLocation.peerId == self.context.account.peerId {
             if self.keepMessageCountersSyncrhonizedDisposable == nil {
-                self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: self.context.account.peerId).startStrict()
+                if let threadId = self.chatLocation.threadId {
+                    self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: self.context.account.peerId, threadId: threadId).startStrict()
+                } else {
+                    self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: self.context.account.peerId).startStrict()
+                }
+            }
+            if self.keepSavedMessagesSyncrhonizedDisposable == nil {
+                self.keepSavedMessagesSyncrhonizedDisposable = self.context.engine.stickers.refreshSavedMessageTags(subPeerId: self.chatLocation.threadId.flatMap(PeerId.init)).startStrict()
             }
         }
         

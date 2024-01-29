@@ -146,8 +146,8 @@ public extension TelegramEngine {
             }
         }
         
-        public func refreshSavedMessageTags() -> Signal<Never, NoError> {
-            return managedSynchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId)
+        public func refreshSavedMessageTags(subPeerId: EnginePeer.Id?) -> Signal<Never, NoError> {
+            return synchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network, peerId: self.account.peerId, threadId: subPeerId?.toInt64())
         }
         
         public func setSavedMessageTagTitle(reaction: MessageReaction.Reaction, title: String?) -> Signal<Never, NoError> {

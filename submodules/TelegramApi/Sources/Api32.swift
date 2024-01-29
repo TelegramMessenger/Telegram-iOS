@@ -1851,14 +1851,15 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.auth {
-                static func signUp(phoneNumber: String, phoneCodeHash: String, firstName: String, lastName: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.Authorization>) {
+                static func signUp(flags: Int32, phoneNumber: String, phoneCodeHash: String, firstName: String, lastName: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.Authorization>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2131827673)
+                    buffer.appendInt32(-1429752041)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(phoneNumber, buffer: buffer, boxed: false)
                     serializeString(phoneCodeHash, buffer: buffer, boxed: false)
                     serializeString(firstName, buffer: buffer, boxed: false)
                     serializeString(lastName, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "auth.signUp", parameters: [("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.Authorization? in
+                    return (FunctionDescription(name: "auth.signUp", parameters: [("flags", String(describing: flags)), ("phoneNumber", String(describing: phoneNumber)), ("phoneCodeHash", String(describing: phoneCodeHash)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.Authorization? in
                         let reader = BufferReader(buffer)
                         var result: Api.auth.Authorization?
                         if let signature = reader.readInt32() {
@@ -5901,11 +5902,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getSavedReactionTags(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedReactionTags>) {
+                static func getSavedReactionTags(flags: Int32, peer: Api.InputPeer?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SavedReactionTags>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1981668047)
+                    buffer.appendInt32(909631579)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {peer!.serialize(buffer, true)}
                     serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getSavedReactionTags", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SavedReactionTags? in
+                    return (FunctionDescription(name: "messages.getSavedReactionTags", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SavedReactionTags? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.SavedReactionTags?
                         if let signature = reader.readInt32() {
