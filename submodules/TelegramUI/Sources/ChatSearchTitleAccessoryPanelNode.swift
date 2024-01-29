@@ -10,6 +10,7 @@ import MultilineTextComponent
 import PlainButtonComponent
 import UIKitRuntimeUtils
 import TelegramCore
+import Postbox
 import EmojiStatusComponent
 import SwiftSignalKit
 import ContextUI
@@ -438,6 +439,8 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
     
     private var itemsDisposable: Disposable?
     
+    private var appliedScrollToTag: MemoryBuffer?
+    
     init(context: AccountContext, chatLocation: ChatLocation) {
         self.context = context
         
@@ -566,6 +569,8 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
         
         var validIds: [MessageReaction.Reaction] = []
         
+        let hadItemViews = !self.itemViews.isEmpty
+        
         if !params.interfaceState.isPremium {
             let promoView: PromoView
             var itemTransition = transition
@@ -648,10 +653,6 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                                 return ChatPresentationInterfaceState.HistoryFilter(customTags: tags, isActive: filter?.isActive ?? true)
                             }
                         })
-                        
-                        if let itemView = self.itemViews[reaction] {
-                            self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -46.0, dy: 0.0), animated: true)
-                        }
                     }, contextGesture: { [weak self] gesture, sourceNode in
                         guard let self, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
                             gesture.cancel()
@@ -732,6 +733,18 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
         }
         if self.scrollView.contentSize != contentSize {
             self.scrollView.contentSize = contentSize
+        }
+        
+        let currentFilterTag = params.interfaceState.historyFilter?.customTags.first
+        if self.appliedScrollToTag != currentFilterTag {
+            if let tag = currentFilterTag {
+                if let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: tag), let itemView = self.itemViews[reaction] {
+                    self.appliedScrollToTag = currentFilterTag
+                    self.scrollView.scrollRectToVisible(itemView.frame.insetBy(dx: -46.0, dy: 0.0), animated: hadItemViews)
+                }
+            } else {
+                self.appliedScrollToTag = currentFilterTag
+            }
         }
     }
     
