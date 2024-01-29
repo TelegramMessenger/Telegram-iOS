@@ -2691,6 +2691,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             )))
         }
         
+        var previousHeaderNodeFrames: [(ListViewItemHeaderNode, CGRect)] = []
+        if animateFullTransition {
+            for (_, itemHeaderNode) in self.itemHeaderNodes {
+                previousHeaderNodeFrames.append((itemHeaderNode, itemHeaderNode.frame))
+            }
+        }
+        
         var takenPreviousNodes = Set<ListViewItemNode>()
         for operation in operations {
             if case let .InsertNode(_, _, _, node, _, _) = operation {
@@ -3609,6 +3616,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 headerNodesTransition.0.animatePositionAdditive(node: topItemOverscrollBackground, offset: CGPoint(x: 0.0, y: -headerNodesTransition.2))
             }
             
+            if animateFullTransition {
+                for (previousHeaderNode, previousFrame) in previousHeaderNodeFrames {
+                    if previousHeaderNode.supernode === self {
+                        previousHeaderNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.minY - previousHeaderNode.frame.minY), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    }
+                }
+            }
+            
             self.setNeedsAnimations()
             
             self.updateVisibleContentOffset()
@@ -3622,6 +3637,24 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         } else {
             self.updateItemHeaders(leftInset: listInsets.left, rightInset: listInsets.right, synchronousLoad: synchronousLoads, transition: headerNodesTransition, animateInsertion: animated || !requestItemInsertionAnimationsIndices.isEmpty)
             self.updateItemNodesVisibilities(onlyPositive: deferredUpdateVisible)
+            
+            if animateFullTransition {
+                for (_, headerNode) in self.itemHeaderNodes {
+                    var found = false
+                    for (previousHeaderNode, previousFrame) in previousHeaderNodeFrames {
+                        if previousHeaderNode === headerNode {
+                            found = true
+                            if previousHeaderNode.supernode === self {
+                                previousHeaderNode.layer.animatePosition(from: CGPoint(x: 0.0, y: previousFrame.minY - previousHeaderNode.frame.minY), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            }
+                        }
+                    }
+                    if !found {
+                        headerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        headerNode.layer.animateScale(from: 0.7, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                }
+            }
             
             if animated {
                 self.setNeedsAnimations()
