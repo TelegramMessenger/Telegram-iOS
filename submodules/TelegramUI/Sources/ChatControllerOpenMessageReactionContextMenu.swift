@@ -17,21 +17,24 @@ import SavedTagNameAlertController
 import PremiumUI
 
 extension ChatControllerImpl {
+    func presentTagPremiumPaywall() {
+        //TODO:localize
+        let context = self.context
+        var replaceImpl: ((ViewController) -> Void)?
+        let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+            let controller = PremiumIntroScreen(context: context, source: .reactions)
+            replaceImpl?(controller)
+        })
+        replaceImpl = { [weak controller] c in
+            controller?.replace(with: c)
+        }
+        self.push(controller)
+    }
+    
     func openMessageReactionContextMenu(message: Message, sourceView: ContextExtractedContentContainingView, gesture: ContextGesture?, value: MessageReaction.Reaction) {
         if message.areReactionsTags(accountPeerId: self.context.account.peerId) {
             if !self.presentationInterfaceState.isPremium {
-                //TODO:localize
-                let context = self.context
-                var replaceImpl: ((ViewController) -> Void)?
-                let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
-                    let controller = PremiumIntroScreen(context: context, source: .reactions)
-                    replaceImpl?(controller)
-                })
-                replaceImpl = { [weak controller] c in
-                    controller?.replace(with: c)
-                }
-                self.push(controller)
-                
+                self.presentTagPremiumPaywall()
                 return
             }
             

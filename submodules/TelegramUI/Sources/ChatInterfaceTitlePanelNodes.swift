@@ -27,6 +27,11 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                 }
             }
         }
+        if case .standard(.embedded) = chatPresentationInterfaceState.mode {
+            if !chatPresentationInterfaceState.isPremium {
+                matches = false
+            }
+        }
         
         if matches {
             if let currentPanel = currentPanel as? ChatSearchTitleAccessoryPanelNode {

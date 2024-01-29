@@ -119,7 +119,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             self.action()
         }
         
-        func update(theme: PresentationTheme, strings: PresentationStrings, height: CGFloat, transition: Transition) -> CGSize {
+        func update(theme: PresentationTheme, strings: PresentationStrings, height: CGFloat, isUnlock: Bool, transition: Transition) -> CGSize {
             let titleIconSpacing: CGFloat = 0.0
             
             let titleIconSize = self.titleIcon.update(
@@ -137,7 +137,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Add tags", font: Font.medium(14.0), textColor: theme.rootController.navigationBar.accentTextColor))
+                    text: .plain(NSAttributedString(string: isUnlock ? "Unlock" : "Add tags", font: Font.medium(14.0), textColor: theme.rootController.navigationBar.accentTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 100.0)
@@ -201,6 +201,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     self.containerButton.addSubview(textView)
                 }
                 textView.frame = textFrame
+                transition.setAlpha(view: textView, alpha: isUnlock ? 0.0 : 1.0)
             }
             totalSize.width += textSize.width
             totalSize.width += arrowSpacing
@@ -212,12 +213,13 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     self.containerButton.addSubview(arrowIconView)
                 }
                 arrowIconView.frame = arrowFrame
+                transition.setAlpha(view: arrowIconView, alpha: isUnlock ? 0.0 : 1.0)
             }
             totalSize.width += arrowSize.width
             
             transition.setFrame(view: self.containerButton, frame: CGRect(origin: CGPoint(), size: totalSize))
             
-            return totalSize
+            return isUnlock ? size : totalSize
         }
     }
     
@@ -307,8 +309,10 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             return super.hitTest(mappedPoint, with: event)
         }
         
-        func update(item: Item, isSelected: Bool, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
+        func update(item: Item, isSelected: Bool, isLocked: Bool, theme: PresentationTheme, height: CGFloat, transition: Transition) -> CGSize {
             let spacing: CGFloat = 3.0
+            
+            let contentsAlpha: CGFloat = isLocked ? 0.6 : 1.0
             
             let reactionSize = CGSize(width: 20.0, height: 20.0)
             var reactionDisplaySize = reactionSize
@@ -379,6 +383,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     self.containerButton.addSubview(iconView)
                 }
                 iconView.frame = reactionDisplaySize.centered(around: iconFrame.center)
+                transition.setAlpha(view: iconView, alpha: contentsAlpha)
             }
             
             if let titleView = self.title.view {
@@ -387,6 +392,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     self.containerButton.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
+                transition.setAlpha(view: titleView, alpha: contentsAlpha)
             }
             if let counterView = self.counter.view {
                 if counterView.superview == nil {
@@ -394,6 +400,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     self.containerButton.addSubview(counterView)
                 }
                 counterView.frame = counterFrame
+                transition.setAlpha(view: counterView, alpha: contentsAlpha)
             }
             
             if theme.overallDarkAppearance {
@@ -570,6 +577,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
         var validIds: [MessageReaction.Reaction] = []
         
         let hadItemViews = !self.itemViews.isEmpty
+        var isFirst = true
         
         if !params.interfaceState.isPremium {
             let promoView: PromoView
@@ -601,108 +609,121 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                 self.scrollView.addSubview(promoView)
             }
             
-            let itemSize = promoView.update(theme: params.interfaceState.theme, strings: params.interfaceState.strings, height: panelHeight, transition: .immediate)
+            let itemSize = promoView.update(theme: params.interfaceState.theme, strings: params.interfaceState.strings, height: panelHeight, isUnlock: !self.items.isEmpty, transition: .immediate)
             let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
             
             itemTransition.updatePosition(layer: promoView.layer, position: itemFrame.center)
             promoView.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
             
             contentSize.width += itemSize.width
+            
+            isFirst = false
         } else {
             if let promoView = self.promoView {
                 self.promoView = nil
                 promoView.removeFromSuperview()
             }
+        }
             
-            var isFirst = true
-            for item in self.items {
-                if isFirst {
-                    isFirst = false
-                } else {
-                    contentSize.width += itemSpacing
-                }
-                let itemId = item.reaction
-                validIds.append(itemId)
-                
-                var itemTransition = transition
-                var animateIn = false
-                let itemView: ItemView
-                if let current = self.itemViews[itemId] {
-                    itemView = current
-                } else {
-                    itemTransition = .immediate
-                    animateIn = true
-                    let reaction = item.reaction
-                    itemView = ItemView(context: self.context, action: { [weak self] in
-                        guard let self, let params = self.params else {
+        for item in self.items {
+            if isFirst {
+                isFirst = false
+            } else {
+                contentSize.width += itemSpacing
+            }
+            let itemId = item.reaction
+            validIds.append(itemId)
+            
+            var itemTransition = transition
+            var animateIn = false
+            let itemView: ItemView
+            if let current = self.itemViews[itemId] {
+                itemView = current
+            } else {
+                itemTransition = .immediate
+                animateIn = true
+                let reaction = item.reaction
+                itemView = ItemView(context: self.context, action: { [weak self] in
+                    guard let self, let params = self.params else {
+                        return
+                    }
+                    
+                    if !params.interfaceState.isPremium {
+                        if let chatController = self.interfaceInteraction?.chatController() {
+                            (chatController as? ChatControllerImpl)?.presentTagPremiumPaywall()
+                        }
+                        return
+                    }
+                    
+                    let tag = ReactionsMessageAttribute.messageTag(reaction: reaction)
+                    
+                    var updatedFilter: ChatPresentationInterfaceState.HistoryFilter?
+                    let currentTag = params.interfaceState.historyFilter?.customTag
+                    if currentTag == tag {
+                        updatedFilter = nil
+                    } else {
+                        updatedFilter = ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
+                    }
+                    
+                    self.interfaceInteraction?.updateHistoryFilter({ filter in
+                        return updatedFilter
+                    })
+                }, contextGesture: { [weak self] gesture, sourceNode in
+                    guard let self, let params = self.params, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
+                        gesture.cancel()
+                        return
+                    }
+                    
+                    if !params.interfaceState.isPremium {
+                        (chatController as? ChatControllerImpl)?.presentTagPremiumPaywall()
+                        return
+                    }
+                    
+                    var items: [ContextMenuItem] = []
+                    
+                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                    //TODO:localize
+                    items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] c, a in
+                        guard let self else {
+                            a(.default)
                             return
                         }
                         
-                        let tag = ReactionsMessageAttribute.messageTag(reaction: reaction)
-                        
-                        var updatedFilter: ChatPresentationInterfaceState.HistoryFilter?
-                        let currentTag = params.interfaceState.historyFilter?.customTag
-                        if currentTag == tag {
-                            updatedFilter = nil
-                        } else {
-                            updatedFilter = ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
-                        }
-                        
-                        self.interfaceInteraction?.updateHistoryFilter({ filter in
-                            return updatedFilter
-                        })
-                    }, contextGesture: { [weak self] gesture, sourceNode in
-                        guard let self, let interfaceInteraction = self.interfaceInteraction, let chatController = interfaceInteraction.chatController() else {
-                            gesture.cancel()
-                            return
-                        }
-                        
-                        var items: [ContextMenuItem] = []
-                        
-                        let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] c, a in
-                            guard let self else {
-                                a(.default)
+                        c.dismiss(completion: { [weak self] in
+                            guard let self, let item = self.items.first(where: { $0.reaction == reaction }) else {
                                 return
                             }
-                            
-                            c.dismiss(completion: { [weak self] in
-                                guard let self, let item = self.items.first(where: { $0.reaction == reaction }) else {
-                                    return
-                                }
-                                self.openEditTagTitle(reaction: reaction, hasTitle: item.title != nil)
-                            })
-                        })))
-                        
-                        let controller = ContextController(presentationData: presentationData, source: .extracted(TagContextExtractedContentSource(controller: chatController, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
-                        interfaceInteraction.presentGlobalOverlayController(controller, nil)
-                    })
-                    self.itemViews[itemId] = itemView
-                    self.scrollView.addSubview(itemView)
-                }
-                
-                var isSelected = false
-                if let historyFilter = params.interfaceState.historyFilter {
-                    if historyFilter.customTag == ReactionsMessageAttribute.messageTag(reaction: item.reaction) {
-                        isSelected = true
-                    }
-                }
-                let itemSize = itemView.update(item: item, isSelected: isSelected, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
-                let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
-                
-                itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
-                itemTransition.updateBounds(layer: itemView.layer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
-                
-                if animateIn && transition.isAnimated {
-                    itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                    transition.animateTransformScale(view: itemView, from: 0.001)
-                }
-                
-                contentSize.width += itemSize.width
+                            self.openEditTagTitle(reaction: reaction, hasTitle: item.title != nil)
+                        })
+                    })))
+                    
+                    let controller = ContextController(presentationData: presentationData, source: .extracted(TagContextExtractedContentSource(controller: chatController, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+                    interfaceInteraction.presentGlobalOverlayController(controller, nil)
+                })
+                self.itemViews[itemId] = itemView
+                self.scrollView.addSubview(itemView)
             }
+                
+            var isSelected = false
+            if let historyFilter = params.interfaceState.historyFilter {
+                if historyFilter.customTag == ReactionsMessageAttribute.messageTag(reaction: item.reaction) {
+                    isSelected = true
+                }
+            }
+            let itemSize = itemView.update(item: item, isSelected: isSelected, isLocked: !params.interfaceState.isPremium, theme: params.interfaceState.theme, height: panelHeight, transition: .immediate)
+            let itemFrame = CGRect(origin: CGPoint(x: contentSize.width, y: -5.0), size: itemSize)
+            
+            itemTransition.updatePosition(layer: itemView.layer, position: itemFrame.center)
+            itemTransition.updateBounds(layer: itemView.layer, bounds: CGRect(origin: CGPoint(), size: itemFrame.size))
+            
+            if animateIn && transition.isAnimated {
+                itemView.layer.animateAlpha(from: 0.0, to: itemView.alpha, duration: 0.15)
+                transition.animateTransformScale(view: itemView, from: 0.001)
+            }
+            
+            contentSize.width += itemSize.width
         }
         var removedIds: [MessageReaction.Reaction] = []
         for (id, itemView) in self.itemViews {
