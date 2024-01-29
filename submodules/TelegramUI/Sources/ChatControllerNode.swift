@@ -2789,6 +2789,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
                 showNavigateButtons = false
             }
+            if chatPresentationInterfaceState.displayHistoryFilterAsList {
+                showNavigateButtons = false
+            }
             transition.updateAlpha(node: self.navigateButtons, alpha: showNavigateButtons ? 1.0 : 0.0)
             
             if let openStickersDisposable = self.openStickersDisposable {

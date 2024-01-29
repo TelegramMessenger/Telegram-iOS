@@ -166,10 +166,27 @@ public final class ChatInlineSearchResultsListComponent: Component {
         
         public func animateIn() {
             self.listNode.layer.animateSublayerScale(from: 0.95, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            if let blurFilter = makeBlurFilter() {
+                blurFilter.setValue(0.0 as NSNumber, forKey: "inputRadius")
+                self.listNode.layer.filters = [blurFilter]
+                self.listNode.layer.animate(from: 30.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, removeOnCompletion: false, completion: { [weak self] completed in
+                    guard let self, completed else {
+                        return
+                    }
+                    self.listNode.layer.filters = []
+                })
+            }
         }
         
         public func animateOut() {
             self.listNode.layer.animateSublayerScale(from: 1.0, to: 0.95, duration: 0.3, removeOnCompletion: false)
+            
+            if let blurFilter = makeBlurFilter() {
+                blurFilter.setValue(30.0 as NSNumber, forKey: "inputRadius")
+                self.listNode.layer.filters = [blurFilter]
+                self.listNode.layer.animate(from: 0.0 as NSNumber, to: 30.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, removeOnCompletion: false)
+            }
         }
         
         func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
