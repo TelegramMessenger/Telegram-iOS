@@ -474,7 +474,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                             guard let navigationController = navigationController?() else {
                                 return
                             }
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), forceOpenChat: true))
                         })
                     }
                     return false
@@ -690,7 +690,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                                         guard let navigationController = navigationController?() else {
                                             return
                                         }
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), forceOpenChat: true))
                                     })
                                 }
                                 return false

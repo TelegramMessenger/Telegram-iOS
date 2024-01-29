@@ -1108,7 +1108,7 @@ final class StoryItemSetContainerSendMessage {
                                         guard let navigationController = controller.navigationController as? NavigationController else {
                                             return
                                         }
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), forceOpenChat: true))
                                     })
                                 }
                                 return false

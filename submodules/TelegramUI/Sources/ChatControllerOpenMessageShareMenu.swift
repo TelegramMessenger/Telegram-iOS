@@ -65,7 +65,23 @@ func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl
                         isBuiltinReaction = true
                     }
                     let presentationData = chatController.context.sharedContext.currentPresentationData.with { $0 }
-                    chatController.present(UndoOverlayController(presentationData: presentationData, content: .messageTagged(context: chatController.context, customEmoji: file, isBuiltinReaction: isBuiltinReaction), elevatedLayout: false, position: .top, animateInAsReplacement: true, action: { _ in
+                    chatController.present(UndoOverlayController(presentationData: presentationData, content: .messageTagged(context: chatController.context, customEmoji: file, isBuiltinReaction: isBuiltinReaction, customUndoText: presentationData.strings.Chat_ToastMessageTagged_Action), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak chatController] action in
+                        if (action == .info || action == .undo), let chatController {
+                            let _ = (chatController.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: chatController.context.account.peerId))
+                            |> deliverOnMainQueue).start(next: { [weak chatController] peer in
+                                guard let chatController else {
+                                    return
+                                }
+                                guard let peer else {
+                                    return
+                                }
+                                guard let navigationController = chatController.navigationController as? NavigationController else {
+                                    return
+                                }
+                                chatController.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: chatController.context, chatLocation: .peer(peer), forceOpenChat: true))
+                            })
+                            return false
+                        }
                         return false
                     }), in: .current)
                 }
@@ -206,7 +222,7 @@ extension ChatControllerImpl {
                                 guard let navigationController = self.navigationController as? NavigationController else {
                                     return
                                 }
-                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
                             })
                         }
                         return false

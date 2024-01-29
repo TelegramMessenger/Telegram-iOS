@@ -1431,7 +1431,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             guard let navigationController = self.navigationController else {
                                 return
                             }
-                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
                         })
                     }
                     return false

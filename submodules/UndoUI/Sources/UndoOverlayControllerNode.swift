@@ -1159,7 +1159,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-            case let .messageTagged(context, customEmoji, isBuiltinReaction):
+            case let .messageTagged(context, customEmoji, isBuiltinReaction, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -1192,6 +1192,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                    isUserInteractionEnabled = true
+                } else {
+                    displayUndo = false
+                }
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
