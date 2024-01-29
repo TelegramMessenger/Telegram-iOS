@@ -11314,8 +11314,17 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 
                 context.engine.peers.updateSavedMessagesViewAsTopics(value: true)
                 
-                if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                    navigationController.replaceController(sourceController, with: infoController, animated: false)
+                if let infoController = navigationController.viewControllers.first(where: { c in
+                    if let c = c as? PeerInfoScreenImpl, case .peer(context.account.peerId) = c.chatLocation {
+                        return true
+                    }
+                    return false
+                }) {
+                    let _ = navigationController.popToViewController(infoController, animated: false)
+                } else {
+                    if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                        navigationController.replaceController(sourceController, with: infoController, animated: false)
+                    }
                 }
             })))
             items.append(.action(ContextMenuActionItem(text: strings.Chat_ContextViewAsMessages, icon: { theme in
@@ -11330,9 +11339,18 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     return
                 }
                 
-                let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default))
-                
-                navigationController.replaceController(sourceController, with: chatController, animated: false)
+                if let chatController = navigationController.viewControllers.first(where: { c in
+                    if let c = c as? ChatController, case .peer(context.account.peerId) = c.chatLocation {
+                        return true
+                    }
+                    return false
+                }) {
+                    let _ = navigationController.popToViewController(chatController, animated: false)
+                } else {
+                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                    
+                    navigationController.replaceController(sourceController, with: chatController, animated: false)
+                }
                 
                 context.engine.peers.updateSavedMessagesViewAsTopics(value: false)
             })))
