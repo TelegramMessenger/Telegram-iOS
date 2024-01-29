@@ -110,7 +110,7 @@ private extension MessageHistoryInput {
                         assert(Set(items.map({ $0.stableId })).count == items.count)
                         
                         if items.count > limit {
-                            let overLimit = limit - items.count
+                            let overLimit = items.count - limit
                             switch direction {
                             case .lowToHigh:
                                 items.removeFirst(overLimit)

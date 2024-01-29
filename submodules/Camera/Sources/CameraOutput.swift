@@ -95,7 +95,9 @@ final class CameraOutput: NSObject {
     private var roundVideoFilter: CameraRoundVideoFilter?
     private let semaphore = DispatchSemaphore(value: 1)
     
-    private let queue = DispatchQueue(label: "")
+    private let videoQueue = DispatchQueue(label: "", qos: .userInitiated)
+    private let audioQueue = DispatchQueue(label: "")
+    
     private let metadataQueue = DispatchQueue(label: "")
     
     private var photoCaptureRequests: [Int64: PhotoCaptureContext] = [:]
@@ -114,7 +116,7 @@ final class CameraOutput: NSObject {
         self.isVideoMessage = use32BGRA
         
         super.init()
-
+        
         if #available(iOS 13.0, *) {
             self.photoOutput.maxPhotoQualityPrioritization = .balanced
         }
@@ -135,13 +137,13 @@ final class CameraOutput: NSObject {
             } else {
                 session.session.addOutput(self.videoOutput)
             }
-            self.videoOutput.setSampleBufferDelegate(self, queue: self.queue)
+            self.videoOutput.setSampleBufferDelegate(self, queue: self.videoQueue)
         } else {
             Logger.shared.log("Camera", "Can't add video output")
         }
         if audio, session.session.canAddOutput(self.audioOutput) {
             session.session.addOutput(self.audioOutput)
-            self.audioOutput.setSampleBufferDelegate(self, queue: self.queue)
+            self.audioOutput.setSampleBufferDelegate(self, queue: self.audioQueue)
         }
         if photo, session.session.canAddOutput(self.photoOutput) {
             if session.hasMultiCam {
@@ -305,6 +307,8 @@ final class CameraOutput: NSObject {
             return .complete()
         }
         
+        Logger.shared.log("CameraOutput", "startRecording")
+        
         self.currentMode = mode
         self.lastSampleTimestamp = nil
         self.captureOrientation = orientation
@@ -449,18 +453,19 @@ final class CameraOutput: NSObject {
                             transitionFactor = 1.0 - max(0.0, (currentTimestamp - self.lastSwitchTimestamp) / duration)
                         }
                     }
-                    if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
-                        let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
-                        if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
-                            
-                        } else {
-                            if (transitionFactor == 1.0 && fromAdditionalOutput) || (transitionFactor == 0.0 && !fromAdditionalOutput) || (transitionFactor > 0.0 && transitionFactor < 1.0) {
+                    
+                    if (transitionFactor == 1.0 && fromAdditionalOutput)
+                        || (transitionFactor == 0.0 && !fromAdditionalOutput)
+                        || (transitionFactor > 0.0 && transitionFactor < 1.0) {                        
+                        if let processedSampleBuffer = self.processRoundVideoSampleBuffer(sampleBuffer, additional: fromAdditionalOutput, transitionFactor: transitionFactor) {
+                            let presentationTime = CMSampleBufferGetPresentationTimeStamp(processedSampleBuffer)
+                            if let lastSampleTimestamp = self.lastSampleTimestamp, lastSampleTimestamp > presentationTime {
+                                
+                            } else {
                                 videoRecorder.appendSampleBuffer(processedSampleBuffer)
                                 self.lastSampleTimestamp = presentationTime
                             }
                         }
-                    } else {
-                        videoRecorder.appendSampleBuffer(sampleBuffer)
                     }
                 } else {
                     var additional = self.currentPosition == .front
@@ -518,7 +523,7 @@ final class CameraOutput: NSObject {
             return nil
         }
         self.semaphore.wait()
-        
+                
         let mediaSubType = CMFormatDescriptionGetMediaSubType(formatDescription)
         let extensions = CMFormatDescriptionGetExtensions(formatDescription) as! [String: Any]
         
@@ -528,6 +533,7 @@ final class CameraOutput: NSObject {
         var newFormatDescription: CMFormatDescription?
         var status = CMVideoFormatDescriptionCreate(allocator: nil, codecType: mediaSubType, width: videoMessageDimensions.width, height: videoMessageDimensions.height, extensions: updatedExtensions as CFDictionary, formatDescriptionOut: &newFormatDescription)
         guard status == noErr, let newFormatDescription else {
+            self.semaphore.signal()
             return nil
         }
         
@@ -539,8 +545,9 @@ final class CameraOutput: NSObject {
             self.roundVideoFilter = filter
         }
         if !filter.isPrepared {
-            filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 3)
+            filter.prepare(with: newFormatDescription, outputRetainedBufferCountHint: 4)
         }
+
         guard let newPixelBuffer = filter.render(pixelBuffer: videoPixelBuffer, additional: additional, captureOrientation: self.captureOrientation, transitionFactor: transitionFactor) else {
             self.semaphore.signal()
             return nil
@@ -592,7 +599,7 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
         guard CMSampleBufferDataIsReady(sampleBuffer) else {
             return
         }
-        
+                
         if let videoPixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
             self.processSampleBuffer?(sampleBuffer, videoPixelBuffer, connection)
         } else {
@@ -607,7 +614,9 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
     }
     
     func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        
+        if #available(iOS 13.0, *) {
+            Logger.shared.log("VideoRecorder", "Dropped sample buffer \(sampleBuffer.attachments)")
+        }
     }
 }
 

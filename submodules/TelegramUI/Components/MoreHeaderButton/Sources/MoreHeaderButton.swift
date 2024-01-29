@@ -52,10 +52,10 @@ public final class MoreHeaderButton: HighlightableButtonNode {
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
 
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 30.0, height: 44.0))
         self.referenceNode.frame = self.containerNode.bounds
 
-        self.iconNode.image = MoreHeaderButton.optionsCircleImage(color: color)
+        //self.iconNode.image = MoreHeaderButton.optionsCircleImage(color: color)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
         }
@@ -72,11 +72,13 @@ public final class MoreHeaderButton: HighlightableButtonNode {
     private var content: Content?
     public func setContent(_ content: Content, animated: Bool = false) {
         if case .more = content {
-            let animationSize = CGSize(width: 22.0, height: 22.0)
+            let animationSize = CGSize(width: 30.0, height: 30.0)
             let _ = self.animationView.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "anim_profilemore"),
+                    content: LottieComponent.AppBundleContent(
+                        name: "anim_moredots"
+                    ),
                     color: self.color
                 )),
                 environment: {},
@@ -119,13 +121,13 @@ public final class MoreHeaderButton: HighlightableButtonNode {
                     if let animationComponentView = self.animationView.view {
                         animationComponentView.isHidden = true
                     }
-                case let .more(image):
-                    if let image = image {
+                case .more:
+                    /*if let image = image {
                         self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
                     }
 
                     self.iconNode.image = image
-                    self.iconNode.isHidden = false
+                    self.iconNode.isHidden = false*/
                     if let animationComponentView = self.animationView.view {
                         animationComponentView.isHidden = false
                     }
@@ -143,13 +145,13 @@ public final class MoreHeaderButton: HighlightableButtonNode {
                     if let animationComponentView = self.animationView.view {
                         animationComponentView.isHidden = true
                     }
-                case let .more(image):
-                    if let image = image {
+                case .more:
+                    /*if let image = image {
                         self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
                     }
 
                     self.iconNode.image = image
-                    self.iconNode.isHidden = false
+                    self.iconNode.isHidden = false*/
                     if let animationComponentView = self.animationView.view {
                         animationComponentView.isHidden = false
                     }

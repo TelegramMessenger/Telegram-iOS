@@ -33,12 +33,13 @@ final class StoryItemContentComponent: Component {
     let availableReactions: StoryAvailableReactions?
     let entityFiles: [MediaId: TelegramMediaFile]
     let audioMode: StoryContentItem.AudioMode
+    let baseRate: Double
     let isVideoBuffering: Bool
     let isCurrent: Bool
     let preferHighQuality: Bool
     let activateReaction: (UIView, MessageReaction.Reaction) -> Void
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, entityFiles: [MediaId: TelegramMediaFile], audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, preferHighQuality: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, entityFiles: [MediaId: TelegramMediaFile], audioMode: StoryContentItem.AudioMode, baseRate: Double, isVideoBuffering: Bool, isCurrent: Bool, preferHighQuality: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
 		self.context = context
         self.strings = strings
         self.peer = peer
@@ -46,6 +47,7 @@ final class StoryItemContentComponent: Component {
         self.entityFiles = entityFiles
         self.availableReactions = availableReactions
         self.audioMode = audioMode
+        self.baseRate = baseRate
         self.isVideoBuffering = isVideoBuffering
         self.isCurrent = isCurrent
         self.preferHighQuality = preferHighQuality
@@ -69,6 +71,9 @@ final class StoryItemContentComponent: Component {
             return false
         }
         if lhs.entityFiles.keys != rhs.entityFiles.keys {
+            return false
+        }
+        if lhs.baseRate != rhs.baseRate {
             return false
         }
         if lhs.isVideoBuffering != rhs.isVideoBuffering {
@@ -117,7 +122,7 @@ final class StoryItemContentComponent: Component {
         override var videoPlaybackPosition: Double? {
             return self.videoPlaybackStatus?.timestamp
         }
-        
+
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
         
         private var fetchPriorityResourceId: String?
@@ -226,6 +231,7 @@ final class StoryItemContentComponent: Component {
                         priority: .gallery
                     )
                     videoNode.isHidden = true
+                    videoNode.setBaseRate(component.baseRate)
                     
                     self.videoNode = videoNode
                     self.insertSubview(videoNode.view, aboveSubview: self.imageView)
@@ -327,6 +333,12 @@ final class StoryItemContentComponent: Component {
                 } else {
                     videoNode.setSoundMuted(soundMuted: true)
                 }
+            }
+        }
+        
+        override func setBaseRate(_ baseRate: Double) {
+            if let videoNode = self.videoNode {
+                videoNode.setBaseRate(baseRate)
             }
         }
         

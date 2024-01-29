@@ -856,13 +856,13 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             self.standaloneReactionAnimation = standaloneReactionAnimation
         }
         
-        func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, itemNode: ListViewItemNode?) {
+        func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, itemNode: ListViewItemNode?, isRotated: Bool) {
             guard let currentItemNode = self.itemNode else {
                 return
             }
             if itemNode == nil || itemNode === currentItemNode {
                 if let contextController = self.contextController {
-                    contextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                    contextController.addRelativeContentOffset(CGPoint(x: 0.0, y: offset), transition: transition)
                 }
                 if let standaloneReactionAnimation = self.standaloneReactionAnimation {
                     standaloneReactionAnimation.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
@@ -1084,7 +1084,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
         }
     }
 
-    func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, itemNode: ListViewItemNode?) {
+    func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, itemNode: ListViewItemNode?, isRotated: Bool) {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
@@ -1094,7 +1094,7 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
             }
         }
         for messageReactionContext in self.messageReactionContexts {
-            messageReactionContext.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+            messageReactionContext.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: isRotated)
         }
     }
 

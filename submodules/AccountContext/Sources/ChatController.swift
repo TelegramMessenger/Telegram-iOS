@@ -912,6 +912,24 @@ public extension Peer {
     }
 }
 
+public struct ChatControllerCustomNavigationPanelNodeLayoutResult {
+    public var backgroundHeight: CGFloat
+    public var insetHeight: CGFloat
+    public var hitTestSlop: CGFloat
+    
+    public init(backgroundHeight: CGFloat, insetHeight: CGFloat, hitTestSlop: CGFloat) {
+        self.backgroundHeight = backgroundHeight
+        self.insetHeight = insetHeight
+        self.hitTestSlop = hitTestSlop
+    }
+}
+
+public protocol ChatControllerCustomNavigationPanelNode: ASDisplayNode {
+    typealias LayoutResult = ChatControllerCustomNavigationPanelNodeLayoutResult
+    
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, chatController: ChatController) -> LayoutResult
+}
+
 public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
@@ -919,8 +937,15 @@ public protocol ChatController: ViewController {
     
     var purposefulAction: (() -> Void)? { get set }
     
+    var stateUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
+    
     var selectedMessageIds: Set<EngineMessage.Id>? { get }
     var presentationInterfaceStateSignal: Signal<Any, NoError> { get }
+    
+    var customNavigationBarContentNode: NavigationBarContentNode? { get }
+    var customNavigationPanelNode: ChatControllerCustomNavigationPanelNode? { get }
+    
+    var visibleContextController: ViewController? { get }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)

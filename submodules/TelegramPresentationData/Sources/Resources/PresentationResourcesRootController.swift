@@ -74,9 +74,21 @@ public struct PresentationResourcesRootController {
         })
     }
     
+    public static func navigationCompactSearchWhiteIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationCompactSearchWhiteIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/SearchIcon"), color: .white)
+        })
+    }
+    
     public static func navigationCompactTagsSearchIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationCompactTagsSearchIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigationSearchTagsIcon"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
+    
+    public static func navigationCompactTagsSearchWhiteIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationCompactTagsSearchWhiteIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigationSearchTagsIcon"), color: .white)
         })
     }
 

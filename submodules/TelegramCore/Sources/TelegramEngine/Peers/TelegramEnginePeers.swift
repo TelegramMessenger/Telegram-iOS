@@ -1346,6 +1346,14 @@ public extension TelegramEngine {
                 |> distinctUntilChanged
             }
         }
+        
+        public func updateSavedMessagesViewAsTopics(value: Bool) {
+            let _ = (self.account.postbox.transaction { transaction -> Void in
+                transaction.updatePreferencesEntry(key: PreferencesKeys.displaySavedChatsAsTopics(), { _ in
+                    return PreferencesEntry(EngineDisplaySavedChatsAsTopics(value: value))
+                })
+            }).start()
+        }
     }
 }
 

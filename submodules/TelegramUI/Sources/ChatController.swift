@@ -122,6 +122,7 @@ import WallpaperGalleryScreen
 import WallpaperGridScreen
 import VideoMessageCameraScreen
 import TopMessageReactions
+import PeerInfoScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -267,6 +268,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var chatTitleView: ChatTitleView?
     var leftNavigationButton: ChatNavigationButton?
     var rightNavigationButton: ChatNavigationButton?
+    var secondaryRightNavigationButton: ChatNavigationButton?
     var chatInfoNavigationButton: ChatNavigationButton?
     
     var moreBarButton: MoreHeaderButton
@@ -452,6 +454,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var slowmodeTooltipController: ChatSlowmodeHintController?
     
     weak var currentContextController: ContextController?
+    public var visibleContextController: ViewController? {
+        return self.currentContextController
+    }
     
     weak var sendMessageActionsController: ChatSendMessageActionSheetController?
     var searchResultsController: ChatSearchResultsController?
@@ -506,6 +511,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var currentWebAppController: ViewController?
     
     weak var currentImportMessageTooltip: UndoOverlayController?
+    
+    public var customNavigationBarContentNode: NavigationBarContentNode?
+    public var customNavigationPanelNode: ChatControllerCustomNavigationPanelNode?
+    public var stateUpdated: ((ContainedViewLayoutTransition) -> Void)?
 
     public override var customData: Any? {
         return self.chatLocation
@@ -4721,13 +4730,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.moreBarButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: self.presentationData.theme.rootController.navigationBar.buttonColor)))
         self.moreInfoNavigationButton = ChatNavigationButton(action: .toggleInfoPanel, buttonItem: UIBarButtonItem(customDisplayNode: self.moreBarButton)!)
         self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
-            guard let self = self else {
+            guard let self else {
                 return
             }
             guard case let .peer(peerId) = self.chatLocation else {
                 return
             }
-            ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: false, sourceView: sourceNode.view, gesture: gesture)
+            
+            if peerId == self.context.account.peerId {
+                PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: self.context, sourceController: self, isViewingAsTopics: false, sourceView: sourceNode.view, gesture: gesture)
+            } else {
+                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: false, sourceView: sourceNode.view, gesture: gesture)
+            }
         }
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         
@@ -7064,7 +7078,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if isTracking {
                 strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
             }
-            strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+            strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode, isRotated: strongSelf.chatDisplayNode.historyNode.rotated)
             
         }
         
@@ -12080,6 +12094,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 self.navigationButtonAction(button.action)
             }
+        }
+    }
+    
+    @objc func secondaryRightNavigationButtonAction() {
+        if let button = self.secondaryRightNavigationButton {
+            self.navigationButtonAction(button.action)
         }
     }
     

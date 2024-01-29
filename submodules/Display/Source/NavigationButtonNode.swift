@@ -500,7 +500,7 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
         var totalHeight: CGFloat = 0.0
         for i in 0 ..< self.nodes.count {
             if i != 0 {
-                nodeOrigin.x += 10.0
+                nodeOrigin.x += 15.0
             }
 
             let node = self.nodes[i]

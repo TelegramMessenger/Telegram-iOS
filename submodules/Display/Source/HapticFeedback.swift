@@ -34,32 +34,11 @@ private final class HapticFeedbackImpl {
     }()
    
     private lazy var selectionGenerator: UISelectionFeedbackGenerator? = {
-        let generator = UISelectionFeedbackGenerator()
-        generator.prepare()
-        var string = generator.debugDescription
-        string.removeLast()
-        let number = string.suffix(1)
-        if number == "1" {
-            return generator
-        } else {
-            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                return generator
-            }
-            return nil
-        }
+        return UISelectionFeedbackGenerator()
     }()
     
     private lazy var notificationGenerator: UINotificationFeedbackGenerator? = {
-        let generator = UINotificationFeedbackGenerator()
-        generator.prepare()
-        var string = generator.debugDescription
-        string.removeLast()
-        let number = string.suffix(1)
-        if number == "1" {
-            return generator
-        } else {
-            return nil
-        }
+        return UINotificationFeedbackGenerator()
     }()
     
     func prepareTap() {

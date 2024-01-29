@@ -102,6 +102,7 @@ import PeerInfoPaneNode
 import MediaPickerUI
 import AttachmentUI
 import BoostLevelIconComponent
+import PeerInfoChatPaneNode
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -3145,6 +3146,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
         
+        self.paneContainerNode.requestUpdate = { [weak self] transition in
+            guard let self else {
+                return
+            }
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: false)
+            }
+        }
+        
         self.paneContainerNode.ensurePaneRectVisible = { [weak self] sourceView, rect in
             guard let self else {
                 return
@@ -3748,12 +3758,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
                 strongSelf.chatInterfaceInteraction.selectionState = strongSelf.state.selectedMessageIds.flatMap { ChatInterfaceSelectionState(selectedIds: $0) }
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
-            case .search:
-                strongSelf.headerNode.navigationButtonContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            case .search, .searchWithTags, .standaloneSearch:
                 strongSelf.activateSearch()
             case .more:
-                if let source = source {
-                    strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
+                if let currentPaneKey = strongSelf.paneContainerNode.currentPaneKey, case .savedMessagesChats = currentPaneKey {
+                    if let controller = strongSelf.controller, let source {
+                        PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: strongSelf.context, sourceController: controller, isViewingAsTopics: true, sourceView: source.view, gesture: gesture)
+                    }
+                } else {
+                    if let source = source {
+                        strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
+                    }
                 }
             case .qrCode:
                 strongSelf.openQrCode()
@@ -9269,6 +9284,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         
+        if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessages = currentPaneKey, let paneNode = self.paneContainerNode.currentPane?.node as? PeerInfoChatPaneNode {
+            paneNode.activateSearch()
+            return
+        }
+        
+        self.headerNode.navigationButtonContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+        
         if self.isSettings {
             (self.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.3, curve: .linear))
             
@@ -9803,8 +9825,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
+    private func updateNavigationHeight(width: CGFloat, defaultHeight: CGFloat, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) -> CGFloat {
+        var navigationHeight = defaultHeight
+        if let customNavigationContentNode = self.headerNode.customNavigationContentNode {
+            var mappedTransition = transition
+            if customNavigationContentNode.supernode == nil {
+                mappedTransition = .immediate
+            }
+            let contentHeight = customNavigationContentNode.update(width: width, defaultHeight: defaultHeight, insets: insets, transition: mappedTransition)
+            navigationHeight = contentHeight
+        }
+        return navigationHeight
+    }
+    
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
         self.validLayout = (layout, navigationHeight)
+        
+        self.headerNode.customNavigationContentNode = self.paneContainerNode.currentPane?.node.navigationContentNode
+        
+        let isScrollEnabled = !self.isMediaOnly && self.headerNode.customNavigationContentNode == nil
+        if self.scrollNode.view.isScrollEnabled != isScrollEnabled {
+            self.scrollNode.view.isScrollEnabled = isScrollEnabled
+        }
+        
+        let navigationHeight = self.updateNavigationHeight(width: layout.size.width, defaultHeight: navigationHeight, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), transition: transition)
         
         if self.headerNode.isAvatarExpanded && layout.size.width > layout.size.height {
             self.headerNode.updateIsAvatarExpanded(false, transition: transition)
@@ -10139,7 +10183,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
                 
         self.ignoreScrolling = false
-        self.updateNavigation(transition: transition, additive: additive, animateHeader: true)
+        self.updateNavigation(transition: transition, additive: additive, animateHeader: self.controller?.didAppear ?? false)
         
         if !self.didSetReady && self.data != nil {
             self.didSetReady = true
@@ -10188,6 +10232,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
                 
         if let (layout, navigationHeight) = self.validLayout {
+            let navigationHeight = self.updateNavigationHeight(width: layout.size.width, defaultHeight: navigationHeight, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), transition: transition)
+            
             if !additive {
                 let sectionInset: CGFloat
                 if layout.size.width >= 375.0 {
@@ -10222,7 +10268,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
                         
             let navigationBarHeight: CGFloat = !self.isSettings && layout.isModalOverlay ? 56.0 : 44.0
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, deviceMetrics: layout.deviceMetrics, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, areTabsHidden: self.headerNode.customNavigationContentNode != nil, navigationHeight: navigationHeight, transition: transition)
           
             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
             
@@ -10247,8 +10293,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if self.state.selectedMessageIds == nil {
                     if let currentPaneKey = self.paneContainerNode.currentPaneKey {
                         switch currentPaneKey {
-                        case .files, .music, .links, .members, .savedMessagesChats:
+                        case .files, .music, .links, .members:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
+                        case .savedMessagesChats:
+                            if let data = self.data, data.hasSavedMessageTags {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .searchWithTags, isForExpandedView: true))
+                            } else {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .standaloneSearch, isForExpandedView: true))
+                            }
+                            rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
+                        case .savedMessages:
+                            if let data = self.data, data.hasSavedMessageTags {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .searchWithTags, isForExpandedView: true))
+                            } else {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
+                            }
                         case .media:
                             rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
                         default:
@@ -10272,7 +10331,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .back, isForExpandedView: false))
                 }
             }
-            self.headerNode.navigationButtonContainer.update(size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight), presentationData: self.presentationData, leftButtons: leftNavigationButtons, rightButtons: rightNavigationButtons, expandFraction: effectiveAreaExpansionFraction, transition: transition)
+            self.headerNode.navigationButtonContainer.update(size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight), presentationData: self.presentationData, leftButtons: leftNavigationButtons, rightButtons: rightNavigationButtons, expandFraction: effectiveAreaExpansionFraction, shouldAnimateIn: animateHeader, transition: transition)
         }
     }
     
@@ -10575,6 +10634,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             }
         }
     }
+    
+    var didAppear: Bool = false
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
@@ -11099,6 +11160,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        DispatchQueue.main.async { [weak self] in
+            self?.didAppear = true
+        }
+        
         var chatNavigationStack: [ChatNavigationStackItem] = []
         if !self.isSettings, let summary = self.customNavigationDataSummary as? ChatControllerNavigationDataSummary {
             chatNavigationStack.removeAll()
@@ -11219,6 +11284,61 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 )
             ]
         }
+    }
+    
+    public static func openSavedMessagesMoreMenu(context: AccountContext, sourceController: ViewController, isViewingAsTopics: Bool, sourceView: UIView, gesture: ContextGesture?) {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).startStandalone(next: { peer in
+            guard let peer else {
+                return
+            }
+            
+            let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+            
+            var items: [ContextMenuItem] = []
+            
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "View as Chats", icon: { theme in
+                if !isViewingAsTopics {
+                    return nil
+                }
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak sourceController] _, a in
+                a(.default)
+                
+                guard let sourceController = sourceController, let navigationController = sourceController.navigationController as? NavigationController else {
+                    return
+                }
+                
+                context.engine.peers.updateSavedMessagesViewAsTopics(value: true)
+                
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                    navigationController.replaceController(sourceController, with: infoController, animated: false)
+                }
+            })))
+            items.append(.action(ContextMenuActionItem(text: strings.Chat_ContextViewAsMessages, icon: { theme in
+                if isViewingAsTopics {
+                    return nil
+                }
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+            }, iconPosition: .left, action: { [weak sourceController] _, a in
+                a(.default)
+                
+                guard let sourceController = sourceController, let navigationController = sourceController.navigationController as? NavigationController else {
+                    return
+                }
+                
+                let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: context.account.peerId), subject: nil, botStart: nil, mode: .standard(.default))
+                
+                navigationController.replaceController(sourceController, with: chatController, animated: false)
+                
+                context.engine.peers.updateSavedMessagesViewAsTopics(value: false)
+            })))
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            sourceController.presentInGlobalOverlay(contextController)
+        })
     }
 }
 
@@ -12384,5 +12504,19 @@ private final class PeerInfoControllerContextReferenceContentSource: ContextRefe
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets)
+    }
+}
+
+private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceView: UIView
+
+    init(controller: ViewController, sourceView: UIView) {
+        self.controller = controller
+        self.sourceView = sourceView
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

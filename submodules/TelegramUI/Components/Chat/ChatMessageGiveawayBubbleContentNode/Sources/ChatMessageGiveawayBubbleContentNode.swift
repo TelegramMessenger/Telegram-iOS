@@ -537,7 +537,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
                 
                 let animationName: String
                 let months = giveaway?.months ?? 0

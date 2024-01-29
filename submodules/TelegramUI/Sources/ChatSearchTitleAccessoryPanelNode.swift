@@ -25,7 +25,7 @@ private let backgroundTagImage: UIImage? = {
     }
 }()
 
-final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UIScrollViewDelegate {
+final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, ChatControllerCustomNavigationPanelNode, UIScrollViewDelegate {
     private struct Params: Equatable {
         var width: CGFloat
         var leftInset: CGFloat
@@ -549,6 +549,10 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, UISc
         let panelHeight: CGFloat = 39.0
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight, hitTestSlop: 0.0)
+    }
+    
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, chatController: ChatController) -> LayoutResult {
+        return self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, transition: transition, interfaceState: (chatController as! ChatControllerImpl).presentationInterfaceState)
     }
     
     private func update(params: Params, transition: ContainedViewLayoutTransition) {

@@ -150,7 +150,6 @@ final class ManagedAudioRecorderContext {
     private let beganWithTone: (Bool) -> Void
     
     private var paused = true
-    private var manuallyPaused = false
     
     private let queue: Queue
     private let mediaManager: MediaManager
@@ -414,11 +413,9 @@ final class ManagedAudioRecorderContext {
                 return Signal { subscriber in
                     queue.async {
                         if let strongSelf = self {
-                            if !strongSelf.manuallyPaused {
-                                strongSelf.hasAudioSession = false
-                                strongSelf.stop()
-                                strongSelf.recordingState.set(.stopped)
-                            }
+                            strongSelf.hasAudioSession = false
+                            strongSelf.stop()
+                            strongSelf.recordingState.set(.stopped)
                             subscriber.putCompletion()
                         }
                     }
@@ -453,17 +450,13 @@ final class ManagedAudioRecorderContext {
     func pause() {
         assert(self.queue.isCurrent())
         
-        self.manuallyPaused = true
+        self.stop()
     }
     
     func resume() {
         assert(self.queue.isCurrent())
         
-        if self.manuallyPaused {
-            self.manuallyPaused = false
-        } else if self.paused {
-            self.start()
-        }
+        self.start()
     }
     
     func stop() {
@@ -507,7 +500,7 @@ final class ManagedAudioRecorderContext {
             free(buffer.mData)
         }
         
-        if !self.processSamples || self.manuallyPaused {
+        if !self.processSamples {
             return
         }
         
