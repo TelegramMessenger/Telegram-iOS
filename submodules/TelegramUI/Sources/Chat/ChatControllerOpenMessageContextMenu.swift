@@ -16,6 +16,7 @@ import TextNodeWithEntities
 import PremiumUI
 import TooltipUI
 import TopMessageReactions
+import TelegramNotices
 
 extension ChatControllerImpl {
     func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, anyRecognizer: UIGestureRecognizer?, location: CGPoint?) -> Void {
@@ -396,13 +397,31 @@ extension ChatControllerImpl {
                                                 standaloneReactionAnimation.frame = self.chatDisplayNode.bounds
                                                 self.chatDisplayNode.addSubnode(standaloneReactionAnimation)
                                             }, completion: { [weak self, weak itemNode, weak targetView] in
-                                                guard let self, let itemNode = itemNode, let targetView = targetView else {
+                                                guard let self, let itemNode, let targetView else {
                                                     return
                                                 }
                                                 
-                                                let _ = self
-                                                let _ = itemNode
-                                                let _ = targetView
+                                                let _ = (ApplicationSpecificNotice.getSavedMessageTagLabelSuggestion(accountManager: self.context.sharedContext.accountManager)
+                                                |> take(1)
+                                                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak targetView, weak itemNode] value in
+                                                    guard let self, let targetView, let itemNode else {
+                                                        return
+                                                    }
+                                                    if value >= 3 {
+                                                        return
+                                                    }
+                                                    
+                                                    let _ = itemNode
+                                                    
+                                                    //TODO:localize
+                                                    let rect = self.chatDisplayNode.view.convert(targetView.bounds, from: targetView).insetBy(dx: -8.0, dy: -8.0)
+                                                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap and hold to add a name to your tag"), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { point, _ in
+                                                        return .ignore
+                                                    })
+                                                    self.present(tooltipScreen, in: .current)
+                                                    
+                                                    let _ = ApplicationSpecificNotice.incrementSavedMessageTagLabelSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
+                                                })
                                             })
                                         } else {
                                             controller.dismiss()

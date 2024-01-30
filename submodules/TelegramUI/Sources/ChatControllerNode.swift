@@ -1901,6 +1901,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let current = listInsets
             listInsets.top = current.bottom
             listInsets.bottom = current.top
+            listInsets.top += 8.0
         }
         
         var displayTopDimNode = false
