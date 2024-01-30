@@ -415,8 +415,8 @@ extension ChatControllerImpl {
                                                     
                                                     //TODO:localize
                                                     let rect = self.chatDisplayNode.view.convert(targetView.bounds, from: targetView).insetBy(dx: -8.0, dy: -8.0)
-                                                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap and hold to add a name to your tag"), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { point, _ in
-                                                        return .ignore
+                                                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap and hold to add a name to your tag"), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _, _ in
+                                                        return .dismiss(consume: false)
                                                     })
                                                     self.present(tooltipScreen, in: .current)
                                                     
