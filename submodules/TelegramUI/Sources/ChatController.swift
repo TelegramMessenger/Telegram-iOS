@@ -16649,72 +16649,133 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func presentDeleteMessageOptions(messageIds: Set<MessageId>, options: ChatAvailableMessageActionOptions, contextController: ContextControllerProtocol?, completion: @escaping (ContextMenuActionResult) -> Void) {
-        let actionSheet = ActionSheetController(presentationData: self.presentationData)
-        var items: [ActionSheetItem] = []
-        var personalPeerName: String?
-        var isChannel = false
-        if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-            personalPeerName = EnginePeer(user).compactDisplayTitle
-        } else if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let associatedPeerId = peer.associatedPeerId, let user = self.presentationInterfaceState.renderedPeer?.peers[associatedPeerId] as? TelegramUser {
-            personalPeerName = EnginePeer(user).compactDisplayTitle
-        } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
-            isChannel = true
-        }
-        
-        if options.contains(.cancelSending) {
-            items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ContextMenuCancelSending, color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
-                }
-            }))
-        }
-        
-        var contextItems: [ContextMenuItem] = []
-        var canDisplayContextMenu = true
-        
-        var unsendPersonalMessages = false
-        if options.contains(.unsendPersonal) {
-            canDisplayContextMenu = false
-            items.append(ActionSheetTextItem(title: self.presentationData.strings.Chat_UnsendMyMessagesAlertTitle(personalPeerName ?? "").string))
-            items.append(ActionSheetSwitchItem(title: self.presentationData.strings.Chat_UnsendMyMessages, isOn: false, action: { value in
-                unsendPersonalMessages = value
-            }))
-        } else if options.contains(.deleteGlobally) {
-            let globalTitle: String
-            if isChannel {
-                globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
-            } else if let personalPeerName = personalPeerName {
-                globalTitle = self.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
-            } else {
-                globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
+        let _ = (self.context.engine.data.get(
+            EngineDataMap(messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] messages in
+            guard let self else {
+                return
             }
-            contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, f in
-                if let strongSelf = self {
-                    var giveaway: TelegramMediaGiveaway?
-                    for messageId in messageIds {
-                        if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                            if let media = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway {
-                                giveaway = media
-                                break
-                            }
-                        }
-                    }
-                    let commit = {
+            
+            let actionSheet = ActionSheetController(presentationData: self.presentationData)
+            var items: [ActionSheetItem] = []
+            var personalPeerName: String?
+            var isChannel = false
+            if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                personalPeerName = EnginePeer(user).compactDisplayTitle
+            } else if let peer = self.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let associatedPeerId = peer.associatedPeerId, let user = self.presentationInterfaceState.renderedPeer?.peers[associatedPeerId] as? TelegramUser {
+                personalPeerName = EnginePeer(user).compactDisplayTitle
+            } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                isChannel = true
+            }
+            
+            if options.contains(.cancelSending) {
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ContextMenuCancelSending, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let strongSelf = self {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                         let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                     }
-                    if let giveaway {
-                        Queue.mainQueue().after(0.2) {
-                            let dateString = stringForDate(timestamp: giveaway.untilDate, timeZone: .current, strings: strongSelf.presentationData.strings)
-                            strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Title, text: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Text(dateString).string, actions: [TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Common_Delete, action: {
-                                commit()
-                            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                            })], parseMarkdown: true), in: .window(.root))
+                }))
+            }
+            
+            var contextItems: [ContextMenuItem] = []
+            var canDisplayContextMenu = true
+            
+            var unsendPersonalMessages = false
+            if options.contains(.unsendPersonal) {
+                canDisplayContextMenu = false
+                items.append(ActionSheetTextItem(title: self.presentationData.strings.Chat_UnsendMyMessagesAlertTitle(personalPeerName ?? "").string))
+                items.append(ActionSheetSwitchItem(title: self.presentationData.strings.Chat_UnsendMyMessages, isOn: false, action: { value in
+                    unsendPersonalMessages = value
+                }))
+            } else if options.contains(.deleteGlobally) {
+                let globalTitle: String
+                if isChannel {
+                    globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                } else if let personalPeerName = personalPeerName {
+                    globalTitle = self.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
+                } else {
+                    globalTitle = self.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                }
+                contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, f in
+                    if let strongSelf = self {
+                        var giveaway: TelegramMediaGiveaway?
+                        for messageId in messageIds {
+                            if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                                if let media = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway {
+                                    giveaway = media
+                                    break
+                                }
+                            }
                         }
-                        f(.default)
+                        let commit = {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
+                        }
+                        if let giveaway {
+                            Queue.mainQueue().after(0.2) {
+                                let dateString = stringForDate(timestamp: giveaway.untilDate, timeZone: .current, strings: strongSelf.presentationData.strings)
+                                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Title, text: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Text(dateString).string, actions: [TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Common_Delete, action: {
+                                    commit()
+                                }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                })], parseMarkdown: true), in: .window(.root))
+                            }
+                            f(.default)
+                        } else {
+                            if "".isEmpty {
+                                f(.dismissWithoutContent)
+                                commit()
+                            } else {
+                                c.dismiss(completion: {
+                                    DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                                        commit()
+                                    })
+                                })
+                            }
+                        }
+                    }
+                })))
+                items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
+                    }
+                }))
+            }
+            if options.contains(.deleteLocally) {
+                var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
+                if self.chatLocation.peerId == self.context.account.peerId {
+                    if case .peer(self.context.account.peerId) = self.chatLocation, messages.values.allSatisfy({ message in message?._asMessage().effectivelyIncoming(self.context.account.peerId) ?? false }) {
+                        localOptionText = self.presentationData.strings.Chat_ConfirmationRemoveFromSavedMessages
                     } else {
+                        localOptionText = self.presentationData.strings.Chat_ConfirmationDeleteFromSavedMessages
+                    }
+                } else if case .scheduledMessages = self.presentationInterfaceState.subject {
+                    localOptionText = messageIds.count > 1 ? self.presentationData.strings.ScheduledMessages_DeleteMany : self.presentationData.strings.ScheduledMessages_Delete
+                } else {
+                    if options.contains(.unsendPersonal) {
+                        localOptionText = self.presentationData.strings.Chat_DeleteMessagesConfirmation(Int32(messageIds.count))
+                    } else if case .peer(self.context.account.peerId) = self.chatLocation {
+                        if messageIds.count == 1 {
+                            localOptionText = self.presentationData.strings.Conversation_Moderate_Delete
+                        } else {
+                            localOptionText = self.presentationData.strings.Conversation_DeleteManyMessages
+                        }
+                    }
+                }
+                contextItems.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, f in
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                        
+                        let commit: () -> Void = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
+                        }
+                        
                         if "".isEmpty {
                             f(.dismissWithoutContent)
                             commit()
@@ -16726,85 +16787,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         }
                     }
-                }
-            })))
-            items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
-                }
-            }))
-        }
-        if options.contains(.deleteLocally) {
-            var localOptionText = self.presentationData.strings.Conversation_DeleteMessagesForMe
-            if self.chatLocation.peerId == self.context.account.peerId {
-                localOptionText = self.presentationData.strings.Chat_ConfirmationRemoveFromSavedMessages
-            } else if case .scheduledMessages = self.presentationInterfaceState.subject {
-                localOptionText = messageIds.count > 1 ? self.presentationData.strings.ScheduledMessages_DeleteMany : self.presentationData.strings.ScheduledMessages_Delete
-            } else {
-                if options.contains(.unsendPersonal) {
-                    localOptionText = self.presentationData.strings.Chat_DeleteMessagesConfirmation(Int32(messageIds.count))
-                } else if case .peer(self.context.account.peerId) = self.chatLocation {
-                    if messageIds.count == 1 {
-                        localOptionText = self.presentationData.strings.Conversation_Moderate_Delete
-                    } else {
-                        localOptionText = self.presentationData.strings.Conversation_DeleteManyMessages
-                    }
-                }
-            }
-            contextItems.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { [weak self] c, f in
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    
-                    let commit: () -> Void = {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
-                    }
-                    
-                    if "".isEmpty {
-                        f(.dismissWithoutContent)
-                        commit()
-                    } else {
-                        c.dismiss(completion: {
-                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
-                                commit()
-                            })
-                        })
-                    }
-                }
-            })))
-            items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
-                    
-                }
-            }))
-        }
-        
-        if canDisplayContextMenu, let contextController = contextController {
-            contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
-        } else {
-            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                })))
+                items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
-                })
-            ])])
-            
-            if let contextController = contextController {
-                contextController.dismiss(completion: { [weak self] in
-                    self?.present(actionSheet, in: .window(.root))
-                })
-            } else {
-                self.chatDisplayNode.dismissInput()
-                self.present(actionSheet, in: .window(.root))
-                completion(.default)
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
+                        
+                    }
+                }))
             }
-        }
+            
+            if canDisplayContextMenu, let contextController = contextController {
+                contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
+            } else {
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                
+                if let contextController = contextController {
+                    contextController.dismiss(completion: { [weak self] in
+                        self?.present(actionSheet, in: .window(.root))
+                    })
+                } else {
+                    self.chatDisplayNode.dismissInput()
+                    self.present(actionSheet, in: .window(.root))
+                    completion(.default)
+                }
+            }
+        })
     }
     
     func presentClearCacheSuggestion() {

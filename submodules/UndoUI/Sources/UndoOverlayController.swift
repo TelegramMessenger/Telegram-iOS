@@ -45,7 +45,7 @@ public enum UndoOverlayContent {
     case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String, customUndoText: String?, timeout: Double?)
     case premiumPaywall(title: String?, text: String, customUndoText: String?, timeout: Double?, linkAction: ((String) -> Void)?)
     case peers(context: AccountContext, peers: [EnginePeer], title: String?, text: String, customUndoText: String?)
-    case messageTagged(context: AccountContext, customEmoji: TelegramMediaFile, isBuiltinReaction: Bool, customUndoText: String?)
+    case messageTagged(context: AccountContext, isSingleMessage: Bool, customEmoji: TelegramMediaFile, isBuiltinReaction: Bool, customUndoText: String?)
 }
 
 public enum UndoOverlayAction {

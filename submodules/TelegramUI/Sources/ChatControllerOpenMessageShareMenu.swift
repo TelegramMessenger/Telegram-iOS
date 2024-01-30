@@ -15,30 +15,33 @@ import ChatShareMessageTagView
 import ReactionSelectionNode
 import TopMessageReactions
 
-func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl, reactionItems: [ReactionItem], correlationId: Int64?) -> (() -> UndoOverlayControllerAdditionalView?)? {
+func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl, reactionItems: [ReactionItem], correlationIds: [Int64]) -> (() -> UndoOverlayControllerAdditionalView?)? {
     if !chatController.presentationInterfaceState.isPremium {
         return nil
     }
-    guard let correlationId else {
+    if correlationIds.count < 1 {
         return nil
     }
     return { [weak chatController] () -> UndoOverlayControllerAdditionalView? in
         guard let chatController else {
             return nil
         }
-        return ChatShareMessageTagView(context: chatController.context, presentationData: chatController.presentationData, reactionItems: reactionItems, completion: { [weak chatController] file, updateReaction in
+        return ChatShareMessageTagView(context: chatController.context, presentationData: chatController.presentationData, isSingleMessage: correlationIds.count == 1, reactionItems: reactionItems, completion: { [weak chatController] file, updateReaction in
             guard let chatController else {
                 return
             }
             
             let _ = (chatController.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: chatController.context.account.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 45, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: [])
             |> map { view, _, _ -> [EngineMessage.Id] in
-                guard let messageId = chatController.context.engine.messages.synchronouslyLookupCorrelationId(correlationId: correlationId) else {
+                let messageIds = correlationIds.compactMap { correlationId in
+                    return chatController.context.engine.messages.synchronouslyLookupCorrelationId(correlationId: correlationId)
+                }
+                if messageIds.isEmpty {
                     return []
                 }
                 
                 let exactResult = view.entries.compactMap { entry -> EngineMessage.Id? in
-                    if entry.message.id == messageId {
+                    if messageIds.contains(entry.message.id) {
                         return entry.message.id
                     } else {
                         return nil
@@ -57,15 +60,17 @@ func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl
                 guard let chatController else {
                     return
                 }
-                if let messageId = messageIds.first {
-                    let _ = chatController.context.engine.messages.setMessageReactions(id: messageId, reactions: [updateReaction])
+                if !messageIds.isEmpty {
+                    for messageId in messageIds {
+                        let _ = chatController.context.engine.messages.setMessageReactions(id: messageId, reactions: [updateReaction])
+                    }
                     
                     var isBuiltinReaction = false
                     if case .builtin = updateReaction {
                         isBuiltinReaction = true
                     }
                     let presentationData = chatController.context.sharedContext.currentPresentationData.with { $0 }
-                    chatController.present(UndoOverlayController(presentationData: presentationData, content: .messageTagged(context: chatController.context, customEmoji: file, isBuiltinReaction: isBuiltinReaction, customUndoText: presentationData.strings.Chat_ToastMessageTagged_Action), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak chatController] action in
+                    chatController.present(UndoOverlayController(presentationData: presentationData, content: .messageTagged(context: chatController.context, isSingleMessage: messageIds.count == 1, customEmoji: file, isBuiltinReaction: isBuiltinReaction, customUndoText: presentationData.strings.Chat_ToastMessageTagged_Action), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { [weak chatController] action in
                         if (action == .info || action == .undo), let chatController {
                             let _ = (chatController.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: chatController.context.account.peerId))
                             |> deliverOnMainQueue).start(next: { [weak chatController] peer in
@@ -226,7 +231,7 @@ extension ChatControllerImpl {
                             })
                         }
                         return false
-                    }, additionalView: savedMessages ? chatShareToSavedMessagesAdditionalView(self, reactionItems: reactionItems, correlationId: correlationIds.first) : nil), in: .current)
+                    }, additionalView: savedMessages ? chatShareToSavedMessagesAdditionalView(self, reactionItems: reactionItems, correlationIds: correlationIds) : nil), in: .current)
                 })
             })
         }

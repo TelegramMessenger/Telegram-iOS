@@ -24,16 +24,17 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
     private var reactionContextNode: ReactionContextNode?
     private var params: Params?
     
-    public init(context: AccountContext, presentationData: PresentationData, reactionItems: [ReactionItem], completion: @escaping (TelegramMediaFile, UpdateMessageReaction) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, isSingleMessage: Bool, reactionItems: [ReactionItem], completion: @escaping (TelegramMediaFile, UpdateMessageReaction) -> Void) {
         super.init(frame: CGRect())
         
+        //TODO:localize
         let reactionContextNode = ReactionContextNode(
             context: context,
             animationCache: context.animationCache,
             presentationData: presentationData,
             items: reactionItems.map(ReactionContextItem.reaction),
             selectedItems: Set(),
-            title: presentationData.strings.Chat_ContextMenuTagsTitle,
+            title: isSingleMessage ? presentationData.strings.Chat_ContextMenuTagsTitle : "You can add a tag to messages",
             reactionsLocked: false,
             alwaysAllowPremiumReactions: false,
             allPresetReactionsAreAvailable: true,

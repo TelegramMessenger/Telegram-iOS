@@ -1159,14 +1159,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-            case let .messageTagged(context, customEmoji, isBuiltinReaction, customUndoText):
+            case let .messageTagged(context, isSingleMessage, customEmoji, isBuiltinReaction, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_savedmessages", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
                 
-                let rawText = presentationData.strings.Chat_ToastMessageTagged_Text(".")
+                let rawText = isSingleMessage ? presentationData.strings.Chat_ToastMessageTagged_Text(".") : presentationData.strings.Chat_ToastMessagesTagged_Text(".")
                 let attributedText = NSMutableAttributedString(string: rawText.string, font: Font.regular(14.0), textColor: .white)
                 for range in rawText.ranges {
                     attributedText.addAttributes([ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: customEmoji.fileId.id, file: customEmoji, custom: nil)], range: range.range)

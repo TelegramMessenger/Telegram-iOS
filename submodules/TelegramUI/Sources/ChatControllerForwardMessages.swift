@@ -186,7 +186,7 @@ extension ChatControllerImpl {
                     }
                     
                     let reactionItems: Signal<[ReactionItem], NoError>
-                    if savedMessages && messages.count == 1 {
+                    if savedMessages && messages.count > 0 {
                         reactionItems = tagMessageReactions(context: strongSelf.context)
                     } else {
                         reactionItems = .single([])
@@ -198,7 +198,7 @@ extension ChatControllerImpl {
                             return
                         }
                         
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, position: savedMessages && messages.count == 1 ? .top : .bottom, animateInAsReplacement: true, action: { action in
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, position: savedMessages && messages.count > 0 ? .top : .bottom, animateInAsReplacement: true, action: { action in
                             if savedMessages, let self, action == .info {
                                 let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                                          |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -212,7 +212,7 @@ extension ChatControllerImpl {
                                 })
                             }
                             return false
-                        }, additionalView: (savedMessages && messages.count == 1) ? chatShareToSavedMessagesAdditionalView(strongSelf, reactionItems: reactionItems, correlationId: correlationIds.first) : nil), in: .current)
+                        }, additionalView: (savedMessages && messages.count > 0) ? chatShareToSavedMessagesAdditionalView(strongSelf, reactionItems: reactionItems, correlationIds: correlationIds) : nil), in: .current)
                     })
                 }
                 
@@ -269,7 +269,7 @@ extension ChatControllerImpl {
                     }
                     
                     let reactionItems: Signal<[ReactionItem], NoError>
-                    if messages.count == 1 {
+                    if messages.count > 0 {
                         reactionItems = tagMessageReactions(context: strongSelf.context)
                     } else {
                         reactionItems = .single([])
@@ -289,7 +289,7 @@ extension ChatControllerImpl {
                         }
                         
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, position: messages.count == 1 ? .top : .bottom, animateInAsReplacement: true, action: { [weak self] value in
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, position: .top, animateInAsReplacement: true, action: { [weak self] value in
                             if case .info = value, let strongSelf = self {
                                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
                                 |> deliverOnMainQueue).startStandalone(next: { peer in
@@ -302,7 +302,7 @@ extension ChatControllerImpl {
                                 return true
                             }
                             return false
-                        }, additionalView: messages.count == 1 ? chatShareToSavedMessagesAdditionalView(strongSelf, reactionItems: reactionItems, correlationId: correlationIds.first) : nil), in: .current)
+                        }, additionalView: messages.count > 0 ? chatShareToSavedMessagesAdditionalView(strongSelf, reactionItems: reactionItems, correlationIds: correlationIds) : nil), in: .current)
                     })
                     
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: mappedMessages)
