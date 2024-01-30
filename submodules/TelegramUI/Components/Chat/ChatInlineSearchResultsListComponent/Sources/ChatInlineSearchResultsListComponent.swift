@@ -526,39 +526,6 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 let previousContentsState = self.appliedContentsState
                 self.appliedContentsState = self.contentsState
                 
-                let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(
-                    leftList: previousContentsState?.entries ?? [],
-                    rightList: contentsState.entries,
-                    isLess: { lhs, rhs in
-                        return lhs < rhs
-                    },
-                    isEqual: { lhs, rhs in
-                        return lhs == rhs
-                    },
-                    getId: { entry in
-                        return entry.id
-                    },
-                    allUpdated: false
-                )
-                
-                let displayMessagesHeader = contentsState.entries.count != contentsState.messages.count
-                
-                let chatListPresentationData: ChatListPresentationData
-                if let current = self.currentChatListPresentationData, current.0 == component.presentation {
-                    chatListPresentationData = current.1
-                } else {
-                    chatListPresentationData = ChatListPresentationData(
-                        theme: component.presentation.theme,
-                        fontSize: component.presentation.chatListFontSize,
-                        strings: component.presentation.strings,
-                        dateTimeFormat: component.presentation.dateTimeFormat,
-                        nameSortOrder: component.presentation.nameSortOrder,
-                        nameDisplayOrder: component.presentation.nameDisplayOrder,
-                        disableAnimations: false
-                    )
-                    self.currentChatListPresentationData = (component.presentation, chatListPresentationData)
-                }
-                
                 let chatListNodeInteraction: ChatListNodeInteraction
                 if let current = self.chatListNodeInteraction {
                     chatListNodeInteraction = current
@@ -648,6 +615,50 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         }
                     )
                     self.chatListNodeInteraction = chatListNodeInteraction
+                }
+                
+                var searchTextHighightState: String?
+                if case let .search(query, _) = component.contents, !query.isEmpty {
+                    searchTextHighightState = query.lowercased()
+                }
+                
+                var allUpdated = false
+                if chatListNodeInteraction.searchTextHighightState != searchTextHighightState {
+                    chatListNodeInteraction.searchTextHighightState = searchTextHighightState
+                    allUpdated = true
+                }
+                
+                let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(
+                    leftList: previousContentsState?.entries ?? [],
+                    rightList: contentsState.entries,
+                    isLess: { lhs, rhs in
+                        return lhs < rhs
+                    },
+                    isEqual: { lhs, rhs in
+                        return lhs == rhs
+                    },
+                    getId: { entry in
+                        return entry.id
+                    },
+                    allUpdated: allUpdated
+                )
+                
+                let displayMessagesHeader = contentsState.entries.count != contentsState.messages.count
+                
+                let chatListPresentationData: ChatListPresentationData
+                if let current = self.currentChatListPresentationData, current.0 == component.presentation {
+                    chatListPresentationData = current.1
+                } else {
+                    chatListPresentationData = ChatListPresentationData(
+                        theme: component.presentation.theme,
+                        fontSize: component.presentation.chatListFontSize,
+                        strings: component.presentation.strings,
+                        dateTimeFormat: component.presentation.dateTimeFormat,
+                        nameSortOrder: component.presentation.nameSortOrder,
+                        nameDisplayOrder: component.presentation.nameDisplayOrder,
+                        disableAnimations: false
+                    )
+                    self.currentChatListPresentationData = (component.presentation, chatListPresentationData)
                 }
                 
                 let listPresentationData = ItemListPresentationData(component.context.sharedContext.currentPresentationData.with({ $0 }))
