@@ -117,8 +117,7 @@ extension ChatControllerImpl {
                         if self.presentationInterfaceState.isPremium {
                             actions.reactionsTitle = presentationData.strings.Chat_ContextMenuTagsTitle
                         } else {
-                            //TODO:localize
-                            actions.reactionsTitle = "Organize your Saved Messages with tags for quicker access. [Learn more...]()"
+                            actions.reactionsTitle = presentationData.strings.Chat_MessageContextMenu_NonPremiumTagsTitle
                             actions.reactionsLocked = true
                             actions.selectedReactionItems = Set()
                         }
@@ -308,24 +307,13 @@ extension ChatControllerImpl {
                 }
                 self.currentContextController = controller
                 
-                //TODO:localize
                 controller.premiumReactionsSelected = { [weak self, weak controller] in
                     guard let self else {
                         return
                     }
                     
                     controller?.dismissWithoutContent()
-
-                    let context = self.context
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = PremiumDemoScreen(context: context, subject: .messageTags, action: {
-                        let controller = PremiumIntroScreen(context: context, source: .messageTags)
-                        replaceImpl?(controller)
-                    })
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
-                    }
-                    self.push(controller)
+                    self.presentTagPremiumPaywall()
                 }
                 
                 controller.reactionSelected = { [weak self, weak controller] chosenUpdatedReaction, isLarge in
@@ -413,9 +401,8 @@ extension ChatControllerImpl {
                                                     
                                                     let _ = itemNode
                                                     
-                                                    //TODO:localize
                                                     let rect = self.chatDisplayNode.view.convert(targetView.bounds, from: targetView).insetBy(dx: -8.0, dy: -8.0)
-                                                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: "Tap and hold to add a name to your tag"), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _, _ in
+                                                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Chat_TooltipAddTagLabel), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _, _ in
                                                         return .dismiss(consume: false)
                                                     })
                                                     self.present(tooltipScreen, in: .current)

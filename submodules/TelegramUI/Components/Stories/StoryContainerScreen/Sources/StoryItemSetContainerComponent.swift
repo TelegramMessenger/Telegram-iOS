@@ -6758,9 +6758,8 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 
                 if case let .file(file) = component.slice.item.storyItem.media, file.isVideo {
-                    //TODO:localize
                     let isHq = component.slice.additionalPeerData.preferHighQualityStories
-                    items.append(.action(ContextMenuActionItem(text: isHq ? "Decrease Quality" : "Increase Quality", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: isHq ? component.strings.Story_ContextMenuSD : component.strings.Story_ContextMenuHD, icon: { theme in
                         if isHq {
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QualitySd"), color: theme.contextMenu.primaryColor)
                         } else {
@@ -6774,22 +6773,20 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         
                         if !component.slice.additionalPeerData.preferHighQualityStories && !accountUser.isPremium {
-                            //TODO:localize
                             self.presentQualityUpgradeScreen()
                             
                             return
                         }
                         
                         let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                        //TODO:localize
                         let title: String
                         let text: String
                         if component.slice.additionalPeerData.preferHighQualityStories {
-                            title = "Quality Lowered"
-                            text = "Stories will now download faster."
+                            title = component.strings.Story_ToastQualitySD_Title
+                            text = component.strings.Story_ToastQualitySD_Text
                         } else {
-                            title = "Quality Increased"
-                            text = "You can lower the quality later for faster downloads."
+                            title = component.strings.Story_ToastQualityHD_Title
+                            text = component.strings.Story_ToastQualityHD_Text
                         }
                         controller.present(UndoOverlayController(
                             presentationData: presentationData,

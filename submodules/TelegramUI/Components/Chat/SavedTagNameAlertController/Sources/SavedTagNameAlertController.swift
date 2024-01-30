@@ -242,8 +242,7 @@ private final class SavedTagNameAlertContentNode: AlertContentNode {
         self.file = file
         self.titleFont = titleFont
         
-        //TODO:localize
-        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: "Name", characterLimit: characterLimit)
+        self.inputFieldNode = PromptInputFieldNode(theme: ptheme, placeholder: strings.Chat_EditTagTitle_Placeholder, characterLimit: characterLimit)
         self.inputFieldNode.text = value ?? ""
         
         self.actionNodesSeparator = ASDisplayNode()

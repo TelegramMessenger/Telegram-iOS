@@ -166,11 +166,10 @@ private final class StoryQualityUpgradeSheetContentComponent: Component {
             
             contentHeight += 138.0
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "High-Quality Stories", font: Font.semibold(20.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Story_UpgradeQuality_Title, font: Font.semibold(20.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0
                 )),
@@ -186,11 +185,10 @@ private final class StoryQualityUpgradeSheetContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 14.0
             
-            //TODO:localize
             let textSize = self.text.update(
                 transition: transition,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Subscribe to premium to view stories in higher resolution.", font: Font.regular(14.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Story_UpgradeQuality_Text, font: Font.regular(14.0), textColor: environment.theme.list.itemSecondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.18
@@ -209,14 +207,13 @@ private final class StoryQualityUpgradeSheetContentComponent: Component {
             
             contentHeight += 32.0
 
-            //TODO:localize
             var buttonContents: [AnyComponentWithIdentity<Empty>] = []
             buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                Text(text: "Increase Quality", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                Text(text: environment.strings.Story_UpgradeQuality_Action, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
             buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(ButtonSubtitleComponent(
-                title: "Premium Required",
+                title: environment.strings.Story_UpgradeQuality_ActionSubtitle,
                 color: environment.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7)
             ))))
             

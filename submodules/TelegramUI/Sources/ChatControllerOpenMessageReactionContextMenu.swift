@@ -18,7 +18,6 @@ import PremiumUI
 
 extension ChatControllerImpl {
     func presentTagPremiumPaywall() {
-        //TODO:localize
         let context = self.context
         var replaceImpl: ((ViewController) -> Void)?
         let controller = PremiumDemoScreen(context: context, subject: .messageTags, action: {
@@ -77,9 +76,8 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let optionTitle = hasTitle ? "Edit Name" : "Add Name"
+                let optionTitle = hasTitle ? self.presentationData.strings.Chat_EditTagTitle_TitleEdit : self.presentationData.strings.Chat_EditTagTitle_TitleSet
                 
-                //TODO:localize
                 items.append(.action(ContextMenuActionItem(text: optionTitle, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, a in
@@ -101,8 +99,7 @@ extension ChatControllerImpl {
                             
                             let reaction = value
                             
-                            //TODO:localize
-                            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: "You can label your emoji tag with a text name.", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
+                            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: self.presentationData.strings.Chat_EditTagTitle_Text, value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
                                 guard let self else {
                                     return
                                 }

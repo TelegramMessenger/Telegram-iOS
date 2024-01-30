@@ -133,11 +133,10 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                 containerSize: CGSize(width: 14.0, height: 14.0)
             )
             
-            //TODO:localize
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: isUnlock ? "Unlock" : "Add tags", font: Font.medium(14.0), textColor: theme.rootController.navigationBar.accentTextColor))
+                    text: .plain(NSAttributedString(string: isUnlock ? strings.Chat_TagsHeaderPanel_Unlock : strings.Chat_TagsHeaderPanel_AddTags, font: Font.medium(14.0), textColor: theme.rootController.navigationBar.accentTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 100.0)
@@ -175,7 +174,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "to your Saved Messages", font: Font.regular(14.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
+                    text: .plain(NSAttributedString(string: strings.Chat_TagsHeaderPanel_AddTagsSuffix, font: Font.regular(14.0), textColor: theme.rootController.navigationBar.secondaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 100.0)
@@ -660,6 +659,10 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                         gesture.cancel()
                         return
                     }
+                    guard let item = self.items.first(where: { $0.reaction == reaction }) else {
+                        gesture.cancel()
+                        return
+                    }
                     
                     if !params.interfaceState.isPremium {
                         (chatController as? ChatControllerImpl)?.presentTagPremiumPaywall()
@@ -669,8 +672,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     var items: [ContextMenuItem] = []
                     
                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Edit Title", icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: item.title != nil ? presentationData.strings.Chat_ReactionContextMenu_EditTagLabel : presentationData.strings.Chat_ReactionContextMenu_SetTagLabel, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/TagEditName"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] c, a in
                         guard let self else {
@@ -755,8 +757,9 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
     }
     
     private func openEditTagTitle(reaction: MessageReaction.Reaction, hasTitle: Bool) {
-        //TODO:localize
-        let optionTitle = hasTitle ? "Edit Name" : "Add Name"
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let optionTitle = hasTitle ? presentationData.strings.Chat_EditTagTitle_TitleEdit : presentationData.strings.Chat_EditTagTitle_TitleSet
         
         let reactionFile: Signal<TelegramMediaFile?, NoError>
         switch reaction {
@@ -783,8 +786,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                 return
             }
             
-            //TODO:localize
-            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: "You can label your emoji tag with a text name.", value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
+            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: presentatinData.strings.Chat_EditTagTitle_Text, value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
                 guard let self else {
                     return
                 }

@@ -113,13 +113,11 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         
         self.tagButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.tagButton.isAccessibilityElement = true
-        //TODO:localize
-        self.tagButton.accessibilityLabel = "Tag"
+        self.tagButton.accessibilityLabel = strings.VoiceOver_MessageSelectionButtonTag
         
         self.tagEditButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.tagEditButton.isAccessibilityElement = true
-        //TODO:localize
-        self.tagEditButton.accessibilityLabel = "Edit Tag"
+        self.tagEditButton.accessibilityLabel = strings.VoiceOver_MessageSelectionButtonTag
         
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
@@ -255,14 +253,13 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let reactionContextNode = ReactionContextNode(
                 context: context,
                 animationCache: context.animationCache,
                 presentationData: presentationData,
                 items: reactionItems.map(ReactionContextItem.reaction),
                 selectedItems: actions.editTags,
-                title: actions.editTags.isEmpty ? "Tag a message with emojis for quick search" : "Edit tags of selected messages",
+                title: actions.editTags.isEmpty ? presentationData.strings.Chat_ReactionSelectionTitleAddTag : presentationData.strings.Chat_ReactionSelectionTitleEditTag,
                 reactionsLocked: false,
                 alwaysAllowPremiumReactions: false,
                 allPresetReactionsAreAvailable: true,

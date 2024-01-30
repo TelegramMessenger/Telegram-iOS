@@ -10994,3 +10994,42 @@ Sorry for the inconvenience.";
 "Premium.MessageTags.Proceed" = "About Telegram Premium";
 
 "Chat.SavedMessagesTabInfoText" = "Messages you send to **Saved Messages**";
+
+"VoiceOver.MessageSelectionButtonTag" = "Tag";
+
+"Chat.ReactionSelectionTitleAddTag" = "Tag a message with emojis for quick search";
+"Chat.ReactionSelectionTitleEditTag" = "Edit tags of selected messages";
+"Chat.ForwardToSavedMessageTagSelectionTitle" = "You can add a tag to the message";
+"Chat.ForwardToSavedMessagesTagSelectionTitle" = "You can add a tag to messages";
+
+"Chat.EditTagTitle.Placeholder" = "Name";
+"Chat.EditTagTitle.TitleSet" = "Set Name";
+"Chat.EditTagTitle.TitleEdit" = "Edit Name";
+"Chat.EditTagTitle.Text" = "You can label your emoji tag with a text name.";
+
+"Chat.SavedMessagesModeMenu.ViewAsChats" = "View as Chats";
+"Chat.SavedMessagesModeMenu.ViewAsMessages" = "View as Messages";
+
+"Story.ContextMenuHD" = "Increase Quality";
+"Story.ContextMenuSD" = "Decrease Quality";
+"Story.ToastQualitySD.Title" = "Quality Lowered";
+"Story.ToastQualitySD.Text" = "Stories will now download faster.";
+"Story.ToastQualityHD.Title" = "Quality Increased";
+"Story.ToastQualityHD.Text" = "You can lower the quality later for faster downloads."
+
+"Story.UpgradeQuality.Title" = "High-Quality Stories";
+"Story.UpgradeQuality.Text" = "Subscribe to premium to view stories in higher resolution.";
+"Story.UpgradeQuality.Action" = "Increase Quality";
+"Story.UpgradeQuality.ActionSubtitle" = "Premium Required";
+
+"Chat.MessageContextMenu.NonPremiumTagsTitle" = "Organize your Saved Messages with tags for quicker access. [Learn more...]()";
+
+"Chat.TooltipAddTagLabel" = "Tap and hold to add a name to your tag";
+
+"Chat.MessageContextMenu.Remove" = "Remove";
+
+"Chat.TagsHeaderPanel.Unlock" = "Unlock";
+"Chat.TagsHeaderPanel.AddTags" = "Add tags";
+"Chat.TagsHeaderPanel.AddTagsSuffix" = "to your Saved Messages";
+"Chat.ReactionContextMenu.SetTagLabel" = "Set Name";
+"Chat.ReactionContextMenu.EditTagLabel" = "Edit Name";

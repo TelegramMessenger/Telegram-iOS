@@ -1667,8 +1667,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 title = chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending
             } else {
                 if case .peer(context.account.peerId) = chatPresentationInterfaceState.chatLocation, message.effectivelyIncoming(context.account.peerId) {
-                    //TODO:localize
-                    title = "Remove"
+                    title = chatPresentationInterfaceState.strings.Chat_MessageContextMenu_Remove
                 } else {
                     title = chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
                 }
