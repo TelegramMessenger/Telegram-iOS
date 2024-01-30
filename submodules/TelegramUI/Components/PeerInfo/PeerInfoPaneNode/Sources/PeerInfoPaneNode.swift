@@ -9,6 +9,8 @@ public enum PeerInfoPaneKey: Int32 {
     case members
     case stories
     case media
+    case savedMessagesChats
+    case savedMessages
     case files
     case music
     case voice
@@ -16,8 +18,6 @@ public enum PeerInfoPaneKey: Int32 {
     case gifs
     case groupsInCommon
     case recommended
-    case savedMessagesChats
-    case savedMessages
 }
 
 public struct PeerInfoStatusData: Equatable {

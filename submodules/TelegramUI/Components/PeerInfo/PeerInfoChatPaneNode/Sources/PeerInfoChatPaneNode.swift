@@ -164,6 +164,18 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             self.presentationData = presentationData
         })
         
+        let strings = self.presentationData.strings
+        self.statusPromise.set(self.context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: self.context.account.peerId, threadId: peerId.toInt64(), tag: [])
+        )
+        |> map { count in
+            if let count {
+                return PeerInfoStatusData(text: strings.Conversation_Messages(Int32(count)), isActivity: false, key: .savedMessages)
+            } else {
+                return nil
+            }
+        })
+        
         self.ready.set(self.chatController.ready.get())
         
         self.addSubnode(self.chatController.displayNode)
