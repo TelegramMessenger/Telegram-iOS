@@ -1285,6 +1285,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let message = messages.first else {
                 return
             }
+            if case .default = reaction, strongSelf.chatLocation.peerId == strongSelf.context.account.peerId {
+                return
+            }
             
             if !force && message.areReactionsTags(accountPeerId: strongSelf.context.account.peerId) {
                 if case .pinnedMessages = strongSelf.subject {

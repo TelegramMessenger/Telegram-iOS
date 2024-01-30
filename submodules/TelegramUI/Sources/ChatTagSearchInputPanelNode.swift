@@ -29,7 +29,14 @@ private func extractAnimatedTextString(string: PresentationStrings.FormattedStri
             textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
         }
         if let value = mapping[range.index] {
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), content: value))
+            let isUnbreakable: Bool
+            switch value {
+            case .text:
+                isUnbreakable = true
+            case .number:
+                isUnbreakable = false
+            }
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), isUnbreakable: isUnbreakable, content: value))
         }
         previousIndex = range.range.upperBound
     }
