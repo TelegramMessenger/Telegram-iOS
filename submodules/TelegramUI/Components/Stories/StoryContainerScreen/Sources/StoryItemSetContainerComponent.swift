@@ -5620,8 +5620,7 @@ public final class StoryItemSetContainerComponent: Component {
                 guard let self else {
                     return
                 }
-                //TODO:localize
-                self.presentStoriesUpgradeScreen(source: .storiesStealthMode)
+                self.presentStoriesUpgradeScreen(source: .storiesHigherQuality)
             })
         }
         

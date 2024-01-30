@@ -1938,6 +1938,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesExpirationDurations
         case .storiesSuggestedReactions:
             mappedSource = .storiesSuggestedReactions
+        case .storiesHigherQuality:
+            mappedSource = .storiesHigherQuality
         case let .channelBoost(peerId):
             mappedSource = .channelBoost(peerId)
         case .nameColor:
@@ -1950,6 +1952,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .presence
         case .readTime:
             mappedSource = .readTime
+        case .messageTags:
+            mappedSource = .messageTags
         }
         let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -1993,6 +1997,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .colors
         case .wallpapers:
             mappedSubject = .wallpapers
+        case .messageTags:
+            mappedSubject = .messageTags
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }

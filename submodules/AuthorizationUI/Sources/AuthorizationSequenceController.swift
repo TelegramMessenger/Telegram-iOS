@@ -1097,8 +1097,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         avatarVideo = nil
                     }
                     
-                    //TODO: pass signup announcement
-                    strongSelf.actionDisposable.set((signUpWithName(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData, avatarVideo: avatarVideo, videoStartTimestamp: videoStartTimestamp, forcedPasswordSetupNotice: { value in
+                    strongSelf.actionDisposable.set((signUpWithName(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData, avatarVideo: avatarVideo, videoStartTimestamp: videoStartTimestamp, disableJoinNotifications: !announceSignUp, forcedPasswordSetupNotice: { value in
                         guard let entry = CodableEntry(ApplicationSpecificCounterNotice(value: value)) else {
                             return nil
                         }

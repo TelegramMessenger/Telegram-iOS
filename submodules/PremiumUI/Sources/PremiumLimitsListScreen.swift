@@ -742,6 +742,25 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
+                availableItems[.messageTags] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageTags,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["saved_tags"],
+                                    decoration: .tag
+                                )),
+                                title: strings.Premium_MessageTags,
+                                text: strings.Premium_MessageTagsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
                 
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }

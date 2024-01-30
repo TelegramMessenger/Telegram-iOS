@@ -429,6 +429,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0xcb3e6d),
                 UIColor(rgb: 0xbc4395),
                 UIColor(rgb: 0xab4ac4),
+                UIColor(rgb: 0xa34cd7),
                 UIColor(rgb: 0x9b4fed),
                 UIColor(rgb: 0x8958ff),
                 UIColor(rgb: 0x676bff),
@@ -521,6 +522,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .colors
                         case .wallpapers:
                             demoSubject = .wallpapers
+                        case .messageTags:
+                            demoSubject = .messageTags
                         }
                         
                         let buttonText: String
