@@ -1,4 +1,3 @@
-#if os(macOS)
 
 import TelegramApi
 import SwiftSignalKit
@@ -226,8 +225,6 @@ public func requestApplicationIcons(engine: TelegramEngine, source: String = "ma
         }
 }
 
-
-#endif
 
 /*
  return Signal { subscriber in
