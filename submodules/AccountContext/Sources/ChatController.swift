@@ -947,6 +947,8 @@ public protocol ChatController: ViewController {
     
     var visibleContextController: ViewController? { get }
     
+    var alwaysShowSearchResultsAsList: Bool { get set }
+    
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)

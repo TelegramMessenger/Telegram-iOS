@@ -39,6 +39,10 @@ extension ChatControllerImpl {
                     c.dismiss()
                     return
                 }
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                    return state.updatedDisplayHistoryFilterAsList(false)
+                })
 
                 c.dismiss()
 

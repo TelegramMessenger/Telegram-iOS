@@ -168,12 +168,18 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 canChangeListMode = true
                 
-                let adjustedIndex = results.messageIndices.count - 1 - index
-                
-                //TODO:localize
-                resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_n"), content: .number(adjustedIndex + 1, minDigits: 1)))
-                resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_of"), isUnbreakable: true, content: .text(" of ")))
-                resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_m"), content: .number(displayTotalCount, minDigits: 1)))
+                if params.interfaceState.displayHistoryFilterAsList {
+                    //TODO:localize
+                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_n"), content: .number(displayTotalCount, minDigits: 1)))
+                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_message"), isUnbreakable: true, content: .text(displayTotalCount == 1 ? " message" : " messages")))
+                } else {
+                    let adjustedIndex = results.messageIndices.count - 1 - index
+                    
+                    //TODO:localize
+                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_n"), content: .number(adjustedIndex + 1, minDigits: 1)))
+                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_of"), isUnbreakable: true, content: .text(" of ")))
+                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_m"), content: .number(displayTotalCount, minDigits: 1)))
+                }
             } else {
                 canChangeListMode = false
                 

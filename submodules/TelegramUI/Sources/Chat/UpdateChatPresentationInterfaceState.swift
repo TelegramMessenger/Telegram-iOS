@@ -398,7 +398,7 @@ func updateChatPresentationInterfaceStateImpl(
     }
     
     if updatedChatPresentationInterfaceState.displayHistoryFilterAsList {
-        if updatedChatPresentationInterfaceState.search == nil || updatedChatPresentationInterfaceState.historyFilter == nil {
+        if updatedChatPresentationInterfaceState.search?.resultsState == nil && updatedChatPresentationInterfaceState.historyFilter == nil && !selfController.alwaysShowSearchResultsAsList {
             updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedDisplayHistoryFilterAsList(false)
         }
     }

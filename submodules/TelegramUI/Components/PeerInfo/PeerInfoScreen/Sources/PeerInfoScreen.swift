@@ -103,6 +103,7 @@ import MediaPickerUI
 import AttachmentUI
 import BoostLevelIconComponent
 import PeerInfoChatPaneNode
+import PeerInfoChatListPaneNode
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -9287,6 +9288,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessages = currentPaneKey, let paneNode = self.paneContainerNode.currentPane?.node as? PeerInfoChatPaneNode {
+            paneNode.activateSearch()
+            return
+        } else if let currentPaneKey = self.paneContainerNode.currentPaneKey, case .savedMessagesChats = currentPaneKey, let paneNode = self.paneContainerNode.currentPane?.node as? PeerInfoChatListPaneNode {
             paneNode.activateSearch()
             return
         }

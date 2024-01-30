@@ -150,6 +150,7 @@ public final class PeerInfoChatPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.coveringView = UIView()
         
         self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .replyThread(message: ChatReplyThreadMessage(peerId: context.account.peerId, threadId: peerId.toInt64(), channelMessageId: nil, isChannelPost: false, isForumPost: false, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)), subject: nil, botStart: nil, mode: .standard(.embedded(invertDirection: true)))
+        self.chatController.navigation_setNavigationController(navigationController())
         
         super.init()
         

@@ -135,6 +135,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let loadingNode: ChatLoadingNode
     private(set) var loadingPlaceholderNode: ChatLoadingPlaceholderNode?
     
+    var alwaysShowSearchResultsAsList: Bool = false
+    private var skippedShowSearchResultsAsListAnimationOnce: Bool = false
     var inlineSearchResults: ComponentView<Empty>?
     private var inlineSearchResultsReadyDisposable: Disposable?
     private var inlineSearchResultsReady: Bool = false
@@ -2430,7 +2432,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.updatePlainInputSeparator(transition: transition)
         
-        if self.chatPresentationInterfaceState.displayHistoryFilterAsList, let peerId = self.chatPresentationInterfaceState.chatLocation.peerId, let historyFilter = self.chatPresentationInterfaceState.historyFilter {
+        var displayInlineSearch = false
+        if self.chatPresentationInterfaceState.displayHistoryFilterAsList {
+            if self.chatPresentationInterfaceState.historyFilter != nil || self.chatPresentationInterfaceState.search?.resultsState != nil {
+                displayInlineSearch = true
+            }
+            if self.alwaysShowSearchResultsAsList {
+                displayInlineSearch = true
+            }
+        }
+        
+        if let peerId = self.chatPresentationInterfaceState.chatLocation.peerId, displayInlineSearch {
             let inlineSearchResults: ComponentView<Empty>
             var inlineSearchResultsTransition = Transition(transition)
             if let current = self.inlineSearchResults {
@@ -2439,6 +2451,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inlineSearchResultsTransition = inlineSearchResultsTransition.withAnimation(.none)
                 inlineSearchResults = ComponentView()
                 self.inlineSearchResults = inlineSearchResults
+            }
+            
+            let mappedContents: ChatInlineSearchResultsListComponent.Contents
+            if let _ = self.chatPresentationInterfaceState.search?.resultsState {
+                mappedContents = .search
+            } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter {
+                mappedContents = .tag(historyFilter.customTag)
+            } else {
+                mappedContents = .empty
             }
             
             let context = self.context
@@ -2455,7 +2476,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder
                     ),
                     peerId: peerId,
-                    contents: .tag(historyFilter.customTag),
+                    contents: mappedContents,
                     insets: childContentInsets,
                     messageSelected: { [weak self] message in
                         guard let self else {
@@ -2512,6 +2533,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 return .single(view)
                             }
                         }
+                    },
+                    getSearchResult: { [weak self] in
+                        guard let self, let controller = self.controller else {
+                            return nil
+                        }
+                        return controller.searchResult.get()
+                        |> map { result in
+                            return result?.0
+                        }
                     }
                 )),
                 environment: {},
@@ -2521,7 +2551,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 var animateIn = false
                 if inlineSearchResultsView.superview == nil {
                     animateIn = true
-                    inlineSearchResultsView.alpha = 0.0
+                    if !self.alwaysShowSearchResultsAsList || self.skippedShowSearchResultsAsListAnimationOnce {
+                        inlineSearchResultsView.alpha = 0.0
+                    }
+                    self.skippedShowSearchResultsAsListAnimationOnce = true
                     inlineSearchResultsView.layer.allowsGroupOpacity = true
                     self.contentContainerNode.view.insertSubview(inlineSearchResultsView, aboveSubview: self.historyNodeContainer.view)
                 }
@@ -2538,11 +2571,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         guard let inlineSearchResultsView = self.inlineSearchResults?.view as? ChatInlineSearchResultsListComponent.View else {
                             return
                         }
-                        inlineSearchResultsView.alpha = 1.0
-                        inlineSearchResultsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        inlineSearchResultsView.animateIn()
+                        if inlineSearchResultsView.alpha == 0.0 {
+                            inlineSearchResultsView.alpha = 1.0
                         
-                        transition.updateSublayerTransformScale(node: self.historyNodeContainer, scale: CGPoint(x: 0.95, y: 0.95))
+                            inlineSearchResultsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            inlineSearchResultsView.animateIn()
+                            
+                            transition.updateSublayerTransformScale(node: self.historyNodeContainer, scale: CGPoint(x: 0.95, y: 0.95))
+                        }
                     })
                 }
             }

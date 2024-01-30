@@ -581,6 +581,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var performTextSelectionAction: ((Message?, Bool, NSAttributedString, TextSelectionAction) -> Void)?
     var performOpenURL: ((Message?, String, Promise<Bool>?) -> Void)?
     
+    public var alwaysShowSearchResultsAsList: Bool = false {
+        didSet {
+            self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
+            self.chatDisplayNode.alwaysShowSearchResultsAsList = self.alwaysShowSearchResultsAsList
+        }
+    }
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(.default), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -10955,11 +10962,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, updateDisplayHistoryFilterAsList: { [weak self] displayAsList in
             guard let self else {
-                return
-            }
-            
-            if let search = self.presentationInterfaceState.search, !search.query.isEmpty {
-                self.interfaceInteraction?.openSearchResults()
                 return
             }
             

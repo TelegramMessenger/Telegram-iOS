@@ -12,6 +12,7 @@ import TelegramPresentationData
 import SwiftSignalKit
 import TelegramUIPreferences
 import UIKitRuntimeUtils
+import ChatPresentationInterfaceState
 
 public final class ChatInlineSearchResultsListComponent: Component {
     public struct Presentation: Equatable {
@@ -62,7 +63,9 @@ public final class ChatInlineSearchResultsListComponent: Component {
     }
     
     public enum Contents: Equatable {
+        case empty
         case tag(MemoryBuffer)
+        case search
     }
     
     public let context: AccountContext
@@ -72,6 +75,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
     public let insets: UIEdgeInsets
     public let messageSelected: (EngineMessage) -> Void
     public let loadTagMessages: (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?
+    public let getSearchResult: () -> Signal<SearchMessagesResult?, NoError>?
     
     public init(
         context: AccountContext,
@@ -80,7 +84,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
         contents: Contents,
         insets: UIEdgeInsets,
         messageSelected: @escaping (EngineMessage) -> Void,
-        loadTagMessages: @escaping (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?
+        loadTagMessages: @escaping (MemoryBuffer, MessageIndex?) -> Signal<MessageHistoryView, NoError>?,
+        getSearchResult: @escaping () -> Signal<SearchMessagesResult?, NoError>?
     ) {
         self.context = context
         self.presentation = presentation
@@ -89,6 +94,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         self.insets = insets
         self.messageSelected = messageSelected
         self.loadTagMessages = loadTagMessages
+        self.getSearchResult = getSearchResult
     }
     
     public static func ==(lhs: ChatInlineSearchResultsListComponent, rhs: ChatInlineSearchResultsListComponent) -> Bool {
@@ -111,15 +117,21 @@ public final class ChatInlineSearchResultsListComponent: Component {
     }
     
     private struct ContentsState: Equatable {
+        enum ContentId: Equatable {
+            case empty
+            case tag(MemoryBuffer)
+            case search
+        }
+        
         var id: Int
-        var tag: MemoryBuffer?
+        var contentId: ContentId
         var entries: [EngineMessage]
         var hasEarlier: Bool
         var hasLater: Bool
         
-        init(id: Int, tag: MemoryBuffer?, entries: [EngineMessage], hasEarlier: Bool, hasLater: Bool) {
+        init(id: Int, contentId: ContentId, entries: [EngineMessage], hasEarlier: Bool, hasLater: Bool) {
             self.id = id
-            self.tag = tag
+            self.contentId = contentId
             self.entries = entries
             self.hasEarlier = hasEarlier
             self.hasLater = hasLater
@@ -134,6 +146,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         private let listNode: ListView
         
         private var tagContents: (index: MessageIndex?, disposable: Disposable?)?
+        private var searchContents: (index: MessageIndex?, disposable: Disposable?)?
         
         private var nextContentsId: Int = 0
         private var contentsState: ContentsState?
@@ -162,6 +175,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
         
         deinit {
             self.tagContents?.disposable?.dispose()
+            self.searchContents?.disposable?.dispose()
         }
         
         public func animateIn() {
@@ -228,9 +242,6 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 guard let contentsState = self.contentsState, contentsState.id == stateId else {
                     return
                 }
-                guard let (currentIndex, disposable) = self.tagContents else {
-                    return
-                }
                 guard let visibleRange = displayedRange.visibleRange else {
                     return
                 }
@@ -245,49 +256,85 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     }
                 }
                 
-                if let loadAroundIndex, loadAroundIndex != currentIndex {
-                    switch component.contents {
-                    case let .tag(tag):
-                        disposable?.dispose()
-                        let updatedDisposable = MetaDisposable()
-                        self.tagContents = (loadAroundIndex, updatedDisposable)
-                        
-                        if let historySignal = component.loadTagMessages(tag, self.tagContents?.index) {
-                            updatedDisposable.set((historySignal
-                            |> deliverOnMainQueue).startStrict(next: { [weak self] view in
-                                guard let self else {
-                                    return
-                                }
-                                
-                                let contentsId = self.nextContentsId
-                                self.nextContentsId += 1
-                                self.contentsState = ContentsState(
-                                    id: contentsId,
-                                    tag: tag,
-                                    entries: view.entries.reversed().map { entry in
-                                        return EngineMessage(entry.message)
-                                    },
-                                    hasEarlier: view.earlierId != nil,
-                                    hasLater: view.laterId != nil
-                                )
-                                if !self.isUpdating {
-                                    self.state?.updated(transition: .immediate)
-                                }
-                                
-                                if !self.didSetReady {
-                                    self.didSetReady = true
-                                    self.isReadyPromise.set(.single(true))
-                                }
-                            }))
+                if let (currentIndex, disposable) = self.tagContents {
+                    if let loadAroundIndex, loadAroundIndex != currentIndex {
+                        switch component.contents {
+                        case .empty:
+                            break
+                        case let .tag(tag):
+                            disposable?.dispose()
+                            let updatedDisposable = MetaDisposable()
+                            self.tagContents = (loadAroundIndex, updatedDisposable)
+                            
+                            if let historySignal = component.loadTagMessages(tag, self.tagContents?.index) {
+                                updatedDisposable.set((historySignal
+                                |> deliverOnMainQueue).startStrict(next: { [weak self] view in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    let contentsId = self.nextContentsId
+                                    self.nextContentsId += 1
+                                    self.contentsState = ContentsState(
+                                        id: contentsId,
+                                        contentId: .tag(tag),
+                                        entries: view.entries.reversed().map { entry in
+                                            return EngineMessage(entry.message)
+                                        },
+                                        hasEarlier: view.earlierId != nil,
+                                        hasLater: view.laterId != nil
+                                    )
+                                    if !self.isUpdating {
+                                        self.state?.updated(transition: .immediate)
+                                    }
+                                    
+                                    if !self.didSetReady {
+                                        self.didSetReady = true
+                                        self.isReadyPromise.set(.single(true))
+                                    }
+                                }))
+                            }
+                        case .search:
+                            break
                         }
                     }
                 }
             }
             
             switch component.contents {
+            case .empty:
+                if previousComponent?.contents != component.contents {
+                    self.tagContents?.disposable?.dispose()
+                    self.tagContents = nil
+                    
+                    self.searchContents?.disposable?.dispose()
+                    self.searchContents = nil
+                    
+                    let contentsId = self.nextContentsId
+                    self.nextContentsId += 1
+                    self.contentsState = ContentsState(
+                        id: contentsId,
+                        contentId: .empty,
+                        entries: [],
+                        hasEarlier: false,
+                        hasLater: false
+                    )
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
+                    
+                    if !self.didSetReady {
+                        self.didSetReady = true
+                        self.isReadyPromise.set(.single(true))
+                    }
+                }
             case let .tag(tag):
                 if previousComponent?.contents != component.contents {
                     self.tagContents?.disposable?.dispose()
+                    self.tagContents = nil
+                    
+                    self.searchContents?.disposable?.dispose()
+                    self.searchContents = nil
                     
                     let disposable = MetaDisposable()
                     self.tagContents = (nil, disposable)
@@ -303,12 +350,52 @@ public final class ChatInlineSearchResultsListComponent: Component {
                             self.nextContentsId += 1
                             self.contentsState = ContentsState(
                                 id: contentsId,
-                                tag: tag,
+                                contentId: .tag(tag),
                                 entries: view.entries.reversed().map { entry in
                                     return EngineMessage(entry.message)
                                 },
                                 hasEarlier: view.earlierId != nil,
                                 hasLater: view.laterId != nil
+                            )
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .immediate)
+                            }
+                            
+                            if !self.didSetReady {
+                                self.didSetReady = true
+                                self.isReadyPromise.set(.single(true))
+                            }
+                        }))
+                    }
+                }
+            case .search:
+                if previousComponent?.contents != component.contents {
+                    self.tagContents?.disposable?.dispose()
+                    self.tagContents = nil
+                    
+                    self.searchContents?.disposable?.dispose()
+                    self.searchContents = nil
+                    
+                    let disposable = MetaDisposable()
+                    self.searchContents = (nil, disposable)
+                    
+                    if let historySignal = component.getSearchResult() {
+                        disposable.set((historySignal
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let contentsId = self.nextContentsId
+                            self.nextContentsId += 1
+                            self.contentsState = ContentsState(
+                                id: contentsId,
+                                contentId: .search,
+                                entries: result?.messages.map { entry in
+                                    return EngineMessage(entry)
+                                } ?? [],
+                                hasEarlier: false,
+                                hasLater: false
                             )
                             if !self.isUpdating {
                                 self.state?.updated(transition: .immediate)
@@ -521,7 +608,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                 }
                 
                 var scrollToItem: ListViewScrollToItem?
-                if previousContentsState?.tag != contentsState.tag && !contentsState.entries.isEmpty {
+                if previousContentsState?.contentId != contentsState.contentId && !contentsState.entries.isEmpty {
                     scrollToItem = ListViewScrollToItem(
                         index: 0,
                         position: .top(0.0),

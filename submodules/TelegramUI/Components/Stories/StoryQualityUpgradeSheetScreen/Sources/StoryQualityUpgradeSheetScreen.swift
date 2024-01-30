@@ -149,19 +149,19 @@ private final class StoryQualityUpgradeSheetContentComponent: Component {
             let iconSize = self.icon.update(
                 transition: transition,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "ChatListNoResults"),
+                    content: LottieComponent.AppBundleContent(name: "StoryUpgradeSheet"),
                     color: nil,
                     startingPosition: .begin,
-                    size: CGSize(width: 120.0, height: 120.0)
+                    size: CGSize(width: 100.0, height: 100.0)
                 )),
                 environment: {},
-                containerSize: CGSize(width: 120.0, height: 120.0)
+                containerSize: CGSize(width: 100.0, height: 100.0)
             )
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.addSubview(iconView)
                 }
-                transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: 25.0), size: iconSize))
+                transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: 42.0), size: iconSize))
             }
             
             contentHeight += 138.0
