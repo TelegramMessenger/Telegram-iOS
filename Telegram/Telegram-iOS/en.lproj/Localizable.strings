@@ -11015,7 +11015,7 @@ Sorry for the inconvenience.";
 "Story.ToastQualitySD.Title" = "Quality Lowered";
 "Story.ToastQualitySD.Text" = "Stories will now download faster.";
 "Story.ToastQualityHD.Title" = "Quality Increased";
-"Story.ToastQualityHD.Text" = "You can lower the quality later for faster downloads."
+"Story.ToastQualityHD.Text" = "You can lower the quality later for faster downloads.";
 
 "Story.UpgradeQuality.Title" = "High-Quality Stories";
 "Story.UpgradeQuality.Text" = "Subscribe to premium to view stories in higher resolution.";
@@ -11033,3 +11033,11 @@ Sorry for the inconvenience.";
 "Chat.TagsHeaderPanel.AddTagsSuffix" = "to your Saved Messages";
 "Chat.ReactionContextMenu.SetTagLabel" = "Set Name";
 "Chat.ReactionContextMenu.EditTagLabel" = "Edit Name";
+
+"Chat.BottomSearchPanel.MessageCountFormat" = "%1$@ %2$@";
+"Chat.BottomSearchPanel.MessageCount_1" = "message";
+"Chat.BottomSearchPanel.MessageCount_any" = "messages";
+
+"Chat.BottomSearchPanel.DisplayModeFormat" = "Show as %@";
+"Chat.BottomSearchPanel.DisplayModeChat" = "Chat";
+"Chat.BottomSearchPanel.DisplayModeList" = "List";

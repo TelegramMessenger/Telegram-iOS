@@ -11303,7 +11303,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             
             var items: [ContextMenuItem] = []
             
-            items.append(.action(ContextMenuActionItem(text: strings.Chat.SavedMessagesModeMenu_ViewAsChats, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.Chat_SavedMessagesModeMenu_ViewAsChats, icon: { theme in
                 if !isViewingAsTopics {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .clear)
                 }

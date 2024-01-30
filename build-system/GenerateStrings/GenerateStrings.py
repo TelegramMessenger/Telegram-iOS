@@ -646,7 +646,9 @@ static NSString * _Nonnull getPluralizedIndirect(_PresentationStrings * _Nonnull
 
             if entry.is_pluralized:
                 argument_format_type = ''
-                if entry.positional_arguments[0].kind == 'd':
+                if len(entry.positional_arguments) == 0:
+                    argument_format_type = '1'
+                elif entry.positional_arguments[0].kind == 'd':
                     argument_format_type = '0'
                 elif entry.positional_arguments[0].kind == '@':
                     argument_format_type = '1'

@@ -19,6 +19,27 @@ import AnimatedTextComponent
 
 private let labelFont = Font.regular(15.0)
 
+private func extractAnimatedTextString(string: PresentationStrings.FormattedString, id: String, mapping: [Int: AnimatedTextComponent.Item.Content]) -> [AnimatedTextComponent.Item] {
+    var textItems: [AnimatedTextComponent.Item] = []
+    
+    var previousIndex = 0
+    let nsString = string.string as NSString
+    for range in string.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+        if range.range.lowerBound > previousIndex {
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
+        }
+        if let value = mapping[range.index] {
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), content: value))
+        }
+        previousIndex = range.range.upperBound
+    }
+    if nsString.length > previousIndex {
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_end"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: nsString.length - previousIndex)))))
+    }
+    
+    return textItems
+}
+
 final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     private struct Params: Equatable {
         var width: CGFloat
@@ -169,16 +190,23 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 canChangeListMode = true
                 
                 if params.interfaceState.displayHistoryFilterAsList {
-                    //TODO:localize
-                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_n"), content: .number(displayTotalCount, minDigits: 1)))
-                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_message"), isUnbreakable: true, content: .text(displayTotalCount == 1 ? " message" : " messages")))
+                    resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
+                        ".",
+                        "."
+                    ), id: "total_count", mapping: [
+                        0: .number(displayTotalCount, minDigits: 1),
+                        1: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(displayTotalCount)))
+                    ])
                 } else {
                     let adjustedIndex = results.messageIndices.count - 1 - index
                     
-                    //TODO:localize
-                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_n"), content: .number(adjustedIndex + 1, minDigits: 1)))
-                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_of"), isUnbreakable: true, content: .text(" of ")))
-                    resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_m"), content: .number(displayTotalCount, minDigits: 1)))
+                    resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Items_NOfM(
+                        ".",
+                        "."
+                    ), id: "position", mapping: [
+                        0: .number(adjustedIndex + 1, minDigits: 1),
+                        1: .number(displayTotalCount, minDigits: 1)
+                    ])
                 }
             } else {
                 canChangeListMode = false
@@ -188,9 +216,13 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         } else if let count = self.tagMessageCount?.count {
             canChangeListMode = count != 0
             
-            //TODO:localize
-            resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_n"), content: .number(count, minDigits: 1)))
-            resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_message"), isUnbreakable: true, content: .text(count == 1 ? " message" : " messages")))
+            resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
+                ".",
+                "."
+            ), id: "total_count", mapping: [
+                0: .number(count, minDigits: 1),
+                1: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(count)))
+            ])
         } else if let context = self.context, case .peer(context.account.peerId) = params.interfaceState.chatLocation {
             canChangeListMode = true
         }
@@ -203,14 +235,9 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
         
         var modeButtonTitle: [AnimatedTextComponent.Item] = []
-        //TODO:localize
-        if params.interfaceState.displayHistoryFilterAsList {
-            modeButtonTitle.append(AnimatedTextComponent.Item(id: AnyHashable("show_as"), isUnbreakable: true, content: .text("Show as ")))
-            modeButtonTitle.append(AnimatedTextComponent.Item(id: AnyHashable("chat"), isUnbreakable: true, content: .text("Chat")))
-        } else {
-            modeButtonTitle.append(AnimatedTextComponent.Item(id: AnyHashable("show_as"), isUnbreakable: true, content: .text("Show as ")))
-            modeButtonTitle.append(AnimatedTextComponent.Item(id: AnyHashable("list"), isUnbreakable: true, content: .text("List")))
-        }
+        modeButtonTitle = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeFormat("."), id: "mode", mapping: [
+            0: params.interfaceState.displayHistoryFilterAsList ? .text(params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeChat) : .text(params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeList)
+        ])
 
         let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)
         
