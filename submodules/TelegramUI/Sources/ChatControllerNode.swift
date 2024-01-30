@@ -1407,7 +1407,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var inputPanelNodeHandlesTransition = false
         
         var dismissedInputPanelNode: ChatInputPanelNode?
-        var dismissedSecondaryInputPanelNode: ASDisplayNode?
+        var dismissedSecondaryInputPanelNode: ChatInputPanelNode?
         var dismissedAccessoryPanelNode: AccessoryPanelNode?
         var dismissedInputContextPanelNode: ChatInputContextPanelNode?
         var dismissedOverlayContextPanelNode: ChatInputContextPanelNode?
@@ -1462,6 +1462,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if secondaryInputPanelNode.supernode == nil {
                     immediatelyLayoutSecondaryInputPanelAndAnimateAppearance = true
                     self.inputPanelClippingNode.insertSubnode(secondaryInputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
+                }
+                if let viewForOverlayContent = secondaryInputPanelNode.viewForOverlayContent, viewForOverlayContent.superview == nil {
+                    self.inputPanelOverlayNode.view.addSubview(viewForOverlayContent)
                 }
             } else {
                 let inputPanelHeight = secondaryInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: layout.additionalInsets, maxHeight: layout.size.height - insets.top - inputPanelBottomInset, isSecondary: true, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: self.inputPanelContainerNode.expansionFraction == 1.0)
@@ -2092,6 +2095,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             transition.updateFrame(node: secondaryInputPanelNode, frame: apparentSecondaryInputPanelFrame)
             transition.updateAlpha(node: secondaryInputPanelNode, alpha: 1.0)
+            
+            if let viewForOverlayContent = secondaryInputPanelNode.viewForOverlayContent {
+                if inputPanelNodeHandlesTransition {
+                    viewForOverlayContent.frame = apparentSecondaryInputPanelFrame
+                } else {
+                    transition.updateFrame(view: viewForOverlayContent, frame: apparentSecondaryInputPanelFrame)
+                }
+            }
         }
         
         if let accessoryPanelNode = self.accessoryPanelNode, let accessoryPanelFrame = accessoryPanelFrame, !accessoryPanelNode.frame.equalTo(accessoryPanelFrame) {
@@ -2275,6 +2286,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 alphaCompleted = true
                 completed()
             })
+            
+            dismissedSecondaryInputPanelNode.viewForOverlayContent?.removeFromSuperview()
         }
         
         if let dismissedAccessoryPanelNode = dismissedAccessoryPanelNode {
@@ -2455,9 +2468,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let mappedContents: ChatInlineSearchResultsListComponent.Contents
             if let _ = self.chatPresentationInterfaceState.search?.resultsState {
-                mappedContents = .search
+                mappedContents = .search(query: self.chatPresentationInterfaceState.search?.query ?? "", includeSavedPeers: self.alwaysShowSearchResultsAsList)
             } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter {
                 mappedContents = .tag(historyFilter.customTag)
+            } else if let search = self.chatPresentationInterfaceState.search, self.alwaysShowSearchResultsAsList {
+                mappedContents = .search(query: search.query, includeSavedPeers: self.alwaysShowSearchResultsAsList)
             } else {
                 mappedContents = .empty
             }
@@ -2493,6 +2508,34 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                             return state.updatedDisplayHistoryFilterAsList(false)
                         })
+                    },
+                    peerSelected: { [weak self] peer in
+                        guard let self else {
+                            return
+                        }
+                        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+                            return
+                        }
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                            navigationController: navigationController,
+                            context: self.context,
+                            chatLocation: .replyThread(ChatReplyThreadMessage(
+                                peerId: self.context.account.peerId,
+                                threadId: peer.id.toInt64(),
+                                channelMessageId: nil,
+                                isChannelPost: false,
+                                isForumPost: false,
+                                maxMessage: nil,
+                                maxReadIncomingMessageId: nil,
+                                maxReadOutgoingMessageId: nil,
+                                unreadCount: 0,
+                                initialFilledHoles: IndexSet(),
+                                initialAnchor: .automatic,
+                                isNotAvailable: false
+                            )),
+                            subject: nil,
+                            keepStack: .always
+                        ))
                     },
                     loadTagMessages: { tag, index in
                         let input: ChatHistoryLocationInput
@@ -2542,6 +2585,27 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         |> map { result in
                             return result?.0
                         }
+                    },
+                    getSavedPeers: { [weak self] query in
+                        guard let self else {
+                            return nil
+                        }
+                        let strings = self.chatPresentationInterfaceState.strings
+                        let foundLocalPeers = context.engine.messages.searchLocalSavedMessagesPeers(query: query.lowercased(), indexNameMapping: [
+                            context.account.peerId: [
+                                PeerIndexNameRepresentation.title(title: strings.DialogList_MyNotes.lowercased(), addressNames: []),
+                                PeerIndexNameRepresentation.title(title: "my notes".lowercased(), addressNames: [])
+                            ],
+                            PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2666000)): [
+                                PeerIndexNameRepresentation.title(title: strings.ChatList_AuthorHidden.lowercased(), addressNames: [])
+                            ]
+                        ])
+                        |> map { peers -> [(EnginePeer, MessageIndex?)] in
+                            return peers.map { peer in
+                                return (peer, nil)
+                            }
+                        }
+                        return foundLocalPeers
                     }
                 )),
                 environment: {},
@@ -3367,6 +3431,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let inputPanelNode = self.inputPanelNode, let viewForOverlayContent = inputPanelNode.viewForOverlayContent {
+            if let result = viewForOverlayContent.hitTest(self.view.convert(point, to: viewForOverlayContent), with: event) {
+                return result
+            }
+            if maybeDismissOverlayContent {
+                viewForOverlayContent.maybeDismissContent(point: self.view.convert(point, to: viewForOverlayContent))
+            }
+        }
+        
+        if let secondaryInputPanelNode = self.secondaryInputPanelNode, let viewForOverlayContent = secondaryInputPanelNode.viewForOverlayContent {
             if let result = viewForOverlayContent.hitTest(self.view.convert(point, to: viewForOverlayContent), with: event) {
                 return result
             }

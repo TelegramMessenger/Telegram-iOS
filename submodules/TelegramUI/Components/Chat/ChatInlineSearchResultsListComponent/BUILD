@@ -24,6 +24,9 @@ swift_library(
         "//submodules/TelegramUIPreferences",
         "//submodules/UIKitRuntimeUtils",
         "//submodules/ChatPresentationInterfaceState",
+        "//submodules/ContactsPeerItem",
+        "//submodules/ItemListUI",
+        "//submodules/ChatListSearchItemHeader",
     ],
     visibility = [
         "//visibility:public",

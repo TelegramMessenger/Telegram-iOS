@@ -590,20 +590,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     guard let self, let interfaceInteraction = self.interfaceInteraction else {
                         return
                     }
-                    //TODO:localize
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = self.context.sharedContext.makePremiumDemoController(context: self.context, subject: .uniqueReactions, action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        
-                        let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
-                        replaceImpl?(controller)
-                    })
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
-                    }
-                    interfaceInteraction.chatController()?.push(controller)
+                    (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentTagPremiumPaywall()
                 })
                 self.promoView = promoView
                 self.scrollView.addSubview(promoView)

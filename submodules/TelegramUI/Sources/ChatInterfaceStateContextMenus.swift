@@ -767,6 +767,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
+    let isScheduled = chatPresentationInterfaceState.subject == .scheduledMessages
+    
     let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
@@ -804,6 +806,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             loggingSettings = LoggingSettings.defaultSettings
         }
         
+        var messageActions = messageActions
+        if isEmbeddedMode {
+            messageActions = ChatAvailableMessageActions(
+                options: messageActions.options.intersection([.deleteLocally, .deleteGlobally, .forward]),
+                banAuthor: nil,
+                disableDelete: true,
+                isCopyProtected: messageActions.isCopyProtected,
+                setTag: false,
+                editTags: Set()
+            )
+        } else if isScheduled {
+            messageActions.setTag = false
+            messageActions.editTags = Set()
+        }
+        
         return (MessageContextMenuData(
             starStatus: stickerSaveStatus,
             canReply: canReply && !isEmbeddedMode,
@@ -811,14 +828,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             canEdit: canEdit && !isEmbeddedMode,
             canSelect: canSelect && !isEmbeddedMode,
             resourceStatus: resourceStatus,
-            messageActions: isEmbeddedMode ? ChatAvailableMessageActions(
-                options: messageActions.options.intersection([.deleteLocally, .deleteGlobally, .forward]),
-                banAuthor: nil,
-                disableDelete: true,
-                isCopyProtected: messageActions.isCopyProtected,
-                setTag: false,
-                editTags: Set()
-            ) : messageActions
+            messageActions: messageActions
         ), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
     }
     

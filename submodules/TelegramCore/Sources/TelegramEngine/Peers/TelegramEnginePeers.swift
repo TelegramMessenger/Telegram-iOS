@@ -1064,13 +1064,13 @@ public extension TelegramEngine {
         public func toggleForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, SetForumChannelTopicPinnedError> {
             return self.account.postbox.transaction { transaction -> ([Int64], Int) in
                 if id == self.account.peerId {
-                    var limit = 5
                     let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
-                    if let data = appConfiguration.data, let value = data["saved_pinned_limit"] as? Double {
-                        limit = Int(value)
-                    }
                     
-                    return (transaction.getPeerPinnedThreads(peerId: id), limit)
+                    let accountPeer = transaction.getPeer(self.account.peerId)
+                    let limitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: accountPeer?.isPremium ?? false)
+                    let limit = limitsConfiguration.maxPinnedSavedChatCount
+                    
+                    return (transaction.getPeerPinnedThreads(peerId: id), Int(limit))
                 } else {
                     var limit = 5
                     let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue

@@ -1442,10 +1442,16 @@ public final class ChatListNode: ListView {
                         }
                         switch error {
                         case let .limitReached(count):
+                            var replaceImpl: ((ViewController) -> Void)?
                             let controller = PremiumLimitScreen(context: context, subject: .pinnedSavedPeers, count: Int32(count), action: {
+                                let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                replaceImpl?(premiumScreen)
                                 return true
                             })
                             self.push?(controller)
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
                         default:
                             break
                         }
