@@ -191,6 +191,8 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             //TODO:localize
             resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_n"), content: .number(count, minDigits: 1)))
             resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("count_message"), isUnbreakable: true, content: .text(count == 1 ? " message" : " messages")))
+        } else if let context = self.context, case .peer(context.account.peerId) = params.interfaceState.chatLocation {
+            canChangeListMode = true
         }
         
         let height: CGFloat

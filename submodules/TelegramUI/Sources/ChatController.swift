@@ -5664,9 +5664,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let peer = peerViewMainPeer(view) as? TelegramChannel, !peer.hasPermission(.sendSomething) {
                             return .single(false)
                         } else {
-                            return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder))
-                            |> map { view, _, _ in
-                                return !view.entries.isEmpty
+                            if case let .replyThread(message) = chatLocation, message.peerId == context.account.peerId {
+                                return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: .peer(id: context.account.peerId), contextHolder: Atomic(value: nil)))
+                                |> map { view, _, _ in
+                                    return !view.entries.isEmpty
+                                }
+                                |> distinctUntilChanged
+                            } else {
+                                return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder))
+                                |> map { view, _, _ in
+                                    return !view.entries.isEmpty
+                                }
+                                |> distinctUntilChanged
                             }
                         }
                     }
@@ -5815,6 +5824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return renderedPeer
                                 }.updatedSavedMessagesTopicPeer(savedMessagesPeer?.peer)
                                 .updatedHasSearchTags(hasSearchTags)
+                                .updatedHasScheduledMessages(hasScheduledMessages)
                             })
                             
                             (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: savedMessagesPeer?.peer, overrideImage: imageOverride)
@@ -17287,7 +17297,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let navigationController = self.effectiveNavigationController, navigationController.topViewController == self else {
             return
         }
-        let controller = ChatControllerImpl(context: self.context, chatLocation: self.chatLocation, subject: .scheduledMessages)
+        
+        var mappedChatLocation = self.chatLocation
+        if case let .replyThread(message) = self.chatLocation, message.peerId == self.context.account.peerId {
+            mappedChatLocation = .peer(id: self.context.account.peerId)
+        }
+        
+        let controller = ChatControllerImpl(context: self.context, chatLocation: mappedChatLocation, subject: .scheduledMessages)
         controller.navigationPresentation = .modal
         navigationController.pushViewController(controller)
     }

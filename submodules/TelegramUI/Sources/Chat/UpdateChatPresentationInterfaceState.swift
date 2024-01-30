@@ -398,7 +398,23 @@ func updateChatPresentationInterfaceStateImpl(
     }
     
     if updatedChatPresentationInterfaceState.displayHistoryFilterAsList {
-        if updatedChatPresentationInterfaceState.search?.resultsState == nil && updatedChatPresentationInterfaceState.historyFilter == nil && !selfController.alwaysShowSearchResultsAsList {
+        var canDisplayAsList = false
+        if updatedChatPresentationInterfaceState.search != nil {
+            if updatedChatPresentationInterfaceState.search?.resultsState != nil {
+                canDisplayAsList = true
+            }
+            if updatedChatPresentationInterfaceState.historyFilter != nil {
+                canDisplayAsList = true
+            }
+            if selfController.alwaysShowSearchResultsAsList {
+                canDisplayAsList = true
+            }
+            if case .peer(selfController.context.account.peerId) = updatedChatPresentationInterfaceState.chatLocation {
+                canDisplayAsList = true
+            }
+        }
+        
+        if !canDisplayAsList {
             updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedDisplayHistoryFilterAsList(false)
         }
     }

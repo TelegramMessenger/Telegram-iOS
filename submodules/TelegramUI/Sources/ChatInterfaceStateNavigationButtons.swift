@@ -187,8 +187,10 @@ func secondaryRightNavigationButtonForChatInterfaceState(context: AccountContext
     if presentationInterfaceState.interfaceState.selectionState != nil {
         return nil
     }
-    if case .peer(context.account.peerId) = presentationInterfaceState.chatLocation {
-        return moreInfoNavigationButton
+    if case .standard(.default) = presentationInterfaceState.mode {
+        if case .peer(context.account.peerId) = presentationInterfaceState.chatLocation, presentationInterfaceState.subject != .scheduledMessages {
+            return moreInfoNavigationButton
+        }
     }
     
     return nil

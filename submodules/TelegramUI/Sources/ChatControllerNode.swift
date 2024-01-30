@@ -2453,6 +2453,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if self.alwaysShowSearchResultsAsList {
                 displayInlineSearch = true
             }
+            if case .peer(self.context.account.peerId) = self.chatPresentationInterfaceState.chatLocation {
+                displayInlineSearch = true
+            }
         }
         
         if let peerId = self.chatPresentationInterfaceState.chatLocation.peerId, displayInlineSearch {
@@ -2473,6 +2476,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 mappedContents = .tag(historyFilter.customTag)
             } else if let search = self.chatPresentationInterfaceState.search, self.alwaysShowSearchResultsAsList {
                 mappedContents = .search(query: search.query, includeSavedPeers: self.alwaysShowSearchResultsAsList)
+            } else if case .peer(self.context.account.peerId) = self.chatPresentationInterfaceState.chatLocation {
+                mappedContents = .tag(MemoryBuffer())
             } else {
                 mappedContents = .empty
             }
@@ -2566,7 +2571,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             chatLocationContextHolder: Atomic(value: nil),
                             scheduled: false,
                             fixedCombinedReadStates: nil,
-                            tag: .customTag(tag),
+                            tag: tag.length == 0 ? nil : .customTag(tag),
                             appendMessagesFromTheSameGroup: false,
                             additionalData: []
                         )

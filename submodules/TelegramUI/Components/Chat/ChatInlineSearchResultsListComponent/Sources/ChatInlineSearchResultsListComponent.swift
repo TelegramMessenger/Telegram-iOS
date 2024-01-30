@@ -722,7 +722,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         return ChatListItem(
                             presentationData: chatListPresentationData,
                             context: component.context,
-                            chatListLocation: .savedMessagesChats,
+                            chatListLocation: component.peerId == component.context.account.peerId ? .savedMessagesChats : .chatList(groupId: .root),
                             filterData: nil,
                             index: .forum(
                                 pinnedIndex: .none,
@@ -744,7 +744,7 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 inputActivities: nil,
                                 promoInfo: nil,
                                 ignoreUnreadBadge: false,
-                                displayAsMessage: false,
+                                displayAsMessage: component.peerId != component.context.account.peerId,
                                 hasFailedMessages: false,
                                 forumTopicData: nil,
                                 topForumTopicItems: [],
