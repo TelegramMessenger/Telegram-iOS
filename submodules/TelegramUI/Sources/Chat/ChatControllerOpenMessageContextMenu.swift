@@ -389,26 +389,28 @@ extension ChatControllerImpl {
                                                     return
                                                 }
                                                 
-                                                let _ = (ApplicationSpecificNotice.getSavedMessageTagLabelSuggestion(accountManager: self.context.sharedContext.accountManager)
-                                                |> take(1)
-                                                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak targetView, weak itemNode] value in
-                                                    guard let self, let targetView, let itemNode else {
-                                                        return
-                                                    }
-                                                    if value >= 3 {
-                                                        return
-                                                    }
-                                                    
-                                                    let _ = itemNode
-                                                    
-                                                    let rect = self.chatDisplayNode.view.convert(targetView.bounds, from: targetView).insetBy(dx: -8.0, dy: -8.0)
-                                                    let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Chat_TooltipAddTagLabel), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _, _ in
-                                                        return .dismiss(consume: false)
+                                                if self.chatLocation.peerId == self.context.account.peerId {
+                                                    let _ = (ApplicationSpecificNotice.getSavedMessageTagLabelSuggestion(accountManager: self.context.sharedContext.accountManager)
+                                                    |> take(1)
+                                                    |> deliverOnMainQueue).startStandalone(next: { [weak self, weak targetView, weak itemNode] value in
+                                                        guard let self, let targetView, let itemNode else {
+                                                            return
+                                                        }
+                                                        if value >= 3 {
+                                                            return
+                                                        }
+                                                        
+                                                        let _ = itemNode
+                                                        
+                                                        let rect = self.chatDisplayNode.view.convert(targetView.bounds, from: targetView).insetBy(dx: -8.0, dy: -8.0)
+                                                        let tooltipScreen = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: self.presentationData.strings.Chat_TooltipAddTagLabel), location: .point(rect, .bottom), displayDuration: .custom(5.0), shouldDismissOnTouch: { _, _ in
+                                                            return .dismiss(consume: false)
+                                                        })
+                                                        self.present(tooltipScreen, in: .current)
+                                                        
+                                                        let _ = ApplicationSpecificNotice.incrementSavedMessageTagLabelSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
                                                     })
-                                                    self.present(tooltipScreen, in: .current)
-                                                    
-                                                    let _ = ApplicationSpecificNotice.incrementSavedMessageTagLabelSuggestion(accountManager: self.context.sharedContext.accountManager).startStandalone()
-                                                })
+                                                }
                                             })
                                         } else {
                                             controller.dismiss()
