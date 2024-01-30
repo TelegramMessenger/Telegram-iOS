@@ -430,7 +430,7 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    let _ = updateMessageReactionsInteractively(account: self.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: isLarge, storeAsRecentlyUsed: true).startStandalone()
+                    let _ = updateMessageReactionsInteractively(account: self.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: isLarge, storeAsRecentlyUsed: true).startStandalone()
                 }
 
                 self.forEachController({ controller in

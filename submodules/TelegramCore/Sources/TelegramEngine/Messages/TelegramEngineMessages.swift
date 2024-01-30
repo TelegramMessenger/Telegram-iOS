@@ -299,12 +299,12 @@ public extension TelegramEngine {
         }
         
         public func setMessageReactions(
-            id: EngineMessage.Id,
+            ids: [EngineMessage.Id],
             reactions: [UpdateMessageReaction]
         ) {
             let _ = updateMessageReactionsInteractively(
                 account: self.account,
-                messageId: id,
+                messageIds: ids,
                 reactions: reactions,
                 isLarge: false,
                 storeAsRecentlyUsed: false,
@@ -313,12 +313,12 @@ public extension TelegramEngine {
         }
         
         public func addMessageReactions(
-            id: EngineMessage.Id,
+            ids: [EngineMessage.Id],
             reactions: [UpdateMessageReaction]
         ) {
             let _ = updateMessageReactionsInteractively(
                 account: self.account,
-                messageId: id,
+                messageIds: ids,
                 reactions: reactions,
                 isLarge: false,
                 storeAsRecentlyUsed: false,

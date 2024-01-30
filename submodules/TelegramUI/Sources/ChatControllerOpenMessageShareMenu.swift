@@ -61,9 +61,7 @@ func chatShareToSavedMessagesAdditionalView(_ chatController: ChatControllerImpl
                     return
                 }
                 if !messageIds.isEmpty {
-                    for messageId in messageIds {
-                        let _ = chatController.context.engine.messages.setMessageReactions(id: messageId, reactions: [updateReaction])
-                    }
+                    let _ = chatController.context.engine.messages.setMessageReactions(ids: messageIds, reactions: [updateReaction])
                     
                     var isBuiltinReaction = false
                     if case .builtin = updateReaction {

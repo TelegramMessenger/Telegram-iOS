@@ -1565,7 +1565,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     }
                     
-                    let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
+                    let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageIds: [message.id], reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).startStandalone()
                 }
             })
         }, activateMessagePinch: { [weak self] sourceNode in
@@ -10927,7 +10927,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let tag = updatedFilter.customTag
                 
                 let _ = (self.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: self.context.account.peerId, reaction: reaction)
+                    TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: self.context.account.peerId, threadId: self.chatLocation.threadId, reaction: reaction)
                 )
                 |> deliverOnMainQueue).start(next: { [weak self] count in
                     guard let self else {

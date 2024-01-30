@@ -123,7 +123,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if self.tagMessageCount?.disposable == nil {
                 if let context = self.context {
                     self.tagMessageCount?.disposable = (context.engine.data.subscribe(
-                        TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: context.account.peerId, reaction: reaction)
+                        TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: context.account.peerId, threadId: params.interfaceState.chatLocation.threadId, reaction: reaction)
                     )
                     |> deliverOnMainQueue).startStrict(next: { [weak self] count in
                         guard let self else {

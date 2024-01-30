@@ -2478,6 +2478,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let context = self.context
+            let chatLocation = self.chatLocation
+            
             let _ = inlineSearchResults.update(
                 transition: inlineSearchResultsTransition,
                 component: AnyComponent(ChatInlineSearchResultsListComponent(
@@ -2560,7 +2562,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             input,
                             ignoreMessagesInTimestampRange: nil,
                             context: context,
-                            chatLocation: .peer(id: peerId),
+                            chatLocation: chatLocation,
                             chatLocationContextHolder: Atomic(value: nil),
                             scheduled: false,
                             fixedCombinedReadStates: nil,
