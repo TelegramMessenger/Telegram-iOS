@@ -477,7 +477,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers, .messageTags]
         self.action = action
         self.dismiss = dismiss
     }
