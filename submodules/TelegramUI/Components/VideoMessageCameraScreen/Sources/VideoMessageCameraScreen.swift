@@ -655,6 +655,7 @@ public class VideoMessageCameraScreen: ViewController {
             
             self.backgroundColor = .clear
             
+            self.view.addSubview(self.backgroundView)
             self.view.addSubview(self.containerView)
             
             self.containerView.addSubview(self.previewContainerView)
@@ -694,7 +695,7 @@ public class VideoMessageCameraScreen: ViewController {
         func withReadyCamera(isFirstTime: Bool = false, _ f: @escaping () -> Void) {
             let previewReady: Signal<Bool, NoError>
             if #available(iOS 13.0, *) {
-                previewReady = self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing |> delay(0.2, queue: Queue.mainQueue())
+                previewReady = self.cameraState.isDualCameraEnabled ? self.additionalPreviewView.isPreviewing : self.mainPreviewView.isPreviewing |> delay(0.3, queue: Queue.mainQueue())
             } else {
                 previewReady = .single(true) |> delay(0.35, queue: Queue.mainQueue())
             }
@@ -739,7 +740,7 @@ public class VideoMessageCameraScreen: ViewController {
                     position: self.cameraState.position,
                     isDualEnabled: self.cameraState.isDualCameraEnabled,
                     audio: true,
-                    photo: true,
+                    photo: false,
                     metadata: false,
                     isRoundVideo: true
                 ),
@@ -791,9 +792,9 @@ public class VideoMessageCameraScreen: ViewController {
         func animateIn() {
             self.animatingIn = true
             
-            if let chatNode = self.controller?.chatNode {
-                chatNode.supernode?.view.insertSubview(self.backgroundView, aboveSubview: chatNode.view)
-            }
+//            if let chatNode = self.controller?.chatNode {
+//                chatNode.supernode?.view.insertSubview(self.backgroundView, aboveSubview: chatNode.view)
+//            }
             
             self.backgroundView.alpha = 0.0
             UIView.animate(withDuration: 0.4, animations: {
@@ -1681,9 +1682,9 @@ public class VideoMessageCameraScreen: ViewController {
     private func requestAudioSession() {
         let audioSessionType: ManagedAudioSessionType
         if self.context.sharedContext.currentMediaInputSettings.with({ $0 }).pauseMusicOnRecording { 
-            audioSessionType = .record(speaker: false, withOthers: false)
+            audioSessionType = .record(speaker: false, video: true, withOthers: false)
         } else {
-            audioSessionType = .recordWithOthers
+            audioSessionType = .record(speaker: false, video: true, withOthers: true)
         }
       
         self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: audioSessionType, activate: { [weak self] _ in

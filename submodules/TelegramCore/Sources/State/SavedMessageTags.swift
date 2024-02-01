@@ -155,7 +155,7 @@ func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network, acco
         
         let signal: Signal<Never, NoError> = _internal_savedMessageTags(postbox: postbox)
         |> mapToSignal { current in
-            return (network.request(Api.functions.messages.getSavedReactionTags(hash: current?.hash ?? 0))
+            return (network.request(Api.functions.messages.getSavedReactionTags(flags: 0, peer: nil, hash: current?.hash ?? 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.SavedReactionTags?, NoError> in
                 return .single(nil)

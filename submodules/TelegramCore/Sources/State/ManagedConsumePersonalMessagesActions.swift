@@ -557,7 +557,7 @@ private func synchronizeSavedMessageTags(postbox: Postbox, network: Network, pee
             return .complete()
         }
         
-        return network.request(Api.functions.messages.getSavedReactionTags(hash: 0))
+        return network.request(Api.functions.messages.getSavedReactionTags(flags: 0, peer: nil, hash: 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.SavedReactionTags?, NoError> in
             return .single(nil)

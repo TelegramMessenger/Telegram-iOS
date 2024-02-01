@@ -312,13 +312,14 @@ private final class StoriesListComponent: CombinedComponent {
             let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let colors = [
-                UIColor(rgb: 0x0275f3),
-                UIColor(rgb: 0x8698ff),
-                UIColor(rgb: 0xc871ff),
-                UIColor(rgb: 0xc356ad),
-                UIColor(rgb: 0xe85c44),
-                UIColor(rgb: 0xff932b),
-                UIColor(rgb: 0xe9af18)
+                UIColor(rgb: 0x007aff),
+                UIColor(rgb: 0x798aff),
+                UIColor(rgb: 0xac64f3),
+                UIColor(rgb: 0xc456ae),
+                UIColor(rgb: 0xe95d44),
+                UIColor(rgb: 0xf2822a),
+                UIColor(rgb: 0xe79519),
+                UIColor(rgb: 0xe7ad19)
             ]
             
             let titleColor = theme.list.itemPrimaryTextColor
@@ -369,6 +370,20 @@ private final class StoriesListComponent: CombinedComponent {
             
             items.append(
                 AnyComponentWithIdentity(
+                    id: "quality",
+                    component: AnyComponent(ParagraphComponent(
+                        title: strings.Premium_Stories_Quality_Title,
+                        titleColor: titleColor,
+                        text: strings.Premium_Stories_Quality_Text,
+                        textColor: textColor,
+                        iconName: "Premium/Stories/Quality",
+                        iconColor: colors[2]
+                    ))
+                )
+            )
+            
+            items.append(
+                AnyComponentWithIdentity(
                     id: "views",
                     component: AnyComponent(ParagraphComponent(
                         title: strings.Premium_Stories_Views_Title,
@@ -376,7 +391,7 @@ private final class StoriesListComponent: CombinedComponent {
                         text: strings.Premium_Stories_Views_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Views",
-                        iconColor: colors[2]
+                        iconColor: colors[3]
                     ))
                 )
             )
@@ -390,7 +405,7 @@ private final class StoriesListComponent: CombinedComponent {
                         text: strings.Premium_Stories_Expiration_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Expire",
-                        iconColor: colors[3]
+                        iconColor: colors[4]
                     ))
                 )
             )
@@ -404,7 +419,7 @@ private final class StoriesListComponent: CombinedComponent {
                         text: strings.Premium_Stories_Save_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Save",
-                        iconColor: colors[4]
+                        iconColor: colors[5]
                     ))
                 )
             )
@@ -418,7 +433,7 @@ private final class StoriesListComponent: CombinedComponent {
                         text: strings.Premium_Stories_Captions_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Caption",
-                        iconColor: colors[5]
+                        iconColor: colors[6]
                     ))
                 )
             )
@@ -432,7 +447,7 @@ private final class StoriesListComponent: CombinedComponent {
                         text: strings.Premium_Stories_Format_Text,
                         textColor: textColor,
                         iconName: "Premium/Stories/Format",
-                        iconColor: colors[6]
+                        iconColor: colors[7]
                     ))
                 )
             )

@@ -36,6 +36,7 @@ import WallpaperGridScreen
 import BoostLevelIconComponent
 import BundleIconComponent
 import Markdown
+import GroupStickerPackSetupController
 
 private final class EmojiActionIconComponent: Component {
     let context: AccountContext
@@ -162,12 +163,14 @@ final class ChannelAppearanceScreenComponent: Component {
     private final class ContentsData {
         let peer: EnginePeer?
         let peerWallpaper: TelegramWallpaper?
+        let peerEmojiPack: StickerPackCollectionInfo?
         let subscriberCount: Int?
         let availableThemes: [TelegramTheme]
         
-        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
+        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, peerEmojiPack: StickerPackCollectionInfo?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
             self.peer = peer
             self.peerWallpaper = peerWallpaper
+            self.peerEmojiPack = peerEmojiPack
             self.subscriberCount = subscriberCount
             self.availableThemes = availableThemes
         }
@@ -177,15 +180,17 @@ final class ChannelAppearanceScreenComponent: Component {
                 context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.EmojiPack(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.Wallpaper(id: peerId)
                 ),
                 telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
             )
             |> map { peerData, cloudThemes -> ContentsData in
-                let (peer, subscriberCount, wallpaper) = peerData
+                let (peer, subscriberCount, emojiPack, wallpaper) = peerData
                 return ContentsData(
                     peer: peer,
                     peerWallpaper: wallpaper,
+                    peerEmojiPack: emojiPack,
                     subscriberCount: subscriberCount,
                     availableThemes: cloudThemes
                 )
@@ -213,6 +218,7 @@ final class ChannelAppearanceScreenComponent: Component {
             static let backgroundFileId = Changes(rawValue: 1 << 3)
             static let emojiStatus = Changes(rawValue: 1 << 4)
             static let wallpaper = Changes(rawValue: 1 << 5)
+            static let emojiPack = Changes(rawValue: 1 << 6)
         }
         
         var nameColor: PeerNameColor
@@ -221,16 +227,27 @@ final class ChannelAppearanceScreenComponent: Component {
         var backgroundFileId: Int64?
         var emojiStatus: PeerEmojiStatus?
         var wallpaper: TelegramWallpaper?
+        var emojiPack: StickerPackCollectionInfo?
         
         var changes: Changes
         
-        init(nameColor: PeerNameColor, profileColor: PeerNameColor?, replyFileId: Int64?, backgroundFileId: Int64?, emojiStatus: PeerEmojiStatus?, wallpaper: TelegramWallpaper?, changes: Changes) {
+        init(
+            nameColor: PeerNameColor,
+            profileColor: PeerNameColor?,
+            replyFileId: Int64?,
+            backgroundFileId: Int64?,
+            emojiStatus: PeerEmojiStatus?,
+            wallpaper: TelegramWallpaper?,
+            emojiPack: StickerPackCollectionInfo?,
+            changes: Changes
+        ) {
             self.nameColor = nameColor
             self.profileColor = profileColor
             self.replyFileId = replyFileId
             self.backgroundFileId = backgroundFileId
             self.emojiStatus = emojiStatus
             self.wallpaper = wallpaper
+            self.emojiPack = emojiPack
             self.changes = changes
         }
     }
@@ -274,6 +291,7 @@ final class ChannelAppearanceScreenComponent: Component {
         private var updatedPeerProfileEmoji: Int64??
         private var updatedPeerStatus: PeerEmojiStatus??
         private var updatedPeerWallpaper: WallpaperSelectionResult?
+        private var updatedPeerEmojiPack: StickerPackCollectionInfo??
         private var temporaryPeerWallpaper: TelegramWallpaper?
         
         private var requiredBoostSubject: BoostSubject?
@@ -350,8 +368,8 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             if !resolvedState.changes.isEmpty {
-                if let premiumConfiguration = self.premiumConfiguration, let requiredBoostSubject = self.requiredBoostSubject{
-                    let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+                if let premiumConfiguration = self.premiumConfiguration, let requiredBoostSubject = self.requiredBoostSubject {
+                    let requiredLevel = requiredBoostSubject.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration)
                     if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                         return true
                     }
@@ -478,6 +496,16 @@ final class ChannelAppearanceScreenComponent: Component {
                 changes.insert(.emojiStatus)
             }
             
+            let emojiPack: StickerPackCollectionInfo?
+            if case let .some(value) = self.updatedPeerEmojiPack {
+                emojiPack = value
+            } else {
+                emojiPack = contentsData.peerEmojiPack
+            }
+            if emojiPack != contentsData.peerEmojiPack {
+                changes.insert(.emojiPack)
+            }
+            
             let wallpaper: TelegramWallpaper?
             if let updatedPeerWallpaper = self.updatedPeerWallpaper {
                 switch updatedPeerWallpaper {
@@ -500,6 +528,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 backgroundFileId: backgroundFileId,
                 emojiStatus: emojiStatus,
                 wallpaper: wallpaper,
+                emojiPack: emojiPack,
                 changes: changes
             )
         }
@@ -512,7 +541,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 self.displayBoostLevels(subject: requiredBoostSubject)
                 return
@@ -551,6 +580,13 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             if resolvedState.changes.contains(.emojiStatus) {
                 signals.append(component.context.engine.peers.updatePeerEmojiStatus(peerId: component.peerId, fileId: statusFileId, expirationDate: nil)
+                |> ignoreValues
+                |> mapError { _ -> ApplyError in
+                    return .generic
+                })
+            }
+            if resolvedState.changes.contains(.emojiPack) {
+                signals.append(component.context.engine.peers.updateGroupSpecificEmojiset(peerId: component.peerId, info: resolvedState.emojiPack)
                 |> ignoreValues
                 |> mapError { _ -> ApplyError in
                     return .generic
@@ -605,7 +641,7 @@ final class ChannelAppearanceScreenComponent: Component {
             })
         }
         
-        private func displayBoostLevels(subject: BoostSubject) {
+        private func displayBoostLevels(subject: BoostSubject?) {
             guard let component = self.component, let status = self.boostStatus else {
                 return
             }
@@ -647,8 +683,8 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             let level = boostStatus.level
-            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration))
+            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration))
             
             let selectedWallpaper = resolvedState.wallpaper
             
@@ -684,12 +720,15 @@ final class ChannelAppearanceScreenComponent: Component {
         }
         
         private func openEmojiPackSetup() {
-            guard let component = self.component, let environment = self.environment else {
+            guard let component = self.component, let environment = self.environment, let resolvedState = self.resolveState() else {
                 return
             }
-            let controller = component.context.sharedContext.makeInstalledStickerPacksController(context: component.context, mode: .groupEmoji(selectedPack: nil, completion: { _ in
-                
-            }), forceTheme: nil)
+            let controller = groupStickerPackSetupController(context: component.context, peerId: component.peerId, emoji: true, currentPackInfo: resolvedState.emojiPack, completion: { [weak self] emojiPack in
+                if let self {
+                    self.updatedPeerEmojiPack = emojiPack
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                }
+            })
             environment.controller()?.push(controller)
         }
         
@@ -795,6 +834,16 @@ final class ChannelAppearanceScreenComponent: Component {
             environment.controller()?.present(controller, in: .window(.root))
         }
         
+        private var isGroup: Bool {
+            guard let contentsData = self.contentsData, let peer = contentsData.peer else {
+                return false
+            }
+            if case let .channel(channel) = peer, case .group = channel.info {
+                return true
+            }
+            return false
+        }
+        
         func update(component: ChannelAppearanceScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -859,13 +908,6 @@ final class ChannelAppearanceScreenComponent: Component {
                     self.boostLevel = boostStatus?.level
                     self.boostStatus = boostStatus
                     
-                    #if DEBUG
-                    if boostStatus == nil {
-                        self.boostLevel = 0
-                        self.boostStatus = ChannelBoostStatus(level: 0, boosts: 0, giftBoosts: nil, currentLevelBoosts: 0, nextLevelBoosts: 10, premiumAudience: nil, url: "", prepaidGiveaways: [], boostedByMe: false)
-                    }
-                    #endif
-                    
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
                     }
@@ -877,12 +919,7 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
-            
-            let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let profileIconLevel = Int(BoostSubject.profileIcon.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let emojiStatusLevel = Int(BoostSubject.emojiStatus.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let themeLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            
+
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
                 requiredBoostSubjects.append(.nameIcon)
@@ -902,6 +939,12 @@ final class ChannelAppearanceScreenComponent: Component {
             if emojiStatus != nil {
                 requiredBoostSubjects.append(.emojiStatus)
             }
+            
+            let emojiPack = resolvedState.emojiPack
+            if emojiPack != nil {
+                requiredBoostSubjects.append(.emojiPack)
+            }
+            
             let statusFileId = emojiStatus?.fileId
             
             let cloudThemes: [PresentationThemeReference] = contentsData.availableThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? component.context.account.id : nil)) }
@@ -981,8 +1024,14 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
+            let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let profileIconLevel = Int(BoostSubject.profileIcon.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let emojiStatusLevel = Int(BoostSubject.emojiStatus.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let emojiPackLevel = Int(BoostSubject.emojiPack.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let themeLevel = Int(BoostSubject.wallpaper.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            
             let requiredBoostSubject: BoostSubject
-            if let maxBoostSubject = requiredBoostSubjects.max(by: { $0.requiredLevel(context: component.context, configuration: premiumConfiguration) < $1.requiredLevel(context: component.context, configuration: premiumConfiguration) }) {
+            if let maxBoostSubject = requiredBoostSubjects.max(by: { $0.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration) < $1.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration) }) {
                 requiredBoostSubject = maxBoostSubject
             } else {
                 requiredBoostSubject = .nameColors(colors: resolvedState.nameColor)
@@ -1121,7 +1170,7 @@ final class ChannelAppearanceScreenComponent: Component {
                             title: AnyComponent(HStack(boostContents, spacing: 12.0)),
                             icon: nil,
                             action: { [weak self] _ in
-                                self?.displayBoostLevels(subject: .profileColors)
+                                self?.displayBoostLevels(subject: nil)
                             }
                         )))
                     ]
@@ -1148,7 +1197,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelProfileIconLevel {
+            if let boostLevel = self.boostLevel, boostLevel < (isGroup ? premiumConfiguration.minGroupProfileIconLevel : premiumConfiguration.minChannelProfileIconLevel) {
                 profileLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: profileIconLevel
@@ -1285,12 +1334,19 @@ final class ChannelAppearanceScreenComponent: Component {
                     )),
                     maximumNumberOfLines: 0
                 ))))
-                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelEmojiStatusLevel {
+                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minGroupEmojiPackLevel {
                     emojiPackContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                         strings: environment.strings,
-                        level: emojiStatusLevel
+                        level: emojiPackLevel
                     ))))
                 }
+                
+                
+                var emojiPackFile: TelegramMediaFile?
+                if let thumbnail = emojiPack?.thumbnail {
+                    emojiPackFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: thumbnail.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: thumbnail.immediateThumbnailData, mimeType: "", size: nil, attributes: [])
+                }
+                
                 let emojiPackSectionSize = self.emojiPackSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(
@@ -1311,8 +1367,8 @@ final class ChannelAppearanceScreenComponent: Component {
                                 icon: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
                                     context: component.context,
                                     color: environment.theme.list.itemAccentColor,
-                                    fileId: statusFileId,
-                                    file: statusFileId.flatMap { self.cachedIconFiles[$0] }
+                                    fileId: emojiPack?.thumbnailFileId,
+                                    file: emojiPackFile
                                 ))),
                                 action: { [weak self] view in
                                     guard let self, let resolvedState = self.resolveState() else {
@@ -1347,7 +1403,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelEmojiStatusLevel {
+            if let boostLevel = self.boostLevel, boostLevel < (isGroup ? premiumConfiguration.minGroupEmojiStatusLevel : premiumConfiguration.minChannelEmojiStatusLevel) {
                 emojiStatusContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: emojiStatusLevel
@@ -1532,7 +1588,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     )),
                     maximumNumberOfLines: 0
                 ))))
-                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelCustomWallpaperLevel {
+                if let boostLevel = self.boostLevel, boostLevel < (isGroup ? premiumConfiguration.minGroupCustomWallpaperLevel : premiumConfiguration.minChannelCustomWallpaperLevel) {
                     wallpaperLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                         strings: environment.strings,
                         level: themeLevel
@@ -1549,16 +1605,28 @@ final class ChannelAppearanceScreenComponent: Component {
                 
                 var wallpaperItems: [AnyComponentWithIdentity<Empty>] = []
                 if isGroup {
-                    let messageItem = PeerNameColorChatPreviewItem.MessageItem(
+                    let incomingMessageItem = PeerNameColorChatPreviewItem.MessageItem(
                         outgoing: false,
-                        peerId: EnginePeer.Id(namespace: peer.id.namespace, id: PeerId.Id._internalFromInt64Value(0)),
+                        peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)),
                         author: peer.compactDisplayTitle,
                         photo: peer.profileImageRepresentations,
-                        nameColor: resolvedState.nameColor,
-                        backgroundEmojiId: replyFileId,
-                        reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText),
-                        linkPreview: (environment.strings.Channel_Appearance_ExampleLinkWebsite, environment.strings.Channel_Appearance_ExampleLinkTitle, environment.strings.Channel_Appearance_ExampleLinkText),
-                        text: environment.strings.Channel_Appearance_ExampleText
+                        nameColor: .blue,
+                        backgroundEmojiId: nil,
+                        reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText),
+                        linkPreview: nil,
+                        text: environment.strings.Appearance_PreviewIncomingText
+                    )
+                    
+                    let outgoingMessageItem = PeerNameColorChatPreviewItem.MessageItem(
+                        outgoing: true,
+                        peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)),
+                        author: peer.compactDisplayTitle,
+                        photo: peer.profileImageRepresentations,
+                        nameColor: .blue,
+                        backgroundEmojiId: nil,
+                        reply: nil,
+                        linkPreview: nil,
+                        text: environment.strings.Appearance_PreviewOutgoingText
                     )
                     
                     wallpaperItems.append(
@@ -1574,7 +1642,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                 wallpaper: chatPreviewWallpaper,
                                 dateTimeFormat: environment.dateTimeFormat,
                                 nameDisplayOrder: presentationData.nameDisplayOrder,
-                                messageItems: [messageItem]
+                                messageItems: [incomingMessageItem, outgoingMessageItem]
                             ),
                             params: listItemParams
                         )))
@@ -1665,7 +1733,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 Text(text: environment.strings.Channel_Appearance_ApplyButton, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: Int(requiredLevel),
@@ -1780,9 +1848,9 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
             boostStatus: boostStatus
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
         
-//        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.title = "" //presentationData.strings.Channel_Appearance_Title
-//        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         self.ready.set(.never())

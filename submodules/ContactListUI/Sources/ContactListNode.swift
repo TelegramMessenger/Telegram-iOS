@@ -985,6 +985,7 @@ public final class ContactListNode: ASDisplayNode {
         let processingQueue = Queue()
         let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
         let previousSelectionState = Atomic<ContactListNodeGroupSelectionState?>(value: nil)
+        let previousPendingRemovalPeerIds = Atomic<Set<EnginePeer.Id>?>(value: nil)
         
         let interaction = ContactListNodeInteraction(activateSearch: { [weak self] in
             self?.activateSearch?()
@@ -1517,6 +1518,7 @@ public final class ContactListNode: ASDisplayNode {
                         let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: view.0.presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers, interaction: interaction)
                         let previous = previousEntries.swap(entries)
                         let previousSelection = previousSelectionState.swap(selectionState)
+                        let previousPendingRemovalPeerIds = previousPendingRemovalPeerIds.swap(pendingRemovalPeerIds)
                         
                         var hadPermissionInfo = false
                         if let previous = previous {
@@ -1537,6 +1539,8 @@ public final class ContactListNode: ASDisplayNode {
                         
                         let animation: ContactListAnimation
                         if (previousSelection == nil) != (selectionState == nil) {
+                            animation = .insertion
+                        } else if previousPendingRemovalPeerIds != pendingRemovalPeerIds {
                             animation = .insertion
                         } else if hadPermissionInfo != hasPermissionInfo {
                             animation = .insertion

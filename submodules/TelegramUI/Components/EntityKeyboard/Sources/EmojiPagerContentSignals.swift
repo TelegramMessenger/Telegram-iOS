@@ -67,6 +67,48 @@ public extension EmojiPagerContentComponent {
         
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
+        struct PeerSpecificPackData: Equatable {
+            var info: StickerPackCollectionInfo
+            var items: [StickerPackItem]
+            var peer: EnginePeer
+            
+            static func ==(lhs: PeerSpecificPackData, rhs: PeerSpecificPackData) -> Bool {
+                if lhs.info.id != rhs.info.id {
+                    return false
+                }
+                if lhs.items != rhs.items {
+                    return false
+                }
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                
+                return true
+            }
+        }
+        
+        let peerSpecificPack: Signal<PeerSpecificPackData?, NoError>
+        if let chatPeerId = chatPeerId {
+            peerSpecificPack = combineLatest(
+                context.engine.peers.peerSpecificEmojiPack(peerId: chatPeerId),
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId))
+            )
+            |> map { packData, peer -> PeerSpecificPackData? in
+                guard let peer = peer else {
+                    return nil
+                }
+                
+                guard let (info, items) = packData.packInfo else {
+                    return nil
+                }
+                
+                return PeerSpecificPackData(info: info, items: items.compactMap { $0 as? StickerPackItem }, peer: peer)
+            }
+            |> distinctUntilChanged
+        } else {
+            peerSpecificPack = .single(nil)
+        }
+        
         var orderedItemListCollectionIds: [Int32] = []
         
         switch subject {
@@ -157,9 +199,10 @@ public extension EmojiPagerContentComponent {
             availableReactions,
             searchCategories,
             iconStatusEmoji,
+            peerSpecificPack,
             ApplicationSpecificNotice.dismissedTrendingEmojiPacks(accountManager: context.sharedContext.accountManager)
         )
-        |> map { view, hasPremium, featuredEmojiPacks, availableReactions, searchCategories, iconStatusEmoji, dismissedTrendingEmojiPacks -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredEmojiPacks, availableReactions, searchCategories, iconStatusEmoji, peerSpecificPack, dismissedTrendingEmojiPacks -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -1180,8 +1223,51 @@ public extension EmojiPagerContentComponent {
                     itemCollectionMapping[id] = info
                 }
             }
-                        
+            
             var skippedCollectionIds = Set<AnyHashable>()
+            
+            var avatarPeer: EnginePeer?
+            if let peerSpecificPack = peerSpecificPack {
+                avatarPeer = peerSpecificPack.peer
+                
+                var processedIds = Set<MediaId>()
+                for item in peerSpecificPack.items {
+                    if isPremiumDisabled && item.file.isPremiumSticker {
+                        continue
+                    }
+                    if processedIds.contains(item.file.fileId) {
+                        continue
+                    }
+                    processedIds.insert(item.file.fileId)
+                    
+                    var tintMode: Item.TintMode = .none
+                    if item.file.isCustomTemplateEmoji {
+                        tintMode = .primary
+                    }
+                    
+                    let animationData = EntityKeyboardAnimationData(file: item.file)
+                    let resultItem = EmojiPagerContentComponent.Item(
+                        animationData: animationData,
+                        content: .animation(animationData),
+                        itemFile: item.file,
+                        subgroupId: nil,
+                        icon: .none,
+                        tintMode: tintMode
+                    )
+                    
+                    let groupId = "peerSpecific"
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    } else {
+                        itemGroupIndexById[groupId] = itemGroups.count
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: peerSpecificPack.peer.compactDisplayTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
+                    }
+                }
+                
+                let supergroupId: AnyHashable = peerSpecificPack.info.id
+                skippedCollectionIds.insert(supergroupId)
+            }
+                        
             if areCustomEmojiEnabled {
                 for entry in view.entries {
                     guard let item = entry.item as? StickerPackItem else {
@@ -1442,7 +1528,7 @@ public extension EmojiPagerContentComponent {
             return EmojiPagerContentComponent(
                 id: "emoji",
                 context: context,
-                avatarPeer: nil,
+                avatarPeer: avatarPeer,
                 animationCache: animationCache,
                 animationRenderer: animationRenderer,
                 inputInteractionHolder: EmojiPagerContentComponent.InputInteractionHolder(),

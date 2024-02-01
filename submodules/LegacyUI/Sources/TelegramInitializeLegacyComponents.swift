@@ -183,9 +183,9 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
             switch type {
                 case TGAudioSessionTypePlayAndRecord, TGAudioSessionTypePlayAndRecordHeadphones:
                     if legacyContext.sharedContext.currentMediaInputSettings.with({ $0 }).pauseMusicOnRecording {
-                        convertedType = .record(speaker: false, withOthers: false)
+                        convertedType = .record(speaker: false, video: true, withOthers: false)
                     } else {
-                        convertedType = .recordWithOthers
+                        convertedType = .record(speaker: false, video: true, withOthers: true)
                     }
                 default:
                     convertedType = .play(mixWithOthers: false)

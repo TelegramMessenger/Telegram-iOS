@@ -122,6 +122,8 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
     override func didLoad() {
         super.didLoad()
         
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
+        
         if let vibrancyEffectView = self.vibrancyEffectView {
             Queue.mainQueue().after(0.05) {
                 if let effectNode = findEffectNode(node: self.supernode) {

@@ -102,6 +102,7 @@ import PeerInfoPaneNode
 import MediaPickerUI
 import AttachmentUI
 import BoostLevelIconComponent
+import GroupStickerPackSetupController
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -540,7 +541,7 @@ private final class PeerInfoInteraction {
     let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
-    let openStats: () -> Void
+    let openStats: (Bool) -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
@@ -595,7 +596,7 @@ private final class PeerInfoInteraction {
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
-        openStats: @escaping () -> Void,
+        openStats: @escaping (Bool) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
@@ -1747,7 +1748,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 
                 if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStats, label: .none, text: presentationData.strings.Channel_Info_Stats, icon: UIImage(bundleImageName: "Chat/Info/StatsIcon"), action: {
-                        interaction.openStats()
+                        interaction.openStats(false)
                     }))
                 }
                 
@@ -2029,7 +2030,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                                 interaction.openParticipantsSection(.memberRequests)
                             }))
                         }
-
+                        
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
                             interaction.openParticipantsSection(.banned)
                         }))
@@ -2433,8 +2434,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             openRecentActions: { [weak self] in
                 self?.openRecentActions()
             },
-            openStats: { [weak self] in
-                self?.openStats()
+            openStats: { [weak self] boosts in
+                self?.openStats(boosts: boosts)
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
@@ -3058,7 +3059,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
-        }, openGroupBoostInfo: { _ in
+        }, openGroupBoostInfo: { _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -3933,7 +3934,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                        
             var previousTimestamp: Double?
             self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                     return
                 }
                 let currentTimestamp = CACurrentMediaTime()
@@ -3953,7 +3954,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     |> take(1)
                     |> mapToSignal { emojiStatusFileAndPack -> Signal<PremiumSource, NoError> in
                         if let (file, pack) = emojiStatusFileAndPack {
-                            return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, pack))
+                            return .single(.emojiStatus(peer.id, peerStatus.fileId, file, pack))
                         } else {
                             return .complete()
                         }
@@ -6943,17 +6944,32 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openBoost() {
-        guard let controller = self.controller else {
+        guard let peer = self.data?.peer, let channel = peer as? TelegramChannel, let controller = self.controller else {
             return
         }
-        let boostController = PremiumBoostLevelsScreen(
-            context: self.context,
-            peerId: controller.peerId,
-            mode: .user(mode: .current),
-            status: ChannelBoostStatus(level: 0, boosts: 0, giftBoosts: 0, currentLevelBoosts: 0, nextLevelBoosts: 1, premiumAudience: nil, url: "", prepaidGiveaways: [], boostedByMe: false),
-            myBoostStatus: nil
-        )
-        controller.push(boostController)
+        
+        if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+            let boostsController = channelStatsController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peerId: self.peerId, section: .boosts, boostStatus: self.boostStatus)
+            controller.push(boostsController)
+        } else {
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
+                context.engine.peers.getMyBoostStatus()
+            ).startStandalone(next: { [weak self] boostStatus, myBoostStatus in
+                guard let self, let controller = self.controller, let boostStatus, let myBoostStatus else {
+                    return
+                }
+                let boostController = PremiumBoostLevelsScreen(
+                    context: self.context,
+                    peerId: controller.peerId,
+                    mode: .user(mode: .current),
+                    status: boostStatus,
+                    myBoostStatus: myBoostStatus
+                )
+                controller.push(boostController)
+            })
+        }
     }
     
     private func openVoiceChatOptions(defaultJoinAsPeerId: PeerId?, gesture: ContextGesture? = nil, contextController: ContextControllerProtocol? = nil) {

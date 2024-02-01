@@ -419,6 +419,10 @@ public extension TelegramEngine {
         public func updateGroupSpecificStickerset(peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificStickersetError> {
             return _internal_updateGroupSpecificStickerset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
         }
+        
+        public func updateGroupSpecificEmojiset(peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificEmojisetError> {
+            return _internal_updateGroupSpecificEmojiset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
+        }
 
         public func joinChannel(peerId: PeerId, hash: String?) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
             return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash)
@@ -461,6 +465,10 @@ public extension TelegramEngine {
 
         public func peerSpecificStickerPack(peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
             return _internal_peerSpecificStickerPack(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+        
+        public func peerSpecificEmojiPack(peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
+            return _internal_peerSpecificEmojiPack(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
 
         public func addRecentlySearchedPeer(peerId: PeerId) -> Signal<Void, NoError> {

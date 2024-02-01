@@ -892,6 +892,9 @@ func openResolvedUrlImpl(
                 mode: .user(mode: isCurrent ? .current : .external),
                 status: status,
                 myBoostStatus: myBoostStatus,
+                openPeer:  { peer in
+                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                },
                 forceDark: forceDark
             )
             controller.disposed = {
@@ -902,33 +905,6 @@ func openResolvedUrlImpl(
             if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
                 storyProgressPauseContext.update(controller)
             }
-        
-//            PremiumBoostScreen(
-//                context: context,
-//                contentContext: contentContext,
-//                peerId: peerId,
-//                isCurrent: isCurrent,
-//                status: status,
-//                myBoostStatus: myBoostStatus,
-//                forceDark: forceDark,
-//                openPeer: { peer in
-//                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
-//                },
-//                presentController: { [weak navigationController] c in
-//                    (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
-//                },
-//                pushController: { [weak navigationController] c in
-//                    navigationController?.pushViewController(c)
-//                    
-//                    if c is PremiumLimitScreen {
-//                        if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
-//                            storyProgressPauseContext.update(c)
-//                        }
-//                    }
-//                }, dismissed: {
-//                    dismissedImpl?()
-//                }
-//            )
         case let .premiumGiftCode(slug):
             var forceDark = false
             if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {

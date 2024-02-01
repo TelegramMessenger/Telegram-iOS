@@ -1030,10 +1030,22 @@ final class ShareWithPeersScreenComponent: Component {
                         if case .user = peer {
                             subtitle = environment.strings.VoiceChat_PersonalAccount
                         } else {
-                            if let count = component.stateContext.stateValue?.participants[peer.id] {
-                                subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                            if case let .channel(channel) = peer {
+                                if case .broadcast = channel.info {
+                                    if let count = component.stateContext.stateValue?.participants[peer.id] {
+                                        subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                                    } else {
+                                        subtitle = environment.strings.Channel_Status
+                                    }
+                                } else {
+                                    if let count = component.stateContext.stateValue?.participants[peer.id] {
+                                        subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                    } else {
+                                        subtitle = environment.strings.Group_Status
+                                    }
+                                }
                             } else {
-                                subtitle = environment.strings.Channel_Status
+                                subtitle = nil
                             }
                         }
                         

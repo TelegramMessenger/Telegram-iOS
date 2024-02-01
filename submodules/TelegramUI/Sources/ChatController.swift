@@ -4401,18 +4401,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.canReadHistory.set(true)
             }
             self.presentInGlobalOverlay(contextController)
-        }, openGroupBoostInfo: { [weak self] userId in
+        }, openGroupBoostInfo: { [weak self] userId, count in
             guard let self, let peerId = self.chatLocation.peerId else {
                 return
             }
-            let boostController = PremiumBoostLevelsScreen(
-                context: self.context,
-                peerId: peerId,
-                mode: .user(mode: .groupPeer(userId)),
-                status: ChannelBoostStatus(level: 0, boosts: 0, giftBoosts: nil, currentLevelBoosts: 0, nextLevelBoosts: 10, premiumAudience: nil, url: "", prepaidGiveaways: [], boostedByMe: false),
-                myBoostStatus: nil
-            )
-            self.push(boostController)
+            let _ = combineLatest(queue: Queue.mainQueue(),
+                context.engine.peers.getChannelBoostStatus(peerId: peerId),
+                context.engine.peers.getMyBoostStatus()
+            ).startStandalone(next: { [weak self] boostStatus, myBoostStatus in
+                guard let self, let boostStatus, let myBoostStatus else {
+                    return
+                }
+                let boostController = PremiumBoostLevelsScreen(
+                    context: self.context,
+                    peerId: peerId,
+                    mode: .user(mode: .groupPeer(userId, count)),
+                    status: boostStatus,
+                    myBoostStatus: myBoostStatus
+                )
+                self.push(boostController)
+            })
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)

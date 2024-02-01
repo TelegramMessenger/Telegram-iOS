@@ -2875,8 +2875,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 self.push(PeerInfoStoryGridScreen(context: self.context, peerId: self.context.account.peerId, scope: .archive))
                             })
                         })))
-                    } else if case .channel = peer {
-                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.ChatList_ContextOpenChannel, icon: { theme in
+                    } else if case let .channel(channel) = peer {
+                        let openTitle: String
+                        switch channel.info {
+                        case .broadcast:
+                            openTitle = self.presentationData.strings.ChatList_ContextOpenChannel
+                        case .group:
+                            openTitle = self.presentationData.strings.ChatList_ContextOpenGroup
+                        }
+                        items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {

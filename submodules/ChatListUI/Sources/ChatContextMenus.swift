@@ -878,9 +878,15 @@ public func savedMessagesPeerMenuItems(context: AccountContext, threadId: Int64,
             |> deliverOnMainQueue).startStandalone(error: { error in
                 switch error {
                 case let .limitReached(count):
+                    var replaceImpl: ((ViewController) -> Void)?
                     let controller = PremiumLimitScreen(context: context, subject: .pinnedSavedPeers, count: Int32(count), action: {
+                        let controller = PremiumIntroScreen(context: context, source: .pinnedChats)
+                        replaceImpl?(controller)
                         return true
                     })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
                     parentController?.push(controller)
                 default:
                     break

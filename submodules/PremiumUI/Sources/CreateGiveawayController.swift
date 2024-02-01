@@ -432,7 +432,11 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .channelsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .channel(_, _, peer, boosts, isRevealed):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text(presentationData.strings.BoostGift_ChannelsBoosts($0), .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: boosts == nil, editing: false, revealed: isRevealed), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
+            var isGroup = false
+            if case let .channel(channel) = peer, case .group = channel.info {
+                isGroup = true
+            }
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text(isGroup ? presentationData.strings.BoostGift_GroupBoosts($0) : presentationData.strings.BoostGift_ChannelsBoosts($0), .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: boosts == nil, editing: false, revealed: isRevealed), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
             }, setPeerIdWithRevealedOptions: { lhs, rhs in
                 arguments.setItemIdWithRevealedOptions(lhs, rhs)
             }, removePeer: { id in
@@ -634,6 +638,11 @@ private func createGiveawayControllerEntries(
     minDate: Int32,
     maxDate: Int32
 ) -> [CreateGiveawayEntry] {
+    var isGroup = false
+    if let peer = peers[peerId], case let .channel(channel) = peer, case .group = channel.info {
+        isGroup = true
+    }
+        
     var entries: [CreateGiveawayEntry] = []
         
     switch subject {
@@ -719,7 +728,7 @@ private func createGiveawayControllerEntries(
             entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_QuantityInfo))
         }
         
-        entries.append(.channelsHeader(presentationData.theme, presentationData.strings.BoostGift_ChannelsTitle.uppercased()))
+        entries.append(.channelsHeader(presentationData.theme, isGroup ? presentationData.strings.BoostGift_GroupsAndChannelsTitle.uppercased() : presentationData.strings.BoostGift_ChannelsAndGroupsTitle.uppercased()))
         var index: Int32 = 0
         let channels = [peerId] + state.channels
         for channelId in channels {
@@ -728,8 +737,8 @@ private func createGiveawayControllerEntries(
             }
             index += 1
         }
-        entries.append(.channelAdd(presentationData.theme, presentationData.strings.BoostGift_AddChannel))
-        entries.append(.channelsInfo(presentationData.theme, presentationData.strings.BoostGift_ChannelsInfo))
+        entries.append(.channelAdd(presentationData.theme, isGroup ? presentationData.strings.BoostGift_AddGroupOrChannel : presentationData.strings.BoostGift_AddChannelOrGroup))
+        entries.append(.channelsInfo(presentationData.theme, isGroup ? presentationData.strings.BoostGift_GroupsAndChannelsInfo : presentationData.strings.BoostGift_ChannelsAndGroupsInfo))
         
         entries.append(.usersHeader(presentationData.theme, presentationData.strings.BoostGift_UsersTitle.uppercased()))
         
@@ -752,9 +761,9 @@ private func createGiveawayControllerEntries(
             countriesText = presentationData.strings.BoostGift_FromAllCountries
         }
         
-        entries.append(.usersAll(presentationData.theme, presentationData.strings.BoostGift_AllSubscribers, countriesText, !state.onlyNewEligible))
-        entries.append(.usersNew(presentationData.theme, presentationData.strings.BoostGift_OnlyNewSubscribers, countriesText, state.onlyNewEligible))
-        entries.append(.usersInfo(presentationData.theme, presentationData.strings.BoostGift_LimitSubscribersInfo))
+        entries.append(.usersAll(presentationData.theme, isGroup ? presentationData.strings.BoostGift_Group_AllMembers : presentationData.strings.BoostGift_AllSubscribers, countriesText, !state.onlyNewEligible))
+        entries.append(.usersNew(presentationData.theme, isGroup ? presentationData.strings.BoostGift_Group_OnlyNewMembers : presentationData.strings.BoostGift_OnlyNewSubscribers, countriesText, state.onlyNewEligible))
+        entries.append(.usersInfo(presentationData.theme, isGroup ? presentationData.strings.BoostGift_Group_LimitMembersInfo : presentationData.strings.BoostGift_LimitSubscribersInfo))
         
         if case .generic = subject {
             appendDurationEntries()
@@ -782,7 +791,12 @@ private func createGiveawayControllerEntries(
         
         entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
         entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate, state.pickingExpiryDate, state.pickingExpiryTime))
-        entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
+        
+        if isGroup {
+            entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_Group_DateInfo(presentationData.strings.BoostGift_Group_DateInfoMembers(Int32(state.subscriptions))).string))
+        } else {
+            entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
+        }
     case .gift:
         appendDurationEntries()
     }
@@ -948,8 +962,13 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         presentationData = presentationData.withUpdated(theme: updatedTheme)
         
         let (state, peersMap) = stateAndPeersMap
+        
+        var isGroup = false
+        if let peer = peersMap[peerId], case let .channel(channel) = peer, case .group = channel.info {
+            isGroup = true
+        }
                 
-        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.BoostGift_Title, text: presentationData.strings.BoostGift_Description, cancel: {
+        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.BoostGift_Title, text: isGroup ? presentationData.strings.BoostGift_Group_Description : presentationData.strings.BoostGift_Description, cancel: {
             dismissImpl?()
         })
         

@@ -18,7 +18,7 @@ import BlurredBackgroundComponent
 import Markdown
 import TelegramUIPreferences
 
-final class GradientBackgroundComponent: Component {
+public final class PremiumGradientBackgroundComponent: Component {
     public let colors: [UIColor]
     
     public init(
@@ -27,7 +27,7 @@ final class GradientBackgroundComponent: Component {
         self.colors = colors
     }
     
-    public static func ==(lhs: GradientBackgroundComponent, rhs: GradientBackgroundComponent) -> Bool {
+    public static func ==(lhs: PremiumGradientBackgroundComponent, rhs: PremiumGradientBackgroundComponent) -> Bool {
         if lhs.colors != rhs.colors {
             return false
         }
@@ -38,7 +38,7 @@ final class GradientBackgroundComponent: Component {
         private let clipLayer: CALayer
         private let gradientLayer: CAGradientLayer
         
-        private var component: GradientBackgroundComponent?
+        private var component: PremiumGradientBackgroundComponent?
         
         override init(frame: CGRect) {
             self.clipLayer = CALayer()
@@ -58,7 +58,7 @@ final class GradientBackgroundComponent: Component {
         }
         
         
-        func update(component: GradientBackgroundComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: PremiumGradientBackgroundComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.clipLayer.frame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: availableSize.height + 10.0))
             self.gradientLayer.frame = CGRect(origin: .zero, size: availableSize)
         
@@ -462,7 +462,6 @@ private final class DemoSheetContent: CombinedComponent {
     let context: AccountContext
     let subject: PremiumDemoScreen.Subject
     let source: PremiumDemoScreen.Source
-    let order: [PremiumPerk]
     let action: () -> Void
     let dismiss: () -> Void
     
@@ -470,14 +469,12 @@ private final class DemoSheetContent: CombinedComponent {
         context: AccountContext,
         subject: PremiumDemoScreen.Subject,
         source: PremiumDemoScreen.Source,
-        order: [PremiumPerk]?,
         action: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers]
         self.action = action
         self.dismiss = dismiss
     }
@@ -490,9 +487,6 @@ private final class DemoSheetContent: CombinedComponent {
             return false
         }
         if lhs.source != rhs.source {
-            return false
-        }
-        if lhs.order != rhs.order {
             return false
         }
         return true
@@ -663,7 +657,7 @@ private final class DemoSheetContent: CombinedComponent {
     
     static var body: Body {
         let closeButton = Child(Button.self)
-        let background = Child(GradientBackgroundComponent.self)
+        let background = Child(PremiumGradientBackgroundComponent.self)
         let pager = Child(DemoPagerComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         let measureText = Child(MultilineTextComponent.self)
@@ -679,7 +673,7 @@ private final class DemoSheetContent: CombinedComponent {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
                     
             let background = background.update(
-                component: GradientBackgroundComponent(colors: [
+                component: PremiumGradientBackgroundComponent(colors: [
                     UIColor(rgb: 0x0077ff),
                     UIColor(rgb: 0x6b93ff),
                     UIColor(rgb: 0x8878ff),
@@ -981,17 +975,70 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
+                availableItems[.messageTags] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageTags,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["saved_tags"],
+                                    decoration: .tag
+                                )),
+                                title: strings.Premium_MessageTags,
+                                text: strings.Premium_MessageTagsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.lastSeen] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.lastSeen,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["last_seen"],
+                                    decoration: .tag
+                                )),
+                                title: strings.Premium_LastSeen,
+                                text: strings.Premium_LastSeenInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.messagePrivacy] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messagePrivacy,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["message_privacy"],
+                                    decoration: .tag
+                                )),
+                                title: strings.Premium_MessagePrivacy,
+                                text: strings.Premium_MessagePrivacyInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
                 
-                var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
-                let index: Int
-                switch component.source {
-                    case .intro, .gift:
-                        index = items.firstIndex(where: { (component.subject as AnyHashable) == $0.content.id }) ?? 0
-                    case .other:
-                        items = items.filter { item in
-                            return item.content.id == (component.subject as AnyHashable)
-                        }
-                        index = 0
+                let index: Int = 0
+                var items: [DemoPagerComponent.Item] = []
+                if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
+                    items.append(item.value)
+                } else {
+                    fatalError()
                 }
                 
                 let pager = pager.update(
@@ -1083,6 +1130,12 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_Wallpaper_Proceed
                         case .colors:
                             buttonText = strings.Premium_Colors_Proceed
+                        case .messageTags:
+                            buttonText = strings.Premium_MessageTags_Proceed
+                        case .lastSeen:
+                            buttonText = strings.Premium_LastSeen_Proceed
+                        case .messagePrivacy:
+                            buttonText = strings.Premium_MessagePrivacy_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }
@@ -1118,9 +1171,13 @@ private final class DemoSheetContent: CombinedComponent {
                         text = strings.Premium_ColorsInfo
                     case .wallpapers:
                         text = strings.Premium_WallpapersInfo
-                    case .doubleLimits:
-                        text = ""
-                    case .stories:
+                    case .messageTags:
+                        text = strings.Premium_MessageTagsInfo
+                    case .lastSeen:
+                        text = strings.Premium_LastSeenInfo
+                    case .messagePrivacy:
+                        text = strings.Premium_MessagePrivacyInfo
+                    case .doubleLimits, .stories:
                         text = ""
                     }
                 
@@ -1227,14 +1284,12 @@ private final class DemoSheetComponent: CombinedComponent {
     let context: AccountContext
     let subject: PremiumDemoScreen.Subject
     let source: PremiumDemoScreen.Source
-    let order: [PremiumPerk]?
     let action: () -> Void
     
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, order: [PremiumPerk]?, action: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source, action: @escaping () -> Void) {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order
         self.action = action
     }
     
@@ -1248,10 +1303,6 @@ private final class DemoSheetComponent: CombinedComponent {
         if lhs.source != rhs.source {
             return false
         }
-        if lhs.order != rhs.order {
-            return false
-        }
-        
         return true
     }
     
@@ -1270,7 +1321,6 @@ private final class DemoSheetComponent: CombinedComponent {
                         context: context.component.context,
                         subject: context.component.subject,
                         source: context.component.source,
-                        order: context.component.order,
                         action: context.component.action,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -1338,6 +1388,9 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case stories
         case colors
         case wallpapers
+        case messageTags
+        case lastSeen
+        case messagePrivacy
     }
     
     public enum Source: Equatable {
@@ -1354,12 +1407,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         return self._ready
     }
         
-    public convenience init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, forceDark: Bool = false, action: @escaping () -> Void) {
-        self.init(context: context, subject: subject, source: source, order: nil, forceDark: forceDark, action: action)
-    }
-    
-    init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, order: [PremiumPerk]?, forceDark: Bool = false, action: @escaping () -> Void) {
-        super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, order: order, action: action), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
+    public init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, forceDark: Bool = false, action: @escaping () -> Void) {
+        super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, action: action), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -1399,4 +1448,3 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         }
     }
 }
-

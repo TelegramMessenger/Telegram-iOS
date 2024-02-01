@@ -45,6 +45,10 @@ public extension TelegramEngine {
         public func searchStickerSets(query: String) -> Signal<FoundStickerSets, NoError> {
             return _internal_searchStickerSets(postbox: self.account.postbox, query: query)
         }
+        
+        public func searchEmojiSets(query: String) -> Signal<FoundStickerSets, NoError> {
+            return _internal_searchEmojiSets(postbox: self.account.postbox, query: query)
+        }
 
         public func searchGifs(query: String, nextOffset: String = "") -> Signal<ChatContextResultCollection?, NoError> {
             return _internal_searchGifs(account: self.account, query: query, nextOffset: nextOffset)

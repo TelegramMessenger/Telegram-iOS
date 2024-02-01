@@ -202,11 +202,12 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
         let arguments = arguments as! GroupStickerPackSetupControllerArguments
         switch self {
             case let .search(theme, _, prefix, placeholder, value):
+                let isEmoji = prefix.contains("addemoji")
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { value in
                     arguments.updateSearchText(value)
                 }, processPaste: { text in
                     if let url = (URL(string: text) ?? URL(string: "http://" + text)), url.host == "t.me" || url.host == "telegram.me" {
-                        let prefix = "/addstickers/"
+                        let prefix = isEmoji ? "/addemoji/" : "/addstickers/"
                         if url.path.hasPrefix(prefix) {
                             return String(url.path[url.path.index(url.path.startIndex, offsetBy: prefix.count)...])
                         }
@@ -260,13 +261,13 @@ private struct GroupStickerPackSetupControllerState: Equatable {
     var isSaving: Bool
 }
 
-private func groupStickerPackSetupControllerEntries(context: AccountContext, presentationData: PresentationData, searchText: String, view: CombinedView, initialData: InitialStickerPackData?, searchState: GroupStickerPackSearchState, stickerSettings: StickerSettings) -> [GroupStickerPackEntry] {
+private func groupStickerPackSetupControllerEntries(context: AccountContext, presentationData: PresentationData, searchText: String, view: CombinedView, initialData: InitialStickerPackData?, searchState: GroupStickerPackSearchState, stickerSettings: StickerSettings, emoji: Bool) -> [GroupStickerPackEntry] {
     if initialData == nil {
         return []
     }
     var entries: [GroupStickerPackEntry] = []
     
-    entries.append(.search(presentationData.theme, presentationData.strings, "t.me/addstickers/", presentationData.strings.Channel_Stickers_Placeholder, searchText))
+    entries.append(.search(presentationData.theme, presentationData.strings, emoji ? "t.me/addemoji/" : "t.me/addstickers/", emoji ? "emojiset" : presentationData.strings.Channel_Stickers_Placeholder, searchText))
     switch searchState {
         case .none:
             break
@@ -277,10 +278,10 @@ private func groupStickerPackSetupControllerEntries(context: AccountContext, pre
         case let .found(data):
             entries.append(.currentPack(0, presentationData.theme, presentationData.strings, .found(packInfo: data.info, topItem: data.item, subtitle: presentationData.strings.StickerPack_StickerCount(data.info.count))))
     }
-    entries.append(.searchInfo(presentationData.theme, presentationData.strings.Channel_Stickers_CreateYourOwn))
-    entries.append(.packsTitle(presentationData.theme, presentationData.strings.Channel_Stickers_YourStickers))
+    entries.append(.searchInfo(presentationData.theme, emoji ? "All members will be able to use these emoji in the group, even if they don't have Telegram Premium." : presentationData.strings.Channel_Stickers_CreateYourOwn))
+    entries.append(.packsTitle(presentationData.theme, emoji ? "CHOOSE FROM YOUR EMOJI" : presentationData.strings.Channel_Stickers_YourStickers))
     
-    let namespace = Namespaces.ItemCollection.CloudStickerPacks
+    let namespace = emoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespace])] as? ItemCollectionInfosView {
         if let packsEntries = stickerPacksView.entriesByNamespace[namespace] {
             var index: Int32 = 0
@@ -300,7 +301,7 @@ private func groupStickerPackSetupControllerEntries(context: AccountContext, pre
     return entries
 }
 
-public func groupStickerPackSetupController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
+public func groupStickerPackSetupController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, emoji: Bool = false, currentPackInfo: StickerPackCollectionInfo?, completion: ((StickerPackCollectionInfo?) -> Void)? = nil) -> ViewController {
     let initialState = GroupStickerPackSetupControllerState(isSaving: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -329,7 +330,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     }
     
     let stickerPacks = Promise<CombinedView>()
-    stickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])]))
+    stickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [emoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks])]))
     
     let searchState = Promise<(String, GroupStickerPackSearchState)>()
     searchState.set(combineLatest(searchText.get(), initialData.get(), stickerPacks.get())
@@ -340,7 +341,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
             } else if case let .data(data) = initialData, searchText.lowercased() == data.info.shortName {
                 return .single((searchText, .found(StickerPackData(info: data.info, item: data.item))))
             } else {
-                let namespace = Namespaces.ItemCollection.CloudStickerPacks
+                let namespace = emoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks
                 if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespace])] as? ItemCollectionInfosView {
                     if let packsEntries = stickerPacksView.entriesByNamespace[namespace] {
                         for entry in packsEntries {
@@ -387,10 +388,16 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     
     let arguments = GroupStickerPackSetupControllerArguments(context: context, selectStickerPack: { info in
         searchText.set(info.shortName)
+        if let completion {
+            completion(info)
+        }
     }, openStickerPack: { info in
         presentStickerPackController?(info)
     }, updateSearchText: { text in
         searchText.set(text)
+        if text == "", let completion {
+            completion(nil)
+        }
     }, openStickersBot: {
         resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers")
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
@@ -417,18 +424,27 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
             stickerSettings = value
         }
         
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-            dismissImpl?()
-        })
+        let leftNavigationButton: ItemListNavigationButton?
+        if emoji {
+            leftNavigationButton = nil
+        } else {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+        }
+        
         
         var rightNavigationButton: ItemListNavigationButton?
-        if initialData != nil {
-            if state.isSaving {
-                rightNavigationButton = ItemListNavigationButton(content: .text(""), style: .activity, enabled: true, action: {})
-            } else {
-                let enabled: Bool
-                var info: StickerPackCollectionInfo?
-                switch searchState.1 {
+        if let _ = completion {
+            rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {})
+        } else {
+            if initialData != nil {
+                if state.isSaving {
+                    rightNavigationButton = ItemListNavigationButton(content: .text(""), style: .activity, enabled: true, action: {})
+                } else {
+                    let enabled: Bool
+                    var info: StickerPackCollectionInfo?
+                    switch searchState.1 {
                     case .searching, .notFound:
                         enabled = false
                     case .none:
@@ -436,32 +452,38 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                     case let .found(data):
                         enabled = true
                         info = data.info
-                }
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: enabled, action: {
-                    if info?.id == currentPackInfo?.id {
-                        dismissImpl?()
-                    } else {
-                        updateState { state in
-                            var state = state
-                            state.isSaving = true
-                            return state
-                        }
-                        saveDisposable.set((context.engine.peers.updateGroupSpecificStickerset(peerId: peerId, info: info)
-                        |> deliverOnMainQueue).start(error: { _ in
-                            updateState { state in
-                                var state = state
-                                state.isSaving = false
-                                return state
-                            }
-                        }, completed: {
-                            dismissImpl?()
-                        }))
                     }
-                })
+                    rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: enabled, action: {
+                        if let completion {
+                            completion(info)
+                            dismissImpl?()
+                        } else {
+                            if info?.id == currentPackInfo?.id {
+                                dismissImpl?()
+                            } else {
+                                updateState { state in
+                                    var state = state
+                                    state.isSaving = true
+                                    return state
+                                }
+                                saveDisposable.set((context.engine.peers.updateGroupSpecificStickerset(peerId: peerId, info: info)
+                                                    |> deliverOnMainQueue).start(error: { _ in
+                                    updateState { state in
+                                        var state = state
+                                        state.isSaving = false
+                                        return state
+                                    }
+                                }, completed: {
+                                    dismissImpl?()
+                                }))
+                            }
+                        }
+                    })
+                }
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Channel_Info_Stickers), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(emoji ? "Group Emoji Pack" : presentationData.strings.Channel_Info_Stickers), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
         let hasData = initialData != nil
         let hadData = previousHadData.swap(hasData)
@@ -471,7 +493,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
             emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStickerPackSetupControllerEntries(context: context, presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: groupStickerPackSetupControllerEntries(context: context, presentationData: presentationData, searchText: searchState.0, view: view, initialData: initialData, searchState: searchState.1, stickerSettings: stickerSettings, emoji: emoji), style: .blocks, emptyStateItem: emptyStateItem, animateChanges: hasData && hadData)
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
         actionsDisposable.dispose()

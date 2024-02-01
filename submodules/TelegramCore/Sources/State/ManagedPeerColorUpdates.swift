@@ -95,18 +95,21 @@ public final class EngineAvailableColorOptions: Codable, Equatable {
             case dark = "d"
             case isHidden = "h"
             case requiredChannelMinBoostLevel = "rcmb"
+            case requiredGroupMinBoostLevel = "rgmb"
         }
         
         public let light: ColorOption
         public let dark: ColorOption?
         public let isHidden: Bool
         public let requiredChannelMinBoostLevel: Int32?
+        public let requiredGroupMinBoostLevel: Int32?
         
-        public init(light: ColorOption, dark: ColorOption?, isHidden: Bool, requiredChannelMinBoostLevel: Int32?) {
+        public init(light: ColorOption, dark: ColorOption?, isHidden: Bool, requiredChannelMinBoostLevel: Int32?, requiredGroupMinBoostLevel: Int32?) {
             self.light = light
             self.dark = dark
             self.isHidden = isHidden
             self.requiredChannelMinBoostLevel = requiredChannelMinBoostLevel
+            self.requiredGroupMinBoostLevel = requiredGroupMinBoostLevel
         }
         
         public init(from decoder: Decoder) throws {
@@ -116,6 +119,7 @@ public final class EngineAvailableColorOptions: Codable, Equatable {
             self.dark = try container.decodeIfPresent(ColorOption.self, forKey: .dark)
             self.isHidden = try container.decode(Bool.self, forKey: .isHidden)
             self.requiredChannelMinBoostLevel = try container.decodeIfPresent(Int32.self, forKey: .requiredChannelMinBoostLevel)
+            self.requiredGroupMinBoostLevel = try container.decodeIfPresent(Int32.self, forKey: .requiredGroupMinBoostLevel)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -125,6 +129,7 @@ public final class EngineAvailableColorOptions: Codable, Equatable {
             try container.encodeIfPresent(self.dark, forKey: .dark)
             try container.encodeIfPresent(self.isHidden, forKey: .isHidden)
             try container.encodeIfPresent(self.requiredChannelMinBoostLevel, forKey: .requiredChannelMinBoostLevel)
+            try container.encodeIfPresent(self.requiredGroupMinBoostLevel, forKey: .requiredGroupMinBoostLevel)
         }
         
         public static func ==(lhs: ColorOptionPack, rhs: ColorOptionPack) -> Bool {
@@ -141,6 +146,9 @@ public final class EngineAvailableColorOptions: Codable, Equatable {
                 return false
             }
             if lhs.requiredChannelMinBoostLevel != rhs.requiredChannelMinBoostLevel {
+                return false
+            }
+            if lhs.requiredGroupMinBoostLevel != rhs.requiredGroupMinBoostLevel {
                 return false
             }
             return true
@@ -270,14 +278,14 @@ private extension EngineAvailableColorOptions {
         var mappedOptions: [Option] = []
         for apiColor in apiColors {
             switch apiColor {
-            case let .peerColorOption(flags, colorId, colors, darkColors, requiredChannelMinBoostLevel):
+            case let .peerColorOption(flags, colorId, colors, darkColors, requiredChannelMinBoostLevel, requiredGroupMinBoostLevel):
                 let isHidden = (flags & (1 << 0)) != 0
                 
                 let mappedColors = colors.flatMap(EngineAvailableColorOptions.ColorOption.init(apiColors:))
                 let mappedDarkColors = darkColors.flatMap(EngineAvailableColorOptions.ColorOption.init(apiColors:))
                 
                 if let mappedColors = mappedColors {
-                    mappedOptions.append(Option(key: colorId, value: ColorOptionPack(light: mappedColors, dark: mappedDarkColors, isHidden: isHidden, requiredChannelMinBoostLevel: requiredChannelMinBoostLevel)))
+                    mappedOptions.append(Option(key: colorId, value: ColorOptionPack(light: mappedColors, dark: mappedDarkColors, isHidden: isHidden, requiredChannelMinBoostLevel: requiredChannelMinBoostLevel, requiredGroupMinBoostLevel: requiredGroupMinBoostLevel)))
                 } else if colorId >= 0 && colorId <= 6 {
                     let staticMap: [UInt32] = [
                         0xcc5049,
@@ -290,7 +298,7 @@ private extension EngineAvailableColorOptions {
                     ]
                     let colorPack = MultiColorPack(colors: [staticMap[Int(colorId)]])
                     let defaultColors = EngineAvailableColorOptions.ColorOption(palette: colorPack, background: colorPack, stories: nil)
-                    mappedOptions.append(Option(key: colorId, value: ColorOptionPack(light: defaultColors, dark: nil, isHidden: isHidden, requiredChannelMinBoostLevel: requiredChannelMinBoostLevel)))
+                    mappedOptions.append(Option(key: colorId, value: ColorOptionPack(light: defaultColors, dark: nil, isHidden: isHidden, requiredChannelMinBoostLevel: requiredChannelMinBoostLevel, requiredGroupMinBoostLevel: requiredGroupMinBoostLevel)))
                 }
             }
         }

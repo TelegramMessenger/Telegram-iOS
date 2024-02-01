@@ -639,6 +639,39 @@ func _internal_searchStickerSets(postbox: Postbox, query: String) -> Signal<Foun
     } |> switchToLatest
 }
 
+func _internal_searchEmojiSets(postbox: Postbox, query: String) -> Signal<FoundStickerSets, NoError> {
+    return postbox.transaction { transaction -> Signal<FoundStickerSets, NoError> in
+        let infos = transaction.getItemCollectionsInfos(namespace: Namespaces.ItemCollection.CloudEmojiPacks)
+        
+        var collections: [(ItemCollectionId, ItemCollectionInfo)] = []
+        var topItems: [ItemCollectionId: ItemCollectionItem] = [:]
+        var entries: [ItemCollectionViewEntry] = []
+        for info in infos {
+            if let info = info.1 as? StickerPackCollectionInfo {
+                let split = info.title.split(separator: " ")
+                if !split.filter({$0.lowercased().hasPrefix(query.lowercased())}).isEmpty || info.shortName.lowercased().hasPrefix(query.lowercased()) {
+                    collections.append((info.id, info))
+                }
+            }
+        }
+        var index: Int32 = 0
+        
+        for info in collections {
+            let items = transaction.getItemCollectionItems(collectionId: info.0)
+            let values = items.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: info.0, itemIndex: $0.index), item: $0) })
+            entries.append(contentsOf: values)
+            if let first = items.first {
+                topItems[info.0] = first
+            }
+            index += 1
+        }
+        
+        let result = FoundStickerSets(infos: collections.map { ($0.0, $0.1, topItems[$0.0], true) }, entries: entries)
+        
+        return .single(result)
+    } |> switchToLatest
+}
+
 func _internal_searchGifs(account: Account, query: String, nextOffset: String = "") -> Signal<ChatContextResultCollection?, NoError> {
    return account.postbox.transaction { transaction -> String in
         let configuration = currentSearchBotsConfiguration(transaction: transaction)

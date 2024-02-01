@@ -937,7 +937,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = NSAttributedString(string: strings.Notification_GiftLink, font: titleFont, textColor: primaryTextColor)
                 }
             case .giveawayLaunched:
-                let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
+                var isGroup = false
+                let messagePeer = message.peers[message.id.peerId]
+                if let channel = messagePeer as? TelegramChannel, case .group = channel.info {
+                    isGroup = true
+                }
+                let resultTitleString = isGroup ? strings.Notification_GiveawayStartedGroup(compactAuthorName) : strings.Notification_GiveawayStarted(compactAuthorName)
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
             case .joinedChannel:
                 attributedString = NSAttributedString(string: strings.Notification_ChannelJoinedByYou, font: titleBoldFont, textColor: primaryTextColor)

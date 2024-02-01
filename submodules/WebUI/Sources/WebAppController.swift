@@ -248,7 +248,8 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
         "section_bg_color": Int32(bitPattern: presentationTheme.list.itemBlocksBackgroundColor.rgb),
         "section_header_text_color": Int32(bitPattern: presentationTheme.list.freeTextColor.rgb),
         "subtitle_text_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
-        "destructive_text_color": Int32(bitPattern: presentationTheme.list.itemDestructiveColor.rgb)
+        "destructive_text_color": Int32(bitPattern: presentationTheme.list.itemDestructiveColor.rgb),
+        "section_separator_color": Int32(bitPattern: presentationTheme.list.itemBlocksSeparatorColor.rgb)
     ]
 }
 

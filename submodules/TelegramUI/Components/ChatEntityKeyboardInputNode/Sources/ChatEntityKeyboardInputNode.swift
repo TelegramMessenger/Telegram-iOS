@@ -885,9 +885,16 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             let remotePacksSignal: Signal<(sets: FoundStickerSets, isFinalResult: Bool), NoError>
                             if hasPremium {
                                 remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
-                                remotePacksSignal = .single((FoundStickerSets(), false)) |> then(context.engine.stickers.searchEmojiSetsRemotely(query: query) |> map {
-                                    ($0, true)
-                                })
+                                remotePacksSignal = context.engine.stickers.searchEmojiSets(query: query)
+                                |> mapToSignal { localResult in
+                                    return .single((localResult, false))
+                                    |> then(
+                                        context.engine.stickers.searchEmojiSetsRemotely(query: query)
+                                        |> map { remoteResult in
+                                            return (localResult.merge(with: remoteResult), true)
+                                        }
+                                    )
+                                }
                             } else {
                                 remoteSignal = .single(([], true))
                                 remotePacksSignal = .single((FoundStickerSets(), true))

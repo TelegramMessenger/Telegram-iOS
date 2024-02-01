@@ -539,6 +539,33 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct EmojiPack: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = StickerPackCollectionInfo?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedData = view.cachedPeerData as? CachedChannelData else {
+                    return nil
+                }
+                return cachedData.emojiPack
+            }
+        }
+        
         public struct AllowedReactions: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = EnginePeerCachedInfoItem<PeerAllowedReactions>
 

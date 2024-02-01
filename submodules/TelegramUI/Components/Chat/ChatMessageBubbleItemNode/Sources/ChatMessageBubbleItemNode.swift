@@ -557,6 +557,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     private var boostBadgeNode: TextNode?
     private var boostIconNode: UIImageView?
+    private var boostCount: Int = 0
+    
     private var boostButtonNode: HighlightTrackingButtonNode?
     private var boostHighlightNode: ASImageNode?
     
@@ -1515,7 +1517,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo {
                 if !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
                     needsShareButton = true
-                } else if author.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(92386307)) {
+                } else if author.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(92386307)) || author.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(6435149744)) {
                     needsShareButton = true
                 }
             }
@@ -2197,12 +2199,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 }
                 
-                let boostCount: Int32 = 2
-                
-                if boostCount > 1, let authorNameColor = authorNameColor {
-                    boostBadgeString = NSAttributedString(string: "\(boostCount)", font: boostBadgeFont, textColor: authorNameColor)
-                }
-                
                 var viaSuffix: NSAttributedString?
                 if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                     let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedString.Key.font: nameFont, NSAttributedString.Key.foregroundColor: authorNameColor])
@@ -2235,18 +2231,34 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         credibilityIconWidth += 20.0
                     }
                 }
+                
                 let adminBadgeSizeAndApply = adminBadgeLayout(TextNodeLayoutArguments(attributedString: adminBadgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                adminNodeSizeApply = (adminBadgeSizeAndApply.0.size, {
-                    return adminBadgeSizeAndApply.1()
-                })
+                if adminBadgeSizeAndApply.0.size.width > 0.0 {
+                    adminNodeSizeApply = (adminBadgeSizeAndApply.0.size, {
+                        return adminBadgeSizeAndApply.1()
+                    })
+                }
+                
+                var boostCount: Int = 0
+                for attribute in item.message.attributes {
+                    if let attribute = attribute as? BoostCountMessageAttribute {
+                        boostCount = attribute.count
+                    }
+                }
+ 
+                if boostCount > 1, let authorNameColor = authorNameColor {
+                    boostBadgeString = NSAttributedString(string: "\(boostCount)", font: boostBadgeFont, textColor: authorNameColor)
+                }
                 
                 var boostBadgeWidth: CGFloat = 0.0
                 let boostBadgeSizeAndApply = boostBadgeLayout(TextNodeLayoutArguments(attributedString: boostBadgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                boostNodeSizeApply = (boostBadgeSizeAndApply.0.size, {
-                    return boostBadgeSizeAndApply.1()
-                })
                 if boostBadgeSizeAndApply.0.size.width > 0.0 {
+                    boostNodeSizeApply = (boostBadgeSizeAndApply.0.size, {
+                        return boostBadgeSizeAndApply.1()
+                    })
                     boostBadgeWidth += boostBadgeSizeAndApply.0.size.width + 19.0
+                } else if boostCount == 1 {
+                    boostBadgeWidth = 14.0
                 }
                 
                 let closeButtonWidth: CGFloat = item.message.adAttribute != nil ? 18.0 : 0.0
@@ -3166,6 +3178,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.credibilityHighlightNode = nil
             }
             
+            var boostCount: Int = 0
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? BoostCountMessageAttribute {
+                    boostCount = attribute.count
+                }
+            }
+            
             var rightContentOffset: CGFloat = 0.0
             if let boostBadgeNode = boostNodeSizeApply.1() {
                 boostBadgeNode.alpha = 0.75
@@ -3184,13 +3203,25 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else {
                     animation.animator.updateFrame(layer: boostBadgeNode.layer, frame: boostBadgeFrame, completion: nil)
                 }
-                rightContentOffset += boostNodeSizeApply.0.width + 19.0
-                    
-                var boostIconFrame = boostBadgeFrame
-                boostIconFrame.origin.x -= 16.0
-                boostIconFrame.origin.y -= 3.0
-                boostIconFrame.size.width += 19.0
-                boostIconFrame.size.height = 22.0
+            } else {
+                strongSelf.boostBadgeNode?.removeFromSupernode()
+                strongSelf.boostBadgeNode = nil
+            }
+            
+            if boostCount > 0 {
+                var boostTotalWidth: CGFloat = 22.0
+                if boostNodeSizeApply.0.width > 0.0 {
+                    boostTotalWidth += boostNodeSizeApply.0.width
+                    rightContentOffset += boostTotalWidth
+                } else {
+                    boostTotalWidth -= 6.0
+                    rightContentOffset += boostTotalWidth - 2.0
+                }
+                
+                
+                let boostIconFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - layoutConstants.text.bubbleInsets.left - boostTotalWidth + 4.0, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY + 1.0 - UIScreenPixel - 3.0), size: CGSize(width: boostTotalWidth, height: 22.0))
+
+                let previousBoostCount = strongSelf.boostCount
                 
                 let boostIconNode: UIImageView
                 let boostButtonNode: HighlightTrackingButtonNode
@@ -3202,7 +3233,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else {
                     boostIconNode = UIImageView()
                     boostIconNode.alpha = 0.75
-                    boostIconNode.image = UIImage(bundleImageName: "Chat/Message/Boosts")?.withRenderingMode(.alwaysTemplate)
                     
                     strongSelf.clippingNode.view.addSubview(boostIconNode)
                     strongSelf.boostIconNode = boostIconNode
@@ -3232,10 +3262,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     strongSelf.boostButtonNode = boostButtonNode
                 }
                 
+                if boostCount != previousBoostCount {
+                    boostIconNode.image = UIImage(bundleImageName: boostCount == 1 ? "Chat/Message/Boost" : "Chat/Message/Boosts")?.withRenderingMode(.alwaysTemplate)
+                }
+                
                 boostIconNode.tintColor = nameColor
                 
-                let iconSize = CGSize(width: 14.0, height: 14.0)
-                boostIconNode.frame = CGRect(origin: CGPoint(x: boostIconFrame.minX + 1.0, y: boostIconFrame.midY - iconSize.height / 2.0), size: iconSize)
+                if let iconSize = boostIconNode.image?.size {
+                    boostIconNode.frame = CGRect(origin: CGPoint(x: boostTotalWidth > 22.0 ? boostIconFrame.minX + 3.0 : boostIconFrame.midX - iconSize.width / 2.0, y: boostIconFrame.midY - iconSize.height / 2.0), size: iconSize)
+                }
                 
                 boostHighlightNode.frame = boostIconFrame
                 boostButtonNode.frame = boostIconFrame.insetBy(dx: -2.0, dy: -3.0)
@@ -3244,13 +3279,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     boostHighlightNode.image = generateFilledRoundedRectImage(size: CGSize(width: 8.0, height: 8.0), cornerRadius: 4.0, color: nameColor.withAlphaComponent(0.1))?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 4)
                 }
             } else {
-                strongSelf.boostBadgeNode?.removeFromSupernode()
-                strongSelf.boostBadgeNode = nil
                 strongSelf.boostButtonNode?.removeFromSupernode()
                 strongSelf.boostButtonNode = nil
                 strongSelf.boostHighlightNode?.removeFromSupernode()
                 strongSelf.boostHighlightNode = nil
+                strongSelf.boostIconNode?.removeFromSuperview()
+                strongSelf.boostIconNode = nil
             }
+            strongSelf.boostCount = boostCount
             
             if let adminBadgeNode = adminNodeSizeApply.1() {
                 strongSelf.adminBadgeNode = adminBadgeNode
@@ -5129,7 +5165,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         guard let item = self.item, let peer = item.message.author else {
             return
         }
-        item.controllerInteraction.openGroupBoostInfo(peer.id)
+        
+        var boostCount: Int = 0
+        for attribute in item.message.attributes {
+            if let attribute = attribute as? BoostCountMessageAttribute {
+                boostCount = attribute.count
+            }
+        }
+        
+        item.controllerInteraction.openGroupBoostInfo(peer.id, boostCount)
     }
     
     private var playedSwipeToReplyHaptic = false

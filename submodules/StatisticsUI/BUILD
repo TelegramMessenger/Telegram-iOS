@@ -38,6 +38,7 @@ swift_library(
         "//submodules/ShareController:ShareController",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
         "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
+        "//submodules/TelegramUI/Components/PlainButtonComponent",
     ],
     visibility = [
         "//visibility:public",

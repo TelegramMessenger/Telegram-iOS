@@ -362,6 +362,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             let participantsText: String
             let countriesText: String
             
+            let isGroup = "".isEmpty
+            
             if let giveaway {
                 if giveaway.flags.contains(.onlyNewSubscribers) {
                     if giveaway.channelPeerIds.count > 1 {
@@ -373,7 +375,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     if giveaway.channelPeerIds.count > 1 {
                         participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsMany
                     } else {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_Participants
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_Participants : item.presentationData.strings.Chat_Giveaway_Message_Participants
                     }
                 }
                 if !giveaway.countries.isEmpty {
@@ -537,7 +539,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                     titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
                 
                 let animationName: String
                 let months = giveaway?.months ?? 0
