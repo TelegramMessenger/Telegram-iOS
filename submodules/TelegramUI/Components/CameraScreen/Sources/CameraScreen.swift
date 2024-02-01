@@ -2766,7 +2766,7 @@ public class CameraScreen: ViewController {
     }
     
     private func requestAudioSession() {
-        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .recordWithOthers, activate: { _ in
+        self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .record(speaker: false, video: true, withOthers: true), activate: { _ in
             if #available(iOS 13.0, *) {
                 try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
