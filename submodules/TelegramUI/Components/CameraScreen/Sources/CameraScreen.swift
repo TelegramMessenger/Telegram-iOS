@@ -1061,7 +1061,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         .disappear(.default(scale: true))
                     )
                     
-                    if !isTablet && Camera.isDualCameraSupported {
+                    if !isTablet && Camera.isDualCameraSupported(forRoundVideo: false) {
                         let dualButton = dualButton.update(
                             component: CameraButton(
                                 content: AnyComponentWithIdentity(
@@ -1513,7 +1513,7 @@ public class CameraScreen: ViewController {
             self.previewBlurView = BlurView()
             self.previewBlurView.isUserInteractionEnabled = false
             
-            var isDualCameraEnabled = Camera.isDualCameraSupported
+            var isDualCameraEnabled = Camera.isDualCameraSupported(forRoundVideo: false)
             if isDualCameraEnabled {
                 if let isDualCameraEnabledValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraIsDualEnabled") as? NSNumber {
                     isDualCameraEnabled = isDualCameraEnabledValue.boolValue
