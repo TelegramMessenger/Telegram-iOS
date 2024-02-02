@@ -640,7 +640,7 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigateToMentions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigateToMentions"), color: theme.rootController.navigationBar.accentTextColor), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
                 }
             })
@@ -652,7 +652,7 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.rootController.navigationBar.accentTextColor), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
                 }
             })
