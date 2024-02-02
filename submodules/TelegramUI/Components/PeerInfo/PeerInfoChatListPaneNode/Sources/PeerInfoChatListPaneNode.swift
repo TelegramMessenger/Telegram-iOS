@@ -409,6 +409,17 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                     return
                 }
                 
+                chatController.customDismissSearch = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    if self.searchNavigationContentNode !== nil {
+                        self.searchNavigationContentNode = nil
+                        self.externalDataUpdated?(.animated(duration: 0.4, curve: .spring))
+                    }
+                    
+                    self.removeChatController()
+                }
                 chatController.stateUpdated = { [weak self] transition in
                     guard let self, let chatController = self.chatController else {
                         return

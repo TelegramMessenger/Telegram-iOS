@@ -517,6 +517,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     public var customNavigationPanelNode: ChatControllerCustomNavigationPanelNode?
     public var stateUpdated: ((ContainedViewLayoutTransition) -> Void)?
 
+    public var customDismissSearch: (() -> Void)?
+
     public override var customData: Any? {
         return self.chatLocation
     }
@@ -9091,13 +9093,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateItemNodesSearchTextHighlightStates()
             })
         }, dismissMessageSearch: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
-                    return current.updatedSearch(nil).updatedHistoryFilter(nil)
-                })
-                strongSelf.updateItemNodesSearchTextHighlightStates()
-                strongSelf.searchResultsController = nil
+            guard let self else {
+                return
             }
+            
+            if let customDismissSearch = self.customDismissSearch {
+                customDismissSearch()
+                return
+            }
+                
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
+                return current.updatedSearch(nil).updatedHistoryFilter(nil)
+            })
+            self.updateItemNodesSearchTextHighlightStates()
+            self.searchResultsController = nil
         }, updateMessageSearch: { [weak self] query in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in

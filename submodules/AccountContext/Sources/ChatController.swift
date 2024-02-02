@@ -938,6 +938,7 @@ public protocol ChatController: ViewController {
     var purposefulAction: (() -> Void)? { get set }
     
     var stateUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
+    var customDismissSearch: (() -> Void)? { get set }
     
     var selectedMessageIds: Set<EngineMessage.Id>? { get }
     var presentationInterfaceStateSignal: Signal<Any, NoError> { get }

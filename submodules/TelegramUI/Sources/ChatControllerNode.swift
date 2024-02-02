@@ -2475,8 +2475,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 mappedContents = .search(query: self.chatPresentationInterfaceState.search?.query ?? "", includeSavedPeers: self.alwaysShowSearchResultsAsList)
             } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter {
                 mappedContents = .tag(historyFilter.customTag)
-            } else if let search = self.chatPresentationInterfaceState.search, !search.query.isEmpty, self.alwaysShowSearchResultsAsList {
-                mappedContents = .search(query: search.query, includeSavedPeers: self.alwaysShowSearchResultsAsList)
+            } else if let search = self.chatPresentationInterfaceState.search, self.alwaysShowSearchResultsAsList {
+                if !search.query.isEmpty {
+                    mappedContents = .search(query: search.query, includeSavedPeers: self.alwaysShowSearchResultsAsList)
+                } else {
+                    mappedContents = .empty
+                }
             } else if case .peer(self.context.account.peerId) = self.chatPresentationInterfaceState.chatLocation {
                 mappedContents = .tag(MemoryBuffer())
             } else {
