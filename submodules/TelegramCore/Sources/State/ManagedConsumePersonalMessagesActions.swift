@@ -468,6 +468,8 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
 }
 
 func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64?) -> Signal<Void, NoError> {
+    let accountPeerId = stateManager.accountPeerId
+    
     return Signal { _ in
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
@@ -493,7 +495,7 @@ func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Net
             for (entry, disposable) in beginValidateOperations {
                 if entry.key.customTag != nil {
                     if peerId == stateManager.accountPeerId {
-                        let signal = synchronizeSavedMessageTags(postbox: postbox, network: network, peerId: peerId, threadId: entry.key.threadId)
+                        let signal = synchronizeSavedMessageTags(postbox: postbox, network: network, peerId: peerId, threadId: entry.key.threadId, force: false)
                         |> map { _ -> Void in
                         }
                         |> then(postbox.transaction { transaction -> Void in
@@ -508,7 +510,7 @@ func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Net
                         disposable.set(signal.start())
                     }
                 } else {
-                    let signal = synchronizeMessageHistoryTagSummary(postbox: postbox, network: network, entry: entry)
+                    let signal = synchronizeMessageHistoryTagSummary(accountPeerId: accountPeerId, postbox: postbox, network: network, entry: entry)
                     |> then(postbox.transaction { transaction -> Void in
                         transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
                     })
@@ -529,39 +531,77 @@ func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Net
     }
 }
 
-private func synchronizeMessageHistoryTagSummary(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
+private func synchronizeMessageHistoryTagSummary(accountPeerId: PeerId, postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
-        guard let threadId = entry.key.threadId else {
-            return .complete()
-        }
-        if let peer = transaction.getPeer(entry.key.peerId) as? TelegramChannel, peer.flags.contains(.isForum), let inputPeer = apiInputPeer(peer) {
-            return network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: threadId), offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<Void, NoError> in
-                guard let result = result else {
-                    return .complete()
+        if let threadId = entry.key.threadId {
+            if let peer = transaction.getPeer(entry.key.peerId) as? TelegramChannel, peer.flags.contains(.isForum), let inputPeer = apiInputPeer(peer) {
+                return network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: threadId), offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                    return .single(nil)
                 }
-                return postbox.transaction { transaction -> Void in
-                    switch result {
-                    case let .channelMessages(_, _, count, _, messages, _, _, _):
-                        let topId: Int32 = messages.first?.id(namespace: Namespaces.Message.Cloud)?.id ?? 1
-                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: threadId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: count, maxId: topId)
-                    default:
-                        break
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    guard let result = result else {
+                        return .complete()
+                    }
+                    return postbox.transaction { transaction -> Void in
+                        switch result {
+                        case let .channelMessages(_, _, count, _, messages, _, _, _):
+                            let topId: Int32 = messages.first?.id(namespace: Namespaces.Message.Cloud)?.id ?? 1
+                            transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: threadId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: count, maxId: topId)
+                        default:
+                            break
+                        }
                     }
                 }
+            } else {
+                return .complete()
             }
         } else {
-            return .complete()
+            if entry.key.peerId != accountPeerId {
+                return .single(Void())
+            }
+            
+            if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
+                return network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, savedPeerId: nil, savedReaction: nil, topMsgId: nil, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    return postbox.transaction { transaction -> Void in
+                        if let result {
+                            let apiMessages: [Api.Message]
+                            let apiCount: Int32
+                            switch result {
+                            case let .channelMessages(_, _, count, _, messages, _, _, _):
+                                apiMessages = messages
+                                apiCount = count
+                            case let .messages(messages, _, _):
+                                apiMessages = messages
+                                apiCount = Int32(messages.count)
+                            case let .messagesNotModified(count):
+                                apiMessages = []
+                                apiCount = count
+                            case let .messagesSlice(_, count, _, _, messages, _, _):
+                                apiMessages = messages
+                                apiCount = count
+                            }
+                            
+                            let topMessageId = apiMessages.first?.id(namespace: Namespaces.Message.Cloud)?.id ?? 1
+                            transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, customTag: nil, count: apiCount, maxId: topMessageId)
+                        }
+                    }
+                }
+            } else {
+                return .complete()
+            }
         }
     }
     |> switchToLatest
 }
 
-func synchronizeSavedMessageTags(postbox: Postbox, network: Network, peerId: PeerId, threadId: Int64?) -> Signal<Never, NoError> {
+func synchronizeSavedMessageTags(postbox: Postbox, network: Network, peerId: PeerId, threadId: Int64?, force: Bool) -> Signal<Never, NoError> {
     let key: PostboxViewKey = .pendingMessageActions(type: .updateReaction)
     let waitForApplySignal: Signal<Never, NoError> = postbox.combinedView(keys: [key])
     |> map { views -> Bool in
@@ -659,7 +699,7 @@ func synchronizeSavedMessageTags(postbox: Postbox, network: Network, peerId: Pee
         )
     }
     |> mapToSignal { alreadyCached, subPeer, currentHash -> Signal<Never, NoError> in
-        if alreadyCached {
+        if alreadyCached && !force {
             return .complete()
         }
         

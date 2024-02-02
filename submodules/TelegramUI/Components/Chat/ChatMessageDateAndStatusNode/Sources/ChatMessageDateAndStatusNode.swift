@@ -319,7 +319,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
         }
     }
-    public var reactionSelected: ((ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((ReactionButtonAsyncNode, MessageReaction.Reaction, ContextExtractedContentContainingView?) -> Void)?
     public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override public init() {
@@ -744,11 +744,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 resultingHeight = layoutSize.height
                 reactionButtonsResult = reactionButtonsContainer.update(
                     context: arguments.context,
-                    action: { itemNode, value in
+                    action: { itemNode, value, sourceView in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.reactionSelected?(itemNode, value)
+                        strongSelf.reactionSelected?(itemNode, value, sourceView)
                     },
                     reactions: [],
                     colors: reactionColors,
@@ -764,11 +764,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
-                        action: { itemNode, value in
+                        action: { itemNode, value, sourceView in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.reactionSelected?(itemNode, value)
+                            strongSelf.reactionSelected?(itemNode, value, sourceView)
                         },
                         reactions: arguments.reactions.map { reaction in
                             var centerAnimation: TelegramMediaFile?
@@ -830,11 +830,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 } else {
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
-                        action: { itemNode, value in
+                        action: { itemNode, value, sourceView in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.reactionSelected?(itemNode, value)
+                            strongSelf.reactionSelected?(itemNode, value, sourceView)
                         },
                         reactions: [],
                         colors: reactionColors,

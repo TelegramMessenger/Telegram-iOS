@@ -37,7 +37,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
     private var backgroundMaskView: UIView?
     private var backgroundMaskButtons: [MessageReaction.Reaction: UIView] = [:]
     
-    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((MessageReaction.Reaction, ContextExtractedContentContainingView?) -> Void)?
     public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override public init() {
@@ -125,11 +125,11 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
         
         let reactionButtonsResult = self.container.update(
             context: context,
-            action: { [weak self] _, value in
+            action: { [weak self] _, value, sourceView in
                 guard let self else {
                     return
                 }
-                self.reactionSelected?(value)
+                self.reactionSelected?(value, sourceView)
             },
             reactions: reactions.reactions.map { reaction in
                 var centerAnimation: TelegramMediaFile?
@@ -486,11 +486,11 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
         
         self.addSubnode(self.buttonsNode)
         
-        self.buttonsNode.reactionSelected = { [weak self] value in
+        self.buttonsNode.reactionSelected = { [weak self] value, sourceView in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
         }
         
         self.buttonsNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
@@ -641,7 +641,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
     
     private let buttonsNode: MessageReactionButtonsNode
     
-    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((MessageReaction.Reaction, ContextExtractedContentContainingView?) -> Void)?
     public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override public init() {
@@ -651,8 +651,8 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         
         self.addSubnode(self.buttonsNode)
         
-        self.buttonsNode.reactionSelected = { [weak self] value in
-            self?.reactionSelected?(value)
+        self.buttonsNode.reactionSelected = { [weak self] value, sourceView in
+            self?.reactionSelected?(value, sourceView)
         }
         
         self.buttonsNode.openReactionPreview = { [weak self] gesture, sourceNode, value in

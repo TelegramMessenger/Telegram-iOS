@@ -477,8 +477,8 @@ final class ViewTracker {
                     switch tag {
                     case let .tag(value):
                         space = .tag(value)
-                    case let .customTag(value):
-                        space = .customTag(value)
+                    case let .customTag(value, regularTag):
+                        space = .customTag(value, regularTag)
                     }
                 } else {
                     space = .everywhere

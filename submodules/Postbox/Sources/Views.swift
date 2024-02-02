@@ -49,6 +49,7 @@ public enum PostboxViewKey: Hashable {
     case story(id: StoryId)
     case savedMessagesIndex(peerId: PeerId)
     case savedMessagesStats(peerId: PeerId)
+    case chatInterfaceState(peerId: PeerId)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -164,6 +165,8 @@ public enum PostboxViewKey: Hashable {
         case let .savedMessagesIndex(peerId):
             hasher.combine(peerId)
         case let .savedMessagesStats(peerId):
+            hasher.combine(peerId)
+        case let .chatInterfaceState(peerId):
             hasher.combine(peerId)
         }
     }
@@ -458,6 +461,12 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .chatInterfaceState(peerId):
+            if case .chatInterfaceState(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -560,5 +569,7 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableMessageHistorySavedMessagesIndexView(postbox: postbox, peerId: peerId)
     case let .savedMessagesStats(peerId):
         return MutableMessageHistorySavedMessagesStatsView(postbox: postbox, peerId: peerId)
+    case let .chatInterfaceState(peerId):
+        return MutableChatInterfaceStateView(postbox: postbox, peerId: peerId)
     }
 }

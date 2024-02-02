@@ -40,6 +40,8 @@ extension ChatControllerImpl {
                     return
                 }
                 
+                strongSelf.alwaysShowSearchResultsAsList = false
+                strongSelf.chatDisplayNode.alwaysShowSearchResultsAsList = false
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
                     return state.updatedDisplayHistoryFilterAsList(false)
                 })

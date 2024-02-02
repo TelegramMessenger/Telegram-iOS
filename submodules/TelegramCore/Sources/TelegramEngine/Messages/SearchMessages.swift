@@ -236,10 +236,32 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
     return SearchMessagesResult(messages: messages, readStates: readStates, threadInfo: threadInfo, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
 }
 
-func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
-    if case let .peer(peerId, fromId, tags, reactions, threadId, minDate, maxDate) = location, fromId == nil, tags == nil, let reactions, !reactions.isEmpty, threadId == nil, minDate == nil, maxDate == 0 {
-        let _ = peerId
-        print("short cirquit")
+func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, centerId: MessageId?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
+    if case let .peer(peerId, fromId, tags, reactions, threadId, minDate, maxDate) = location, fromId == nil, tags == nil, peerId == account.peerId, let reactions, let reaction = reactions.first, (minDate == nil || minDate == 0), (maxDate == nil || maxDate == 0) {
+        return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
+            let messages = transaction.getMessagesWithCustomTag(peerId: peerId, namespace: Namespaces.Message.Cloud, threadId: threadId, customTag: ReactionsMessageAttribute.messageTag(reaction: reaction), from: MessageIndex.upperBound(peerId: peerId, namespace: Namespaces.Message.Cloud), includeFrom: false, to: MessageIndex.lowerBound(peerId: peerId, namespace: Namespaces.Message.Cloud), limit: 500)
+            
+            return (
+                SearchMessagesResult(
+                    messages: messages,
+                    readStates: [:],
+                    threadInfo: [:],
+                    totalCount: Int32(messages.count),
+                    completed: true
+                ),
+                SearchMessagesState(
+                    main: SearchMessagesPeerState(
+                        messages: messages,
+                        readStates: [:],
+                        threadInfo: [:],
+                        totalCount: Int32(messages.count),
+                        completed: true,
+                        nextRate: nil
+                    ),
+                    additional: nil
+                )
+            )
+        }
     }
     
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>

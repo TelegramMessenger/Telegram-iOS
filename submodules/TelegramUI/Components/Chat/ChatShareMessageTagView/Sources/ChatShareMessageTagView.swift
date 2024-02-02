@@ -122,6 +122,13 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
     required public init(coder: NSCoder) {
         preconditionFailure()
     }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let reactionContextNode = self.reactionContextNode, let result = reactionContextNode.view.hitTest(self.convert(point, to: reactionContextNode.view), with: event) {
+            return result
+        }
+        return nil
+    }
 
     public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
         let params = Params(size: size)

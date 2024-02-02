@@ -32,7 +32,7 @@ public struct MessageHistoryTagNamespaceSummary: Equatable, CustomStringConverti
     }
     
     func withAddedCount(_ value: Int32) -> MessageHistoryTagNamespaceSummary {
-        return MessageHistoryTagNamespaceSummary(version: self.version, count: self.count + value, range: self.range)
+        return MessageHistoryTagNamespaceSummary(version: self.version, count: Int32(clamping: Int64(self.count) + Int64(value)), range: self.range)
     }
     
     public var description: String {

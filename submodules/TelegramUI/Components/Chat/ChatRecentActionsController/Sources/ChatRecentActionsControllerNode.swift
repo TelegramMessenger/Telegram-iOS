@@ -271,7 +271,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             let gesture: ContextGesture? = anyRecognizer as? ContextGesture
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, recognizer: recognizer, gesture: gesture, location: location)
         }, openMessageReactionContextMenu: { _, _, _, _ in
-        }, updateMessageReaction: { _, _, _ in
+        }, updateMessageReaction: { _, _, _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in

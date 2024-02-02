@@ -242,7 +242,7 @@ final class MessageCustomTagHoleIndexTable: Table {
             self.valueBox.set(self.table, key: self.key(id: MessageId(peerId: peerId, namespace: namespace, id: closedRange.upperBound), threadId: threadId, tag: tag), value: MemoryBuffer(memory: &lowerBound, capacity: 4, length: 4, freeWhenDone: false))
         }
         
-        addMessageHistoryHoleOperation(.insert(clippedRange), peerId: peerId, threadId: threadId, namespace: namespace, space: .customTag(tagValue), to: &operations)
+        addMessageHistoryHoleOperation(.insert(clippedRange), peerId: peerId, threadId: threadId, namespace: namespace, space: .customTag(tagValue, nil), to: &operations)
     }
     
     func remove(peerId: PeerId, threadId: Int64?, tag: MemoryBuffer, namespace: MessageId.Namespace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
@@ -298,7 +298,7 @@ final class MessageCustomTagHoleIndexTable: Table {
         }
         
         if !removeKeys.isEmpty {
-            addMessageHistoryHoleOperation(.remove(range), peerId: peerId, threadId: threadId, namespace: namespace, space: .customTag(tagValue), to: &operations)
+            addMessageHistoryHoleOperation(.remove(range), peerId: peerId, threadId: threadId, namespace: namespace, space: .customTag(tagValue, nil), to: &operations)
         }
     }
     

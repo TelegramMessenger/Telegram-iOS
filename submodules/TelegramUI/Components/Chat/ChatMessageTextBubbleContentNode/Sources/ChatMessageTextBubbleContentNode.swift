@@ -715,11 +715,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     
                                     strongSelf.addSubnode(statusNode)
                                     
-                                    statusNode.reactionSelected = { [weak strongSelf] _, value in
+                                    statusNode.reactionSelected = { [weak strongSelf] _, value, sourceView in
                                         guard let strongSelf, let item = strongSelf.item else {
                                             return
                                         }
-                                        item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+                                        item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
                                     }
                                     statusNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
                                         guard let strongSelf, let item = strongSelf.item else {

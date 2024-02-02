@@ -13,9 +13,11 @@ public enum MessageHistoryInput: Equatable, Hashable {
     
     public struct CustomTagged: Equatable, Hashable {
         public var tag: MemoryBuffer
+        public var regularTag: MessageTags?
         
-        public init(tag: MemoryBuffer) {
+        public init(tag: MemoryBuffer, regularTag: MessageTags?) {
             self.tag = tag
+            self.regularTag = regularTag
         }
     }
     
@@ -49,6 +51,7 @@ private extension MessageHistoryInput {
                     tag = value.tag
                 case let .customTag(value):
                     customTag = value.tag
+                    tag = value.regularTag
                 }
             }
             
@@ -238,8 +241,15 @@ private extension MessageHistoryInput {
                     } else {
                         return postbox.messageHistoryTagsTable.getMessageCountInRange(tag: automatic.tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
                     }
+                } else if case let .customTag(customTagged) = tagInfo {
+                    if let regularTag = customTagged.regularTag {
+                        return postbox.messageCustomTagWithTagTable.getMessageCountInRange(threadId: threadId, tag: customTagged.tag, regularTag: regularTag.rawValue, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+                    } else {
+                        // Count should not be required in custom tagged views
+                        assertionFailure()
+                        return 0
+                    }
                 } else {
-                    // Count should not be required in custom tagged views
                     assertionFailure()
                     return 0
                 }
@@ -639,6 +649,7 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
                 tag = value.tag
             case let .customTag(value):
                 customTag = value.tag
+                tag = value.regularTag
             }
         }
         threadId = threadIdValue
@@ -1266,7 +1277,7 @@ struct HistoryViewLoadedSample {
 
 public enum HistoryViewInputTag: Equatable, Hashable {
     case tag(MessageTags)
-    case customTag(MemoryBuffer)
+    case customTag(MemoryBuffer, MessageTags?)
 }
 
 final class HistoryViewLoadedState {
@@ -1303,8 +1314,8 @@ final class HistoryViewLoadedState {
                 switch tag {
                 case let .tag(value):
                     return MessageHistoryInput.TagInfo.tag(MessageHistoryInput.Tagged(tag: value, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup))
-                case let .customTag(value):
-                    return MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: value))
+                case let .customTag(value, regularValue):
+                    return MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: value, regularTag: regularValue))
                 }
             })
         case let .associated(peerId, associatedId):
@@ -1316,8 +1327,8 @@ final class HistoryViewLoadedState {
                 switch tag {
                 case let .tag(value):
                     return MessageHistoryInput.TagInfo.tag(MessageHistoryInput.Tagged(tag: value, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup))
-                case let .customTag(value):
-                    return MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: value))
+                case let .customTag(value, regularValue):
+                    return MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: value, regularTag: regularValue))
                 }
             })
         case let .external(external):
@@ -1976,15 +1987,30 @@ private func fetchHoles(postbox: PostboxImpl, locations: MessageHistoryViewInput
                     }
                 }
             }
-        case let .customTag(customTag):
-            for peerId in peerIds {
-                for namespace in postbox.messageCustomTagHoleIndexTable.existingNamespaces(peerId: peerId, threadId: threadId, tag: customTag) {
-                    if namespaces.contains(namespace) {
-                        let indices = postbox.messageCustomTagHoleIndexTable.closest(peerId: peerId, threadId: threadId, tag: customTag, namespace: namespace, range: 1 ... (Int32.max - 1))
-                        if !indices.isEmpty {
-                            let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
-                            assert(canContainHoles(peerIdAndNamespace, input: .automatic(threadId: threadId, tagInfo: MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: customTag))), seedConfiguration: postbox.seedConfiguration))
-                            holesBySpace[peerIdAndNamespace] = indices
+        case let .customTag(customTag, regularTag):
+            if let regularTag {
+                for peerId in peerIds {
+                    for namespace in postbox.messageCustomTagWithTagHoleIndexTable.existingNamespaces(peerId: peerId, threadId: threadId, tag: customTag, regularTag: regularTag.rawValue) {
+                        if namespaces.contains(namespace) {
+                            let indices = postbox.messageCustomTagWithTagHoleIndexTable.closest(peerId: peerId, threadId: threadId, tag: customTag, regularTag: regularTag.rawValue, namespace: namespace, range: 1 ... (Int32.max - 1))
+                            if !indices.isEmpty {
+                                let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
+                                assert(canContainHoles(peerIdAndNamespace, input: .automatic(threadId: threadId, tagInfo: MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: customTag, regularTag: regularTag))), seedConfiguration: postbox.seedConfiguration))
+                                holesBySpace[peerIdAndNamespace] = indices
+                            }
+                        }
+                    }
+                }
+            } else {
+                for peerId in peerIds {
+                    for namespace in postbox.messageCustomTagHoleIndexTable.existingNamespaces(peerId: peerId, threadId: threadId, tag: customTag) {
+                        if namespaces.contains(namespace) {
+                            let indices = postbox.messageCustomTagHoleIndexTable.closest(peerId: peerId, threadId: threadId, tag: customTag, namespace: namespace, range: 1 ... (Int32.max - 1))
+                            if !indices.isEmpty {
+                                let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
+                                assert(canContainHoles(peerIdAndNamespace, input: .automatic(threadId: threadId, tagInfo: MessageHistoryInput.TagInfo.customTag(MessageHistoryInput.CustomTagged(tag: customTag, regularTag: regularTag))), seedConfiguration: postbox.seedConfiguration))
+                                holesBySpace[peerIdAndNamespace] = indices
+                            }
                         }
                     }
                 }

@@ -3788,11 +3788,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                 strongSelf.reactionButtonsNode = reactionButtonsNode
-                reactionButtonsNode.reactionSelected = { [weak strongSelf] value in
+                reactionButtonsNode.reactionSelected = { [weak strongSelf] value, sourceView in
                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
                         return
                     }
-                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
                 }
                 reactionButtonsNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
@@ -4047,7 +4047,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         f()
                     case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: openContextMenu.tapMessage) {
-                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default, false)
+                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default, false, nil)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }
@@ -4056,7 +4056,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     item.controllerInteraction.clickThroughMessage()
                 } else if case .doubleTap = gesture {
                     if canAddMessageReactions(message: item.message) {
-                        item.controllerInteraction.updateMessageReaction(item.message, .default, false)
+                        item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)
                     }
                 }
             }

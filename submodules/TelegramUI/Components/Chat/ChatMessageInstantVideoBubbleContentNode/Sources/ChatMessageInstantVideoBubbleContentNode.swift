@@ -144,11 +144,11 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
             }
         }
         
-        self.interactiveFileNode.dateAndStatusNode.reactionSelected = { [weak self] _, value in
+        self.interactiveFileNode.dateAndStatusNode.reactionSelected = { [weak self] _, value, sourceView in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
         }
         
         self.interactiveFileNode.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in

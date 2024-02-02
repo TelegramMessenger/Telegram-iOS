@@ -130,11 +130,11 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
-        self.dateAndStatusNode.reactionSelected = { [weak self] _, value in
+        self.dateAndStatusNode.reactionSelected = { [weak self] _, value, sourceView in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
         }
         
         self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceView, value in

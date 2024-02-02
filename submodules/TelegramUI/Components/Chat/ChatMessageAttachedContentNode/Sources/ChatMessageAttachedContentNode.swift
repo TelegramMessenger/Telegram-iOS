@@ -1230,11 +1230,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     }
                                     self.openMedia?(mode)
                                 }
-                                contentMedia.updateMessageReaction = { [weak controllerInteraction] message, value, force in
+                                contentMedia.updateMessageReaction = { [weak controllerInteraction] message, value, force, sourceView in
                                     guard let controllerInteraction else {
                                         return
                                     }
-                                    controllerInteraction.updateMessageReaction(message, value, force)
+                                    controllerInteraction.updateMessageReaction(message, value, force, sourceView)
                                 }
                                 contentMedia.visibility = self.visibility != .none
                                 
@@ -1352,11 +1352,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.statusNode = statusNode
                                 self.addSubnode(statusNode)
                                 
-                                statusNode.reactionSelected = { [weak self] _, value in
+                                statusNode.reactionSelected = { [weak self] _, value, sourceView in
                                     guard let self, let message = self.message else {
                                         return
                                     }
-                                    controllerInteraction.updateMessageReaction(message, .reaction(value), false)
+                                    controllerInteraction.updateMessageReaction(message, .reaction(value), false, sourceView)
                                 }
                                 
                                 statusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in

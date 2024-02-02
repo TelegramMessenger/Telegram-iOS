@@ -10993,7 +10993,7 @@ Sorry for the inconvenience.";
 "Premium.MessageTagsInfo" = "Organize your Saved Messages with tags for quicker access.";
 "Premium.MessageTags.Proceed" = "About Telegram Premium";
 
-"Chat.SavedMessagesTabInfoText" = "Messages you send to **Saved Messages**";
+"Chat.SavedMessagesTabInfoText" = "Messages you send to [Saved Messages]()";
 
 "VoiceOver.MessageSelectionButtonTag" = "Tag";
 

@@ -95,6 +95,9 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     
     private var tagMessageCount: (tag: MemoryBuffer, count: Int?, disposable: Disposable?)?
     
+    private var totalMessageCount: Int?
+    private var totalMessageCountDisposable: Disposable?
+    
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
         }
@@ -106,6 +109,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     
     deinit {
         self.tagMessageCount?.disposable?.dispose()
+        self.totalMessageCountDisposable?.dispose()
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
@@ -140,6 +144,28 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             self.isUpdating = false
         }
         
+        if self.totalMessageCountDisposable == nil, let context = self.context, case let .peer(peerId) = params.interfaceState.chatLocation, peerId == context.account.peerId {
+            self.totalMessageCountDisposable = (context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Messages.MessageCount(
+                    peerId: peerId,
+                    threadId: nil,
+                    tag: []
+                )
+            )
+            |> distinctUntilChanged
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                if self.totalMessageCount != value {
+                    self.totalMessageCount = value
+                    if !self.isUpdating {
+                        self.update(transition: .easeInOut(duration: 0.25))
+                    }
+                }
+            })
+        }
+        
         if let historyFilter = params.interfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag) {
             let tag = historyFilter.customTag
             
@@ -160,7 +186,9 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                         if self.tagMessageCount?.tag == tag {
                             if self.tagMessageCount?.count != count {
                                 self.tagMessageCount?.count = count
-                                self.update(transition: .easeInOut(duration: 0.25))
+                                if !self.isUpdating {
+                                    self.update(transition: .easeInOut(duration: 0.25))
+                                }
                             }
                         }
                     })
@@ -220,7 +248,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 
                 resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_no_results"), isUnbreakable: true, content: .text(params.interfaceState.strings.Conversation_SearchNoResults)))
             }
-        } else if let count = self.tagMessageCount?.count {
+        } else if let count = self.tagMessageCount?.count ?? self.totalMessageCount {
             canChangeListMode = count != 0
             
             resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
@@ -412,7 +440,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                     items: resultsTextString
                 )),
                 environment: {},
-                containerSize: size
+                containerSize: CGSize(width: 200.0, height: 100.0)
             )
             let resultsTextFrame = CGRect(origin: CGPoint(x: nextLeftX - 3.0, y: floor((size.height - resultsTextSize.height) * 0.5)), size: resultsTextSize)
             if let resultsTextView = resultsText.view {

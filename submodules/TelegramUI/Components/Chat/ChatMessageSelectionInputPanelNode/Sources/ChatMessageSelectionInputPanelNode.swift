@@ -242,7 +242,7 @@ public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             return
         }
         
-        let reactionItems: Signal<[ReactionItem], NoError> = tagMessageReactions(context: context)
+        let reactionItems: Signal<[ReactionItem], NoError> = tagMessageReactions(context: context, subPeerId: self.presentationInterfaceState?.chatLocation.threadId.flatMap(EnginePeer.Id.init))
         
         let _ = (reactionItems
         |> take(1)

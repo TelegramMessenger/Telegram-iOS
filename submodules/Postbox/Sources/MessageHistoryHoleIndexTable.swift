@@ -36,7 +36,7 @@ public enum MessageHistoryHoleSpace: Equatable, Hashable, CustomStringConvertibl
 public enum MessageHistoryHoleOperationSpace: Equatable, Hashable, CustomStringConvertible {
     case everywhere
     case tag(MessageTags)
-    case customTag(MemoryBuffer)
+    case customTag(MemoryBuffer, MessageTags?)
     
     public var description: String {
         switch self {
@@ -44,8 +44,12 @@ public enum MessageHistoryHoleOperationSpace: Equatable, Hashable, CustomStringC
             return ".everywhere"
         case let .tag(tags):
             return ".tag\(tags.rawValue)"
-        case let .customTag(customTag):
-            return ".customTag\(customTag)"
+        case let .customTag(customTag, regularTag):
+            if let regularTag {
+                return ".customTag\(customTag)_tag\(regularTag.rawValue)"
+            } else {
+                return ".customTag\(customTag)"
+            }
         }
     }
 }

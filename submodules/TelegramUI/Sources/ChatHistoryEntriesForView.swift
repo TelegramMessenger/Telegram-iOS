@@ -13,6 +13,7 @@ import Markdown
 import Display
 
 func chatHistoryEntriesForView(
+    context: AccountContext,
     location: ChatLocation,
     view: MessageHistoryView,
     includeUnreadEntry: Bool,
@@ -466,8 +467,8 @@ func chatHistoryEntriesForView(
                 string,
                 attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .black),
-                    bold: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white),
-                    link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .black),
+                    bold: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .black),
+                    link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white),
                     linkAttribute: { url in
                         return ("URL", url)
                     }
@@ -477,6 +478,11 @@ func chatHistoryEntriesForView(
             formattedString.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: formattedString.length), options: [], using: { value, range, _ in
                 if let value = value as? UIColor, value == .white {
                     entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Bold))
+                }
+            })
+            formattedString.enumerateAttribute(NSAttributedString.Key(rawValue: "URL"), in: NSRange(location: 0, length: formattedString.length), options: [], using: { value, range, _ in
+                if value != nil {
+                    entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: context.account.peerId)))
                 }
             })
             

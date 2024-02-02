@@ -455,7 +455,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     
     public var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
     public var activatePinch: ((PinchSourceContainerNode) -> Void)?
-    public var updateMessageReaction: ((Message, ChatControllerInteractionReaction, Bool) -> Void)?
+    public var updateMessageReaction: ((Message, ChatControllerInteractionReaction, Bool, ContextExtractedContentContainingView?) -> Void)?
         
     override public init() {
         self.pinchContainerNode = PinchSourceContainerNode()

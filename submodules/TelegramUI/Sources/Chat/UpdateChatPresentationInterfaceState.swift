@@ -406,12 +406,12 @@ func updateChatPresentationInterfaceStateImpl(
             if updatedChatPresentationInterfaceState.historyFilter != nil {
                 canDisplayAsList = true
             }
-            if selfController.alwaysShowSearchResultsAsList {
-                canDisplayAsList = true
-            }
             if case .peer(selfController.context.account.peerId) = updatedChatPresentationInterfaceState.chatLocation {
                 canDisplayAsList = true
             }
+        }
+        if selfController.alwaysShowSearchResultsAsList {
+            canDisplayAsList = true
         }
         
         if !canDisplayAsList {
@@ -575,8 +575,8 @@ func updateChatPresentationInterfaceStateImpl(
     
     if case .tag = selfController.chatDisplayNode.historyNode.tag {
     } else {
-        if let historyFilter = selfController.presentationInterfaceState.historyFilter {
-            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTag))
+        if let historyFilter = selfController.presentationInterfaceState.historyFilter, historyFilter.isActive {
+            selfController.chatDisplayNode.historyNode.updateTag(tag: .customTag(historyFilter.customTag, nil))
         } else {
             selfController.chatDisplayNode.historyNode.updateTag(tag: nil)
         }

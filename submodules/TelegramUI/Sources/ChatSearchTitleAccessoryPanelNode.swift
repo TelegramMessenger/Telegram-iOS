@@ -648,7 +648,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                     if currentTag == tag {
                         updatedFilter = nil
                     } else {
-                        updatedFilter = ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
+                        updatedFilter = ChatPresentationInterfaceState.HistoryFilter(customTag: tag, isActive: true)
                     }
                     
                     self.interfaceInteraction?.updateHistoryFilter({ filter in
@@ -782,11 +782,11 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
         )
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags, reactionFile in
-            guard let self, let reactionFile, let savedMessageTags else {
+            guard let self, let reactionFile else {
                 return
             }
             
-            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: presentationData.strings.Chat_EditTagTitle_Text, value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
+            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: presentationData.strings.Chat_EditTagTitle_Text, value: savedMessageTags?.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
                 guard let self else {
                     return
                 }

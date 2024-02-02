@@ -187,7 +187,7 @@ extension ChatControllerImpl {
                     
                     let reactionItems: Signal<[ReactionItem], NoError>
                     if savedMessages && messages.count > 0 {
-                        reactionItems = tagMessageReactions(context: strongSelf.context)
+                        reactionItems = tagMessageReactions(context: strongSelf.context, subPeerId: nil)
                     } else {
                         reactionItems = .single([])
                     }
@@ -270,7 +270,7 @@ extension ChatControllerImpl {
                     
                     let reactionItems: Signal<[ReactionItem], NoError>
                     if messages.count > 0 {
-                        reactionItems = tagMessageReactions(context: strongSelf.context)
+                        reactionItems = tagMessageReactions(context: strongSelf.context, subPeerId: nil)
                     } else {
                         reactionItems = .single([])
                     }

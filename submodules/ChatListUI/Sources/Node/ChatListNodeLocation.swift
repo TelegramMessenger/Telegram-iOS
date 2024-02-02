@@ -319,14 +319,26 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
         }
     case .savedMessagesChats:
         let viewKey: PostboxViewKey = .savedMessagesIndex(peerId: account.peerId)
+        let interfaceStateKey: PostboxViewKey = .chatInterfaceState(peerId: account.peerId)
         
         var isFirst = true
-        return account.postbox.combinedView(keys: [viewKey])
+        return account.postbox.combinedView(keys: [viewKey, interfaceStateKey])
         |> map { views -> ChatListNodeViewUpdate in
             guard let view = views.views[viewKey] as? MessageHistorySavedMessagesIndexView else {
                 preconditionFailure()
             }
             
+            var draft: EngineChatList.Draft?
+            if let interfaceStateView = views.views[interfaceStateKey] as? ChatInterfaceStateView {
+                if let embeddedState = interfaceStateView.value, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
+                }
+            }
+             
             var items: [EngineChatList.Item] = []
             for item in view.items {
                 guard let sourcePeer = item.peer else {
@@ -348,7 +360,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     messages: messages,
                     readCounters: nil,
                     isMuted: false,
-                    draft: nil,
+                    draft: sourceId == accountPeerId ? draft : nil,
                     threadData: nil,
                     renderedPeer: EngineRenderedPeer(peer: EnginePeer(sourcePeer)),
                     presence: nil,

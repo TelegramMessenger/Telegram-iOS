@@ -745,7 +745,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     minMaxRange = 1 ... 1
                     request = .never()
                 }
-            case let .customTag(customTag):
+            case let .customTag(customTag, regularTag):
                 if let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: customTag) {
                     let offsetId: Int32
                     let addOffset: Int32
@@ -808,13 +808,24 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                     }
                     
+                    var mappedFilter: Api.MessagesFilter = .inputMessagesFilterEmpty
+                    if let regularTag {
+                        if let filter = messageFilterForTagMask(regularTag) {
+                            mappedFilter = filter
+                        } else {
+                            Logger.shared.log("fetchMessageHistoryHole", "fetch for \(peerInput) direction \(direction) space \(space): unknown filter for tag \(regularTag.rawValue)")
+                            assertionFailure()
+                            return .never()
+                        }
+                    }
+                    
                     flags |= 1 << 3
                     
-                    request = source.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, savedPeerId: savedPeerId, savedReaction: [reaction.apiReaction], topMsgId: topMsgId, filter: .inputMessagesFilterEmpty, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                    request = source.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: "", fromId: nil, savedPeerId: savedPeerId, savedReaction: [reaction.apiReaction], topMsgId: topMsgId, filter: mappedFilter, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
                 } else {
                     assertionFailure()
                     minMaxRange = 1 ... 1
-                    request = .never()
+                    return .never()
                 }
             }
             
@@ -899,12 +910,16 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     } else {
                                         return id.id
                                     }
-                                case let .customTag(customTag):
+                                case let .customTag(customTag, regularTag):
+                                    if let regularTag {
+                                        if !message.tags.contains(regularTag) {
+                                            return nil
+                                        }
+                                    }
                                     if !postbox.seedConfiguration.customTagsFromAttributes(message.attributes).contains(customTag) {
                                         return nil
-                                    } else {
-                                        return id.id
                                     }
+                                    return id.id
                                 case .everywhere:
                                     return id.id
                                 }
@@ -922,12 +937,16 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     } else {
                                         return id
                                     }
-                                case let .customTag(customTag):
+                                case let .customTag(customTag, regularTag):
+                                    if let regularTag {
+                                        if !message.tags.contains(regularTag) {
+                                            return nil
+                                        }
+                                    }
                                     if !postbox.seedConfiguration.customTagsFromAttributes(message.attributes).contains(customTag) {
                                         return nil
-                                    } else {
-                                        return id
                                     }
+                                    return id
                                 case .everywhere:
                                     return id
                                 }

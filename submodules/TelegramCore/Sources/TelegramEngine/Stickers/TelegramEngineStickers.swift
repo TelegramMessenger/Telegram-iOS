@@ -146,8 +146,18 @@ public extension TelegramEngine {
             }
         }
         
+        private var refreshedSavedMessageTags = Atomic<Set<EnginePeer.Id?>>(value: Set())
         public func refreshSavedMessageTags(subPeerId: EnginePeer.Id?) -> Signal<Never, NoError> {
-            return synchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network, peerId: self.account.peerId, threadId: subPeerId?.toInt64())
+            var force = false
+            let _ = refreshedSavedMessageTags.modify { value in
+                var value = value
+                if !value.contains(subPeerId) {
+                    value.insert(subPeerId)
+                    force = true
+                }
+                return value
+            }
+            return synchronizeSavedMessageTags(postbox: self.account.postbox, network: self.account.network, peerId: self.account.peerId, threadId: subPeerId?.toInt64(), force: force)
         }
         
         public func setSavedMessageTagTitle(reaction: MessageReaction.Reaction, title: String?) -> Signal<Never, NoError> {
@@ -233,6 +243,10 @@ public extension TelegramEngine {
             return _internal_resolveInlineStickers(postbox: self.account.postbox, network: self.account.network, fileIds: fileIds)
         }
         
+        public func resolveInlineStickersLocal(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+            return _internal_resolveInlineStickersLocal(postbox: self.account.postbox, fileIds: fileIds)
+        }
+        
         public func searchEmoji(emojiString: [String]) -> Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError> {
             return _internal_searchEmoji(account: self.account, query: emojiString)
             |> map { items, isFinalResult -> (items: [TelegramMediaFile], isFinalResult: Bool) in
@@ -298,26 +312,24 @@ public func _internal_resolveInlineStickers(postbox: Postbox, network: Network, 
                 return resultFiles
             }
         }
-        
-        /*return network.request(Api.functions.messages.getCustomEmojiDocuments(documentId: Array(unknownIds)))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<[Api.Document]?, NoError> in
-            return .single(nil)
+    }
+}
+
+func _internal_resolveInlineStickersLocal(postbox: Postbox, fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+    if fileIds.isEmpty {
+        return .single([:])
+    }
+    
+    return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
+        var cachedFiles: [Int64: TelegramMediaFile] = [:]
+        for fileId in fileIds {
+            if let file = transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile {
+                cachedFiles[fileId] = file
+            }
         }
-        |> mapToSignal { result -> Signal<[Int64: TelegramMediaFile], NoError> in
-            guard let result = result else {
-                return .single(cachedFiles)
-            }
-            return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
-                var resultFiles: [Int64: TelegramMediaFile] = cachedFiles
-                for document in result {
-                    if let file = telegramMediaFileFromApiDocument(document) {
-                        resultFiles[file.fileId.id] = file
-                        transaction.storeMediaIfNotPresent(media: file)
-                    }
-                }
-                return resultFiles
-            }
-        }*/
+        return cachedFiles
+    }
+    |> mapToSignal { cachedFiles -> Signal<[Int64: TelegramMediaFile], NoError> in
+        return .single(cachedFiles)
     }
 }

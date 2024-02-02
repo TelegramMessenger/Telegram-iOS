@@ -93,13 +93,13 @@ extension ChatControllerImpl {
                         let _ = (self.context.engine.stickers.savedMessageTagData()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] savedMessageTags in
-                            guard let self, let savedMessageTags else {
+                            guard let self else {
                                 return
                             }
                             
                             let reaction = value
                             
-                            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: self.presentationData.strings.Chat_EditTagTitle_Text, value: savedMessageTags.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
+                            let promptController = savedTagNameAlertController(context: self.context, updatedPresentationData: nil, text: optionTitle, subtext: self.presentationData.strings.Chat_EditTagTitle_Text, value: savedMessageTags?.tags.first(where: { $0.reaction == reaction })?.title ?? "", reaction: reaction, file: reactionFile, characterLimit: 10, apply: { [weak self] value in
                                 guard let self else {
                                     return
                                 }
@@ -125,7 +125,7 @@ extension ChatControllerImpl {
                             }
                             self.chatDisplayNode.historyNode.frozenMessageForScrollingReset = message.id
                             self.interfaceInteraction?.updateHistoryFilter { _ in
-                                return ChatPresentationInterfaceState.HistoryFilter(customTag: tag)
+                                return ChatPresentationInterfaceState.HistoryFilter(customTag: tag, isActive: true)
                             }
                             
                             a(.default)
@@ -140,7 +140,7 @@ extension ChatControllerImpl {
                     guard let self else {
                         return
                     }
-                    self.controllerInteraction?.updateMessageReaction(message, .reaction(value), true)
+                    self.controllerInteraction?.updateMessageReaction(message, .reaction(value), true, nil)
                 })))
                 
                 self.canReadHistory.set(false)

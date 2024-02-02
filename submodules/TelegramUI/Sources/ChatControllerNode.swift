@@ -2475,7 +2475,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 mappedContents = .search(query: self.chatPresentationInterfaceState.search?.query ?? "", includeSavedPeers: self.alwaysShowSearchResultsAsList)
             } else if let historyFilter = self.chatPresentationInterfaceState.historyFilter {
                 mappedContents = .tag(historyFilter.customTag)
-            } else if let search = self.chatPresentationInterfaceState.search, self.alwaysShowSearchResultsAsList {
+            } else if let search = self.chatPresentationInterfaceState.search, !search.query.isEmpty, self.alwaysShowSearchResultsAsList {
                 mappedContents = .search(query: search.query, includeSavedPeers: self.alwaysShowSearchResultsAsList)
             } else if case .peer(self.context.account.peerId) = self.chatPresentationInterfaceState.chatLocation {
                 mappedContents = .tag(MemoryBuffer())
@@ -2505,17 +2505,86 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         guard let self else {
                             return
                         }
-                        self.controller?.navigateToMessage(
-                            from: nil,
-                            to: .index(message.index),
-                            scrollPosition: .center(.bottom),
-                            rememberInStack: false,
-                            forceInCurrentChat: true,
-                            animated: true
-                        )
-                        self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                            return state.updatedDisplayHistoryFilterAsList(false)
-                        })
+                        
+                        if let historyFilter = self.chatPresentationInterfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag), let peerId = self.chatLocation.peerId, historyFilter.isActive {
+                            let _ = (self.context.engine.messages.searchMessages(
+                                location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: [reaction], threadId: self.chatLocation.threadId, minDate: nil, maxDate: nil),
+                                query: "",
+                                state: nil,
+                                centerId: message.id
+                            )
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak self] results, searchState in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                let messageIndices = results.messages.map({ $0.index }).sorted()
+                                var currentIndex = messageIndices.last
+                                for index in messageIndices {
+                                    if index.id >= message.id {
+                                        currentIndex = index
+                                        break
+                                    }
+                                }
+                                
+                                self.controller?.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                                    guard var filter = state.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: filter.customTag) else {
+                                        return state
+                                    }
+                                    filter.isActive = false
+                                    return state.updatedHistoryFilter(filter).updatedSearch(ChatSearchData(
+                                        query: "",
+                                        domain: .tag(reaction),
+                                        domainSuggestionContext: .none,
+                                        resultsState: ChatSearchResultsState(
+                                            messageIndices: messageIndices,
+                                            currentId: currentIndex?.id,
+                                            state: searchState,
+                                            totalCount: results.totalCount,
+                                            completed: results.completed
+                                        )
+                                    ))
+                                })
+                                
+                                let _ = (self.historyNode.isReady
+                                |> filter { $0 }
+                                |> take(1)
+                                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    self.controller?.navigateToMessage(
+                                        from: nil,
+                                        to: .index(message.index),
+                                        scrollPosition: .center(.bottom),
+                                        rememberInStack: false,
+                                        forceInCurrentChat: true,
+                                        animated: true
+                                    )
+                                    self.controller?.alwaysShowSearchResultsAsList = false
+                                    self.alwaysShowSearchResultsAsList = false
+                                    self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                                        return state.updatedDisplayHistoryFilterAsList(false)
+                                    })
+                                })
+                            })
+                        } else {
+                            self.controller?.navigateToMessage(
+                                from: nil,
+                                to: .index(message.index),
+                                scrollPosition: .center(.bottom),
+                                rememberInStack: false,
+                                forceInCurrentChat: true,
+                                animated: true
+                            )
+                            self.controller?.alwaysShowSearchResultsAsList = false
+                            self.alwaysShowSearchResultsAsList = false
+                            self.controller?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                                return state.updatedDisplayHistoryFilterAsList(false)
+                            })
+                        }
                     },
                     peerSelected: { [weak self] peer in
                         guard let self else {
@@ -2572,7 +2641,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             chatLocationContextHolder: Atomic(value: nil),
                             scheduled: false,
                             fixedCombinedReadStates: nil,
-                            tag: tag.length == 0 ? nil : .customTag(tag),
+                            tag: tag.length == 0 ? nil : .customTag(tag, nil),
                             appendMessagesFromTheSameGroup: false,
                             additionalData: []
                         )

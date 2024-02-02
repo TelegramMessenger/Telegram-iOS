@@ -16,6 +16,7 @@ private enum MetadataPrefix: Int8 {
     case PeerHistoryThreadHoleIndexInitialized = 13
     case NextCustomTagId = 14
     case PeerHistoryCustomTagInitialized = 15
+    case PeerHistoryCustomTagWithTagInitialized = 16
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -47,11 +48,13 @@ final class MessageHistoryMetadataTable: Table {
         var peerId: PeerId
         var threadId: Int64?
         var tag: Int32
+        var regularTag: UInt32?
         
-        init(peerId: PeerId, threadId: Int64?, tag: Int32) {
+        init(peerId: PeerId, threadId: Int64?, tag: Int32, regularTag: UInt32?) {
             self.peerId = peerId
             self.threadId = threadId
             self.tag = tag
+            self.regularTag = regularTag
         }
     }
     
@@ -114,6 +117,16 @@ final class MessageHistoryMetadataTable: Table {
         key.setInt8(8, value: MetadataPrefix.PeerHistoryCustomTagInitialized.rawValue)
         key.setInt64(8 + 1, value: threadId ?? 0)
         key.setInt32(8 + 1 + 8, value: tag)
+        return key
+    }
+    
+    private func peerHistoryInitializedCustomTagWithTagKey(id: PeerId, threadId: Int64?, tag: Int32, regularTag: UInt32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8 + 1 + 8 + 4 + 4)
+        key.setInt64(0, value: id.toInt64())
+        key.setInt8(8, value: MetadataPrefix.PeerHistoryCustomTagWithTagInitialized.rawValue)
+        key.setInt64(8 + 1, value: threadId ?? 0)
+        key.setInt32(8 + 1 + 8, value: tag)
+        key.setUInt32(8 + 1 + 8 + 4, value: regularTag)
         return key
     }
     
@@ -285,24 +298,48 @@ final class MessageHistoryMetadataTable: Table {
         if self.initializedHistoryPeerIdCustomTags[peerId] == nil {
             self.initializedHistoryPeerIdCustomTags[peerId] = Set()
         }
-        self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag))
+        self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: nil))
         self.valueBox.set(self.table, key: self.peerHistoryInitializedCustomTagKey(id: peerId, threadId: threadId, tag: tag), value: MemoryBuffer())
     }
     
     func isPeerCustomTagInitialized(peerId: PeerId, threadId: Int64?, tag: Int32) -> Bool {
-        if let currentTags = self.initializedHistoryPeerIdCustomTags[peerId], currentTags.contains(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag)) {
+        if let currentTags = self.initializedHistoryPeerIdCustomTags[peerId], currentTags.contains(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: nil)) {
             return true
         } else {
             if self.valueBox.exists(self.table, key: self.peerHistoryInitializedCustomTagKey(id: peerId, threadId: threadId, tag: tag)) {
                 if self.initializedHistoryPeerIdCustomTags[peerId] == nil {
                     self.initializedHistoryPeerIdCustomTags[peerId] = Set()
                 }
-                self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag))
+                self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: nil))
                 return true
             } else {
                 return false
             }
         }
+    }
+    
+    func isPeerCustomTagInitialized(peerId: PeerId, threadId: Int64?, tag: Int32, regularTag: UInt32) -> Bool {
+        if let currentTags = self.initializedHistoryPeerIdCustomTags[peerId], currentTags.contains(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: regularTag)) {
+            return true
+        } else {
+            if self.valueBox.exists(self.table, key: self.peerHistoryInitializedCustomTagWithTagKey(id: peerId, threadId: threadId, tag: tag, regularTag: regularTag)) {
+                if self.initializedHistoryPeerIdCustomTags[peerId] == nil {
+                    self.initializedHistoryPeerIdCustomTags[peerId] = Set()
+                }
+                self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: regularTag))
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    func setPeerCustomTagInitialized(peerId: PeerId, threadId: Int64?, tag: Int32, regularTag: UInt32) {
+        if self.initializedHistoryPeerIdCustomTags[peerId] == nil {
+            self.initializedHistoryPeerIdCustomTags[peerId] = Set()
+        }
+        self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: regularTag))
+        self.valueBox.set(self.table, key: self.peerHistoryInitializedCustomTagWithTagKey(id: peerId, threadId: threadId, tag: tag, regularTag: regularTag), value: MemoryBuffer())
     }
     
     func removePeerCustomTagInitializedList() {
@@ -312,6 +349,15 @@ final class MessageHistoryMetadataTable: Table {
         self.valueBox.scan(self.table, keys: { key in
             if key.length == 8 + 1 + 8 + 4 {
                 if key.getInt8(8) == MetadataPrefix.PeerHistoryCustomTagInitialized.rawValue {
+                    removeKeys.append(key)
+                }
+            }
+            
+            return true
+        })
+        self.valueBox.scan(self.table, keys: { key in
+            if key.length == 8 + 1 + 8 + 4 {
+                if key.getInt8(8) == MetadataPrefix.PeerHistoryCustomTagWithTagInitialized.rawValue {
                     removeKeys.append(key)
                 }
             }

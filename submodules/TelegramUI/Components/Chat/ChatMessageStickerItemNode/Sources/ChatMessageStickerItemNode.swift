@@ -1230,11 +1230,11 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         }
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
-                            reactionButtonsNode.reactionSelected = { value in
+                            reactionButtonsNode.reactionSelected = { value, sourceView in
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
-                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
@@ -1333,7 +1333,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         f()
                     case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: item.message) {
-                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default, false)
+                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default, false, nil)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }

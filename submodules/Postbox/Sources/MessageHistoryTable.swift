@@ -83,6 +83,7 @@ final class MessageHistoryTable: Table {
     let threadsTable: MessageHistoryThreadsTable
     let threadTagsTable: MessageHistoryThreadTagsTable
     let customTagTable: MessageCustomTagTable
+    let customTagWithTagTable: MessageCustomTagWithTagTable
     let globalTagsTable: GlobalMessageHistoryTagsTable
     let localTagsTable: LocalMessageHistoryTagsTable
     let timeBasedAttributesTable: TimestampBasedMessageAttributesTable
@@ -92,7 +93,7 @@ final class MessageHistoryTable: Table {
     let summaryTable: MessageHistoryTagsSummaryTable
     let pendingActionsTable: PendingMessageActionsTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, threadsTable: MessageHistoryThreadsTable, threadTagsTable: MessageHistoryThreadTagsTable, customTagTable: MessageCustomTagTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, timeBasedAttributesTable: TimestampBasedMessageAttributesTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, threadsTable: MessageHistoryThreadsTable, threadTagsTable: MessageHistoryThreadTagsTable, customTagTable: MessageCustomTagTable, customTagWithTagTable: MessageCustomTagWithTagTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, timeBasedAttributesTable: TimestampBasedMessageAttributesTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
         self.seedConfiguration = seedConfiguration
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
@@ -105,6 +106,7 @@ final class MessageHistoryTable: Table {
         self.threadsTable = threadsTable
         self.threadTagsTable = threadTagsTable
         self.customTagTable = customTagTable
+        self.customTagWithTagTable = customTagWithTagTable
         self.globalTagsTable = globalTagsTable
         self.localTagsTable = localTagsTable
         self.timeBasedAttributesTable = timeBasedAttributesTable
@@ -285,6 +287,13 @@ final class MessageHistoryTable: Table {
                                 if let threadId = message.threadId {
                                     self.threadTagsTable.add(tags: tag, threadId: threadId, index: message.index, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                                 }
+                                
+                                for customTag in message.customTags {
+                                    self.customTagWithTagTable.add(threadId: nil, tag: customTag, regularTag: tag.rawValue, index: message.index, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                                    if let threadId = message.threadId {
+                                        self.customTagWithTagTable.add(threadId: threadId, tag: customTag, regularTag: tag.rawValue, index: message.index, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                                    }
+                                }
                             }
                         }
                     }
@@ -293,6 +302,8 @@ final class MessageHistoryTable: Table {
                         
                         self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace, customTag: nil), id: message.id.id, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                     }
+                
+                    self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: nil, namespace: message.id.namespace, customTag: nil), id: message.id.id, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                 
                     for customTag in message.customTags {
                         self.customTagTable.add(threadId: nil, tag: customTag, index: message.index)
@@ -1379,12 +1390,20 @@ final class MessageHistoryTable: Table {
                 if let threadId = message.threadId {
                     self.threadTagsTable.remove(tags: tag, threadId: threadId, index: index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                 }
+                
+                for customTag in message.customTags {
+                    self.customTagWithTagTable.remove(threadId: nil, tag: customTag, regularTag: tag.rawValue, index: index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                    if let threadId = message.threadId {
+                        self.customTagWithTagTable.remove(threadId: threadId, tag: customTag, regularTag: tag.rawValue, index: index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                    }
+                }
             }
             if let threadId = message.threadId {
                 self.threadsTable.remove(threadId: threadId, index: index)
                 
                 self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace, customTag: nil), id: message.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
             }
+            self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: nil, namespace: message.id.namespace, customTag: nil), id: message.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
             for customTag in message.customTags {
                 self.customTagTable.remove(threadId: nil, tag: customTag, index: index)
                 if let threadId = message.threadId {
@@ -1602,7 +1621,6 @@ final class MessageHistoryTable: Table {
                     }
                 }
                 if !message.tags.isEmpty {
-                    //let isNewlyAdded = previousMessage.tags.isEmpty
                     self.tagsTable.add(tags: message.tags, index: message.index, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                     
                     if let threadId = message.threadId {
@@ -1617,14 +1635,39 @@ final class MessageHistoryTable: Table {
                     self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: index.id.peerId, threadId: threadId, namespace: index.id.namespace, customTag: nil), id: index.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                 }
                 
+                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: index.id.peerId, threadId: nil, namespace: index.id.namespace, customTag: nil), id: index.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                
                 if let threadId = message.threadId {
                     self.threadsTable.add(threadId: threadId, index: message.index)
                     
                     self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace, customTag: nil), id: message.id.id, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                 }
+                
+                self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: nil, namespace: message.id.namespace, customTag: nil), id: message.id.id, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
             }
             
-            if previousMessage.customTags != message.customTags || previousMessage.threadId != message.threadId || index != message.index {
+            if previousMessage.tags != message.tags || previousMessage.customTags != message.customTags || previousMessage.threadId != message.threadId || index != message.index {
+                if !previousMessage.tags.isEmpty {
+                    for tag in previousMessage.tags {
+                        for customTag in previousMessage.customTags {
+                            self.customTagWithTagTable.remove(threadId: nil, tag: customTag, regularTag: tag.rawValue, index: previousMessage.index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                            if let threadId = previousMessage.threadId {
+                                self.customTagWithTagTable.remove(threadId: threadId, tag: customTag, regularTag: tag.rawValue, index: previousMessage.index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                            }
+                        }
+                    }
+                }
+                if !message.tags.isEmpty {
+                    for tag in message.tags {
+                        for customTag in message.customTags {
+                            self.customTagWithTagTable.add(threadId: nil, tag: customTag, regularTag: tag.rawValue, index: message.index, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                            if let threadId = message.threadId {
+                                self.customTagWithTagTable.add(threadId: threadId, tag: customTag, regularTag: tag.rawValue, index: message.index, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                            }
+                        }
+                    }
+                }
+                
                 for customTag in previousMessage.customTags {
                     self.customTagTable.remove(threadId: nil, tag: customTag, index: index)
                     if let threadId = previousMessage.threadId {
@@ -3061,6 +3104,10 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    func getMessageCountInRange(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, customTag: MemoryBuffer, tag: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
+        return self.customTagWithTagTable.getMessageCountInRange(threadId: threadId, tag: customTag, regularTag: tag.rawValue, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+    }
+    
     func setPendingMessageAction(id: MessageId, type: PendingMessageActionType, action: PendingMessageActionData?, pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32]) {
         if let _ = self.messageHistoryIndexTable.getIndex(id) {
             self.pendingActionsTable.setAction(id: id, type: type, action: action, operations: &pendingActionsOperations, updatedSummaries: &updatedMessageActionsSummaries)
@@ -3186,31 +3233,61 @@ final class MessageHistoryTable: Table {
         
         var result: [IntermediateMessage] = []
         if let customTag {
-            let indices: [MessageIndex]
-            if fromIndex < toIndex {
-                indices = self.customTagTable.laterIndices(threadId: threadId, tag: customTag, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
-            } else {
-                indices = self.customTagTable.earlierIndices(threadId: threadId, tag: customTag, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
-            }
-            for index in indices {
-                if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
-                    if ignoreMessagesInTimestampRange.contains(index.timestamp) {
-                        continue
-                    }
-                }
+            if let tag {
+                let indices: [MessageIndex]
                 if fromIndex < toIndex {
-                    if index < fromIndex || index > toIndex {
-                        continue
-                    }
+                    indices = self.customTagWithTagTable.laterIndices(threadId: threadId, tag: customTag, regularTag: tag.rawValue, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
                 } else {
-                    if index < toIndex || index > fromIndex {
-                        continue
+                    indices = self.customTagWithTagTable.earlierIndices(threadId: threadId, tag: customTag, regularTag: tag.rawValue, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
+                }
+                for index in indices {
+                    if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
+                        if ignoreMessagesInTimestampRange.contains(index.timestamp) {
+                            continue
+                        }
+                    }
+                    if fromIndex < toIndex {
+                        if index < fromIndex || index > toIndex {
+                            continue
+                        }
+                    } else {
+                        if index < toIndex || index > fromIndex {
+                            continue
+                        }
+                    }
+                    if let message = self.getMessage(index) {
+                        result.append(message)
+                    } else {
+                        assertionFailure()
                     }
                 }
-                if let message = self.getMessage(index) {
-                    result.append(message)
+            } else {
+                let indices: [MessageIndex]
+                if fromIndex < toIndex {
+                    indices = self.customTagTable.laterIndices(threadId: threadId, tag: customTag, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
                 } else {
-                    assertionFailure()
+                    indices = self.customTagTable.earlierIndices(threadId: threadId, tag: customTag, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
+                }
+                for index in indices {
+                    if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
+                        if ignoreMessagesInTimestampRange.contains(index.timestamp) {
+                            continue
+                        }
+                    }
+                    if fromIndex < toIndex {
+                        if index < fromIndex || index > toIndex {
+                            continue
+                        }
+                    } else {
+                        if index < toIndex || index > fromIndex {
+                            continue
+                        }
+                    }
+                    if let message = self.getMessage(index) {
+                        result.append(message)
+                    } else {
+                        assertionFailure()
+                    }
                 }
             }
         } else if let threadId = threadId {

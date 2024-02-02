@@ -830,11 +830,11 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                             }
                             if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                                 strongSelf.reactionButtonsNode = reactionButtonsNode
-                                reactionButtonsNode.reactionSelected = { value in
+                                reactionButtonsNode.reactionSelected = { value, sourceView in
                                     guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                         return
                                     }
-                                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+                                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
                                 }
                                 reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
                                     guard let strongSelf = weakSelf.value, let item = strongSelf.item else {

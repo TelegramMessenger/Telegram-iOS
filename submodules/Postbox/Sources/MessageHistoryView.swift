@@ -540,8 +540,8 @@ final class MutableMessageHistoryView {
                         if case let .tag(currentTag) = self.tag, currentTag == tag {
                             matchesSpace = true
                         }
-                    case let .customTag(customTag):
-                        if case let .customTag(currentTag) = self.tag, currentTag == customTag {
+                    case let .customTag(customTag, regularTag):
+                        if case let .customTag(currentTag, currentRegularTag) = self.tag, currentTag == customTag, currentRegularTag == regularTag {
                             matchesSpace = true
                         }
                     }
@@ -589,9 +589,17 @@ final class MutableMessageHistoryView {
                             if message.tags.contains(value) {
                                 matchesTag = true
                             }
-                        case let .customTag(value):
-                            if message.customTags.contains(value) {
-                                matchesTag = true
+                        case let .customTag(value, regularTag):
+                            if let regularTag {
+                                if message.tags.contains(regularTag) {
+                                    if message.customTags.contains(value) {
+                                        matchesTag = true
+                                    }
+                                }
+                            } else {
+                                if message.customTags.contains(value) {
+                                    matchesTag = true
+                                }
                             }
                         }
                         
@@ -608,9 +616,17 @@ final class MutableMessageHistoryView {
                                             if groupMessage.tags.contains(value) {
                                                 groupMatchesTag = true
                                             }
-                                        case let .customTag(value):
-                                            if groupMessage.customTags.contains(value) {
-                                                groupMatchesTag = true
+                                        case let .customTag(value, regularValue):
+                                            if let regularValue {
+                                                if groupMessage.tags.contains(regularValue) {
+                                                    if groupMessage.customTags.contains(value) {
+                                                        groupMatchesTag = true
+                                                    }
+                                                }
+                                            } else {
+                                                if groupMessage.customTags.contains(value) {
+                                                    groupMatchesTag = true
+                                                }
                                             }
                                         }
                                         
@@ -700,8 +716,8 @@ final class MutableMessageHistoryView {
                         if case let .tag(currentTag) = self.tag, currentTag == tag {
                             matchesSpace = true
                         }
-                    case let .customTag(customTag):
-                        if case let .customTag(currentTag) = self.tag, currentTag == customTag {
+                    case let .customTag(customTag, regularTag):
+                        if case let .customTag(currentTag, currentRegularTag) = self.tag, currentTag == customTag, currentRegularTag == regularTag {
                             matchesSpace = true
                         }
                     }
@@ -968,8 +984,8 @@ final class MutableMessageHistoryView {
                 switch tag {
                 case let .tag(value):
                     space = .tag(value)
-                case let .customTag(value):
-                    space = .customTag(value)
+                case let .customTag(value, regularTag):
+                    space = .customTag(value, regularTag)
                 }
             } else {
                 space = .everywhere

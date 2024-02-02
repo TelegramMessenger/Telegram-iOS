@@ -204,7 +204,7 @@ extension ChatControllerImpl {
                 
                 let reactionItems: Signal<[ReactionItem], NoError>
                 if savedMessages {
-                    reactionItems = tagMessageReactions(context: self.context)
+                    reactionItems = tagMessageReactions(context: self.context, subPeerId: self.chatLocation.threadId.flatMap(EnginePeer.Id.init))
                 } else {
                     reactionItems = .single([])
                 }

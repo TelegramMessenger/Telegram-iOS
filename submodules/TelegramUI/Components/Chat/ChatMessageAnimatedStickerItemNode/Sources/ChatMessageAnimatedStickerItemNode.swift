@@ -1683,11 +1683,11 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
-                            reactionButtonsNode.reactionSelected = { value in
+                            reactionButtonsNode.reactionSelected = { value, sourceView in
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
-                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
+                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceView, value in
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
@@ -1780,7 +1780,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         f()
                     case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: item.message) {
-                            item.controllerInteraction.updateMessageReaction(item.message, .default, false)
+                            item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }
@@ -1789,7 +1789,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     item.controllerInteraction.clickThroughMessage()
                 } else if case .doubleTap = gesture {
                     if canAddMessageReactions(message: item.message) {
-                        item.controllerInteraction.updateMessageReaction(item.message, .default, false)
+                        item.controllerInteraction.updateMessageReaction(item.message, .default, false, nil)
                     }
                 }
             }
