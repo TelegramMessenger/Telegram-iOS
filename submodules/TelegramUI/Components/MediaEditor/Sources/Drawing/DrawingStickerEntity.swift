@@ -14,6 +14,10 @@ private func fullEntityMediaPath(_ path: String) -> String {
 }
 
 public final class DrawingStickerEntity: DrawingEntity, Codable {
+    public enum DecodingError: Error {
+        case generic
+    }
+    
     public enum Content: Equatable {
         public enum ImageType: Equatable {
             case sticker
@@ -262,7 +266,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         } else if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .videoFile) {
             self.content = .video(file)
         } else {
-            fatalError()
+            throw DrawingStickerEntity.DecodingError.generic
         }
         self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
         self.position = try container.decode(CGPoint.self, forKey: .position)

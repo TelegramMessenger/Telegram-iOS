@@ -960,17 +960,6 @@ public final class ManagedAudioSession: NSObject {
             try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
         }
         
-        if case let .record(_, video, _) = type, video, let input = AVAudioSession.sharedInstance().availableInputs?.first {
-            if let dataSources = input.dataSources {
-                for source in dataSources {
-                    if source.dataSourceName.contains("Front") {
-                        try? input.setPreferredDataSource(source)
-                        break
-                    }
-                }
-            }
-        }
-        
         if resetToBuiltin {
             var updatedType = type
             if case .record(false, let video, let withOthers) = updatedType, self.isHeadsetPluggedInValue {
