@@ -400,6 +400,8 @@ public final class EmojiStatusComponent: Component {
                     emojiThemeColor = themeColor
                     emojiLoopMode = loopMode
                     emojiSize = size
+                } else if case let .premium(color) = component.content {
+                    iconTintColor = color
                 }
             }
             

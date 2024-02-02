@@ -248,24 +248,24 @@
         [itemViews addObject:viewItem];
     }
     
-    if (_hasSearchButton)
-    {
-        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-        {
-            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            __strong TGMenuSheetController *strongController = weakController;
-            if (strongController == nil)
-                return;
-            
-            [strongController dismissAnimated:true];
-            if (strongSelf != nil)
-                strongSelf.requestSearchController(nil);
-        }];
-        [itemViews addObject:viewItem];
-    }
+//    if (_hasSearchButton)
+//    {
+//        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+//        {
+//            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+//            if (strongSelf == nil)
+//                return;
+//            
+//            __strong TGMenuSheetController *strongController = weakController;
+//            if (strongController == nil)
+//                return;
+//            
+//            [strongController dismissAnimated:true];
+//            if (strongSelf != nil)
+//                strongSelf.requestSearchController(nil);
+//        }];
+//        [itemViews addObject:viewItem];
+//    }
     
     if (_hasViewButton)
     {

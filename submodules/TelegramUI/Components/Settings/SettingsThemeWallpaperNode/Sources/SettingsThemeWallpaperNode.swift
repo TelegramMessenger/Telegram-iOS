@@ -80,6 +80,7 @@ public final class SettingsThemeWallpaperNode: ASDisplayNode {
         self.statusNode.isUserInteractionEnabled = false
         
         self.emojiContainerNode = ASDisplayNode()
+        self.emojiContainerNode.isUserInteractionEnabled = false
         self.emojiImageNode = TransformImageNode()
         
         super.init()
