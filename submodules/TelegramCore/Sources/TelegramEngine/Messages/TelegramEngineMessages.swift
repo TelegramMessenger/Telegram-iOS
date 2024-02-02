@@ -1395,5 +1395,11 @@ public extension TelegramEngine {
         public func searchLocalSavedMessagesPeers(query: String, indexNameMapping: [EnginePeer.Id: [PeerIndexNameRepresentation]]) -> Signal<[EnginePeer], NoError> {
             return _internal_searchLocalSavedMessagesPeers(account: self.account, query: query, indexNameMapping: indexNameMapping)
         }
+        
+        public func internalReindexSavedMessagesCustomTagsIfNeeded(threadId: Int64?, tag: MemoryBuffer) {
+            let _ = self.account.postbox.transaction({ transaction in
+                transaction.reindexSavedMessagesCustomTagsWithTagsIfNeeded(peerId: self.account.peerId, threadId: threadId, tag: tag)
+            }).startStandalone()
+        }
     }
 }

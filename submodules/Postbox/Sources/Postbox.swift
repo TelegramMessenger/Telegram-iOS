@@ -1383,6 +1383,11 @@ public final class Transaction {
         }
         return matchingPeers.sorted(by: { $0.1 > $1.1 }).map(\.0)
     }
+    
+    public func reindexSavedMessagesCustomTagsWithTagsIfNeeded(peerId: PeerId, threadId: Int64?, tag: MemoryBuffer) {
+        assert(!self.disposed)
+        self.postbox!.reindexSavedMessagesCustomTagsWithTagsIfNeeded(peerId: peerId, threadId: threadId, tag: tag)
+    }
 }
 
 public enum PostboxResult {
@@ -2372,6 +2377,23 @@ final class PostboxImpl {
     
     fileprivate func setStory(id: StoryId, value: CodableEntry) {
         self.storyTable.set(id: id, value: value, events: &self.currentStoryEvents)
+    }
+    
+    fileprivate func reindexSavedMessagesCustomTagsWithTagsIfNeeded(peerId: PeerId, threadId: Int64?, tag: MemoryBuffer) {
+        let mappedTag = self.messageCustomTagIdTable.get(tag: tag)
+        if !self.messageHistoryMetadataTable.isPeerCustomTagReindexed(peerId: peerId, threadId: threadId, tag: mappedTag) {
+            let indices = self.messageCustomTagTable.laterIndices(threadId: threadId, tag: tag, peerId: peerId, namespace: 0, index: nil, includeFrom: false, count: 1000)
+            for index in indices {
+                if let message = self.messageHistoryTable.getMessage(index) {
+                    for regularTag in message.tags {
+                        if !self.messageCustomTagWithTagTable.entryExists(threadId: threadId, tag: tag, regularTag: regularTag.rawValue, index: index) {
+                            self.messageCustomTagWithTagTable.add(threadId: threadId, tag: tag, regularTag: regularTag.rawValue, index: index, isNewlyAdded: true, updatedSummaries: &self.currentUpdatedMessageTagSummaries, invalidateSummaries: &self.currentInvalidateMessageTagSummaries)
+                        }
+                    }
+                }
+            }
+            self.messageHistoryMetadataTable.setPeerCustomTagReindexed(peerId: peerId, threadId: threadId, tag: mappedTag)
+        }
     }
     
     func renderIntermediateMessage(_ message: IntermediateMessage) -> Message {

@@ -17,6 +17,7 @@ private enum MetadataPrefix: Int8 {
     case NextCustomTagId = 14
     case PeerHistoryCustomTagInitialized = 15
     case PeerHistoryCustomTagWithTagInitialized = 16
+    case PeerHistoryCustomTagWithTagReindexed = 17
 }
 
 public struct ChatListTotalUnreadCounters: PostboxCoding, Equatable {
@@ -73,6 +74,7 @@ final class MessageHistoryMetadataTable: Table {
     private var initializedHistoryPeerIds = Set<PeerId>()
     private var initializedHistoryPeerIdTags: [PeerId: Set<MessageTags>] = [:]
     private var initializedHistoryPeerIdCustomTags: [PeerId: Set<PeerIdThreadIdAndTag>] = [:]
+    private var reindexedHistoryPeerIdCustomTags: [PeerId: Set<PeerIdThreadIdAndTag>] = [:]
     private var initializedGroupFeedIndexIds = Set<PeerGroupId>()
     
     private var peerNextMessageIdByNamespace: [PeerId: [MessageId.Namespace: MessageId.Id]] = [:]
@@ -115,6 +117,15 @@ final class MessageHistoryMetadataTable: Table {
         let key = ValueBoxKey(length: 8 + 1 + 8 + 4)
         key.setInt64(0, value: id.toInt64())
         key.setInt8(8, value: MetadataPrefix.PeerHistoryCustomTagInitialized.rawValue)
+        key.setInt64(8 + 1, value: threadId ?? 0)
+        key.setInt32(8 + 1 + 8, value: tag)
+        return key
+    }
+    
+    private func peerHistoryReindexedCustomTagKey(id: PeerId, threadId: Int64?, tag: Int32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8 + 1 + 8 + 4)
+        key.setInt64(0, value: id.toInt64())
+        key.setInt8(8, value: MetadataPrefix.PeerHistoryCustomTagWithTagReindexed.rawValue)
         key.setInt64(8 + 1, value: threadId ?? 0)
         key.setInt32(8 + 1 + 8, value: tag)
         return key
@@ -340,6 +351,30 @@ final class MessageHistoryMetadataTable: Table {
         }
         self.initializedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: regularTag))
         self.valueBox.set(self.table, key: self.peerHistoryInitializedCustomTagWithTagKey(id: peerId, threadId: threadId, tag: tag, regularTag: regularTag), value: MemoryBuffer())
+    }
+    
+    func setPeerCustomTagReindexed(peerId: PeerId, threadId: Int64?, tag: Int32) {
+        if self.reindexedHistoryPeerIdCustomTags[peerId] == nil {
+            self.reindexedHistoryPeerIdCustomTags[peerId] = Set()
+        }
+        self.reindexedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: nil))
+        self.valueBox.set(self.table, key: self.peerHistoryReindexedCustomTagKey(id: peerId, threadId: threadId, tag: tag), value: MemoryBuffer())
+    }
+    
+    func isPeerCustomTagReindexed(peerId: PeerId, threadId: Int64?, tag: Int32) -> Bool {
+        if let currentTags = self.reindexedHistoryPeerIdCustomTags[peerId], currentTags.contains(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: nil)) {
+            return true
+        } else {
+            if self.valueBox.exists(self.table, key: self.peerHistoryReindexedCustomTagKey(id: peerId, threadId: threadId, tag: tag)) {
+                if self.reindexedHistoryPeerIdCustomTags[peerId] == nil {
+                    self.reindexedHistoryPeerIdCustomTags[peerId] = Set()
+                }
+                self.reindexedHistoryPeerIdCustomTags[peerId]!.insert(PeerIdThreadIdAndTag(peerId: peerId, threadId: threadId, tag: tag, regularTag: nil))
+                return true
+            } else {
+                return false
+            }
+        }
     }
     
     func removePeerCustomTagInitializedList() {

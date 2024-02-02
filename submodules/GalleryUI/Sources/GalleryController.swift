@@ -596,7 +596,22 @@ public class GalleryController: ViewController, StandalonePresentableController,
         let message: Signal<(Message, Bool)?, NoError>
         var translateToLanguage: Signal<String?, NoError> = .single(nil)
         switch source {
-            case let .peerMessagesAtId(messageId, _, _, _):
+            case let .peerMessagesAtId(messageId, chatLocation, customTag, _):
+                var peerIdValue: PeerId?
+                var threadIdValue: Int64?
+                switch chatLocation {
+                case let .peer(peerId):
+                    peerIdValue = peerId
+                case let .replyThread(message):
+                    peerIdValue = message.peerId
+                    threadIdValue = message.threadId
+                case .feed:
+                    break
+                }
+                if peerIdValue == context.account.peerId, let customTag {
+                    context.engine.messages.internalReindexSavedMessagesCustomTagsIfNeeded(threadId: threadIdValue, tag: customTag)
+                }
+            
                 message = context.account.postbox.messageAtId(messageId)
                 |> mapToSignal { message -> Signal<(Message, Bool)?, NoError> in
                     if let message, let peer = message.peers[message.id.peerId] as? TelegramGroup, let migrationPeerId = peer.migrationReference?.peerId {
