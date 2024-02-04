@@ -15116,6 +15116,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
+            if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
+                switch message {
+                case let .message(text, attributes, inlineStickers, mediaReference, threadId, replyToMessageId, replyToStoryId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets):
+                    message = .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, threadId: threadId ?? replyThreadMessage.threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
+                case .forward:
+                    break
+                }
+            }
+            
             return message.withUpdatedAttributes { attributes in
                 var attributes = attributes
                 if silentPosting || scheduleTime != nil {
