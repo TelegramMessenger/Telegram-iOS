@@ -6,6 +6,7 @@ import TelegramPresentationData
 import TextSelectionNode
 import TelegramCore
 import SwiftSignalKit
+import UIKitRuntimeUtils
 
 final class PinchSourceGesture: UIPinchGestureRecognizer {
     private final class Target {
@@ -237,6 +238,7 @@ private final class PinchControllerNode: ViewControllerTracingNode {
     private let scrollingContainer: ASDisplayNode
 
     private let sourceNode: PinchSourceContainerNode
+    private let disableScreenshots: Bool
     private let getContentAreaInScreenSpace: () -> CGRect
 
     private let dimNode: ASDisplayNode
@@ -246,9 +248,10 @@ private final class PinchControllerNode: ViewControllerTracingNode {
 
     private var hapticFeedback: HapticFeedback?
 
-    init(controller: PinchController, sourceNode: PinchSourceContainerNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+    init(controller: PinchController, sourceNode: PinchSourceContainerNode, disableScreenshots: Bool, getContentAreaInScreenSpace: @escaping () -> CGRect) {
         self.controller = controller
         self.sourceNode = sourceNode
+        self.disableScreenshots = disableScreenshots
         self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
 
         self.dimNode = ASDisplayNode()
@@ -289,6 +292,10 @@ private final class PinchControllerNode: ViewControllerTracingNode {
             transform = CATransform3DScale(transform, scale, scale, 0.0)
 
             strongSelf.sourceNode.contentNode.transform = transform
+        }
+        
+        if self.disableScreenshots {
+            setLayerDisableScreenshots(self.layer, true)
         }
     }
 
@@ -407,6 +414,7 @@ public final class PinchController: ViewController, StandalonePresentableControl
     }
 
     private let sourceNode: PinchSourceContainerNode
+    private let disableScreenshots: Bool
     private let getContentAreaInScreenSpace: () -> CGRect
 
     private var wasDismissed = false
@@ -415,8 +423,9 @@ public final class PinchController: ViewController, StandalonePresentableControl
         return self.displayNode as! PinchControllerNode
     }
 
-    public init(sourceNode: PinchSourceContainerNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+    public init(sourceNode: PinchSourceContainerNode, disableScreenshots: Bool = false, getContentAreaInScreenSpace: @escaping () -> CGRect) {
         self.sourceNode = sourceNode
+        self.disableScreenshots = disableScreenshots
         self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
 
         super.init(navigationBarPresentationData: nil)
@@ -435,7 +444,7 @@ public final class PinchController: ViewController, StandalonePresentableControl
     }
 
     override public func loadDisplayNode() {
-        self.displayNode = PinchControllerNode(controller: self, sourceNode: self.sourceNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
+        self.displayNode = PinchControllerNode(controller: self, sourceNode: self.sourceNode, disableScreenshots: self.disableScreenshots, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
 
         self.displayNodeDidLoad()
 

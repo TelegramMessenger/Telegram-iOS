@@ -13,6 +13,7 @@ import EntityKeyboard
 import AnimationCache
 import MultiAnimationRenderer
 import UndoUI
+import UIKitRuntimeUtils
 
 private let animationDurationFactor: Double = 1.0
 
@@ -558,6 +559,10 @@ final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelega
         self.dismissAccessibilityArea.activate = { [weak self] in
             self?.dimNodeTapped()
             return true
+        }
+        
+        if controller.disableScreenshots {
+            setLayerDisableScreenshots(self.layer, true)
         }
     }
     
@@ -2426,6 +2431,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
     let workaroundUseLegacyImplementation: Bool
+    let disableScreenshots: Bool
 
     public enum HandledTouchEvent {
         case ignore
@@ -2441,7 +2447,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var getOverlayViews: (() -> [UIView])?
     
-    convenience public init(presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
+    convenience public init(presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false, disableScreenshots: Bool = false) {
         self.init(
             presentationData: presentationData,
             configuration: ContextController.Configuration(
@@ -2455,7 +2461,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
             ),
             recognizer: recognizer,
             gesture: gesture,
-            workaroundUseLegacyImplementation: workaroundUseLegacyImplementation
+            workaroundUseLegacyImplementation: workaroundUseLegacyImplementation,
+            disableScreenshots: disableScreenshots
         )
     }
     
@@ -2464,13 +2471,15 @@ public final class ContextController: ViewController, StandalonePresentableContr
         configuration: ContextController.Configuration,
         recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil,
         gesture: ContextGesture? = nil,
-        workaroundUseLegacyImplementation: Bool = false
+        workaroundUseLegacyImplementation: Bool = false,
+        disableScreenshots: Bool = false
     ) {
         self.presentationData = presentationData
         self.configuration = configuration
         self.recognizer = recognizer
         self.gesture = gesture
         self.workaroundUseLegacyImplementation = workaroundUseLegacyImplementation
+        self.disableScreenshots = disableScreenshots
         
         super.init(navigationBarPresentationData: nil)
         
