@@ -707,7 +707,6 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     |> `catch` { _ in
                                         return .single(.result([]))
                                     }
-                                    |> take(1)
                                     |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
                                         switch result {
                                         case .progress:
