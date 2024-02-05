@@ -739,7 +739,6 @@ public enum InstalledStickerPacksControllerMode {
     case modal
     case masks
     case emoji
-    case groupEmoji(selectedPack: StickerPackCollectionInfo?, completion: (StickerPackCollectionInfo?) -> Void)
 }
 
 public let defaultContactLabel: String = "_$!<Mobile>!$_"

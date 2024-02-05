@@ -17,6 +17,7 @@ import AvatarStoryIndicatorComponent
 import AccountContext
 import Markdown
 import BalancedTextComponent
+import MultilineTextWithEntitiesComponent
 
 public enum TooltipActiveTextItem {
     case url(String, Bool)
@@ -108,6 +109,8 @@ private class DownArrowsIconNode: ASDisplayNode {
 }
 
 private final class TooltipScreenNode: ViewControllerTracingNode {
+    private let context: AccountContext?
+    
     private let text: TooltipScreen.Text
     private let textAlignment: TooltipScreen.Alignment
     private let balancedTextLayout: Bool
@@ -171,6 +174,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         cornerRadius: CGFloat? = nil,
         shouldDismissOnTouch: @escaping (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?)
     {
+        self.context = context
         self.tooltipStyle = style
         self.arrowStyle = arrowStyle
         self.icon = icon
@@ -534,6 +538,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 }
             )
             attributedText = parseMarkdownIntoAttributedString(text, attributes: markdownAttributes)
+        case let .attributedString(text):
+            attributedText = text
         }
         
         let highlightColor: UIColor? = UIColor.white.withAlphaComponent(0.5)
@@ -594,21 +600,44 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
         }
         
-        let textSize = self.textView.update(
-            transition: .immediate,
-            component: AnyComponent(BalancedTextComponent(
-                text: .plain(attributedText),
-                balanced: self.balancedTextLayout,
-                horizontalAlignment: self.textAlignment == .center ? .center : .left,
-                maximumNumberOfLines: 0,
-                highlightColor: highlightColor,
-                highlightAction: highlightAction,
-                tapAction: tapAction,
-                longTapAction: longTapAction
-            )),
-            environment: {},
-            containerSize: CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: 1000000.0)
-        )
+        let textSize: CGSize
+        if case .attributedString = self.text, let context = self.context {
+            textSize = self.textView.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.4),
+                    text: .plain(attributedText),
+                    horizontalAlignment: self.textAlignment == .center ? .center : .left,
+                    truncationType: .end,
+                    maximumNumberOfLines: 3,
+                    lineSpacing: 0.2,
+                    highlightAction: nil,
+                    tapAction: { _, _ in
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: 1000000.0)
+            )
+        } else {
+            textSize = self.textView.update(
+                transition: .immediate,
+                component: AnyComponent(BalancedTextComponent(
+                    text: .plain(attributedText),
+                    balanced: self.balancedTextLayout,
+                    horizontalAlignment: self.textAlignment == .center ? .center : .left,
+                    maximumNumberOfLines: 0,
+                    highlightColor: highlightColor,
+                    highlightAction: highlightAction,
+                    tapAction: tapAction,
+                    longTapAction: longTapAction
+                )),
+                environment: {},
+                containerSize: CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: 1000000.0)
+            )
+        }
         
         var backgroundFrame: CGRect
         
@@ -941,6 +970,7 @@ public final class TooltipScreen: ViewController {
         case plain(text: String)
         case entities(text: String, entities: [MessageTextEntity])
         case markdown(text: String)
+        case attributedString(text: NSAttributedString)
     }
     
     public class Action {

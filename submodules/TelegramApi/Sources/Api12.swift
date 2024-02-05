@@ -664,6 +664,7 @@ public extension Api {
 }
 public extension Api {
     enum MessageAction: TypeConstructorDescription {
+        case messageActionBoostApply(boosts: Int32)
         case messageActionBotAllowed(flags: Int32, domain: String?, app: Api.BotApp?)
         case messageActionChannelCreate(title: String)
         case messageActionChannelMigrateFrom(title: String, chatId: Int64)
@@ -708,6 +709,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .messageActionBoostApply(let boosts):
+                    if boxed {
+                        buffer.appendInt32(-872240531)
+                    }
+                    serializeInt32(boosts, buffer: buffer, boxed: false)
+                    break
                 case .messageActionBotAllowed(let flags, let domain, let app):
                     if boxed {
                         buffer.appendInt32(-988359047)
@@ -1032,6 +1039,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .messageActionBoostApply(let boosts):
+                return ("messageActionBoostApply", [("boosts", boosts as Any)])
                 case .messageActionBotAllowed(let flags, let domain, let app):
                 return ("messageActionBotAllowed", [("flags", flags as Any), ("domain", domain as Any), ("app", app as Any)])
                 case .messageActionChannelCreate(let title):
@@ -1117,6 +1126,17 @@ public extension Api {
     }
     }
     
+        public static func parse_messageActionBoostApply(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionBoostApply(boosts: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_messageActionBotAllowed(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()

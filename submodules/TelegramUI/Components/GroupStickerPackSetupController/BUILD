@@ -20,6 +20,9 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/ItemListStickerPackItem:ItemListStickerPackItem",
+        "//submodules/SearchBarNode:SearchBarNode",
+        "//submodules/SearchUI:SearchUI",
+        "//submodules/MergeLists:MergeLists",
     ],
     visibility = [
         "//visibility:public",

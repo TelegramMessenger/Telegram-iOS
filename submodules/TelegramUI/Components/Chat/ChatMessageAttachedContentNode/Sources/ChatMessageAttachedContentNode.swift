@@ -564,7 +564,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         false
                     )
                     actionButtonMinWidthAndFinalizeLayout = (buttonWidth, continueLayout)
-                    actualWidth = max(actualWidth, buttonWidth)
+                    
+                    var buttonInset: CGFloat = 0.0
+                    if let buttonIconImage {
+                        buttonInset += buttonIconImage.size.width + 2.0
+                    }
+                    actualWidth = max(actualWidth, buttonWidth + buttonInset * 2.0)
                 } else {
                     actionButtonMinWidthAndFinalizeLayout = nil
                 }

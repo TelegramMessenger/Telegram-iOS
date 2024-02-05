@@ -3381,6 +3381,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                 
+                let peerSpecificEmojiPack = (self.controller?.peerView?.cachedData as? CachedChannelData)?.emojiPack
+                
                 var inlineStickers: [MediaId: Media] = [:]
                 var firstLockedPremiumEmoji: TelegramMediaFile?
                 var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
@@ -3391,7 +3393,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if let packId = value.interactivelySelectedFromPackId {
                                 bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
                             }
-                            if file.isPremiumEmoji && !self.chatPresentationInterfaceState.isPremium && self.chatPresentationInterfaceState.chatLocation.peerId != self.context.account.peerId {
+                            
+                            var isPeerSpecific = false
+                            for attribute in file.attributes {
+                                if case let .CustomEmoji(_, _, _, packReference) = attribute, case let .id(id, _) = packReference {
+                                    isPeerSpecific = id == peerSpecificEmojiPack?.id.id
+                                }
+                            }
+                            
+                            if file.isPremiumEmoji && !self.chatPresentationInterfaceState.isPremium && self.chatPresentationInterfaceState.chatLocation.peerId != self.context.account.peerId && !isPeerSpecific {
                                 if firstLockedPremiumEmoji == nil {
                                     firstLockedPremiumEmoji = file
                                 }

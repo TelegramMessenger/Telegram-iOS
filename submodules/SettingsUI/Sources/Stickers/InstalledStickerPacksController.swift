@@ -510,7 +510,7 @@ private func namespaceForMode(_ mode: InstalledStickerPacksControllerMode) -> It
             return Namespaces.ItemCollection.CloudStickerPacks
         case .masks:
             return Namespaces.ItemCollection.CloudMaskPacks
-        case .emoji, .groupEmoji:
+        case .emoji:
             return Namespaces.ItemCollection.CloudEmojiPacks
     }
 }
@@ -574,11 +574,6 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         
         entries.append(.suggestAnimatedEmoji(presentationData.strings.StickerPacksSettings_SuggestAnimatedEmoji, stickerSettings.suggestAnimatedEmoji))
         entries.append(.suggestAnimatedEmojiInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_SuggestAnimatedEmojiInfo))
-    case .groupEmoji:
-        entries.append(.info(presentationData.theme, "All members will be able to use these emoji in the group, even if they don't have Telegram Premium.\n"))
-        
-        //TODO:localize
-        entries.append(.packsTitle(presentationData.theme, "CHOOSE EMOJI PACK".uppercased()))
     }
     
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespaceForMode(mode)])] as? ItemCollectionInfosView {
@@ -624,27 +619,21 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         }
     }
     
-    if case .groupEmoji = mode {
-        
-    } else {
-        var markdownString: String
-        switch mode {
-        case .general, .modal:
-            markdownString = presentationData.strings.StickerPacksSettings_ManagingHelp
-        case .masks:
-            markdownString = presentationData.strings.MaskStickerSettings_Info
-        case .emoji:
-            markdownString = presentationData.strings.EmojiStickerSettings_Info
-        case .groupEmoji:
-            markdownString = ""
-        }
-        let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
-        if let entity = entities.first {
-            markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
-            markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
-        }
-        entries.append(.packsInfo(presentationData.theme, markdownString))
+    var markdownString: String
+    switch mode {
+    case .general, .modal:
+        markdownString = presentationData.strings.StickerPacksSettings_ManagingHelp
+    case .masks:
+        markdownString = presentationData.strings.MaskStickerSettings_Info
+    case .emoji:
+        markdownString = presentationData.strings.EmojiStickerSettings_Info
     }
+    let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+    if let entity = entities.first {
+        markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+        markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+    }
+    entries.append(.packsInfo(presentationData.theme, markdownString))
     
     return entries
 }
@@ -917,7 +906,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .masks) |> map(Optional.init)))
             quickReaction = .single(nil)
             emojiCount.set(.single(0))
-        case .emoji, .groupEmoji:
+        case .emoji:
             featured.set(.single([]))
             archivedPromise.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks(namespace: .emoji) |> map(Optional.init)))
             quickReaction = .single(nil)
@@ -1070,8 +1059,6 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             } else {
                 if case .modal = mode {
                     rightNavigationButton = nil
-                } else if case .groupEmoji = mode {
-                    rightNavigationButton = nil
                 } else {
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
                         updateState {
@@ -1093,9 +1080,6 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 title = presentationData.strings.MaskStickerSettings_Title
             case .emoji:
                 title = presentationData.strings.EmojiPacksSettings_Title
-            case .groupEmoji:
-                //TODO:localize
-                title = "Group Emoji Pack"
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
@@ -1250,48 +1234,43 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
                 packs.insert(packReference, at: 0)
             }
             if let mainStickerPack = mainStickerPack {
-                //TODO:localize
-                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: [mainStickerPack], mainActionTitle: "Set as Group Emoji Pack", parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { actions in
-                    if case .groupEmoji = mode {
-                        
-                    } else {
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        var animateInAsReplacement = false
-                        if let navigationController = navigationControllerImpl?() {
-                            for controller in navigationController.overlayControllers {
-                                if let controller = controller as? UndoOverlayController {
-                                    controller.dismissWithCommitActionAndReplacementAnimation()
-                                    animateInAsReplacement = true
-                                }
+                presentControllerImpl?(StickerPackScreen(context: context, mode: .settings, mainStickerPack: mainStickerPack, stickerPacks: [mainStickerPack], parentNavigationController: controller?.navigationController as? NavigationController, actionPerformed: { actions in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    var animateInAsReplacement = false
+                    if let navigationController = navigationControllerImpl?() {
+                        for controller in navigationController.overlayControllers {
+                            if let controller = controller as? UndoOverlayController {
+                                controller.dismissWithCommitActionAndReplacementAnimation()
+                                animateInAsReplacement = true
                             }
                         }
-                        if let (info, items, action) = actions.first {
-                            switch action {
-                            case .add:
-                                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                                    return true
-                                }))
-                            case let .remove(positionInList):
-                                let removedTitle: String
-                                let removedText: String
-                                if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                                    removedTitle = presentationData.strings.EmojiPackActionInfo_RemovedTitle
-                                    removedText = presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string
-                                } else if info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
-                                    removedTitle = presentationData.strings.MaskPackActionInfo_RemovedTitle
-                                    removedText = presentationData.strings.MaskPackActionInfo_RemovedText(info.title).string
-                                } else {
-                                    removedTitle = presentationData.strings.StickerPackActionInfo_RemovedTitle
-                                    removedText = presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string
-                                }
-                                
-                                navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: removedTitle, text: removedText, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
-                                    if case .undo = action {
-                                        let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
-                                    }
-                                    return true
-                                }))
+                    }
+                    if let (info, items, action) = actions.first {
+                        switch action {
+                        case .add:
+                            navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                                return true
+                            }))
+                        case let .remove(positionInList):
+                            let removedTitle: String
+                            let removedText: String
+                            if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                                removedTitle = presentationData.strings.EmojiPackActionInfo_RemovedTitle
+                                removedText = presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string
+                            } else if info.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
+                                removedTitle = presentationData.strings.MaskPackActionInfo_RemovedTitle
+                                removedText = presentationData.strings.MaskPackActionInfo_RemovedText(info.title).string
+                            } else {
+                                removedTitle = presentationData.strings.StickerPackActionInfo_RemovedTitle
+                                removedText = presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string
                             }
+                            
+                            navigationControllerImpl?()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: removedTitle, text: removedText, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { action in
+                                if case .undo = action {
+                                    let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                }
+                                return true
+                            }))
                         }
                     }
                 }), nil)

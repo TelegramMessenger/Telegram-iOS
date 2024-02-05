@@ -183,3 +183,33 @@ func _internal_updateDefaultChannelMemberBannedRights(account: Account, peerId: 
     |> switchToLatest
 }
 
+func _internal_updateChannelBoostsToUnlockRestrictions(account: Account, peerId: PeerId, boosts: Int32) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+        guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.channels.setBoostsToUnblockRestrictions(channel: inputChannel, boosts: boosts))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            guard let result = result else {
+                return .complete()
+            }
+            account.stateManager.addUpdates(result)
+            return account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.withUpdatedBoostsToUnrestrict(boosts)
+                    }
+                    return cachedData
+                })
+            }
+            |> ignoreValues
+        }
+    }
+    |> switchToLatest
+}
+
+

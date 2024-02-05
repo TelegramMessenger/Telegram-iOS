@@ -466,6 +466,8 @@ private final class SheetContent: CombinedComponent {
     
     final class State: ComponentState {
         var cachedChevronImage: (UIImage, PresentationTheme)?
+        var cachedIconImage: UIImage?
+        
         private(set) var peer: EnginePeer?
         private(set) var memberPeer: EnginePeer?
         
@@ -511,6 +513,10 @@ private final class SheetContent: CombinedComponent {
     }
     
     static var body: Body {
+        let iconBackground = Child(Image.self)
+        let icon = Child(BundleIconComponent.self)
+        //let icon = Child(LottieComponent.self)
+        
         let peerShortcut = Child(Button.self)
         let text = Child(BalancedTextComponent.self)
         let alternateText = Child(List<Empty>.self)
@@ -658,7 +664,7 @@ private final class SheetContent: CombinedComponent {
                     }
                     isCurrent = true
                 case let .unrestrict(unrestrictCount):
-                    textString = "Boost the group \(unrestrictCount) times to remove messaging restrictions. Your boosts will help \(peerName) to unlock new features."
+                    textString = "Boost the group **\(unrestrictCount)** times to remove messaging restrictions. Your boosts will help **\(peerName)** to unlock new features."
                     isCurrent = true
                 default:
                     if let remaining {
@@ -674,7 +680,7 @@ private final class SheetContent: CombinedComponent {
                     isCurrent = mode == .current
                 }
             case .features:
-                textString = ""
+                textString = "By gaining **boosts**, your group reaches higher levels and unlocks more features."
             }
             
             let defaultTitle = strings.ChannelBoost_Level("\(level)").string
@@ -733,7 +739,48 @@ private final class SheetContent: CombinedComponent {
             }
             
             if case .features = component.mode {
-                contentSize.height += 17.0
+                contentSize.height -= 14.0
+                
+                let iconSize = CGSize(width: 90.0, height: 90.0)
+                let gradientImage: UIImage
+                if let current = state.cachedIconImage {
+                    gradientImage = current
+                } else {
+                    gradientImage = generateFilledCircleImage(diameter: iconSize.width, color: theme.actionSheet.controlAccentColor)!
+                    context.state.cachedIconImage = gradientImage
+                }
+                
+                let iconBackground = iconBackground.update(
+                    component: Image(image: gradientImage),
+                    availableSize: iconSize,
+                    transition: .immediate
+                )
+                context.add(iconBackground
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
+                )
+                
+                let icon = icon.update(
+                    component: BundleIconComponent(
+                        name: "Premium/BoostLarge",
+                        tintColor: .white
+                    ),
+                    availableSize: CGSize(width: 90.0, height: 90.0),
+                    transition: .immediate
+                )
+//                let icon = icon.update(
+//                    component: LottieComponent(
+//                        content: LottieComponent.AppBundleContent(name: iconName),
+//                        playOnce: state.playOnce
+//                    ),
+//                    availableSize: CGSize(width: 70, height: 70),
+//                    transition: .immediate
+//                )
+                
+                context.add(icon
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
+                )
+                contentSize.height += iconSize.height
+                contentSize.height += 52.0
             } else {
                 let limit = limit.update(
                     component: PremiumLimitDisplayComponent(
@@ -760,83 +807,83 @@ private final class SheetContent: CombinedComponent {
                 )
                 
                 contentSize.height += limit.size.height + 23.0
+            }
+            
+            if myBoostCount > 0 {
+                let alternateTitle = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peerName).string : strings.ChannelBoost_YouBoostedOtherChannelText
                 
-                if myBoostCount > 0 {
-                    let alternateTitle = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peerName).string : strings.ChannelBoost_YouBoostedOtherChannelText
-                    
-                    var alternateBadge: String?
-                    if myBoostCount > 1 {
-                        alternateBadge = "X\(myBoostCount)"
-                    }
-                    
-                    let alternateText = alternateText.update(
-                        component: List(
-                            [
-                                AnyComponentWithIdentity(
-                                    id: "title",
-                                    component: AnyComponent(
-                                        BoostedTitleContent(text: NSAttributedString(string: alternateTitle, font: Font.semibold(15.0), textColor: textColor), badge: alternateBadge)
-                                    )
-                                ),
-                                AnyComponentWithIdentity(
-                                    id: "text",
-                                    component: AnyComponent(
-                                        BalancedTextComponent(
-                                            text: .markdown(text: textString, attributes: markdownAttributes),
-                                            horizontalAlignment: .center,
-                                            maximumNumberOfLines: 0,
-                                            lineSpacing: 0.1
-                                        )
+                var alternateBadge: String?
+                if myBoostCount > 1 {
+                    alternateBadge = "X\(myBoostCount)"
+                }
+                
+                let alternateText = alternateText.update(
+                    component: List(
+                        [
+                            AnyComponentWithIdentity(
+                                id: "title",
+                                component: AnyComponent(
+                                    BoostedTitleContent(text: NSAttributedString(string: alternateTitle, font: Font.semibold(15.0), textColor: textColor), badge: alternateBadge)
+                                )
+                            ),
+                            AnyComponentWithIdentity(
+                                id: "text",
+                                component: AnyComponent(
+                                    BalancedTextComponent(
+                                        text: .markdown(text: textString, attributes: markdownAttributes),
+                                        horizontalAlignment: .center,
+                                        maximumNumberOfLines: 0,
+                                        lineSpacing: 0.1
                                     )
                                 )
-                            ],
-                            centerAlignment: true
-                        ),
-                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                        transition: .immediate
-                    )
-                    context.add(alternateText
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + alternateText.size.height / 2.0))
-                        .appear(Transition.Appear({ _, view, transition in
-                            transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 64.0), to: .zero, additive: true)
-                            transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                            )
+                        ],
+                        centerAlignment: true
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                context.add(alternateText
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + alternateText.size.height / 2.0))
+                    .appear(Transition.Appear({ _, view, transition in
+                        transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 64.0), to: .zero, additive: true)
+                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                    }))
+                        .disappear(Transition.Disappear({ view, transition, completion in
+                            view.superview?.sendSubviewToBack(view)
+                            transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
+                            transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                                completion()
+                            })
                         }))
-                            .disappear(Transition.Disappear({ view, transition, completion in
-                                view.superview?.sendSubviewToBack(view)
-                                transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
-                                transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                                    completion()
-                                })
-                            }))
-                    )
-                    contentSize.height += alternateText.size.height + 13.0
-                } else {
-                    let text = text.update(
-                        component: BalancedTextComponent(
-                            text: .markdown(text: textString, attributes: markdownAttributes),
-                            horizontalAlignment: .center,
-                            maximumNumberOfLines: 0,
-                            lineSpacing: 0.2
-                        ),
-                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                        transition: .immediate
-                    )
-                    context.add(text
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + text.size.height / 2.0))
-                        .appear(Transition.Appear({ _, view, transition in
-                            transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 64.0), to: .zero, additive: true)
-                            transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                )
+                contentSize.height += alternateText.size.height + 20.0
+            } else {
+                let text = text.update(
+                    component: BalancedTextComponent(
+                        text: .markdown(text: textString, attributes: markdownAttributes),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                context.add(text
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + text.size.height / 2.0))
+                    .appear(Transition.Appear({ _, view, transition in
+                        transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 64.0), to: .zero, additive: true)
+                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                    }))
+                        .disappear(Transition.Disappear({ view, transition, completion in
+                            view.superview?.sendSubviewToBack(view)
+                            transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
+                            transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                                completion()
+                            })
                         }))
-                            .disappear(Transition.Disappear({ view, transition, completion in
-                                view.superview?.sendSubviewToBack(view)
-                                transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
-                                transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                                    completion()
-                                })
-                            }))
-                    )
-                    contentSize.height += text.size.height + 13.0
-                }
+                )
+                contentSize.height += text.size.height + 20.0
             }
                         
             if case .owner = component.mode, let status = component.status {
@@ -886,7 +933,6 @@ private final class SheetContent: CombinedComponent {
                         iconPosition: .left,
                         action: {
                             component.boost()
-                            component.dismiss()
                         }
                     ),
                     availableSize: CGSize(width: (context.availableSize.width - 8.0 - sideInset * 2.0) / 2.0, height: 50.0),
@@ -1296,6 +1342,8 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
             )
             
             let titleString: String
+            var titleFont = Font.semibold(17.0)
+            
             switch component.mode {
             case let .owner(subject):
                 if let status = component.status, let _ = status.nextLevelBoosts {
@@ -1352,12 +1400,13 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                 }
             case .features:
                 //TODO:localize
-                titleString = "Features"
+                titleString = "Additional Features"
+                titleFont = Font.semibold(20.0)
             }
-            
+
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: titleString, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: titleString, font: titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 1
@@ -1366,7 +1415,29 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                 transition: context.transition
             )
                   
-            let topPanelAlpha: CGFloat = min(30.0, state.topContentOffset) / 30.0
+            let topPanelAlpha: CGFloat
+            let titleOriginY: CGFloat
+            let titleScale: CGFloat
+            if case .features = component.mode {
+                if state.topContentOffset > 78.0 {
+                    topPanelAlpha = min(30.0, state.topContentOffset - 78.0) / 30.0
+                } else {
+                    topPanelAlpha = 0.0
+                }
+                
+                let titleTopOriginY = topPanel.size.height / 2.0
+                let titleBottomOriginY: CGFloat = 146.0
+                let titleOriginDelta = titleTopOriginY - titleBottomOriginY
+                
+                let fraction = min(1.0, state.topContentOffset / abs(titleOriginDelta))
+                titleOriginY = titleBottomOriginY + fraction * titleOriginDelta
+                titleScale = 1.0 - max(0.0, fraction * 0.2)
+            } else {
+                topPanelAlpha = min(30.0, state.topContentOffset) / 30.0
+                titleOriginY = topPanel.size.height / 2.0
+                titleScale = 1.0
+            }
+            
             context.add(topPanel
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height / 2.0))
                 .opacity(topPanelAlpha)
@@ -1376,7 +1447,8 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                 .opacity(topPanelAlpha)
             )
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: topPanel.size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY))
+                .scale(titleScale)
             )
             
             if let openStats = component.openStats {
@@ -1615,6 +1687,9 @@ public class PremiumBoostLevelsScreen: ViewController {
                 
         private var dismissOffset: CGFloat?
         func containerLayoutUpdated(layout: ContainerViewLayout, transition: Transition) {
+            guard !self.isDismissing else {
+                return
+            }
             self.currentLayout = layout
             
             self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
@@ -1725,15 +1800,17 @@ public class PremiumBoostLevelsScreen: ViewController {
                             
                             controller.dismiss(animated: true)
                                 
-                            let boostController = PremiumBoostLevelsScreen(
-                                context: controller.context,
-                                peerId: controller.peerId,
-                                mode: .user(mode: .current),
-                                status: controller.status,
-                                myBoostStatus: nil,
-                                forceDark: controller.forceDark
-                            )
-                            navigationController.pushViewController(boostController, animated: true)
+                            Queue.mainQueue().justDispatch {
+                                let boostController = PremiumBoostLevelsScreen(
+                                    context: controller.context,
+                                    peerId: controller.peerId,
+                                    mode: .user(mode: .current),
+                                    status: controller.status,
+                                    myBoostStatus: nil,
+                                    forceDark: controller.forceDark
+                                )
+                                navigationController.pushViewController(boostController, animated: true)
+                            }
                         },
                         copyLink: { [weak self, weak controller] link in
                             guard let self else {

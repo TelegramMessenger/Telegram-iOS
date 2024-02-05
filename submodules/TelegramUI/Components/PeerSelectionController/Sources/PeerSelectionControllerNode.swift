@@ -728,6 +728,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openBoostToUnrestrict: {
         }, updateHistoryFilter: { _ in
         }, requestLayout: { _ in
         }, chatController: {

@@ -321,6 +321,11 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, 10.0, nil, false, addTitle.uppercased(), mainColor, false, false)
                 
+                
+                let showAddButton = !(!canAdd && canMessage)
+                let showMessageButton = canMessage
+                let buttonCount = (showAddButton ? 1 : 0) + (showMessageButton ? 1 : 0)
+                
                 let maxButtonWidth = max(messageButtonWidth, addButtonWidth)
                 var maxContentWidth: CGFloat = avatarSize.width + 7.0
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
@@ -328,7 +333,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + titleLayout.size.width + 7.0)
                 maxContentWidth = max(maxContentWidth, 7.0 + avatarSize.width + 7.0 + textLayout.size.width + 7.0)
-                maxContentWidth = max(maxContentWidth, maxButtonWidth * 2.0)
+                maxContentWidth = max(maxContentWidth, maxButtonWidth * CGFloat(buttonCount))
                 maxContentWidth = max(maxContentWidth, 220.0)
                 
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0

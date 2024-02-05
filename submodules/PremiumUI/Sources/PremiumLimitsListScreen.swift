@@ -771,7 +771,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     position: .top,
                                     model: .island,
                                     videoFile: configuration.videos["last_seen"],
-                                    decoration: .tag
+                                    decoration: .badgeStars
                                 )),
                                 title: strings.Premium_LastSeen,
                                 text: strings.Premium_LastSeenInfo,
@@ -790,7 +790,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     position: .top,
                                     model: .island,
                                     videoFile: configuration.videos["message_privacy"],
-                                    decoration: .tag
+                                    decoration: .swirlStars
                                 )),
                                 title: strings.Premium_MessagePrivacy,
                                 text: strings.Premium_MessagePrivacyInfo,

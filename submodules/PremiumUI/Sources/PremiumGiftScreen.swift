@@ -317,12 +317,6 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             
             if !component.isCompleted {
                 if let products = component.products {
-                    let gradientColors: [UIColor] = [
-                        UIColor(rgb: 0x8e77ff),
-                        UIColor(rgb: 0x9a6fff),
-                        UIColor(rgb: 0xb36eee)
-                    ]
-                    
                     let shortestOptionPrice: (Int64, NSDecimalNumber)
                     if let product = products.last {
                         shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months)), product.storeProduct.priceValue.dividing(by: NSDecimalNumber(value: product.months)))
@@ -352,14 +346,20 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         var accessibilitySubtitle = ""
                         var pricePerMonth = environment.strings.Premium_PricePerMonth(product.storeProduct.pricePerMonth(Int(product.months))).string
                         
+                        var labelPrice = pricePerMonth
                         if component.peers.count > 1 {
-                            subtitle = "\(product.storeProduct.price) x \(component.peers.count)"
                             pricePerMonth = product.storeProduct.multipliedPrice(count: component.peers.count)
+                            
+                            subtitle = ""
+                            labelPrice = "\(product.storeProduct.price) x \(component.peers.count)"
                         } else {
                             if discountValue > 0 {
                                 subtitle = "**\(defaultPrice)** \(product.price)"
                                 accessibilitySubtitle = product.price
                             }
+                            
+                            subtitle = ""
+                            labelPrice = product.price
                         }
                         
                         items.append(SectionGroupComponent.Item(
@@ -369,13 +369,13 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                                     PremiumOptionComponent(
                                         title: giftTitle,
                                         subtitle: subtitle,
-                                        labelPrice: pricePerMonth,
+                                        labelPrice: labelPrice,
                                         discount: discount,
                                         multiple: component.peers.count > 1,
                                         selected: product.id == component.selectedProductId,
                                         primaryTextColor: textColor,
                                         secondaryTextColor: subtitleColor,
-                                        accentColor: gradientColors[i],
+                                        accentColor: environment.theme.list.itemAccentColor,
                                         checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
                                         checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
                                     )

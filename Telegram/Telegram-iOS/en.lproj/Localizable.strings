@@ -10987,6 +10987,7 @@ Sorry for the inconvenience.";
 "ContactList.Context.Delete" = "Delete Contact";
 "ContactList.Context.Select" = "Select";
 
+"ContactList.DeleteConfirmationSingle" = "Delete Contact";
 "ContactList.DeleteConfirmation_1" = "Delete %@ Contact";
 "ContactList.DeleteConfirmation_any" = "Delete %@ Contacts";
 
@@ -11082,3 +11083,12 @@ Sorry for the inconvenience.";
 "GroupInfo.Permissions.DontRestrictBoosters" = "Do Not Restrict Boosters";
 "GroupInfo.Permissions.DontRestrictBoostersInfo" = "Choose how many boosts a user must give to the group to bypass restrictions on sending messages.";
 "GroupInfo.Permissions.DontRestrictBoostersEnableInfo" = "Turn this on to always allow users who boosted your group to send messages and media.";
+
+"Notification.Boost.Times_1" = "%@ time";
+"Notification.Boost.Times_any" = "%@ times";
+
+"Notification.Boost.Single" = "%1$@ boosted the group";
+"Notification.Boost.Multiple" = "%1$@ boosted the group %2$@";
+
+"Notification.Boost.SingleYou" = "You boosted the group";
+"Notification.Boost.MultipleYou" = "You boosted the group %1$@";

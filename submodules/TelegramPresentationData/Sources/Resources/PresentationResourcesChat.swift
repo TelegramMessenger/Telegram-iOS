@@ -84,6 +84,12 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatPanelBoostIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatPanelBoostIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostChannel"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
     public static func chatTitleMuteIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatTitleMuteIcon.rawValue, { theme in
             return generateImage(CGSize(width: 9.0, height: 9.0), rotatedContext: { size, context in

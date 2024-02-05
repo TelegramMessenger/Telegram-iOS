@@ -589,7 +589,15 @@ public class ContactsController: ViewController {
     public func requestDeleteContacts(peerIds: [EnginePeer.Id]) {
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ContactList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+        
+        let actionTitle: String
+        if peerIds.count > 1 {
+            actionTitle = self.presentationData.strings.ContactList_DeleteConfirmation(Int32(peerIds.count))
+        } else {
+            actionTitle = self.presentationData.strings.ContactList_DeleteConfirmationSingle
+        }
+        
+        items.append(ActionSheetButtonItem(title: actionTitle, color: .destructive, action: { [weak self, weak actionSheet] in
             actionSheet?.dismissAnimated()
             
             guard let self else {

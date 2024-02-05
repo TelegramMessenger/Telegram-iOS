@@ -652,7 +652,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         let slowModeTimeout = state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)
         
         if !canSendText || !canSendMedia || slowModeTimeout > 0 {
-            let unrestrictBoosters = state.modifiedUnrestrictBoosters ?? (cachedData.boostsUnrestrict ?? 0)
+            let unrestrictBoosters = state.modifiedUnrestrictBoosters ?? (cachedData.boostsToUnrestrict ?? 0)
             let unrestrictEnabled = unrestrictBoosters > 0
             
             entries.append(.unrestrictBoostersSwitch(presentationData.theme, presentationData.strings.GroupInfo_Permissions_DontRestrictBoosters, unrestrictEnabled))
@@ -779,6 +779,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     
     let updateDefaultRightsDisposable = MetaDisposable()
     actionsDisposable.add(updateDefaultRightsDisposable)
+    
+    let updateUnrestrictBoostersDisposable = MetaDisposable()
+    actionsDisposable.add(updateUnrestrictBoostersDisposable)
     
     let peerView = Promise<PeerView>()
     peerView.set(sourcePeerId.get()
@@ -1144,6 +1147,12 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             return state
         }
         
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { view in
+            updateUnrestrictBoostersDisposable.set((context.engine.peers.updateChannelBoostsToUnlockRestrictions(peerId: view.peerId, boosts: value)
+            |> deliverOnMainQueue).start())
+        })
     }, toggleIsOptionExpanded: { flags in
         updateState { state in
             var state = state

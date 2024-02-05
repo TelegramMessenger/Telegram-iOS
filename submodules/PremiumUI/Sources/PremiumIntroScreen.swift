@@ -643,9 +643,9 @@ public enum PremiumPerk: CaseIterable {
         case .messageTags:
             return "Premium/Perk/MessageTags"
         case .lastSeen:
-            return "Premium/Perk/Wallpapers"
+            return "Premium/Perk/LastSeen"
         case .messagePrivacy:
-            return "Premium/Perk/MessageTags"
+            return "Premium/Perk/MessagePrivacy"
         }
     }
 }
@@ -864,7 +864,6 @@ final class PremiumOptionComponent: CombinedComponent {
                 transition: context.transition
             )
                      
-            var discountOffset: CGFloat = 0.0
             let discountSize: CGSize
             if !component.discount.isEmpty {
                 let discount = discount.update(
@@ -872,7 +871,7 @@ final class PremiumOptionComponent: CombinedComponent {
                         text: .plain(
                             NSAttributedString(
                                 string: component.discount,
-                                font: Font.with(size: component.multiple ? 13.0 : 14.0, design: .round, weight: .semibold, traits: []),
+                                font: Font.with(size: 14.0, design: .round, weight: .semibold, traits: []),
                                 textColor: .white
                             )
                         ),
@@ -893,13 +892,7 @@ final class PremiumOptionComponent: CombinedComponent {
                     transition: context.transition
                 )
                 
-                let discountPosition: CGPoint
-                if component.multiple {
-                    discountOffset = discountSize.width + 6.0
-                    discountPosition = CGPoint(x: insets.left + discountSize.width / 2.0, y: insets.top + title.size.height + discountSize.height / 2.0)
-                } else {
-                    discountPosition = CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0)
-                }
+                let discountPosition = CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0)
                 
                 context.add(discountBackground
                     .position(discountPosition)
@@ -938,7 +931,7 @@ final class PremiumOptionComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(subtitle
-                    .position(CGPoint(x: insets.left + subtitle.size.width / 2.0 + discountOffset, y: insets.top + title.size.height + spacing + subtitle.size.height / 2.0))
+                    .position(CGPoint(x: insets.left + subtitle.size.width / 2.0, y: insets.top + title.size.height + spacing + subtitle.size.height / 2.0))
                 )
                 subtitleSize = subtitle.size
                 
@@ -1894,11 +1887,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let layoutOptions = {
                 if let products = state.products, products.count > 1, state.isPremium == false || (!context.component.justBought && state.canUpgrade) {
                     var optionsItems: [SectionGroupComponent.Item] = []
-                    let gradientColors: [UIColor] = [
-                        UIColor(rgb: 0x8e77ff),
-                        UIColor(rgb: 0x9a6fff),
-                        UIColor(rgb: 0xb36eee)
-                    ]
                     
                     let shortestOptionPrice: (Int64, NSDecimalNumber)
                     if let product = products.first(where: { $0.id.hasSuffix(".monthly") }) {
@@ -1967,7 +1955,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                             selected: !product.isCurrent && product.id == state.selectedProductId,
                                             primaryTextColor: textColor,
                                             secondaryTextColor: subtitleColor,
-                                            accentColor: gradientColors[i],
+                                            accentColor: environment.theme.list.itemAccentColor,
                                             checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
                                             checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
                                         )

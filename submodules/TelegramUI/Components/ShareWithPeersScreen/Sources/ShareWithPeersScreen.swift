@@ -1461,11 +1461,24 @@ final class ShareWithPeersScreenComponent: Component {
                                         }
                                         if case .channels = component.stateContext.subject {
                                             if case let .channel(channel) = peer, channel.addressName == nil, index == nil {
+                                                let title: String
+                                                let text: String
+                                                
+                                                switch channel.info {
+                                                case .broadcast:
+                                                    title = environment.strings.BoostGift_Channels_PrivateChannel_Title
+                                                    text = environment.strings.BoostGift_Channels_PrivateChannel_Text
+                                                case .group:
+                                                    //TODO:localize
+                                                    title = "Group is Private"
+                                                    text = "Are you sure you want to add a private group? Users won't be able to join it without an invite link."
+                                                }
+                                                
                                                 let alertController = textAlertController(
                                                     context: component.context,
                                                     forceTheme: environment.theme,
-                                                    title: environment.strings.BoostGift_Channels_PrivateChannel_Title,
-                                                    text: environment.strings.BoostGift_Channels_PrivateChannel_Text,
+                                                    title: title,
+                                                    text: text,
                                                     actions: [
                                                         TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
                                                         TextAlertAction(type: .defaultAction, title: environment.strings.BoostGift_Channels_PrivateChannel_Add, action: {
@@ -2382,9 +2395,10 @@ final class ShareWithPeersScreenComponent: Component {
                 subtitle = environment.strings.BoostGift_Subscribers_Subtitle("\(10)").string
                 actionButtonTitle = environment.strings.BoostGift_Subscribers_Save
             case .channels:
-                title = environment.strings.BoostGift_Channels_Title
-                subtitle = environment.strings.BoostGift_Channels_Subtitle("\(component.context.userLimits.maxGiveawayChannelsCount)").string
-                actionButtonTitle = environment.strings.BoostGift_Channels_Save
+                //TODO:localize
+                title = "Add Groups or Channels"// environment.strings.BoostGift_Channels_Title
+                subtitle = "select up to \(component.context.userLimits.maxGiveawayChannelsCount) groups or channels" //environment.strings.BoostGift_Channels_Subtitle("\(component.context.userLimits.maxGiveawayChannelsCount)").string
+                actionButtonTitle = "Save Groups and Channels" // environment.strings.BoostGift_Channels_Save
             }
             
             let titleComponent: AnyComponent<Empty>

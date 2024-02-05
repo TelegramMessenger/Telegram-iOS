@@ -231,21 +231,7 @@ private final class PageIndicatorView: UIView {
     private func updateDotPosition(currentPage: Int, animated: Bool) {
         let duration = animated ? self.animationDuration : 0
 
-        if !animated {
-            if currentPage == 0 {
-                let x = -self.scrollView.contentInset.left
-                self.moveScrollView(x: x)
-            } else {
-                for _ in 0 ..< currentPage {
-                    let x = self.scrollView.contentOffset.x + self.itemSize
-                    self.moveScrollView(x: x, duration: duration)
-                }
-                if currentPage == self.pageCount - 1 {
-                    let x = self.scrollView.contentSize.width - self.scrollView.bounds.width + self.scrollView.contentInset.right
-                    self.moveScrollView(x: x, duration: duration)
-                }
-            }
-        } else {
+        let action: (Int, Double) -> Void = { currentPage, duration in
             if currentPage == 0 {
                 let x = -self.scrollView.contentInset.left
                 self.moveScrollView(x: x, duration: duration)
@@ -259,6 +245,18 @@ private final class PageIndicatorView: UIView {
                 let x = self.scrollView.contentOffset.x + self.itemSize
                 self.moveScrollView(x: x, duration: duration)
             }
+        }
+        
+        if !animated {
+            if currentPage == 0 {
+                action(currentPage, 0)
+            } else {
+                for i in 0 ..< currentPage {
+                    action(i, 0)
+                }
+            }
+        } else {
+            action(currentPage, duration)
         }
     }
 

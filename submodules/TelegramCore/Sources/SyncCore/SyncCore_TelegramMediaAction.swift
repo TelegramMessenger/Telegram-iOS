@@ -126,6 +126,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case giveawayLaunched
     case joinedChannel
     case giveawayResults(winners: Int32, unclaimed: Int32)
+    case boostsApplied(boosts: Int32)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -232,6 +233,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .joinedChannel
         case 39:
             self = .giveawayResults(winners: decoder.decodeInt32ForKey("winners", orElse: 0), unclaimed: decoder.decodeInt32ForKey("unclaimed", orElse: 0))
+        case 40:
+            self = .boostsApplied(boosts: decoder.decodeInt32ForKey("boosts", orElse: 0))
         default:
             self = .unknown
         }
@@ -451,6 +454,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(39, forKey: "_rawValue")
             encoder.encodeInt32(winners, forKey: "winners")
             encoder.encodeInt32(unclaimed, forKey: "unclaimed")
+        case let .boostsApplied(boosts):
+            encoder.encodeInt32(40, forKey: "_rawValue")
+            encoder.encodeInt32(boosts, forKey: "boosts")
         }
     }
     

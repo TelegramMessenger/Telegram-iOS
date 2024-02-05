@@ -414,6 +414,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openBoostToUnrestrict: {
         }, updateHistoryFilter: { _ in
         }, requestLayout: { _ in
         }, chatController: {

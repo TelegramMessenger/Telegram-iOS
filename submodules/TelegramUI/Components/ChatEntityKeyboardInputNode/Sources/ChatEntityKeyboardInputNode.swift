@@ -639,7 +639,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             }
                         }
                         
-                        if file.isPremiumEmoji && !hasPremium {
+                        if file.isPremiumEmoji && !hasPremium && groupId != AnyHashable("peerSpecific") {
                             var animateInAsReplacement = false
                             if let currentUndoOverlayController = strongSelf.currentUndoOverlayController {
                                 currentUndoOverlayController.dismissWithCommitActionAndReplacementAnimation()
@@ -959,6 +959,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     groupId: "search",
                                     title: nil,
                                     subtitle: nil,
+                                    badge: nil,
                                     actionButtonTitle: nil,
                                     isFeatured: false,
                                     isPremiumLocked: false,
@@ -1007,6 +1008,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                             groupId: AnyHashable(info.id),
                                             title: info.title,
                                             subtitle: nil,
+                                            badge: nil,
                                             actionButtonTitle: nil,
                                             isFeatured: false,
                                             isPremiumLocked: false,
@@ -1065,6 +1067,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             groupId: "search",
                             title: nil,
                             subtitle: nil,
+                            badge: nil,
                             actionButtonTitle: nil,
                             isFeatured: false,
                             isPremiumLocked: false,
@@ -1095,6 +1098,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     groupId: "search",
                                     title: nil,
                                     subtitle: nil,
+                                    badge: nil,
                                     actionButtonTitle: nil,
                                     isFeatured: false,
                                     isPremiumLocked: false,
@@ -1365,6 +1369,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             groupId: "search",
                             title: nil,
                             subtitle: nil,
+                            badge: nil,
                             actionButtonTitle: nil,
                             isFeatured: false,
                             isPremiumLocked: false,
@@ -1395,6 +1400,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     groupId: "search",
                                     title: nil,
                                     subtitle: nil,
+                                    badge: nil,
                                     actionButtonTitle: nil,
                                     isFeatured: false,
                                     isPremiumLocked: false,

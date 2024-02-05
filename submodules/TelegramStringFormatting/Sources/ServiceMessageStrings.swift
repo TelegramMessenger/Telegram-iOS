@@ -959,6 +959,25 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResults(winners), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
                 }
+            case let .boostsApplied(boosts):
+                if message.author?.id == accountPeerId {
+                    if boosts == 1 {
+                        attributedString = NSAttributedString(string: strings.Notification_Boost_SingleYou, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let boostsString = strings.Notification_Boost_Times(boosts)
+                        attributedString = NSAttributedString(string: strings.Notification_Boost_MultipleYou(boostsString).string, font: titleFont, textColor: primaryTextColor)
+                    }
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    if boosts == 1 {
+                        let resultTitleString = strings.Notification_Boost_Single(peerName)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else {
+                        let boostsString = strings.Notification_Boost_Times(boosts)
+                        let resultTitleString = strings.Notification_Boost_Multiple(peerName, boostsString)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    }
+                }
             case .unknown:
                 attributedString = nil
             }
