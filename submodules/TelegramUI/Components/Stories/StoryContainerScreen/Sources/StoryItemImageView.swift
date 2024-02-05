@@ -164,8 +164,18 @@ final class StoryItemImageView: UIView {
                         }
                     }
                     
-                    self.disposable = (context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
-                    |> map { result -> UIImage? in
+                    let fullSize = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedVideoFirstFrameRepresentation(), complete: true, fetch: true, attemptSynchronously: false)
+                    var previewSize: Signal<MediaResourceData?, NoError> = .single(nil)
+                    if let representation = file.previewRepresentations.first {
+                        previewSize = context.account.postbox.mediaBox.resourceData(representation.resource, option: .complete(waitUntilFetchStatus: false))
+                        |> map(Optional.init)
+                    }
+                    
+                    self.disposable = (combineLatest(
+                        fullSize,
+                        previewSize
+                    )
+                    |> map { result, previewResult -> UIImage? in
                         if result.complete {
                             if #available(iOS 15.0, *) {
                                 if let image = UIImage(contentsOfFile: result.path)?.preparingForDisplay() {
@@ -175,6 +185,20 @@ final class StoryItemImageView: UIView {
                                 }
                             } else {
                                 if let image = UIImage(contentsOfFile: result.path)?.precomposed() {
+                                    return image
+                                } else {
+                                    return nil
+                                }
+                            }
+                        } else if let previewResult, previewResult.complete {
+                            if #available(iOS 15.0, *) {
+                                if let image = UIImage(contentsOfFile: previewResult.path)?.preparingForDisplay() {
+                                    return image
+                                } else {
+                                    return nil
+                                }
+                            } else {
+                                if let image = UIImage(contentsOfFile: previewResult.path)?.precomposed() {
                                     return image
                                 } else {
                                     return nil

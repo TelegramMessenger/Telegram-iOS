@@ -588,6 +588,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             peerMode: .generalSearch(isSavedMessages: false),
                             peer: peerContent,
                             status: status,
+                            requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                             enabled: enabled,
                             selection: selectable ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
@@ -601,9 +602,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                         nodeInteraction.peerSelected(chatPeer, nil, threadId, nil)
                                     }
                                 }
-                            }, disabledAction: isForum && editing ? nil : { _ in
+                            }, disabledAction: (isForum && editing) && !peerEntry.requiresPremiumForMessaging ? nil : { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, .generic)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, peerEntry.requiresPremiumForMessaging ? .premiumRequired : .generic)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -627,6 +628,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         peerMode: .generalSearch(isSavedMessages: false),
                         peer: peerContent,
                         status: status,
+                        requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                         enabled: true,
                         selection: .none,
                         editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
@@ -636,7 +638,11 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             if let chatPeer = chatPeer {
                                 nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
                             }
-                        }, disabledAction: nil,
+                        }, disabledAction: peerEntry.requiresPremiumForMessaging ? { _ in
+                            if let chatPeer {
+                                nodeInteraction.disabledPeerSelected(chatPeer, nil, .premiumRequired)
+                            }
+                        } : nil,
                         animationCache: nodeInteraction.animationCache,
                         animationRenderer: nodeInteraction.animationRenderer
                     ), directionHint: entry.directionHint)
@@ -912,6 +918,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             peerMode: .generalSearch(isSavedMessages: false),
                             peer: peerContent,
                             status: status,
+                            requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                             enabled: enabled,
                             selection: selectable ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
@@ -925,9 +932,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                         nodeInteraction.peerSelected(chatPeer, nil, threadId, nil)
                                     }
                                 }
-                            }, disabledAction: isForum && editing ? nil : { _ in
+                            }, disabledAction: (isForum && editing) && !peerEntry.requiresPremiumForMessaging ? nil : { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, .generic)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId, peerEntry.requiresPremiumForMessaging ? .premiumRequired : .generic)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -951,6 +958,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             peerMode: .generalSearch(isSavedMessages: false),
                             peer: peerContent,
                             status: status,
+                            requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                             enabled: true,
                             selection: .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
@@ -960,7 +968,11 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 if let chatPeer = chatPeer {
                                     nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
                                 }
-                            }, disabledAction: nil,
+                            }, disabledAction: peerEntry.requiresPremiumForMessaging ? { _ in
+                                if let chatPeer {
+                                    nodeInteraction.disabledPeerSelected(chatPeer, nil, .premiumRequired)
+                                }
+                            } : nil,
                             animationCache: nodeInteraction.animationCache,
                             animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
@@ -1758,10 +1770,17 @@ public final class ChatListNode: ListView {
         
         let viewProcessingQueue = self.viewProcessingQueue
         
+        let shouldLoadCanMessagePeer: Bool
+        if case .peers = mode {
+            shouldLoadCanMessagePeer = true
+        } else {
+            shouldLoadCanMessagePeer = false
+        }
+        
         let chatListViewUpdate = self.chatListLocation.get()
         |> distinctUntilChanged
         |> mapToSignal { listLocation -> Signal<(ChatListNodeViewUpdate, ChatListFilter?), NoError> in
-            return chatListViewForLocation(chatListLocation: location, location: listLocation, account: context.account)
+            return chatListViewForLocation(chatListLocation: location, location: listLocation, account: context.account, shouldLoadCanMessagePeer: shouldLoadCanMessagePeer)
             |> map { update in
                 return (update, listLocation.filter)
             }
@@ -3719,7 +3738,15 @@ public final class ChatListNode: ListView {
                     guard case let .chatList(groupId) = self.location else {
                         return
                     }
-                    let _ = (chatListViewForLocation(chatListLocation: .chatList(groupId: groupId), location: .initial(count: 10, filter: filter), account: self.context.account)
+                    
+                    let shouldLoadCanMessagePeer: Bool
+                    if case .peers = self.mode {
+                        shouldLoadCanMessagePeer = true
+                    } else {
+                        shouldLoadCanMessagePeer = false
+                    }
+                    
+                    let _ = (chatListViewForLocation(chatListLocation: .chatList(groupId: groupId), location: .initial(count: 10, filter: filter), account: self.context.account, shouldLoadCanMessagePeer: shouldLoadCanMessagePeer)
                     |> take(1)
                     |> deliverOnMainQueue).startStandalone(next: { update in
                         let items = update.list.items

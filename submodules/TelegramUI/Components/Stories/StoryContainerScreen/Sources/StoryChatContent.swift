@@ -1748,6 +1748,14 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
             }
         }
         
+        if let representation = file.previewRepresentations.first {
+            signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: representation.resource), range: nil)
+            |> ignoreValues
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            })
+        }
+        
         signals.append(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(info.peer.id), userContentType: .story, reference: .media(media: .story(peer: info.peer, id: info.storyId, media: selectedMedia._asMedia()), resource: file.resource), range: fetchRange)
         |> ignoreValues
         |> `catch` { _ -> Signal<Never, NoError> in

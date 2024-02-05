@@ -11230,6 +11230,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .voiceMessagesForbidden:
                             strongSelf.interfaceInteraction?.displayRestrictedInfo(.premiumVoiceMessages, .alert)
                             return
+                        case .nonPremiumMessagesForbidden:
+                            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer {
+                                text = strongSelf.presentationData.strings.Conversation_SendMessageErrorNonPremiumForbidden(EnginePeer(peer).compactDisplayTitle).string
+                                moreInfo = false
+                            } else {
+                                return
+                            }
                         }
                         let actions: [TextAlertAction]
                         if moreInfo {
@@ -11990,7 +11997,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if replyThreadMessage.peerId == self.context.account.peerId && replyThreadMessage.threadId == self.context.account.peerId.toInt64() {
                 peerId = replyThreadMessage.peerId
                 threadId = nil
-                includeScrollState = false
+                includeScrollState = true
+                
+                let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
+                let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: replyThreadMessage.threadId, { current in
+                    return current.withUpdatedHistoryScrollState(scrollState)
+                }).startStandalone()
             } else {
                 peerId = replyThreadMessage.peerId
                 threadId = replyThreadMessage.threadId
@@ -12001,7 +12013,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let timestamp = Int32(Date().timeIntervalSince1970)
         var interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
-        if includeScrollState && threadId == nil {
+        if includeScrollState {
             let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
             interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
         }

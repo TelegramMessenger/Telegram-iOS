@@ -175,7 +175,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
     return false
 }
 
-private func canViewReadStats(message: Message, participantCount: Int?, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
+private func canViewReadStats(message: Message, participantCount: Int?, isMessageRead: Bool, isPremium: Bool, appConfig: AppConfiguration) -> Bool {
     guard let peer = message.peers[message.id.peerId] else {
         return false
     }
@@ -250,6 +250,13 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
         }
         if user.flags.contains(.isSupport) {
             return false
+        }
+        
+        if !isPremium {
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: appConfig)
+            if premiumConfiguration.isPremiumDisabled {
+                return false
+            }
         }
     default:
         return false
@@ -1731,7 +1738,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         let canViewStats: Bool
         if let messageReadStatsAreHidden = infoSummaryData.messageReadStatsAreHidden, !messageReadStatsAreHidden {
-            canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, appConfig: appConfig)
+            canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, isPremium: isPremium, appConfig: appConfig)
         } else {
             canViewStats = false
         }

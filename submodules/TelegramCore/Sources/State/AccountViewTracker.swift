@@ -1966,14 +1966,26 @@ public final class AccountViewTracker {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
             if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tag == nil {
-                signal = account.postbox.transaction { transaction -> MessageHistoryThreadData? in
-                    return transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self)
+                signal = account.postbox.transaction { transaction -> (MessageHistoryThreadData?, MessageIndex?) in
+                    let interfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId)
+                    
+                    return (
+                        transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self),
+                        interfaceState?.historyScrollMessageIndex
+                    )
                 }
-                |> mapToSignal { threadInfo -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+                |> mapToSignal { threadInfo, scrollRestorationIndex -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
                     if peerId == account.peerId {
+                        let anchor: HistoryViewInputAnchor
+                        if let scrollRestorationIndex {
+                            anchor = .index(scrollRestorationIndex)
+                        } else {
+                            anchor = .upperBound
+                        }
+                        
                         return account.postbox.aroundMessageHistoryViewForLocation(
                             chatLocation,
-                            anchor: .upperBound,
+                            anchor: anchor,
                             ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange,
                             count: count,
                             fixedCombinedReadStates: .peer([peerId: CombinedPeerReadState(states: [
@@ -2374,7 +2386,7 @@ public final class AccountViewTracker {
         })
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int, shouldLoadCanMessagePeer: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
             return self.wrappedChatListView(signal: account.postbox.tailChatListView(
                 groupId: groupId,
@@ -2397,14 +2409,16 @@ public final class AccountViewTracker {
                             actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
                         )
                     ]
-                )
+                ),
+                extractCachedData: shouldLoadCanMessagePeer ? extractCachedDataIsPremiumRequiredToMessage : nil,
+                accountPeerId: shouldLoadCanMessagePeer ? account.peerId : nil
             ))
         } else {
             return .never()
         }
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, shouldLoadCanMessagePeer: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
             return self.wrappedChatListView(signal: account.postbox.aroundChatListView(
                 groupId: groupId,
@@ -2428,7 +2442,9 @@ public final class AccountViewTracker {
                             actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
                         )
                     ]
-                )
+                ),
+                extractCachedData: shouldLoadCanMessagePeer ? extractCachedDataIsPremiumRequiredToMessage : nil,
+                accountPeerId: shouldLoadCanMessagePeer ? account.peerId : nil
             ))
         } else {
             return .never()
@@ -2482,4 +2498,27 @@ public final class AccountViewTracker {
             }
         }
     }
+}
+
+public final class ExtractedChatListItemCachedData: Hashable {
+    public let isPremiumRequiredToMessage: Bool
+    
+    public init(isPremiumRequiredToMessage: Bool) {
+        self.isPremiumRequiredToMessage = isPremiumRequiredToMessage
+    }
+    
+    public static func ==(lhs: ExtractedChatListItemCachedData, rhs: ExtractedChatListItemCachedData) -> Bool {
+        return true
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.isPremiumRequiredToMessage)
+    }
+}
+
+private func extractCachedDataIsPremiumRequiredToMessage(_ cachedData: CachedPeerData) -> AnyHashable? {
+    if let cachedData = cachedData as? CachedUserData {
+        return ExtractedChatListItemCachedData(isPremiumRequiredToMessage: cachedData.flags.contains(.premiumRequired))
+    }
+    return nil
 }

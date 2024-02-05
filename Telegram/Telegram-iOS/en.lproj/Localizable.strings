@@ -10939,6 +10939,7 @@ Sorry for the inconvenience.";
 "Chat.ReactionContextMenu.RemoveTag" = "Remove Tag";
 
 "Chat.EmptyStateMessagingRestrictedToPremium.Text" = "Subscribe to **Premium**\nto message **%@**.";
+"Chat.EmptyStateMessagingRestrictedToPremiumDisabled.Text" = "Subscribe to **Premium**\nto message **%@**.";
 "Chat.EmptyStateMessagingRestrictedToPremium.Action" = "Get Premium";
 
 "Chat.ContextMenuReadDate.ReadAvailablePrefix" = "read";
@@ -11041,3 +11042,5 @@ Sorry for the inconvenience.";
 "Chat.BottomSearchPanel.DisplayModeFormat" = "Show as %@";
 "Chat.BottomSearchPanel.DisplayModeChat" = "Chat";
 "Chat.BottomSearchPanel.DisplayModeList" = "List";
+
+"Conversation.SendMessageErrorNonPremiumForbidden" = "Only Premium users can message %@";

@@ -78,6 +78,7 @@ private let TitleNodeStateExpanded = 1
 
 final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
+    private let isPremiumDisabled: Bool
     private weak var controller: PeerInfoScreenImpl?
     private var presentationData: PresentationData?
     private var state: PeerInfoState?
@@ -185,6 +186,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.videoCallsEnabled = true
         self.forumTopicThreadId = forumTopicThreadId
         self.chatLocation = chatLocation
+        
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        self.isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
         self.avatarClippingNode = SparseNode()
         self.avatarClippingNode.alpha = 0.996
@@ -1249,7 +1253,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
         
-        if let statusData, statusData.isHiddenStatus {
+        if let statusData, statusData.isHiddenStatus, !self.isPremiumDisabled {
             let subtitleBadgeView: PeerInfoSubtitleBadgeView
             if let current = self.subtitleBadgeView {
                 subtitleBadgeView = current

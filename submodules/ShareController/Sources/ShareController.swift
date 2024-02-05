@@ -1225,7 +1225,16 @@ public final class ShareController: ViewController {
                 }
                 return true
             }
-            self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: (self.environment is ShareControllerAppEnvironment) ? presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action : nil, timeout: nil, linkAction: { _ in
+            
+            var hasAction = false
+            if let context = self.currentContext as? ShareControllerAppAccountContext {
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.context.currentAppConfiguration.with { $0 })
+                if !premiumConfiguration.isPremiumDisabled {
+                    hasAction = true
+                }
+            }
+            
+            self.present(UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: nil, text: presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Text(peer.compactDisplayTitle).string, customUndoText: hasAction ? presentationData.strings.Chat_ToastMessagingRestrictedToPremium_Action : nil, timeout: nil, linkAction: { _ in
             }), elevatedLayout: false, animateInAsReplacement: false, action: { [weak self] action in
                 guard let self, let parentNavigationController = self.parentNavigationController, let context = self.currentContext as? ShareControllerAppAccountContext else {
                     return false

@@ -714,7 +714,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                     hasUnseenCloseFriends: stats.hasUnseenCloseFriends
                 )
             },
-            requiresPremiumForMessaging: false,
+            requiresPremiumForMessaging: entry.isPremiumRequiredToMessage,
             displayAsTopicList: entry.displayAsTopicList
         ))
         

@@ -89,7 +89,6 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                     requestAroundId = true
                 }
                 if case let .replyThread(message) = chatLocation, message.peerId == context.account.peerId {
-                    requestAroundId = true
                     preFixedReadState = .peer([:])
                 }
             
@@ -114,7 +113,11 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                         
                         let canScrollToRead: Bool
                         if case let .replyThread(message) = chatLocation, !message.isForumPost {
-                            canScrollToRead = true
+                            if message.peerId == context.account.peerId {
+                                canScrollToRead = false
+                            } else {
+                                canScrollToRead = true
+                            }
                         } else if view.isAddedToChatList {
                             canScrollToRead = true
                         } else {

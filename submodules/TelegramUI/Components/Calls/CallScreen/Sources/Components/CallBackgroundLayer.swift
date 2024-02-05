@@ -97,6 +97,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     private let colorSets: [ColorSet]
     private let colorTransition: AnimatedProperty<ColorSet>
     private var stateIndex: Int = 0
+    private var isEnergySavingEnabled: Bool = false
     private let phaseAcceleration = AnimatedProperty<CGFloat>(0.0)
     
     override init() {
@@ -169,7 +170,9 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(stateIndex: Int, transition: Transition) {
+    func update(stateIndex: Int, isEnergySavingEnabled: Bool, transition: Transition) {
+        self.isEnergySavingEnabled = isEnergySavingEnabled
+        
         if self.stateIndex != stateIndex {
             self.stateIndex = stateIndex
             if !transition.animation.isImmediate {
@@ -187,7 +190,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             return
         }
         
-        let phase = self.phase
+        let phase = self.isEnergySavingEnabled ? 0.0 : self.phase
         
         for i in 0 ..< 2 {
             let isBlur = i == 1

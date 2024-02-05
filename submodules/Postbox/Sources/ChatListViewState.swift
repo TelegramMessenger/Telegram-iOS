@@ -141,14 +141,16 @@ private final class ChatListViewSpaceState {
     private let space: ChatListViewSpace
     private let anchorIndex: MutableChatListEntryIndex
     private let summaryComponents: ChatListEntrySummaryComponents
+    private let extractCachedData: ((CachedPeerData) -> AnyHashable?)?
     private let halfLimit: Int
     
     var orderedEntries: OrderedChatListViewEntries
     
-    init(postbox: PostboxImpl, currentTransaction: Transaction, space: ChatListViewSpace, anchorIndex: MutableChatListEntryIndex, summaryComponents: ChatListEntrySummaryComponents, halfLimit: Int) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, space: ChatListViewSpace, anchorIndex: MutableChatListEntryIndex, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, halfLimit: Int) {
         self.space = space
         self.anchorIndex = anchorIndex
         self.summaryComponents = summaryComponents
+        self.extractCachedData = extractCachedData
         self.halfLimit = halfLimit
         self.orderedEntries = OrderedChatListViewEntries(anchorIndex: anchorIndex.index, lowerOrAtAnchor: [], higherThanAnchor: [])
         self.fillSpace(postbox: postbox, currentTransaction: currentTransaction)
@@ -913,7 +915,7 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty || !transaction.updatedPeerThreadsSummaries.isEmpty || cachedPeerDataUpdated || !transaction.currentStoryTopItemEvents.isEmpty || !transaction.storyPeerStatesEvents.isEmpty {
+        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty || !transaction.updatedPeerThreadsSummaries.isEmpty || cachedPeerDataUpdated || !transaction.currentStoryTopItemEvents.isEmpty || !transaction.storyPeerStatesEvents.isEmpty || !transaction.currentUpdatedCachedPeerData.isEmpty {
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
                 case let .MessageEntry(entryData):
@@ -988,6 +990,14 @@ private final class ChatListViewSpaceState {
                         didUpdateSummaryInfo = true
                     }
                     
+                    var extractedCachedData: AnyHashable?
+                    if let extractCachedData = self.extractCachedData {
+                        extractedCachedData = postbox.cachedPeerDataTable.get(entryData.index.messageIndex.id.peerId).flatMap(extractCachedData)
+                    }
+                    if entryData.extractedCachedData != extractedCachedData {
+                        didUpdateSummaryInfo = true
+                    }
+                    
                     if didUpdateSummaryInfo {
                         var entryData = entryData
                         entryData.readState = updatedReadState
@@ -995,6 +1005,7 @@ private final class ChatListViewSpaceState {
                         entryData.autoremoveTimeout = updatedAutoremoveTimeout
                         entryData.storyStats = storyStats
                         entryData.displayAsRegularChat = displayAsRegularChat
+                        entryData.extractedCachedData = extractedCachedData
                         return .MessageEntry(entryData)
                     } else {
                         return nil
@@ -1382,16 +1393,18 @@ final class ChatListViewSample {
 struct ChatListViewState {
     private let anchorIndex: MutableChatListEntryIndex
     private let summaryComponents: ChatListEntrySummaryComponents
+    private let extractCachedData: ((CachedPeerData) -> AnyHashable?)?
     private let halfLimit: Int
     private var stateBySpace: [ChatListViewSpace: ChatListViewSpaceState] = [:]
     
-    init(postbox: PostboxImpl, currentTransaction: Transaction, spaces: [ChatListViewSpace], anchorIndex: ChatListIndex, summaryComponents: ChatListEntrySummaryComponents, halfLimit: Int) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, spaces: [ChatListViewSpace], anchorIndex: ChatListIndex, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, halfLimit: Int) {
         self.anchorIndex = MutableChatListEntryIndex(index: anchorIndex, isMessage: true)
         self.summaryComponents = summaryComponents
+        self.extractCachedData = extractCachedData
         self.halfLimit = halfLimit
         
         for space in spaces {
-            self.stateBySpace[space] = ChatListViewSpaceState(postbox: postbox, currentTransaction: currentTransaction, space: space, anchorIndex: self.anchorIndex, summaryComponents: summaryComponents, halfLimit: halfLimit)
+            self.stateBySpace[space] = ChatListViewSpaceState(postbox: postbox, currentTransaction: currentTransaction, space: space, anchorIndex: self.anchorIndex, summaryComponents: summaryComponents, extractCachedData: extractCachedData, halfLimit: halfLimit)
         }
     }
     
@@ -1641,6 +1654,11 @@ struct ChatListViewState {
                     
                     let storyStats = fetchPeerStoryStats(postbox: postbox, peerId: index.messageIndex.id.peerId)
                     
+                    var extractedCachedData: AnyHashable?
+                    if let extractCachedData = self.extractCachedData {
+                        extractedCachedData = postbox.cachedPeerDataTable.get(index.messageIndex.id.peerId).flatMap(extractCachedData)
+                    }
+                    
                     let updatedEntry: MutableChatListEntry = .MessageEntry(MutableChatListEntry.MessageEntryData(
                         index: index,
                         messages: renderedMessages,
@@ -1657,7 +1675,8 @@ struct ChatListViewState {
                         hasFailedMessages: false,
                         isContact: postbox.contactsTable.isContact(peerId: index.messageIndex.id.peerId),
                         autoremoveTimeout: autoremoveTimeout,
-                        storyStats: storyStats
+                        storyStats: storyStats,
+                        extractedCachedData: extractedCachedData
                     ))
                     if directionIndex == 0 {
                         self.stateBySpace[space]!.orderedEntries.setLowerOrAtAnchorAtArrayIndex(listIndex, to: updatedEntry)

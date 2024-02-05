@@ -14,6 +14,7 @@ import ComponentFlow
 import MultilineTextComponent
 import PlainButtonComponent
 import ComponentDisplayAdapters
+import AccountContext
 
 private let labelFont = Font.regular(15.0)
 
@@ -100,19 +101,25 @@ final class ChatPremiumRequiredInputPanelNode: ChatInputPanelNode {
         
         let buttonTitle: String = params.interfaceState.strings.Chat_MessagingRestrictedPlaceholder(peerTitle).string
         let buttonSubtitle: String = params.interfaceState.strings.Chat_MessagingRestrictedPlaceholderAction
+        
+        var buttonContents: [AnyComponentWithIdentity<Empty>] = []
+        buttonContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+            text: .plain(NSAttributedString(string: buttonTitle, font: Font.regular(13.0), textColor: params.interfaceState.theme.rootController.navigationBar.secondaryTextColor))
+        ))))
+        if let context = self.context {
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            if !premiumConfiguration.isPremiumDisabled {
+                buttonContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: buttonSubtitle, font: Font.regular(13.0), textColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor))
+                ))))
+            }
+        }
 
         let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)
         let buttonSize = self.button.update(
             transition: .immediate,
             component: AnyComponent(PlainButtonComponent(
-                content: AnyComponent(VStack([
-                    AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: buttonTitle, font: Font.regular(13.0), textColor: params.interfaceState.theme.rootController.navigationBar.secondaryTextColor))
-                    ))),
-                    AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: buttonSubtitle, font: Font.regular(13.0), textColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor))
-                    )))
-                ], spacing: 1.0)),
+                content: AnyComponent(VStack(buttonContents, spacing: 1.0)),
                 effectAlignment: .center,
                 minSize: size,
                 action: { [weak self] in

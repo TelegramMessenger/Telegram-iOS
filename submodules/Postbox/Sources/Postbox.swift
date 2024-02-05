@@ -3458,13 +3458,13 @@ final class PostboxImpl {
         |> switchToLatest
     }
     
-    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int, summaryComponents: ChatListEntrySummaryComponents) -> Signal<(ChatListView, ViewUpdateType), NoError> {
-        return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true)
+    public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, count: Int, summaryComponents: ChatListEntrySummaryComponents, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return self.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: ChatListIndex.absoluteUpperBound, count: count, summaryComponents: summaryComponents, userInteractive: true, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
     }
     
-    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+    public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false, extractCachedData: ((CachedPeerData) -> AnyHashable?)?, accountPeerId: PeerId?) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
-            let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
+            let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents, extractCachedData: extractCachedData, accountPeerId: accountPeerId)
             mutableView.render(postbox: self)
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
@@ -4568,7 +4568,9 @@ public class Postbox {
         groupId: PeerGroupId,
         filterPredicate: ChatListFilterPredicate? = nil,
         count: Int,
-        summaryComponents: ChatListEntrySummaryComponents
+        summaryComponents: ChatListEntrySummaryComponents,
+        extractCachedData: ((CachedPeerData) -> AnyHashable?)? = nil,
+        accountPeerId: PeerId? = nil
     ) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -4578,7 +4580,9 @@ public class Postbox {
                     groupId: groupId,
                     filterPredicate: filterPredicate,
                     count: count,
-                    summaryComponents: summaryComponents
+                    summaryComponents: summaryComponents,
+                    extractCachedData: extractCachedData,
+                    accountPeerId: accountPeerId
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
@@ -4592,7 +4596,9 @@ public class Postbox {
         index: ChatListIndex,
         count: Int,
         summaryComponents: ChatListEntrySummaryComponents,
-        userInteractive: Bool = false
+        userInteractive: Bool = false,
+        extractCachedData: ((CachedPeerData) -> AnyHashable?)? = nil,
+        accountPeerId: PeerId? = nil
     ) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -4604,7 +4610,9 @@ public class Postbox {
                     index: index,
                     count: count,
                     summaryComponents: summaryComponents,
-                    userInteractive: userInteractive
+                    userInteractive: userInteractive,
+                    extractCachedData: extractCachedData,
+                    accountPeerId: accountPeerId
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 

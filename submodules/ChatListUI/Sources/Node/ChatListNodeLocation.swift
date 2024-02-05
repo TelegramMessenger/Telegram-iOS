@@ -113,7 +113,7 @@ public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: E
     })
 }
 
-func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account, shouldLoadCanMessagePeer: Bool) -> Signal<ChatListNodeViewUpdate, NoError> {
     let accountPeerId = account.peerId
     
     switch chatListLocation {
@@ -128,7 +128,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
         switch location {
         case let .initial(count, _):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
-            signal = account.viewTracker.tailChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, count: count)
+            signal = account.viewTracker.tailChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, count: count, shouldLoadCanMessagePeer: shouldLoadCanMessagePeer)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 return ChatListNodeViewUpdate(list: EngineChatList(view, accountPeerId: accountPeerId), type: updateType, scrollPosition: nil)
@@ -138,7 +138,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 return .never()
             }
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80, shouldLoadCanMessagePeer: shouldLoadCanMessagePeer)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
@@ -157,7 +157,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > .chatList(index) ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80, shouldLoadCanMessagePeer: shouldLoadCanMessagePeer)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil
@@ -295,7 +295,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     isContact: false,
                     autoremoveTimeout: nil,
                     storyStats: nil,
-                    displayAsTopicList: false
+                    displayAsTopicList: false,
+                    isPremiumRequiredToMessage: false
                 ))
             }
             
@@ -372,7 +373,8 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     isContact: false,
                     autoremoveTimeout: nil,
                     storyStats: nil,
-                    displayAsTopicList: false
+                    displayAsTopicList: false,
+                    isPremiumRequiredToMessage: false
                 ))
             }
             

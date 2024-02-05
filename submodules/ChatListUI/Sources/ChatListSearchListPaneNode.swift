@@ -1754,7 +1754,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             
             let foundThreads: Signal<[EngineChatList.Item], NoError>
             if case let .forum(peerId) = location, (key == .topics || key == .chats) {
-                foundThreads = chatListViewForLocation(chatListLocation: location, location: .initial(count: 1000, filter: nil), account: context.account)
+                foundThreads = chatListViewForLocation(chatListLocation: location, location: .initial(count: 1000, filter: nil), account: context.account, shouldLoadCanMessagePeer: true)
                 |> map { view -> [EngineChatList.Item] in
                     var filteredItems: [EngineChatList.Item] = []
                     let queryTokens = stringIndexTokens(finalQuery, transliteration: .combined)

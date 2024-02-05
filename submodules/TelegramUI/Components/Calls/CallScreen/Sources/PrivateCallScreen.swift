@@ -79,7 +79,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         public var localVideo: VideoSource?
         public var remoteVideo: VideoSource?
         public var isRemoteBatteryLow: Bool
-        public var displaySnowEffect: Bool
+        public var isEnergySavingEnabled: Bool
         
         public init(
             strings: PresentationStrings,
@@ -93,7 +93,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             localVideo: VideoSource?,
             remoteVideo: VideoSource?,
             isRemoteBatteryLow: Bool,
-            displaySnowEffect: Bool = false
+            isEnergySavingEnabled: Bool
         ) {
             self.strings = strings
             self.lifecycleState = lifecycleState
@@ -106,7 +106,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.localVideo = localVideo
             self.remoteVideo = remoteVideo
             self.isRemoteBatteryLow = isRemoteBatteryLow
-            self.displaySnowEffect = displaySnowEffect
+            self.isEnergySavingEnabled = isEnergySavingEnabled
         }
         
         public static func ==(lhs: State, rhs: State) -> Bool {
@@ -143,7 +143,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if lhs.isRemoteBatteryLow != rhs.isRemoteBatteryLow {
                 return false
             }
-            if lhs.displaySnowEffect != rhs.displaySnowEffect {
+            if lhs.isEnergySavingEnabled != rhs.isEnergySavingEnabled {
                 return false
             }
             return true
@@ -696,7 +696,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         case .terminated:
             backgroundStateIndex = 0
         }
-        self.backgroundLayer.update(stateIndex: backgroundStateIndex, transition: transition)
+        self.backgroundLayer.update(stateIndex: backgroundStateIndex, isEnergySavingEnabled: params.state.isEnergySavingEnabled, transition: transition)
         
         transition.setFrame(view: self.buttonGroupView, frame: CGRect(origin: CGPoint(), size: params.size))
         
@@ -1220,7 +1220,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 titleString = params.state.strings.Call_StatusMissed
             }
         default:
-            displayAudioLevelBlob = !params.state.isRemoteAudioMuted
+            displayAudioLevelBlob = !params.state.isRemoteAudioMuted && !params.state.isEnergySavingEnabled
             
             self.titleView.contentMode = .scaleToFill
             titleString = params.state.name
@@ -1375,24 +1375,6 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 })
             }
         }
-        
-        /*if params.state.displaySnowEffect {
-            let snowEffectView: SnowEffectView
-            if let current = self.snowEffectView {
-                snowEffectView = current
-            } else {
-                snowEffectView = SnowEffectView(frame: CGRect())
-                self.snowEffectView = snowEffectView
-                self.maskContents.addSubview(snowEffectView)
-            }
-            transition.setFrame(view: snowEffectView, frame: CGRect(origin: CGPoint(), size: params.size))
-            snowEffectView.update(size: params.size)
-        } else {
-            if let snowEffectView = self.snowEffectView {
-                self.snowEffectView = nil
-                snowEffectView.removeFromSuperview()
-            }
-        }*/
     }
 }
 

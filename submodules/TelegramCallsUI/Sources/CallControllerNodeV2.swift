@@ -167,7 +167,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             isRemoteAudioMuted: false,
             localVideo: nil,
             remoteVideo: nil,
-            isRemoteBatteryLow: false
+            isRemoteBatteryLow: false,
+            isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency
         )
         if let peer = call.peer {
             self.updatePeer(peer: peer)

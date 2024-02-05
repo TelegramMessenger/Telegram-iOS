@@ -58,6 +58,7 @@ public enum PendingMessageFailureReason {
     case tooMuchScheduled
     case voiceMessagesForbidden
     case sendingTooFast
+    case nonPremiumMessagesForbidden
 }
 
 func sendMessageReasonForError(_ error: String) -> PendingMessageFailureReason? {
@@ -75,6 +76,8 @@ func sendMessageReasonForError(_ error: String) -> PendingMessageFailureReason? 
         return .tooMuchScheduled
     } else if error.hasPrefix("VOICE_MESSAGES_FORBIDDEN") {
         return .voiceMessagesForbidden
+    } else if error.hasPrefix("PRIVACY_PREMIUM_REQUIRED") {
+        return .nonPremiumMessagesForbidden
     } else {
         return nil
     }
