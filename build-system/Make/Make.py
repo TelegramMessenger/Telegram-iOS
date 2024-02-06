@@ -111,9 +111,6 @@ class BazelCommandLine:
             # Strip unsused code.
             '--features=dead_strip',
             '--objc_enable_binary_stripping',
-
-            # Always embed bitcode into Watch binaries. This is required by the App Store.
-            '--apple_bitcode=watchos=embedded',
         ]
 
     def add_remote_cache(self, host):
@@ -617,7 +614,8 @@ def build(bazel, arguments):
         os.makedirs(artifacts_path, exist_ok=True)
         os.makedirs(artifacts_path + '/DSYMs', exist_ok=True)
 
-        ipa_paths = glob.glob('bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa')
+        built_ipa_path_prefix = 'bazel-out/ios_arm64-opt-ios-arm64-min12.0-applebin_ios-ST-*'
+        ipa_paths = glob.glob('{}/bin/Telegram/Telegram.ipa'.format(built_ipa_path_prefix))
         if len(ipa_paths) == 0:
             print('Could not find the IPA at bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa')
             sys.exit(1)
