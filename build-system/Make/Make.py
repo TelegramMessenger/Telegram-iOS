@@ -111,9 +111,6 @@ class BazelCommandLine:
             # Strip unsused code.
             '--features=dead_strip',
             '--objc_enable_binary_stripping',
-
-            # Always embed bitcode into Watch binaries. This is required by the App Store.
-            '--apple_bitcode=watchos=embedded',
         ]
 
     def add_remote_cache(self, host):
