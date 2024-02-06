@@ -319,12 +319,20 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                         return true
                     })
                     
-                    self.parentController?.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: self.presentationData.strings.SavedMessages_SubChatDeleted, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
-                        guard let self else {
-                            return false
-                        }
+                    if self.chatListNode.entryPeerIds.count == 0 || self.chatListNode.entryPeerIds == [peer.id] {
+                        let _ = context.engine.messages.clearHistoryInteractively(peerId: self.context.account.peerId, threadId: peer.id.toInt64(), type: .forLocalPeer).startStandalone(completed: {
+                        })
+                        context.engine.peers.updateSavedMessagesViewAsTopics(value: false)
+                        
+                        self.parentController?.dismiss()
+                        
+                        return
+                    }
+                    
+                    let context = self.context
+                    let undoController = UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: self.presentationData.strings.SavedMessages_SubChatDeleted, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                         if value == .commit {
-                            let _ = self.context.engine.messages.clearHistoryInteractively(peerId: self.context.account.peerId, threadId: peer.id.toInt64(), type: .forLocalPeer).startStandalone(completed: { [weak self] in
+                            let _ = context.engine.messages.clearHistoryInteractively(peerId: context.account.peerId, threadId: peer.id.toInt64(), type: .forLocalPeer).startStandalone(completed: {
                                 guard let self else {
                                     return
                                 }
@@ -336,15 +344,18 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, UI
                             })
                             return true
                         } else if value == .undo {
-                            self.chatListNode.updateState({ state in
-                                var state = state
-                                state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peer.id, threadId: nil))
-                                return state
-                            })
+                            if let self {
+                                self.chatListNode.updateState({ state in
+                                    var state = state
+                                    state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peer.id, threadId: nil))
+                                    return state
+                                })
+                            }
                             return true
                         }
                         return false
-                    }), in: .current)
+                    })
+                    self.parentController?.present(undoController, in: .window(.root))
                 }))
                 
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items),

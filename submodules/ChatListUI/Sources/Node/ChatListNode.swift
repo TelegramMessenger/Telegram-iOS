@@ -1182,11 +1182,27 @@ public final class ChatListNode: ListView {
     
     private let viewProcessingQueue = Queue()
     private var chatListView: ChatListNodeView?
-    var entriesCount: Int {
+    public var entriesCount: Int {
         if let chatListView = self.chatListView {
             return chatListView.filteredEntries.count
         } else {
             return 0
+        }
+    }
+    public var entryPeerIds: [EnginePeer.Id] {
+        if let chatListView = self.chatListView {
+            return chatListView.filteredEntries.compactMap { item -> EnginePeer.Id? in
+                switch item.stableId {
+                case .Header, .Hole:
+                    return nil
+                case let .PeerId(value):
+                    return PeerId(value)
+                case .ThreadId, .GroupId, .ContactId, .ArchiveIntro, .EmptyIntro, .SectionHeader, .Notice, .additionalCategory:
+                    return nil
+                }
+            }
+        } else {
+            return []
         }
     }
     private var interaction: ChatListNodeInteraction?

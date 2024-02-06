@@ -1503,7 +1503,7 @@ open class TextNode: ASDisplayNode {
             if let titleLine = segment.titleLine {
                 titleLine.frame = CGRect(origin: CGPoint(x: titleLine.frame.origin.x, y: -insets.bottom + size.height + titleLine.frame.size.height), size: titleLine.frame.size)
                 titleLine.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
-                size.height += titleLine.frame.height
+                size.height += titleLine.frame.height + titleLine.frame.height * lineSpacingFactor
                 blockWidth = max(blockWidth, titleLine.frame.origin.x + titleLine.frame.width)
                 
                 lines.append(titleLine)
@@ -1512,8 +1512,7 @@ open class TextNode: ASDisplayNode {
             for line in segment.lines {
                 line.frame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: -insets.bottom + size.height + line.frame.size.height), size: line.frame.size)
                 line.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
-                //line.frame.size.width = max(blockWidth, line.frame.size.width)
-                size.height += line.frame.height
+                size.height += line.frame.height + line.frame.height * lineSpacingFactor
                 blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width)
                 
                 if let range = line.range {

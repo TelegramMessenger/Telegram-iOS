@@ -7171,17 +7171,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var closeOnEmpty = false
         if case .pinnedMessages = self.presentationInterfaceState.subject {
             closeOnEmpty = true
-        } else if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.peerId == self.context.account.peerId {
-            closeOnEmpty = false
+        } else if self.chatLocation.peerId == self.context.account.peerId {
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_close_empty_saved"] {
+            } else {
+                closeOnEmpty = true
+            }
         }
         
         if closeOnEmpty {
             self.chatDisplayNode.historyNode.addSetLoadStateUpdated({ [weak self] state, _ in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
                 if case .empty = state {
-                    strongSelf.dismiss()
+                    if self.chatLocation.peerId == self.context.account.peerId {
+                        if self.chatDisplayNode.historyNode.tag != nil {
+                            self.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                                return state.updatedSearch(nil).updatedHistoryFilter(nil)
+                            })
+                        } else if case .replyThread = self.chatLocation {
+                            self.dismiss()
+                        }
+                    } else {
+                        self.dismiss()
+                    }
                 }
             })
         }
