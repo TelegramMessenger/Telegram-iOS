@@ -283,7 +283,12 @@ public final class ChatInlineSearchResultsListComponent: Component {
             self.component = component
             self.state = state
             
-            self.backgroundColor = component.presentation.theme.list.plainBackgroundColor
+            switch component.contents {
+            case .empty:
+                self.backgroundColor = nil
+            default:
+                break
+            }
             
             self.listNode.frame = CGRect(origin: CGPoint(), size: availableSize)
             let (listDuration, listCurve) = listViewAnimationDurationAndCurve(transition: transition.containedViewLayoutTransition)
@@ -801,6 +806,13 @@ public final class ChatInlineSearchResultsListComponent: Component {
                     updateSizeAndInsets: nil,
                     updateOpaqueState: contentsState.id
                 )
+                
+                switch component.contents {
+                case .empty:
+                    self.backgroundColor = nil
+                default:
+                    self.backgroundColor = component.presentation.theme.list.plainBackgroundColor
+                }
             }
             
             return availableSize

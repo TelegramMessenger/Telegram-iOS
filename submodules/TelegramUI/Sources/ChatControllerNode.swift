@@ -2727,6 +2727,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     })
                 }
             }
+            
+            if self.alwaysShowSearchResultsAsList {
+                transition.updateAlpha(node: self.historyNode, alpha: 0.0)
+                transition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
+            } else {
+                transition.updateAlpha(node: self.historyNode, alpha: 1.0)
+                transition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
+            }
         } else {
             if let inlineSearchResults = self.inlineSearchResults {
                 self.inlineSearchResults = nil
@@ -2743,6 +2751,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inlineSearchResultsReadyDisposable.dispose()
             }
             self.inlineSearchResultsReady = false
+            
+            transition.updateAlpha(node: self.historyNode, alpha: 1.0)
+            transition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
         }
 
         let listBottomInset = self.historyNode.insets.top
