@@ -132,6 +132,95 @@ func _internal_setSavedMessageTags(transaction: Transaction, savedMessageTags: S
     }
 }
 
+func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Never, NoError> {
+    let poll = Signal<Never, NoError> { subscriber in
+        let key: PostboxViewKey = .pendingMessageActions(type: .updateReaction)
+        let waitForApplySignal: Signal<Never, NoError> = postbox.combinedView(keys: [key])
+        |> map { views -> Bool in
+            guard let view = views.views[key] as? PendingMessageActionsView else {
+                return false
+            }
+            
+            for entry in view.entries {
+                if entry.id.peerId == accountPeerId {
+                    return false
+                }
+            }
+            
+            return true
+        }
+        |> filter { $0 }
+        |> take(1)
+        |> ignoreValues
+        
+        let signal: Signal<Never, NoError> = _internal_savedMessageTags(postbox: postbox)
+        |> mapToSignal { current in
+            return (network.request(Api.functions.messages.getSavedReactionTags(flags: 0, peer: nil, hash: current?.hash ?? 0))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.SavedReactionTags?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<Never, NoError> in
+                guard let result = result else {
+                    return .complete()
+                }
+                
+                switch result {
+                case .savedReactionTagsNotModified:
+                    return .complete()
+                case let .savedReactionTags(tags, hash):
+                    var customFileIds: [Int64] = []
+                    
+                    var parsedTags: [SavedMessageTags.Tag] = []
+                    for tag in tags {
+                        switch tag {
+                        case let .savedReactionTag(_, reaction, title, count):
+                            guard let reaction = MessageReaction.Reaction(apiReaction: reaction) else {
+                                continue
+                            }
+                            parsedTags.append(SavedMessageTags.Tag(
+                                reaction: reaction,
+                                title: title,
+                                count: Int(count)
+                            ))
+                            
+                            if case let .custom(fileId) = reaction {
+                                customFileIds.append(fileId)
+                            }
+                        }
+                    }
+                    
+                    let savedMessageTags = SavedMessageTags(
+                        hash: hash,
+                        tags: parsedTags
+                    )
+                    
+                    return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: customFileIds)
+                    |> mapToSignal { _ -> Signal<Never, NoError> in
+                        return postbox.transaction { transaction in
+                            _internal_setSavedMessageTags(transaction: transaction, savedMessageTags: savedMessageTags)
+                        }
+                        |> ignoreValues
+                    }
+                }
+            })
+        }
+                
+        return (waitForApplySignal |> then(signal)).start(completed: {
+            subscriber.putCompletion()
+        })
+    }
+    
+    return (
+    	poll
+    	|> then(
+    		.complete()
+    		|> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue())
+    	)
+    )
+    |> restart
+}
+
 func _internal_setSavedMessageTagTitle(account: Account, reaction: MessageReaction.Reaction, title: String?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         let value = _internal_savedMessageTags(transaction: transaction) ?? SavedMessageTags(hash: 0, tags: [])

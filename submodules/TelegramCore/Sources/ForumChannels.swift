@@ -1138,7 +1138,8 @@ public func _internal_searchForumTopics(account: Account, peerId: EnginePeer.Id,
                     autoremoveTimeout: nil,
                     storyStats: nil,
                     displayAsTopicList: false,
-                    isPremiumRequiredToMessage: false
+                    isPremiumRequiredToMessage: false,
+                    mediaDraftContentType: nil
                 ))
             }
             

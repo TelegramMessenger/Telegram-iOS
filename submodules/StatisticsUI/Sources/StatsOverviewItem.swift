@@ -34,14 +34,16 @@ extension StoryStats: Stats {
 
 class StatsOverviewItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
+    let isGroup: Bool
     let stats: Stats
     let storyViews: EngineStoryItem.Views?
     let publicShares: Int32?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, stats: Stats, storyViews: EngineStoryItem.Views? = nil, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, isGroup: Bool, stats: Stats, storyViews: EngineStoryItem.Views? = nil, publicShares: Int32? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
+        self.isGroup = isGroup
         self.stats = stats
         self.storyViews = storyViews
         self.publicShares = publicShares
@@ -403,7 +405,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     params.width,
                     item.presentationData,
                     "≈\(Int(stats.premiumAudience?.value ?? 0))",
-                    item.presentationData.strings.Stats_Boosts_PremiumSubscribers,
+                    item.isGroup ? item.presentationData.strings.Stats_Boosts_PremiumMembers : item.presentationData.strings.Stats_Boosts_PremiumSubscribers,
                     (String(format: "%.02f%%", premiumSubscribers * 100.0), .generic)
                 )
                 

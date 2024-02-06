@@ -42,6 +42,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/AnimatedCountLabelNode",
+        "//submodules/AudioWaveform",
     ],
     visibility = [
         "//visibility:public",

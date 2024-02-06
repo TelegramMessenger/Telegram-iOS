@@ -278,7 +278,7 @@ public struct PresentationResourcesItemList {
     
     public static func addBoostsIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddBoostsIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Premium/AddBoosts"), color: theme.list.itemAccentColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Premium/Gift"), color: theme.list.itemAccentColor)
         })
     }
     

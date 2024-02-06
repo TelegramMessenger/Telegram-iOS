@@ -571,7 +571,7 @@ public final class EntityKeyboardComponent: Component {
                 var topEmojiItems: [EntityKeyboardTopPanelComponent.Item] = []
                 for itemGroup in emojiContent.panelItemGroups {
                     if !itemGroup.items.isEmpty {
-                        if let id = itemGroup.groupId.base as? String {
+                        if let id = itemGroup.groupId.base as? String, id != "peerSpecific" {
                             if id == "recent" || id == "liked" {
                                 let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
                                     "recent": .recent,

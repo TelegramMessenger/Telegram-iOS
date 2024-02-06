@@ -771,6 +771,8 @@ private final class GroupHeaderLayer: UIView {
     private var tintSubtitleLayer: SimpleLayer?
     private var lockIconLayer: SimpleLayer?
     private var tintLockIconLayer: SimpleLayer?
+    private var badgeLayer: SimpleLayer?
+    private var tintBadgeLayer: SimpleLayer?
     private(set) var clearIconLayer: SimpleLayer?
     private var tintClearIconLayer: SimpleLayer?
     private var separatorLayer: SimpleLayer?
@@ -816,6 +818,7 @@ private final class GroupHeaderLayer: UIView {
         actionButtonTitle: String?,
         title: String,
         subtitle: String?,
+        badge: String?,
         isPremiumLocked: Bool,
         hasClear: Bool,
         embeddedItems: [EmojiPagerContentComponent.Item]?,
@@ -831,7 +834,7 @@ private final class GroupHeaderLayer: UIView {
             self.theme = theme
             themeUpdated = true
         }
-        
+                
         let needsVibrancy = !theme.overallDarkAppearance || forceNeedsVibrancy
         
         let textOffsetY: CGFloat
@@ -978,16 +981,83 @@ private final class GroupHeaderLayer: UIView {
             self.tintTextLayer.isHidden = !needsVibrancy
             self.currentTextLayout = (title, color, textConstrainedWidth, textSize)
         }
+              
+        var badgeSize: CGSize = .zero
+        if let badge {
+            func generateBadgeImage(color: UIColor) -> UIImage? {
+                let string = NSAttributedString(string: badge, font: Font.semibold(11.0), textColor: .white)
+                let stringBounds = string.boundingRect(with: CGSize(width: 120, height: 18.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
+                
+                let badgeSize = CGSize(width: stringBounds.width + 8.0, height: 16.0)
+                return generateImage(badgeSize, opaque: false, scale: 0.0, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    context.setFillColor(color.cgColor)
+                    context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: badgeSize), cornerRadius: badgeSize.height / 2.0).cgPath)
+                    context.fillPath()
+                    
+                    context.setBlendMode(.clear)
+                    
+                    UIGraphicsPushContext(context)
+                        
+                    string.draw(with: CGRect(origin: CGPoint(x: floorToScreenPixels((badgeSize.width - stringBounds.size.width) / 2.0), y: floorToScreenPixels((badgeSize.height - stringBounds.size.height) / 2.0)), size: stringBounds.size), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
+                    
+                    UIGraphicsPopContext()
+                })
+            }
+            
+            let badgeLayer: SimpleLayer
+            if let current = self.badgeLayer {
+                badgeLayer = current
+            } else {
+                badgeLayer = SimpleLayer()
+                self.badgeLayer = badgeLayer
+                self.layer.addSublayer(badgeLayer)
+                
+                if let image = generateBadgeImage(color: color.withMultipliedAlpha(0.66)) {
+                    badgeLayer.contents = image.cgImage
+                    badgeLayer.bounds = CGRect(origin: .zero, size: image.size)
+                }
+            }
+            badgeSize = badgeLayer.bounds.size
+            
+            let tintBadgeLayer: SimpleLayer
+            if let current = self.tintBadgeLayer {
+                tintBadgeLayer = current
+            } else {
+                tintBadgeLayer = SimpleLayer()
+                self.tintBadgeLayer = tintBadgeLayer
+                self.tintContentLayer.addSublayer(tintBadgeLayer)
+                
+                if let image = generateBadgeImage(color: .white) {
+                    tintBadgeLayer.contents = image.cgImage
+                }
+            }
+        } else {
+            if let badgeLayer = self.badgeLayer {
+                self.badgeLayer = nil
+                badgeLayer.removeFromSuperlayer()
+            }
+            if let tintBadgeLayer = self.tintBadgeLayer {
+                self.tintBadgeLayer = nil
+                tintBadgeLayer.removeFromSuperlayer()
+            }
+        }
         
         let textFrame: CGRect
         if subtitle == nil {
-            textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset + floor((constrainedSize.width - titleHorizontalOffset - textSize.width) / 2.0), y: textOffsetY), size: textSize)
+            textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset + floor((constrainedSize.width - titleHorizontalOffset - (textSize.width + badgeSize.width)) / 2.0), y: textOffsetY), size: textSize)
         } else {
             textFrame = CGRect(origin: CGPoint(x: titleHorizontalOffset, y: textOffsetY), size: textSize)
         }
         self.textLayer.frame = textFrame
         self.tintTextLayer.frame = textFrame
         self.tintTextLayer.isHidden = !needsTintText
+        
+        if let badgeLayer = self.badgeLayer, let tintBadgeLayer = self.tintBadgeLayer {
+            badgeLayer.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 4.0, y: 0.0), size: badgeLayer.frame.size)
+            tintBadgeLayer.frame = badgeLayer.frame
+        }
         
         if isPremiumLocked {
             let lockIconLayer: SimpleLayer
@@ -2536,6 +2606,7 @@ public final class EmojiPagerContentComponent: Component {
         public let groupId: AnyHashable
         public let title: String?
         public let subtitle: String?
+        public let badge: String?
         public let actionButtonTitle: String?
         public let isFeatured: Bool
         public let isPremiumLocked: Bool
@@ -2553,6 +2624,7 @@ public final class EmojiPagerContentComponent: Component {
             groupId: AnyHashable,
             title: String?,
             subtitle: String?,
+            badge: String?,
             actionButtonTitle: String?,
             isFeatured: Bool,
             isPremiumLocked: Bool,
@@ -2569,6 +2641,7 @@ public final class EmojiPagerContentComponent: Component {
             self.groupId = groupId
             self.title = title
             self.subtitle = subtitle
+            self.badge = badge
             self.actionButtonTitle = actionButtonTitle
             self.isFeatured = isFeatured
             self.isPremiumLocked = isPremiumLocked
@@ -2596,6 +2669,9 @@ public final class EmojiPagerContentComponent: Component {
                 return false
             }
             if lhs.subtitle != rhs.subtitle {
+                return false
+            }
+            if lhs.badge != rhs.badge {
                 return false
             }
             if lhs.actionButtonTitle != rhs.actionButtonTitle {
@@ -5540,6 +5616,7 @@ public final class EmojiPagerContentComponent: Component {
                         actionButtonTitle: actionButtonTitle,
                         title: title,
                         subtitle: itemGroup.subtitle,
+                        badge: itemGroup.badge,
                         isPremiumLocked: itemGroup.isPremiumLocked,
                         hasClear: itemGroup.hasClear,
                         embeddedItems: itemGroup.isEmbedded ? itemGroup.items : nil,

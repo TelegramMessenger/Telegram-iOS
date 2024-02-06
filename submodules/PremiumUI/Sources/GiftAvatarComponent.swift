@@ -16,7 +16,7 @@ import TelegramPresentationData
 
 private let sceneVersion: Int = 3
 
-class GiftAvatarComponent: Component {
+final class GiftAvatarComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peers: [EnginePeer]

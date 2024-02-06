@@ -13,7 +13,7 @@ public final class StoredPeerChatInterfaceState: Codable, Equatable {
         case associatedMessageIds
         case data
     }
-
+    
     public let overrideChatTimestamp: Int32?
     public let historyScrollMessageIndex: MessageIndex?
     public let associatedMessageIds: [MessageId]
@@ -65,11 +65,3 @@ public final class StoredPeerChatInterfaceState: Codable, Equatable {
         return true
     }
 }
-
-/*public protocol PeerChatInterfaceState: PostboxCoding {
-    var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? { get }
-    var historyScrollMessageIndex: MessageIndex? { get }
-    var associatedMessageIds: [MessageId] { get }
-    
-    func isEqual(to: PeerChatInterfaceState) -> Bool
-}*/

@@ -50,6 +50,7 @@ import ObjectiveC
 import LocationUI
 import ReactionSelectionNode
 import StoryQualityUpgradeSheetScreen
+import AudioWaveform
 
 private var ObjCKey_DeinitWatcher: Int?
 

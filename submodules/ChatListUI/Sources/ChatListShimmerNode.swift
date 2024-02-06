@@ -199,6 +199,7 @@ public final class ChatListShimmerNode: ASDisplayNode {
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
                     draftState: nil,
+                    mediaDraftContentType: nil,
                     inputActivities: nil,
                     promoInfo: nil,
                     ignoreUnreadBadge: false,

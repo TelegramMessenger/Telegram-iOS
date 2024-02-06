@@ -127,6 +127,39 @@ func _internal_deleteContactPeerInteractively(account: Account, peerId: PeerId) 
     |> switchToLatest
 }
 
+func _internal_deleteContacts(account: Account, peerIds: [PeerId]) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+        let users = peerIds.compactMap { transaction.getPeer($0) }
+        let inputUsers: [Api.InputUser] = users.compactMap { apiInputUser($0) }
+        if !inputUsers.isEmpty {
+            return account.network.request(Api.functions.contacts.deleteContacts(id: inputUsers))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { updates -> Signal<Void, NoError> in
+                if let updates = updates {
+                    account.stateManager.addUpdates(updates)
+                }
+                return account.postbox.transaction { transaction -> Void in
+                    for user in users {
+                        if let user = user as? TelegramUser {
+                            _internal_updatePeerIsContact(transaction: transaction, user: user, isContact: false)
+                        }
+                    }
+                    
+                    let updatedContactPeerIds = transaction.getContactPeerIds().filter { !peerIds.contains($0) }
+                    transaction.replaceContactPeerIds(updatedContactPeerIds)
+                }
+            }
+            |> ignoreValues
+        } else {
+            return .complete()
+        }
+    }
+    |> switchToLatest
+}
+
 func _internal_deleteAllContacts(account: Account) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> [Api.InputUser] in
         return transaction.getContactPeerIds().compactMap(transaction.getPeer).compactMap({ apiInputUser($0) }).compactMap({ $0 })

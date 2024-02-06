@@ -582,7 +582,6 @@ final class StoriesPageComponent: CombinedComponent {
         let topPanel = Child(BlurredBackgroundComponent.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(MultilineTextComponent.self)
-        let secondaryTitle = Child(MultilineTextComponent.self)
         
         let resetScroll = ActionSlot<Void>()
         
@@ -664,17 +663,6 @@ final class StoriesPageComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
-            
-            let secondaryTitle = secondaryTitle.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: strings.Premium_Stories_AdditionalTitle, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
-                    horizontalAlignment: .center,
-                    truncationType: .end,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
                   
             let topPanelAlpha: CGFloat
             if state.topContentOffset > 78.0 {
@@ -699,23 +687,9 @@ final class StoriesPageComponent: CombinedComponent {
             let titleOriginY: CGFloat = titleBottomOriginY + fraction * titleOriginDelta
             let titleScale = 1.0 - max(0.0, fraction * 0.2)
 
-            let titleAlpha: CGFloat
-            if fraction > 0.78 {
-                titleAlpha = max(0.0, 1.0 - (fraction - 0.78) / 0.16)
-            } else {
-                titleAlpha = 1.0
-            }
-            let secondaryTitleAlpha: CGFloat = 1.0 - titleAlpha
-            
             context.add(title
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY))
                 .scale(titleScale)
-                .opacity(titleAlpha)
-            )
-            
-            context.add(secondaryTitle
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY))
-                .opacity(secondaryTitleAlpha)
             )
                         
             return scroll.size

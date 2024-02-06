@@ -816,6 +816,13 @@ public final class ContactListNode: ASDisplayNode {
         }
     }
     
+    private let pendingRemovalPeerIdsPromise = ValuePromise<Set<EnginePeer.Id>>(Set())
+    private var pendingRemovalPeerIds = Set<EnginePeer.Id>() {
+        didSet {
+            self.pendingRemovalPeerIdsPromise.set(self.pendingRemovalPeerIds)
+        }
+    }
+    
     private var interaction: ContactListNodeInteraction?
     
     private var enableUpdatesValue = false
@@ -978,6 +985,7 @@ public final class ContactListNode: ASDisplayNode {
         let processingQueue = Queue()
         let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
         let previousSelectionState = Atomic<ContactListNodeGroupSelectionState?>(value: nil)
+        let previousPendingRemovalPeerIds = Atomic<Set<EnginePeer.Id>?>(value: nil)
         
         let interaction = ContactListNodeInteraction(activateSearch: { [weak self] in
             self?.activateSearch?()
@@ -1074,6 +1082,7 @@ public final class ContactListNode: ASDisplayNode {
         let context = self.context
         var firstTime: Int32 = 1
         let selectionStateSignal = self.selectionStatePromise.get()
+        let pendingRemovalPeerIdsSignal = self.pendingRemovalPeerIdsPromise.get()
         let transition: Signal<ContactsListNodeTransition, NoError>
         let presentationDataPromise = self.presentationDataPromise
         
@@ -1231,8 +1240,8 @@ public final class ContactListNode: ASDisplayNode {
                         peerRequiresPremiumForMessaging = .single([:])
                     }
                     
-                    return combineLatest(accountPeer, foundPeers.get(), peerRequiresPremiumForMessaging, foundDeviceContacts, selectionStateSignal, presentationDataPromise.get())
-                    |> mapToQueue { accountPeer, foundPeers, peerRequiresPremiumForMessaging, deviceContacts, selectionState, presentationData -> Signal<ContactsListNodeTransition, NoError> in
+                    return combineLatest(accountPeer, foundPeers.get(), peerRequiresPremiumForMessaging, foundDeviceContacts, selectionStateSignal, pendingRemovalPeerIdsSignal, presentationDataPromise.get())
+                    |> mapToQueue { accountPeer, foundPeers, peerRequiresPremiumForMessaging, deviceContacts, selectionState, pendingRemovalPeerIds, presentationData -> Signal<ContactsListNodeTransition, NoError> in
                         let localPeersAndStatuses = foundPeers.foundLocalContacts
                         let remotePeers = foundPeers.foundRemoteContacts
                         
@@ -1281,12 +1290,13 @@ public final class ContactListNode: ASDisplayNode {
                             }
                             
                             for peer in localPeersAndStatuses.0 {
-                                if !existingPeerIds.contains(peer.peer.id) {
-                                    existingPeerIds.insert(peer.peer.id)
-                                    peers.append(.peer(peer: peer.peer, isGlobal: false, participantCount: peer.subscribers))
-                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                    }
+                                if existingPeerIds.contains(peer.peer.id) || pendingRemovalPeerIds.contains(peer.peer.id) {
+                                    continue
+                                }
+                                existingPeerIds.insert(peer.peer.id)
+                                peers.append(.peer(peer: peer.peer, isGlobal: false, participantCount: peer.subscribers))
+                                if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                    existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                 }
                             }
                             for peer in remotePeers.0 {
@@ -1315,12 +1325,13 @@ public final class ContactListNode: ASDisplayNode {
                                 }
                                 
                                 if matches {
-                                    if !existingPeerIds.contains(peer.peer.id) {
-                                        existingPeerIds.insert(peer.peer.id)
-                                        peers.append(.peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers))
-                                        if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                            existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                        }
+                                    if existingPeerIds.contains(peer.peer.id) || pendingRemovalPeerIds.contains(peer.peer.id) {
+                                        continue
+                                    }
+                                    existingPeerIds.insert(peer.peer.id)
+                                    peers.append(.peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers))
+                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                     }
                                 }
                             }
@@ -1350,12 +1361,13 @@ public final class ContactListNode: ASDisplayNode {
                                 }
                                 
                                 if matches {
-                                    if !existingPeerIds.contains(peer.peer.id) {
-                                        existingPeerIds.insert(peer.peer.id)
-                                        peers.append(.peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers))
-                                        if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
-                                            existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
-                                        }
+                                    if existingPeerIds.contains(peer.peer.id) || pendingRemovalPeerIds.contains(peer.peer.id) {
+                                        continue
+                                    }
+                                    existingPeerIds.insert(peer.peer.id)
+                                    peers.append(.peer(peer: peer.peer, isGlobal: true, participantCount: peer.subscribers))
+                                    if searchDeviceContacts, let user = peer.peer as? TelegramUser, let phone = user.phone {
+                                        existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                                     }
                                 }
                             }
@@ -1446,13 +1458,14 @@ public final class ContactListNode: ASDisplayNode {
                     self.contactPeersViewPromise.get(),
                     chatListSignal,
                     selectionStateSignal,
+                    pendingRemovalPeerIdsSignal,
                     presentationDataPromise.get(),
                     contactsAuthorization.get(),
                     contactsWarningSuppressed.get(),
                     self.storySubscriptions.get(),
                     recentPeers
                 )
-                |> mapToQueue { view, chatListPeers, selectionState, presentationData, authorizationStatus, warningSuppressed, storySubscriptions, recentPeers -> Signal<ContactsListNodeTransition, NoError> in
+                |> mapToQueue { view, chatListPeers, selectionState, pendingRemovalPeerIds, presentationData, authorizationStatus, warningSuppressed, storySubscriptions, recentPeers -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         if !view.2.isEmpty {
                             context.account.viewTracker.refreshCanSendMessagesForPeerIds(peerIds: Array(view.2.keys))
@@ -1487,7 +1500,7 @@ public final class ContactListNode: ASDisplayNode {
                                         return false
                                     }
                                 }
-                                return !existingPeerIds.contains(peer.id)
+                                return !existingPeerIds.contains(peer.id) && !pendingRemovalPeerIds.contains(peer.id)
                             default:
                                 return true
                             }
@@ -1505,6 +1518,7 @@ public final class ContactListNode: ASDisplayNode {
                         let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: view.0.presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, peerRequiresPremiumForMessaging: view.2, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions, topPeers: topPeers, interaction: interaction)
                         let previous = previousEntries.swap(entries)
                         let previousSelection = previousSelectionState.swap(selectionState)
+                        let previousPendingRemovalPeerIds = previousPendingRemovalPeerIds.swap(pendingRemovalPeerIds)
                         
                         var hadPermissionInfo = false
                         if let previous = previous {
@@ -1525,6 +1539,8 @@ public final class ContactListNode: ASDisplayNode {
                         
                         let animation: ContactListAnimation
                         if (previousSelection == nil) != (selectionState == nil) {
+                            animation = .insertion
+                        } else if previousPendingRemovalPeerIds != pendingRemovalPeerIds {
                             animation = .insertion
                         } else if hadPermissionInfo != hasPermissionInfo {
                             animation = .insertion
@@ -1649,6 +1665,13 @@ public final class ContactListNode: ASDisplayNode {
         let updatedSelectionState = f(self.selectionStateValue)
         if updatedSelectionState != self.selectionStateValue {
             self.selectionStateValue = updatedSelectionState
+        }
+    }
+    
+    public func updatePendingRemovalPeerIds(_ f: (Set<EnginePeer.Id>) -> Set<EnginePeer.Id>) {
+        let updatedPendingRemovalPeerIds = f(self.pendingRemovalPeerIds)
+        if updatedPendingRemovalPeerIds != self.pendingRemovalPeerIds {
+            self.pendingRemovalPeerIds = updatedPendingRemovalPeerIds
         }
     }
     

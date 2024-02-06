@@ -68,6 +68,8 @@ public enum PremiumDemoSubject {
     case colors
     case wallpapers
     case messageTags
+    case lastSeen
+    case messagePrivacy
 }
 
 public enum PremiumLimitSubject {
@@ -106,7 +108,13 @@ public struct PremiumConfiguration {
             minChannelProfileIconLevel: 7,
             minChannelEmojiStatusLevel: 8,
             minChannelWallpaperLevel: 9,
-            minChannelCustomWallpaperLevel: 10
+            minChannelCustomWallpaperLevel: 10,
+            minGroupProfileIconLevel: 7,
+            minGroupEmojiStatusLevel: 8,
+            minGroupWallpaperLevel: 9,
+            minGroupCustomWallpaperLevel: 9,
+            minGroupEmojiPackLevel: 9,
+            minGroupAudioTranscriptionLevel: 9
         )
     }
     
@@ -125,6 +133,13 @@ public struct PremiumConfiguration {
     public let minChannelWallpaperLevel: Int32
     public let minChannelCustomWallpaperLevel: Int32
     
+    public let minGroupProfileIconLevel: Int32
+    public let minGroupEmojiStatusLevel: Int32
+    public let minGroupWallpaperLevel: Int32
+    public let minGroupCustomWallpaperLevel: Int32
+    public let minGroupEmojiPackLevel: Int32
+    public let minGroupAudioTranscriptionLevel: Int32
+    
     fileprivate init(
         isPremiumDisabled: Bool,
         showPremiumGiftInAttachMenu: Bool,
@@ -139,8 +154,13 @@ public struct PremiumConfiguration {
         minChannelProfileIconLevel: Int32,
         minChannelEmojiStatusLevel: Int32,
         minChannelWallpaperLevel: Int32,
-        minChannelCustomWallpaperLevel: Int32
-    
+        minChannelCustomWallpaperLevel: Int32,
+        minGroupProfileIconLevel: Int32,
+        minGroupEmojiStatusLevel: Int32,
+        minGroupWallpaperLevel: Int32,
+        minGroupCustomWallpaperLevel: Int32,
+        minGroupEmojiPackLevel: Int32,
+        minGroupAudioTranscriptionLevel: Int32
     ) {
         self.isPremiumDisabled = isPremiumDisabled
         self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
@@ -156,6 +176,12 @@ public struct PremiumConfiguration {
         self.minChannelEmojiStatusLevel = minChannelEmojiStatusLevel
         self.minChannelWallpaperLevel = minChannelWallpaperLevel
         self.minChannelCustomWallpaperLevel = minChannelCustomWallpaperLevel
+        self.minGroupProfileIconLevel = minGroupProfileIconLevel
+        self.minGroupEmojiStatusLevel = minGroupEmojiStatusLevel
+        self.minGroupWallpaperLevel = minGroupWallpaperLevel
+        self.minGroupCustomWallpaperLevel = minGroupCustomWallpaperLevel
+        self.minGroupEmojiPackLevel = minGroupEmojiPackLevel
+        self.minGroupAudioTranscriptionLevel = minGroupAudioTranscriptionLevel
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
@@ -178,7 +204,13 @@ public struct PremiumConfiguration {
                 minChannelProfileIconLevel: get(data["channel_profile_bg_icon_level_min"]) ?? defaultValue.minChannelProfileIconLevel,
                 minChannelEmojiStatusLevel: get(data["channel_emoji_status_level_min"]) ?? defaultValue.minChannelEmojiStatusLevel,
                 minChannelWallpaperLevel: get(data["channel_wallpaper_level_min"]) ?? defaultValue.minChannelWallpaperLevel,
-                minChannelCustomWallpaperLevel: get(data["channel_custom_wallpaper_level_min"]) ?? defaultValue.minChannelCustomWallpaperLevel
+                minChannelCustomWallpaperLevel: get(data["channel_custom_wallpaper_level_min"]) ?? defaultValue.minChannelCustomWallpaperLevel,
+                minGroupProfileIconLevel: get(data["group_profile_bg_icon_level_min "]) ?? defaultValue.minGroupProfileIconLevel,
+                minGroupEmojiStatusLevel: get(data["group_emoji_status_level_min"]) ?? defaultValue.minGroupEmojiStatusLevel,
+                minGroupWallpaperLevel: get(data["group_wallpaper_level_min"]) ?? defaultValue.minGroupWallpaperLevel,
+                minGroupCustomWallpaperLevel: get(data["group_custom_wallpaper_level_min"]) ?? defaultValue.minGroupCustomWallpaperLevel,
+                minGroupEmojiPackLevel: get(data["group_emoji_stickers_level_min"]) ?? defaultValue.minGroupEmojiPackLevel,
+                minGroupAudioTranscriptionLevel: get(data["group_transcribe_level_min"]) ?? defaultValue.minGroupAudioTranscriptionLevel
             )
         } else {
             return defaultValue

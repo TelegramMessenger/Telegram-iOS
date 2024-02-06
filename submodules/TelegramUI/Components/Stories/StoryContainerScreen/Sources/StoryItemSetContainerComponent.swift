@@ -6100,7 +6100,7 @@ public final class StoryItemSetContainerComponent: Component {
 
             return .single(items)
         }
-        
+
         private func performMyMoreAction(sourceView: UIView, gesture: ContextGesture?) {
             guard let component = self.component, let controller = component.controller() else {
                 return
@@ -6110,7 +6110,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             let baseRatePromise = ValuePromise<Double>(component.storyItemSharedState.baseRate)
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-            
             
             let contextItems = baseRatePromise.get()
             |> mapToSignal { [weak self, weak component] baseRate -> Signal<ContextController.Items , NoError> in
@@ -6194,7 +6193,7 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
                 
                 items.append(.separator)
-                                            
+
                 items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? component.strings.Story_Context_RemoveFromProfile : component.strings.Story_Context_SaveToProfile, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Stories/Context Menu/Unpin" : "Stories/Context Menu/Pin"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
@@ -6328,14 +6327,14 @@ public final class StoryItemSetContainerComponent: Component {
             
             let baseRatePromise = ValuePromise<Double>(component.storyItemSharedState.baseRate)
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-           
+
             let contextItems = baseRatePromise.get()
             |> mapToSignal { [weak self, weak component] baseRate -> Signal<ContextController.Items , NoError> in
                 guard let self, let component else {
                     return .complete()
                 }
+
                 var items: [ContextMenuItem] = []
-                
                 if case .file = component.slice.item.storyItem.media {
                     var speedValue: String = presentationData.strings.PlaybackSpeed_Normal
                     var speedIconText: String = "1x"
@@ -6463,7 +6462,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         
                         let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                                 |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
                             guard let self, let component = self.component else {
                                 return
                             }
@@ -6990,7 +6989,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let (tip, tipSignal) = self.getLinkedStickerPacks()
                 
-                let contextItems = ContextController.Items(content: .list(items), tip: tip, tipSignal: tipSignal)
+                let contextItems = ContextController.Items(id: 0, content: .list(items), tip: tip, tipSignal: tipSignal)
                                 
                 let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: gesture)
                 contextController.dismissed = { [weak self] in

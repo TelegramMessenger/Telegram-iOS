@@ -197,6 +197,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case outgoingVideoMessagePlayOnceTip = 63
     case dismissedMessageTagsBadge = 64
     case savedMessageTagLabelSuggestion = 65
+    case dismissedLastSeenBadge = 66
+    case dismissedMessagePrivacyBadge = 67
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -513,6 +515,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func savedMessageTagLabelSuggestion() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.savedMessageTagLabelSuggestion.key)
+    }
+    
+    static func dismissedLastSeenBadge() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedLastSeenBadge.key)
+    }
+    
+    static func dismissedMessagePrivacyBadge() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedMessagePrivacyBadge.key)
     }
 }
 
@@ -2112,6 +2122,7 @@ public struct ApplicationSpecificNotice {
         |> take(1)
     }
     
+
     public static func getSavedMessageTagLabelSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
         return accountManager.transaction { transaction -> Int32 in
             if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.savedMessageTagLabelSuggestion())?.get(ApplicationSpecificCounterNotice.self) {
@@ -2130,12 +2141,54 @@ public struct ApplicationSpecificNotice {
             }
             let previousValue = currentValue
             currentValue += Int32(count)
-
+            
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.savedMessageTagLabelSuggestion(), entry)
             }
             
             return Int(previousValue)
         }
+    }
+
+    public static func setDismissedLastSeenBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedLastSeenBadge(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func dismissedLastSeenBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedLastSeenBadge())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDismissedMessagePrivacyBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedMessagePrivacyBadge(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func dismissedMessagePrivacyBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedMessagePrivacyBadge())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
     }
 }

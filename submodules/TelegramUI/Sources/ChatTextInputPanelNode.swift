@@ -41,6 +41,8 @@ import ChatContextQuery
 import ChatInputTextNode
 import ChatInputPanelNode
 import TelegramNotices
+import AnimatedCountLabelNode
+import TelegramStringFormatting
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -535,6 +537,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     let textInputBackgroundNode: ASImageNode
     private var transparentTextInputBackgroundImage: UIImage?
     let actionButtons: ChatTextInputActionButtonsNode
+    private let slowModeButton: BoostSlowModeButton
     var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
     private let counterTextNode: ImmediateTextNode
     
@@ -570,6 +573,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool, Bool)?
     private var leftMenuInset: CGFloat = 0.0
+    private var rightSlowModeInset: CGFloat = 0.0
     
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
@@ -855,9 +859,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.counterTextNode = ImmediateTextNode()
         self.counterTextNode.textAlignment = .center
         
+        self.slowModeButton = BoostSlowModeButton()
+        self.slowModeButton.alpha = 0.0
+        
         self.viewOnceButton = ChatRecordingViewOnceButtonNode(icon: .viewOnce)
         
         super.init()
+        
+        self.slowModeButton.requestUpdate = { [weak self] in
+            self?.requestLayout(transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+        self.slowModeButton.addTarget(self, action: #selector(self.slowModeButtonPressed), forControlEvents: .touchUpInside)
         
         self.viewForOverlayContent = ChatTextViewForOverlayContent(
             ignoreHit: { [weak self] view, point in
@@ -1044,6 +1056,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
           
         self.clippingNode.addSubnode(self.actionButtons)
         self.clippingNode.addSubnode(self.counterTextNode)
+        
+        self.clippingNode.addSubnode(self.slowModeButton)
         
         self.clippingNode.view.addSubview(self.searchLayoutClearButton)
         
@@ -1416,11 +1430,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
     }
     
-    func requestLayout() {
+    func requestLayout(transition: ContainedViewLayoutTransition = .immediate) {
         guard let presentationInterfaceState = self.presentationInterfaceState, let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = self.validLayout else {
             return
         }
-        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: transition, interfaceState: presentationInterfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
@@ -1933,11 +1947,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         self.leftMenuInset = leftMenuInset
         
+        var rightSlowModeInset: CGFloat = 0.0
+        var slowModeButtonSize: CGSize = .zero
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            slowModeButtonSize = self.slowModeButton.update(size: CGSize(width: width, height: 44.0), interfaceState: presentationInterfaceState)
+            if inputHasText {
+                rightSlowModeInset = slowModeButtonSize.width - 33.0
+            }
+        }
+        self.rightSlowModeInset = rightSlowModeInset
+        
         if buttonTitleUpdated && !transition.isAnimated {
             transition = .animated(duration: 0.3, curve: .easeInOut)
         }
         
-        let baseWidth = width - leftInset - leftMenuInset - rightInset
+        let baseWidth = width - leftInset - leftMenuInset - rightInset - rightSlowModeInset
         let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
         var panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
         if displayBotStartButton {
@@ -1968,7 +1992,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         transition.updateFrame(node: self.sendAsAvatarReferenceNode, frame: CGRect(origin: CGPoint(), size: menuButtonFrame.size))
         transition.updateFrame(node: self.sendAsAvatarNode, frame: CGRect(origin: CGPoint(), size: menuButtonFrame.size))
         
-        let showMenuButton = hasMenuButton && interfaceState.recordedMediaPreview == nil
+        let showMenuButton = hasMenuButton && interfaceState.interfaceState.mediaDraftState == nil
         if isSendAsButton {
             if interfaceState.showSendAsPeers {
                 transition.updateTransformScale(node: self.menuButton, scale: 1.0)
@@ -1997,8 +2021,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         var hideMicButton = false
         var audioRecordingItemsAlpha: CGFloat = 1
-        if mediaRecordingState != nil || (interfaceState.recordedMediaPreview != nil && self.finishedTransitionToPreview != true) {
-            if interfaceState.recordedMediaPreview != nil {
+        if mediaRecordingState != nil || (interfaceState.interfaceState.mediaDraftState != nil && self.finishedTransitionToPreview != true) {
+            if interfaceState.interfaceState.mediaDraftState != nil {
                 self.finishedTransitionToPreview = false
             }
             
@@ -2043,7 +2067,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 self.clippingNode.insertSubnode(audioRecordingCancelIndicator, at: 0)
             }
             
-            let isLocked = mediaRecordingState?.isLocked ?? (interfaceState.recordedMediaPreview != nil)
+            let isLocked = mediaRecordingState?.isLocked ?? (interfaceState.interfaceState.mediaDraftState != nil)
             var hideInfo = false
             
             if let mediaRecordingState = mediaRecordingState {
@@ -2332,6 +2356,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), isMediaInputExpanded: isMediaInputExpanded, transition: transition, interfaceState: presentationInterfaceState)
         }
         
+        let slowModeButtonFrame = CGRect(origin: CGPoint(x: hideOffset.x + width - rightInset - 5.0 - slowModeButtonSize.width + composeButtonsOffset, y: hideOffset.y + panelHeight - minimalHeight + 6.0), size: slowModeButtonSize)
+        transition.updateFrame(node: self.slowModeButton, frame: slowModeButtonFrame)
+        
         if let _ = interfaceState.inputTextPanelState.mediaRecordingState {
             let text: String = interfaceState.strings.VoiceOver_MessageContextSend
             let mediaRecordingAccessibilityArea: AccessibilityAreaNode
@@ -2463,7 +2490,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             self.slowmodePlaceholderNode?.isHidden = true
         }
         
-        var nextButtonTopRight = CGPoint(x: hideOffset.x + width - rightInset - textFieldInsets.right - accessoryButtonInset, y: hideOffset.y + panelHeight - textFieldInsets.bottom - minimalInputHeight)
+        var nextButtonTopRight = CGPoint(x: hideOffset.x + width - rightInset - textFieldInsets.right - accessoryButtonInset - rightSlowModeInset, y: hideOffset.y + panelHeight - textFieldInsets.bottom - minimalInputHeight)
         for (item, button) in self.accessoryItemButtons.reversed() {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
             button.updateLayout(item: item, size: buttonSize)
@@ -2734,6 +2761,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         
         return panelHeight
+    }
+    
+    @objc private func slowModeButtonPressed() {
+        self.interfaceInteraction?.openBoostToUnrestrict()
     }
     
     @objc private func viewOncePressed() {
@@ -3239,7 +3270,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 composeButtonsOffset = 44.0
             }
             
-            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - self.leftMenuInset, maxHeight: maxHeight, metrics: metrics)
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - self.leftMenuInset - self.rightSlowModeInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             var textFieldMinHeight: CGFloat = 33.0
             if let presentationInterfaceState = self.presentationInterfaceState {
@@ -3544,7 +3575,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             }
         }
         
-        self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: animated)
+        let _ = hideMicButton
+//        self.updateActionButtons(hasText: inputHasText, hideMicButton: hideMicButton, animated: animated)
         self.updateTextHeight(animated: animated)
     }
     
@@ -3605,7 +3637,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             
             if (hasText || self.keepSendButtonEnabled && !mediaInputIsActive) {
                 hideMicButton = true
-                if self.actionButtons.sendContainerNode.alpha.isZero {
+                
+                if self.actionButtons.sendContainerNode.alpha.isZero && self.rightSlowModeInset.isZero {
                     self.actionButtons.sendContainerNode.alpha = 1.0
                     self.actionButtons.sendButtonRadialStatusNode?.alpha = 1.0
                     self.actionButtons.updateAccessibility()
@@ -3618,6 +3651,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         } else {
                             self.actionButtons.sendContainerNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
                             self.actionButtons.sendButtonRadialStatusNode?.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
+                        }
+                    }
+                }
+                if self.slowModeButton.alpha.isZero && self.rightSlowModeInset > 0.0 {
+                    self.slowModeButton.alpha = 1.0
+                    if animated {
+                        self.slowModeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        if animateWithBounce {
+                            self.slowModeButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                        } else {
+                            self.slowModeButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
                         }
                     }
                 }
@@ -3635,6 +3679,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                             }
                         })
                         self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
+                }
+                if !self.slowModeButton.alpha.isZero {
+                    self.slowModeButton.alpha = 0.0
+                    if animated {
+                        self.slowModeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                     }
                 }
             }
@@ -3694,7 +3744,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     
     private func updateTextHeight(animated: Bool) {
         if let (width, leftInset, rightInset, _, additionalSideInsets, maxHeight, metrics, _, _) = self.validLayout {
-            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right - self.leftMenuInset, maxHeight: maxHeight, metrics: metrics)
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right - self.leftMenuInset - self.rightSlowModeInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {
                 self.updateHeight(animated)
@@ -4618,5 +4668,99 @@ private final class MenuIconNode: ManagedAnimationNode {
                         break
             }
         }
+    }
+}
+
+private func generateClearImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 17.0, height: 17.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        context.setBlendMode(.copy)
+        context.setStrokeColor(UIColor.clear.cgColor)
+        context.setLineCap(.round)
+        context.setLineWidth(1.66)
+        context.move(to: CGPoint(x: 6.0, y: 6.0))
+        context.addLine(to: CGPoint(x: 11.0, y: 11.0))
+        context.strokePath()
+        context.move(to: CGPoint(x: size.width - 6.0, y: 6.0))
+        context.addLine(to: CGPoint(x: size.width - 11.0, y: 11.0))
+        context.strokePath()
+    })
+}
+
+
+private final class BoostSlowModeButton: HighlightTrackingButtonNode {
+    let backgroundNode: ASImageNode
+    let textNode: ImmediateAnimatedCountLabelNode
+    let iconNode: ASImageNode
+    
+    private var updateTimer: SwiftSignalKit.Timer?
+    
+    var requestUpdate: () -> Void = {}
+    
+    override init(pointerStyle: PointerStyle? = nil) {
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.clipsToBounds = true
+        self.backgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 2.0), scale: 1.0, colors: [UIColor(rgb: 0x9076ff), UIColor(rgb: 0xbc6de8)], locations: [0.0, 1.0], direction: .horizontal)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = generateClearImage(color: .white)
+        
+        self.textNode = ImmediateAnimatedCountLabelNode()
+        self.textNode.isUserInteractionEnabled = false
+        
+        super.init(pointerStyle: pointerStyle)
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.iconNode)
+        self.addSubnode(self.textNode)
+    }
+        
+    func update(size: CGSize, interfaceState: ChatPresentationInterfaceState) -> CGSize {
+        var text = ""
+        if let slowmodeState = interfaceState.slowmodeState, case let .timestamp(validUntilTimestamp) = slowmodeState.variant {
+            let timestamp = CGFloat(Date().timeIntervalSince1970)
+            let relativeTimestamp = CGFloat(validUntilTimestamp) - timestamp
+            text = stringForDuration(Int32(relativeTimestamp))
+            
+            self.updateTimer?.invalidate()
+            self.updateTimer = SwiftSignalKit.Timer(timeout: 1.0 / 60.0, repeat: false, completion: { [weak self] in
+                self?.requestUpdate()
+            }, queue: .mainQueue())
+            self.updateTimer?.start()
+        } else {
+            self.updateTimer?.invalidate()
+            self.updateTimer = nil
+        }
+        
+        let font = Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers])
+        let textColor = UIColor.white
+        
+        var segments: [AnimatedCountLabelNode.Segment] = []
+        var textCount = 0
+        
+        for char in text {
+            if let intValue = Int(String(char)) {
+                segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: textColor)))
+            } else {
+                segments.append(.text(textCount, NSAttributedString(string: String(char), font: font, textColor: textColor)))
+                textCount += 1
+            }
+        }
+        self.textNode.segments = segments
+        
+        let textSize = self.textNode.updateLayout(size: CGSize(width: 200.0, height: 100.0), animated: true)
+        let totalSize = CGSize(width: textSize.width > 0.0 ? textSize.width + 38.0 : 33.0, height: 33.0)
+        
+        self.backgroundNode.frame = CGRect(origin: .zero, size: totalSize)
+        self.backgroundNode.cornerRadius = totalSize.height / 2.0
+        self.textNode.frame = CGRect(origin: CGPoint(x: 9.0, y: floorToScreenPixels((totalSize.height - textSize.height) / 2.0)), size: textSize)
+        if let icon = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: totalSize.width - icon.size.width - 7.0, y: floorToScreenPixels((totalSize.height - icon.size.height) / 2.0)), size: icon.size)
+        }
+        return totalSize
     }
 }

@@ -13,6 +13,10 @@ public extension TelegramEngine {
         public func deleteContactPeerInteractively(peerId: PeerId) -> Signal<Never, NoError> {
             return _internal_deleteContactPeerInteractively(account: self.account, peerId: peerId)
         }
+        
+        public func deleteContacts(peerIds: [PeerId]) -> Signal<Never, NoError> {
+            return _internal_deleteContacts(account: self.account, peerIds: peerIds)
+        }
 
         public func deleteAllContacts() -> Signal<Never, NoError> {
             return _internal_deleteAllContacts(account: self.account)

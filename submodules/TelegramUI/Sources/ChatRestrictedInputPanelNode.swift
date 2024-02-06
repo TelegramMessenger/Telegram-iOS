@@ -11,6 +11,7 @@ import TelegramPresentationData
 import ChatInputPanelNode
 
 final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
+    private let buttonNode: HighlightTrackingButtonNode
     private let textNode: ImmediateTextNode
     private var iconView: UIImageView?
     
@@ -21,9 +22,34 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         self.textNode.maximumNumberOfLines = 2
         self.textNode.textAlignment = .center
         
+        self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.isUserInteractionEnabled = false
+        
         super.init()
         
         self.addSubnode(self.textNode)
+        self.addSubnode(self.buttonNode)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            if let self {
+                if highlighted {
+                    self.iconView?.layer.removeAnimation(forKey: "opacity")
+                    self.iconView?.alpha = 0.4
+                    self.textNode.layer.removeAnimation(forKey: "opacity")
+                    self.textNode.alpha = 0.4
+                } else {
+                    self.iconView?.alpha = 1.0
+                    self.iconView?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    self.textNode.alpha = 1.0
+                    self.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func buttonPressed() {
+        self.interfaceInteraction?.openBoostToUnrestrict()
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
@@ -45,6 +71,8 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         }
         
         var iconImage: UIImage?
+        var iconSpacing: CGFloat = 4.0
+        var isUserInteractionEnabled = false
         
         if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == self.context?.account.peerId {
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelStatusAuthorHidden, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
@@ -63,17 +91,25 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             } else if personal {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             } else {
-                self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_DefaultRestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+                if "".isEmpty {
+                    //TODO:localize
+                    iconSpacing = 0.0
+                    iconImage = PresentationResourcesChat.chatPanelBoostIcon(interfaceState.theme)
+                    self.textNode.attributedText = NSAttributedString(string: "Boost this group to send messages", font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+                    isUserInteractionEnabled = true
+                } else {
+                    self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_DefaultRestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+                }
             }
         }
+        self.buttonNode.isUserInteractionEnabled = isUserInteractionEnabled
         
         let panelHeight = defaultHeight(metrics: metrics)
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 8.0 * 2.0, height: panelHeight))
         
-        let textFrame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - textSize.width) / 2.0), y: floor((panelHeight - textSize.height) / 2.0)), size: textSize)
-        self.textNode.frame = textFrame
+        var originX: CGFloat = leftInset + floor((width - leftInset - rightInset - textSize.width) / 2.0)
         
-        if let iconImage = iconImage {
+        if let iconImage {
             let iconView: UIImageView
             if let current = self.iconView {
                 iconView = current
@@ -83,11 +119,20 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
                 self.view.addSubview(iconView)
             }
             iconView.image = iconImage
-            iconView.frame = CGRect(origin: CGPoint(x: textFrame.minX - 4.0 - iconImage.size.width, y: textFrame.minY + UIScreenPixel + floorToScreenPixels((textFrame.height - iconImage.size.height) / 2.0)), size: iconImage.size)
+            
+            let totalWidth = textSize.width + iconImage.size.width + iconSpacing
+            iconView.frame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - totalWidth) / 2.0), y: floor((panelHeight - textSize.height) / 2.0) + UIScreenPixel + floorToScreenPixels((textSize.height - iconImage.size.height) / 2.0)), size: iconImage.size)
+            
+            originX += iconImage.size.width + iconSpacing
         } else if let iconView = self.iconView {
             self.iconView = nil
             iconView.removeFromSuperview()
         }
+        
+        let textFrame = CGRect(origin: CGPoint(x: originX, y: floor((panelHeight - textSize.height) / 2.0)), size: textSize)
+        self.textNode.frame = textFrame
+        
+        self.buttonNode.frame = textFrame.insetBy(dx: -8.0, dy: -12.0)
         
         return panelHeight
     }

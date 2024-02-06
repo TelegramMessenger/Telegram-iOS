@@ -124,6 +124,7 @@ public enum PresentationResourceKey: Int32 {
     case chatTitleLockIcon
     case chatTitleMuteIcon
     case chatPanelLockIcon
+    case chatPanelBoostIcon
     
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage

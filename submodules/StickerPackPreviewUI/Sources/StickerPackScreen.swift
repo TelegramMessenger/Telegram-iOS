@@ -741,7 +741,11 @@ private final class StickerPackContainer: ASDisplayNode {
         if let currentContents = self.currentContents?.first {
             let buttonColor: UIColor
             var buttonFont: UIFont = Font.semibold(17.0)
-            switch currentContents {
+            
+            if let controller = self.controller, let _ = controller.mainActionTitle {
+                buttonColor = self.presentationData.theme.list.itemCheckColors.foregroundColor
+            } else {
+                switch currentContents {
                 case .fetching:
                     buttonColor = .clear
                 case .none:
@@ -751,7 +755,9 @@ private final class StickerPackContainer: ASDisplayNode {
                     if installed {
                         buttonFont = Font.regular(17.0)
                     }
+                }
             }
+    
             self.buttonNode.setTitle(self.buttonNode.attributedTitle(for: .normal)?.string ?? "", with: buttonFont, with: buttonColor, for: .normal)
         }
                 
@@ -1134,33 +1140,43 @@ private final class StickerPackContainer: ASDisplayNode {
                     }
                 }
                 
-                if installed {
-                    let text: String
-                    if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                        text = self.presentationData.strings.StickerPack_RemoveStickerCount(Int32(entries.count))
-                    } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                        text = self.presentationData.strings.StickerPack_RemoveEmojiCount(Int32(items.count))
-                    } else {
-                        text = self.presentationData.strings.StickerPack_RemoveMaskCount(Int32(entries.count))
-                    }
-                    self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
-                    self.buttonNode.setBackgroundImage(nil, for: [])
-                } else {
-                    let text: String
-                    if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
-                        text = self.presentationData.strings.StickerPack_AddStickerCount(Int32(entries.count))
-                    } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
-                        text = self.presentationData.strings.StickerPack_AddEmojiCount(Int32(items.count))
-                    } else {
-                        text = self.presentationData.strings.StickerPack_AddMaskCount(Int32(entries.count))
-                    }
-                    self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
+                if let mainActionTitle = self.controller?.mainActionTitle {
+                    self.buttonNode.setTitle(mainActionTitle, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
                     let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
                         context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
                     })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
                     self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
+                } else {
+                    if installed {
+                        let text: String
+                        if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                            text = self.presentationData.strings.StickerPack_RemoveStickerCount(Int32(entries.count))
+                        } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                            text = self.presentationData.strings.StickerPack_RemoveEmojiCount(Int32(items.count))
+                        } else {
+                            text = self.presentationData.strings.StickerPack_RemoveMaskCount(Int32(entries.count))
+                        }
+                        self.buttonNode.setTitle(text, with: Font.regular(17.0), with: self.presentationData.theme.list.itemDestructiveColor, for: .normal)
+                        self.buttonNode.setBackgroundImage(nil, for: [])
+                    } else {
+                        let text: String
+                        if info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
+                            text = self.presentationData.strings.StickerPack_AddStickerCount(Int32(entries.count))
+                        } else if info.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                            text = self.presentationData.strings.StickerPack_AddEmojiCount(Int32(items.count))
+                        } else {
+                            text = self.presentationData.strings.StickerPack_AddMaskCount(Int32(entries.count))
+                        }
+                        self.buttonNode.setTitle(text, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemCheckColors.foregroundColor, for: .normal)
+                        let roundedAccentBackground = generateImage(CGSize(width: 22.0, height: 22.0), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.setFillColor(self.presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+                        })?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
+                        self.buttonNode.setBackgroundImage(roundedAccentBackground, for: [])
+                    }
                 }
             }
         }
@@ -1225,23 +1241,27 @@ private final class StickerPackContainer: ASDisplayNode {
         var buttonHeight: CGFloat = 50.0
         var actionAreaTopInset: CGFloat = 8.0
         var actionAreaBottomInset: CGFloat = 16.0
-        if !self.currentStickerPacks.isEmpty {
-            var installedCount = 0
-            for (_, _, isInstalled) in self.currentStickerPacks {
-                if isInstalled {
-                    installedCount += 1
+        if let _ = self.controller?.mainActionTitle {
+            
+        } else {
+            if !self.currentStickerPacks.isEmpty {
+                var installedCount = 0
+                for (_, _, isInstalled) in self.currentStickerPacks {
+                    if isInstalled {
+                        installedCount += 1
+                    }
+                }
+                if installedCount == self.currentStickerPacks.count {
+                    buttonHeight = 42.0
+                    actionAreaTopInset = 1.0
+                    actionAreaBottomInset = 2.0
                 }
             }
-            if installedCount == self.currentStickerPacks.count {
+            if let (_, _, isInstalled) = self.currentStickerPack, isInstalled {
                 buttonHeight = 42.0
                 actionAreaTopInset = 1.0
                 actionAreaBottomInset = 2.0
             }
-        }
-        if let (_, _, isInstalled) = self.currentStickerPack, isInstalled {
-            buttonHeight = 42.0
-            actionAreaTopInset = 1.0
-            actionAreaBottomInset = 2.0
         }
         
         let buttonSideInset: CGFloat = 16.0
@@ -1910,6 +1930,7 @@ public final class StickerPackScreenImpl: ViewController {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
+    let mainActionTitle: String?
     let actionTitle: String?
     
     public init(
@@ -1918,6 +1939,7 @@ public final class StickerPackScreenImpl: ViewController {
         stickerPacks: [StickerPackReference],
         loadedStickerPacks: [LoadedStickerPack],
         selectedStickerPackIndex: Int = 0,
+        mainActionTitle: String? = nil,
         actionTitle: String? = nil,
         parentNavigationController: NavigationController? = nil,
         sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
@@ -1930,6 +1952,7 @@ public final class StickerPackScreenImpl: ViewController {
         self.stickerPacks = stickerPacks
         self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
+        self.mainActionTitle = mainActionTitle
         self.actionTitle = actionTitle
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
@@ -2161,6 +2184,7 @@ public func StickerPackScreen(
     mainStickerPack: StickerPackReference,
     stickerPacks: [StickerPackReference],
     loadedStickerPacks: [LoadedStickerPack] = [],
+    mainActionTitle: String? = nil,
     actionTitle: String? = nil,
     parentNavigationController: NavigationController? = nil,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
@@ -2175,6 +2199,7 @@ public func StickerPackScreen(
         stickerPacks: stickerPacks,
         loadedStickerPacks: loadedStickerPacks,
         selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0,
+        mainActionTitle: mainActionTitle,
         actionTitle: actionTitle,
         parentNavigationController: parentNavigationController,
         sendSticker: sendSticker,

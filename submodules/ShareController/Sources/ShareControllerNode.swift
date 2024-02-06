@@ -1460,7 +1460,8 @@ private func threadList(accountPeerId: EnginePeer.Id, postbox: Postbox, peerId: 
                 autoremoveTimeout: nil,
                 storyStats: nil,
                 displayAsTopicList: false,
-                isPremiumRequiredToMessage: false
+                isPremiumRequiredToMessage: false,
+                mediaDraftContentType: nil
             ))
         }
         

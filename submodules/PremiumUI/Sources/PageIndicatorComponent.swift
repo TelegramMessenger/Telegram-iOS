@@ -55,10 +55,11 @@ public final class PageIndicatorComponent: Component {
         }
         
         public func update(component: PageIndicatorComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            let isFirstTime = self.component == nil
             self.component = component
             
             self.indicatorView.pageCount = component.pageCount
-            self.indicatorView.setProgress(progress: component.position)
+            self.indicatorView.setProgress(progress: component.position, animated: !isFirstTime)
             
             self.indicatorView.activeColor = component.activeColor
             self.indicatorView.inactiveColor = component.inactiveColor
@@ -155,9 +156,9 @@ private final class PageIndicatorView: UIView {
         return CGSize(width: self.itemSize * CGFloat(self.displayCount), height: self.itemSize)
     }
 
-    public func setProgress(progress: CGFloat) {
+    public func setProgress(progress: CGFloat, animated: Bool = true) {
         let currentPage = Int(round(progress * CGFloat(self.pageCount - 1)))
-        self.setCurrentPage(at: currentPage, animated: true)
+        self.setCurrentPage(at: currentPage, animated: animated)
     }
 
     public func updateViewSize() {
@@ -186,8 +187,7 @@ private final class PageIndicatorView: UIView {
         if currentPage < self.displayCount {
             self.items = (-2..<(self.displayCount + 2))
                 .map { ItemView(itemSize: self.itemSize, dotSize: self.dotSize, smallDotSizeRatio: self.smallDotSizeRatio, mediumDotSizeRatio: self.mediumDotSizeRatio, index: $0) }
-        }
-        else {
+        } else {
             guard let firstItem = self.items.first else { return }
             guard let lastItem = self.items.last else { return }
             self.items = (firstItem.index...lastItem.index)
@@ -231,21 +231,32 @@ private final class PageIndicatorView: UIView {
     private func updateDotPosition(currentPage: Int, animated: Bool) {
         let duration = animated ? self.animationDuration : 0
 
-        if currentPage == 0 {
-            let x = -self.scrollView.contentInset.left
-            self.moveScrollView(x: x, duration: duration)
+        let action: (Int, Double) -> Void = { currentPage, duration in
+            if currentPage == 0 {
+                let x = -self.scrollView.contentInset.left
+                self.moveScrollView(x: x, duration: duration)
+            } else if currentPage == self.pageCount - 1 {
+                let x = self.scrollView.contentSize.width - self.scrollView.bounds.width + self.scrollView.contentInset.right
+                self.moveScrollView(x: x, duration: duration)
+            } else if CGFloat(currentPage) * self.itemSize <= self.scrollView.contentOffset.x + self.itemSize {
+                let x = self.scrollView.contentOffset.x - self.itemSize
+                self.moveScrollView(x: x, duration: duration)
+            } else if CGFloat(currentPage) * self.itemSize + self.itemSize >= self.scrollView.contentOffset.x + self.scrollView.bounds.width - self.itemSize {
+                let x = self.scrollView.contentOffset.x + self.itemSize
+                self.moveScrollView(x: x, duration: duration)
+            }
         }
-        else if currentPage == self.pageCount - 1 {
-            let x = self.scrollView.contentSize.width - self.scrollView.bounds.width + self.scrollView.contentInset.right
-            self.moveScrollView(x: x, duration: duration)
-        }
-        else if CGFloat(currentPage) * self.itemSize <= self.scrollView.contentOffset.x + self.itemSize {
-            let x = self.scrollView.contentOffset.x - self.itemSize
-            self.moveScrollView(x: x, duration: duration)
-        }
-        else if CGFloat(currentPage) * self.itemSize + self.itemSize >= self.scrollView.contentOffset.x + self.scrollView.bounds.width - self.itemSize {
-            let x = self.scrollView.contentOffset.x + self.itemSize
-            self.moveScrollView(x: x, duration: duration)
+        
+        if !animated {
+            if currentPage == 0 {
+                action(currentPage, 0)
+            } else {
+                for i in 0 ..< currentPage {
+                    action(i, 0)
+                }
+            }
+        } else {
+            action(currentPage, duration)
         }
     }
 
@@ -274,12 +285,16 @@ private final class PageIndicatorView: UIView {
         }
     }
 
-    private func moveScrollView(x: CGFloat, duration: TimeInterval) {
+    private func moveScrollView(x: CGFloat, duration: TimeInterval = 0.0) {
         let direction = self.behaviorDirection(x: x)
         self.reusedView(direction: direction)
-        UIView.animate(withDuration: duration, animations: { [unowned self] in
+        if duration > 0.0 {
+            UIView.animate(withDuration: duration, animations: { [unowned self] in
+                self.scrollView.contentOffset.x = x
+            })
+        } else {
             self.scrollView.contentOffset.x = x
-        })
+        }
     }
 
     private enum Direction {

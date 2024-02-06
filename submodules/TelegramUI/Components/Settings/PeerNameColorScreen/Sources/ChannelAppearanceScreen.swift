@@ -34,6 +34,9 @@ import MediaPickerUI
 import WallpaperGalleryScreen
 import WallpaperGridScreen
 import BoostLevelIconComponent
+import BundleIconComponent
+import Markdown
+import GroupStickerPackSetupController
 
 private final class EmojiActionIconComponent: Component {
     let context: AccountContext
@@ -160,12 +163,14 @@ final class ChannelAppearanceScreenComponent: Component {
     private final class ContentsData {
         let peer: EnginePeer?
         let peerWallpaper: TelegramWallpaper?
+        let peerEmojiPack: StickerPackCollectionInfo?
         let subscriberCount: Int?
         let availableThemes: [TelegramTheme]
         
-        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
+        init(peer: EnginePeer?, peerWallpaper: TelegramWallpaper?, peerEmojiPack: StickerPackCollectionInfo?, subscriberCount: Int?, availableThemes: [TelegramTheme]) {
             self.peer = peer
             self.peerWallpaper = peerWallpaper
+            self.peerEmojiPack = peerEmojiPack
             self.subscriberCount = subscriberCount
             self.availableThemes = availableThemes
         }
@@ -175,15 +180,17 @@ final class ChannelAppearanceScreenComponent: Component {
                 context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.EmojiPack(id: peerId),
                     TelegramEngine.EngineData.Item.Peer.Wallpaper(id: peerId)
                 ),
                 telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
             )
             |> map { peerData, cloudThemes -> ContentsData in
-                let (peer, subscriberCount, wallpaper) = peerData
+                let (peer, subscriberCount, emojiPack, wallpaper) = peerData
                 return ContentsData(
                     peer: peer,
                     peerWallpaper: wallpaper,
+                    peerEmojiPack: emojiPack,
                     subscriberCount: subscriberCount,
                     availableThemes: cloudThemes
                 )
@@ -211,6 +218,7 @@ final class ChannelAppearanceScreenComponent: Component {
             static let backgroundFileId = Changes(rawValue: 1 << 3)
             static let emojiStatus = Changes(rawValue: 1 << 4)
             static let wallpaper = Changes(rawValue: 1 << 5)
+            static let emojiPack = Changes(rawValue: 1 << 6)
         }
         
         var nameColor: PeerNameColor
@@ -219,31 +227,49 @@ final class ChannelAppearanceScreenComponent: Component {
         var backgroundFileId: Int64?
         var emojiStatus: PeerEmojiStatus?
         var wallpaper: TelegramWallpaper?
+        var emojiPack: StickerPackCollectionInfo?
         
         var changes: Changes
         
-        init(nameColor: PeerNameColor, profileColor: PeerNameColor?, replyFileId: Int64?, backgroundFileId: Int64?, emojiStatus: PeerEmojiStatus?, wallpaper: TelegramWallpaper?, changes: Changes) {
+        init(
+            nameColor: PeerNameColor,
+            profileColor: PeerNameColor?,
+            replyFileId: Int64?,
+            backgroundFileId: Int64?,
+            emojiStatus: PeerEmojiStatus?,
+            wallpaper: TelegramWallpaper?,
+            emojiPack: StickerPackCollectionInfo?,
+            changes: Changes
+        ) {
             self.nameColor = nameColor
             self.profileColor = profileColor
             self.replyFileId = replyFileId
             self.backgroundFileId = backgroundFileId
             self.emojiStatus = emojiStatus
             self.wallpaper = wallpaper
+            self.emojiPack = emojiPack
             self.changes = changes
         }
     }
     
     final class View: UIView, UIScrollViewDelegate {
+        private let topOverscrollLayer = SimpleLayer()
         private let scrollView: ScrollView
         private let actionButton = ComponentView<Empty>()
         private let bottomPanelBackgroundView: BlurredBackgroundView
         private let bottomPanelSeparator: SimpleLayer
         
+        private let backButton = PeerInfoHeaderNavigationButton()
+        private let navigationTitle = ComponentView<Empty>()
+        
+        private let previewSection = ComponentView<Empty>()
+        private let boostSection = ComponentView<Empty>()
+        private let bannerSection = ComponentView<Empty>()
         private let replySection = ComponentView<Empty>()
         private let wallpaperSection = ComponentView<Empty>()
-        private let bannerSection = ComponentView<Empty>()
         private let resetColorSection = ComponentView<Empty>()
         private let emojiStatusSection = ComponentView<Empty>()
+        private let emojiPackSection = ComponentView<Empty>()
         
         private var chatPreviewItemNode: PeerNameColorChatPreviewItemNode?
         
@@ -265,6 +291,7 @@ final class ChannelAppearanceScreenComponent: Component {
         private var updatedPeerProfileEmoji: Int64??
         private var updatedPeerStatus: PeerEmojiStatus??
         private var updatedPeerWallpaper: WallpaperSelectionResult?
+        private var updatedPeerEmojiPack: StickerPackCollectionInfo??
         private var temporaryPeerWallpaper: TelegramWallpaper?
         
         private var requiredBoostSubject: BoostSubject?
@@ -305,8 +332,16 @@ final class ChannelAppearanceScreenComponent: Component {
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
             
+            self.scrollView.layer.addSublayer(self.topOverscrollLayer)
+            
             self.addSubview(self.bottomPanelBackgroundView)
             self.layer.addSublayer(self.bottomPanelSeparator)
+            
+            self.backButton.action = { [weak self] _, _ in
+                if let self, let controller = self.environment?.controller() {
+                    controller.navigationController?.popViewController(animated: true)
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -333,8 +368,8 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             if !resolvedState.changes.isEmpty {
-                if let premiumConfiguration = self.premiumConfiguration, let requiredBoostSubject = self.requiredBoostSubject{
-                    let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+                if let premiumConfiguration = self.premiumConfiguration, let requiredBoostSubject = self.requiredBoostSubject {
+                    let requiredLevel = requiredBoostSubject.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration)
                     if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                         return true
                     }
@@ -366,12 +401,31 @@ final class ChannelAppearanceScreenComponent: Component {
             self.updateScrolling(transition: .immediate)
         }
         
+        var scrolledUp = true
         private func updateScrolling(transition: Transition) {
             let navigationAlphaDistance: CGFloat = 16.0
             let navigationAlpha: CGFloat = max(0.0, min(1.0, self.scrollView.contentOffset.y / navigationAlphaDistance))
             if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
                 transition.setAlpha(layer: navigationBar.backgroundNode.layer, alpha: navigationAlpha)
                 transition.setAlpha(layer: navigationBar.stripeNode.layer, alpha: navigationAlpha)
+            }
+            
+            var scrolledUp = false
+            if navigationAlpha < 0.5 {
+                scrolledUp = true
+            } else if navigationAlpha > 0.5 {
+                scrolledUp = false
+            }
+            
+            if self.scrolledUp != scrolledUp {
+                self.scrolledUp = scrolledUp
+                if !self.isUpdating {
+                    self.state?.updated()
+                }
+            }
+            
+            if let navigationTitleView = self.navigationTitle.view {
+                transition.setAlpha(view: navigationTitleView, alpha: navigationAlpha)
             }
             
             let bottomNavigationAlphaDistance: CGFloat = 16.0
@@ -442,6 +496,16 @@ final class ChannelAppearanceScreenComponent: Component {
                 changes.insert(.emojiStatus)
             }
             
+            let emojiPack: StickerPackCollectionInfo?
+            if case let .some(value) = self.updatedPeerEmojiPack {
+                emojiPack = value
+            } else {
+                emojiPack = contentsData.peerEmojiPack
+            }
+            if emojiPack != contentsData.peerEmojiPack {
+                changes.insert(.emojiPack)
+            }
+            
             let wallpaper: TelegramWallpaper?
             if let updatedPeerWallpaper = self.updatedPeerWallpaper {
                 switch updatedPeerWallpaper {
@@ -464,6 +528,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 backgroundFileId: backgroundFileId,
                 emojiStatus: emojiStatus,
                 wallpaper: wallpaper,
+                emojiPack: emojiPack,
                 changes: changes
             )
         }
@@ -476,7 +541,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 self.displayBoostLevels(subject: requiredBoostSubject)
                 return
@@ -515,6 +580,13 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             if resolvedState.changes.contains(.emojiStatus) {
                 signals.append(component.context.engine.peers.updatePeerEmojiStatus(peerId: component.peerId, fileId: statusFileId, expirationDate: nil)
+                |> ignoreValues
+                |> mapError { _ -> ApplyError in
+                    return .generic
+                })
+            }
+            if resolvedState.changes.contains(.emojiPack) {
+                signals.append(component.context.engine.peers.updateGroupSpecificEmojiset(peerId: component.peerId, info: resolvedState.emojiPack)
                 |> ignoreValues
                 |> mapError { _ -> ApplyError in
                     return .generic
@@ -569,39 +641,33 @@ final class ChannelAppearanceScreenComponent: Component {
             })
         }
         
-        private func displayBoostLevels(subject: BoostSubject) {
-            guard let component = self.component else {
+        private func displayBoostLevels(subject: BoostSubject?) {
+            guard let component = self.component, let status = self.boostStatus else {
                 return
             }
             
-            let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId))
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                guard let self, let component = self.component, let peer, let status = self.boostStatus else {
-                    return
-                }
-                let controller = PremiumBoostLevelsScreen(
-                    context: component.context,
-                    peer: peer,
-                    subject: subject,
-                    status: status,
-                    openStats: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.openBoostStats()
-                    },
-                    openGift: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        let controller = createGiveawayController(context: component.context, peerId: component.peerId, subject: .generic)
-                        self.environment?.controller()?.push(controller)
+            let controller = PremiumBoostLevelsScreen(
+                context: component.context,
+                peerId: component.peerId,
+                mode: .owner(subject: subject),
+                status: status,
+                openStats: { [weak self] in
+                    guard let self else {
+                        return
                     }
-                )
-                self.environment?.controller()?.push(controller)
-                
-                HapticFeedback().impact(.light)
-            })
+                    self.openBoostStats()
+                },
+                openGift: { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    let controller = createGiveawayController(context: component.context, peerId: component.peerId, subject: .generic)
+                    self.environment?.controller()?.push(controller)
+                }
+            )
+            self.environment?.controller()?.push(controller)
+            
+            HapticFeedback().impact(.light)
         }
         
         private func openBoostStats() {
@@ -617,8 +683,8 @@ final class ChannelAppearanceScreenComponent: Component {
                 return
             }
             let level = boostStatus.level
-            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
+            let requiredWallpaperLevel = Int(BoostSubject.wallpaper.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration))
+            let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration))
             
             let selectedWallpaper = resolvedState.wallpaper
             
@@ -653,12 +719,25 @@ final class ChannelAppearanceScreenComponent: Component {
             self.environment?.controller()?.push(controller)
         }
         
+        private func openEmojiPackSetup() {
+            guard let component = self.component, let environment = self.environment, let resolvedState = self.resolveState() else {
+                return
+            }
+            let controller = groupStickerPackSetupController(context: component.context, peerId: component.peerId, emoji: true, currentPackInfo: resolvedState.emojiPack, completion: { [weak self] emojiPack in
+                if let self {
+                    self.updatedPeerEmojiPack = emojiPack
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                }
+            })
+            environment.controller()?.push(controller)
+        }
+        
         private enum EmojiSetupSubject {
             case reply
             case profile
             case status
         }
-        
+                
         private var previousEmojiSetupTimestamp: Double?
         private func openEmojiSetup(sourceView: UIView, currentFileId: Int64?, color: UIColor?, subject: EmojiSetupSubject) {
             guard let component = self.component, let environment = self.environment else {
@@ -755,6 +834,16 @@ final class ChannelAppearanceScreenComponent: Component {
             environment.controller()?.present(controller, in: .window(.root))
         }
         
+        private var isGroup: Bool {
+            guard let contentsData = self.contentsData, let peer = contentsData.peer else {
+                return false
+            }
+            if case let .channel(channel) = peer, case .group = channel.info {
+                return true
+            }
+            return false
+        }
+        
         func update(component: ChannelAppearanceScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -818,6 +907,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     }
                     self.boostLevel = boostStatus?.level
                     self.boostStatus = boostStatus
+                    
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
                     }
@@ -829,12 +919,7 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
-            
-            let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let profileIconLevel = Int(BoostSubject.profileIcon.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let emojiStatusLevel = Int(BoostSubject.emojiStatus.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            let themeLevel = Int(BoostSubject.wallpaper.requiredLevel(context: component.context, configuration: premiumConfiguration))
-            
+
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
                 requiredBoostSubjects.append(.nameIcon)
@@ -854,6 +939,12 @@ final class ChannelAppearanceScreenComponent: Component {
             if emojiStatus != nil {
                 requiredBoostSubjects.append(.emojiStatus)
             }
+            
+            let emojiPack = resolvedState.emojiPack
+            if emojiPack != nil {
+                requiredBoostSubjects.append(.emojiPack)
+            }
+            
             let statusFileId = emojiStatus?.fileId
             
             let cloudThemes: [PresentationThemeReference] = contentsData.availableThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? component.context.account.id : nil)) }
@@ -911,6 +1002,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
+            var isGroup = false
             if case let .user(user) = peer {
                 peer = .user(user
                     .withUpdatedNameColor(resolvedState.nameColor)
@@ -927,17 +1019,73 @@ final class ChannelAppearanceScreenComponent: Component {
                     .withUpdatedBackgroundEmojiId(replyFileId)
                     .withUpdatedProfileBackgroundEmojiId(backgroundFileId)
                 )
+                if case .group = channel.info {
+                    isGroup = true
+                }
             }
             
+            let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let profileIconLevel = Int(BoostSubject.profileIcon.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let emojiStatusLevel = Int(BoostSubject.emojiStatus.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let emojiPackLevel = Int(BoostSubject.emojiPack.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            let themeLevel = Int(BoostSubject.wallpaper.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
+            
             let requiredBoostSubject: BoostSubject
-            if let maxBoostSubject = requiredBoostSubjects.max(by: { $0.requiredLevel(context: component.context, configuration: premiumConfiguration) < $1.requiredLevel(context: component.context, configuration: premiumConfiguration) }) {
+            if let maxBoostSubject = requiredBoostSubjects.max(by: { $0.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration) < $1.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration) }) {
                 requiredBoostSubject = maxBoostSubject
             } else {
                 requiredBoostSubject = .nameColors(colors: resolvedState.nameColor)
             }
             self.requiredBoostSubject = requiredBoostSubject
             
-            let topInset: CGFloat = 24.0
+            
+            let headerColor: UIColor
+            if let profileColor {
+                let headerBackgroundColors = component.context.peerNameColors.getProfile(profileColor, dark: environment.theme.overallDarkAppearance, subject: .background)
+                headerColor = headerBackgroundColors.secondary ?? headerBackgroundColors.main
+            } else {
+                headerColor = .clear
+            }
+            self.topOverscrollLayer.backgroundColor = headerColor.cgColor
+            
+            let backSize = self.backButton.update(key: .back, presentationData: component.context.sharedContext.currentPresentationData.with { $0 }, height: 44.0)
+            var scrolledUp = self.scrolledUp
+            if profileColor == nil {
+                scrolledUp = false
+            }
+            
+            if let controller = self.environment?.controller() as? ChannelAppearanceScreen {
+                controller.statusBar.updateStatusBarStyle(scrolledUp ? .White : .Ignore, animated: true)
+            }
+
+            self.backButton.updateContentsColor(backgroundColor: scrolledUp ? UIColor(white: 0.0, alpha: 0.1) : .clear, contentsColor: scrolledUp ? .white : environment.theme.rootController.navigationBar.accentTextColor, canBeExpanded: !scrolledUp, transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.backButton.frame = CGRect(origin: CGPoint(x: 16.0, y: 54.0), size: backSize)
+            if self.backButton.view.superview == nil {
+                if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                    navigationBar.view.addSubview(self.backButton.view)
+                }
+            }
+            
+            //TODO:localize
+            let navigationTitleSize = self.navigationTitle.update(
+                transition: transition,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "Appearance", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    horizontalAlignment: .center
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            let navigationTitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - navigationTitleSize.width) / 2.0), y: environment.statusBarHeight + floor((environment.navigationHeight - environment.statusBarHeight - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
+            if let navigationTitleView = self.navigationTitle.view {
+                if navigationTitleView.superview == nil {
+                    if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
+                        navigationBar.view.addSubview(navigationTitleView)
+                    }
+                }
+                transition.setFrame(view: navigationTitleView, frame: navigationTitleFrame)
+            }
+            
             let bottomContentInset: CGFloat = 24.0
             let bottomInset: CGFloat = 8.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
@@ -946,115 +1094,83 @@ final class ChannelAppearanceScreenComponent: Component {
             let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             
             var contentHeight: CGFloat = 0.0
-            contentHeight += environment.navigationHeight
-            contentHeight += topInset
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            
-            let messageItem = PeerNameColorChatPreviewItem.MessageItem(
-                outgoing: false,
-                peerId: EnginePeer.Id(namespace: peer.id.namespace, id: PeerId.Id._internalFromInt64Value(0)),
-                author: peer.compactDisplayTitle,
-                photo: peer.profileImageRepresentations,
-                nameColor: resolvedState.nameColor,
-                backgroundEmojiId: replyFileId,
-                reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText),
-                linkPreview: (environment.strings.Channel_Appearance_ExampleLinkWebsite, environment.strings.Channel_Appearance_ExampleLinkTitle, environment.strings.Channel_Appearance_ExampleLinkText),
-                text: environment.strings.Channel_Appearance_ExampleText
-            )
-            
-            var replyLogoContents: [AnyComponentWithIdentity<Empty>] = []
-            replyLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(
-                    string: environment.strings.Channel_Appearance_NameIcon,
-                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                    textColor: environment.theme.list.itemPrimaryTextColor
-                )),
-                maximumNumberOfLines: 0
-            ))))
-            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelNameIconLevel {
-                replyLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
-                    strings: environment.strings,
-                    level: replyIconLevel
-                ))))
-            }
-            
-            var chatPreviewTheme: PresentationTheme = environment.theme
-            var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
-            if let updatedWallpaper = self.updatedPeerWallpaper, case .remove = updatedWallpaper {  
-            } else if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
-                chatPreviewWallpaper = temporaryPeerWallpaper
-            } else if let resolvedCurrentTheme = self.resolvedCurrentTheme {
-                chatPreviewTheme = resolvedCurrentTheme.theme
-                if let wallpaper = resolvedCurrentTheme.wallpaper {
-                    chatPreviewWallpaper = wallpaper
-                }
-            } else if let initialWallpaper = contentsData.peerWallpaper, !initialWallpaper.isEmoticon {
-                chatPreviewWallpaper = initialWallpaper
-            }
-            
-            let replySectionSize = self.replySection.update(
+                        
+            let previewSectionSize = self.previewSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
+                    background: .none(clipped: false),
                     header: nil,
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_Appearance_NameColorFooter,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
+                    footer: nil,
                     items: [
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                            itemGenerator: PeerNameColorChatPreviewItem(
+                            itemGenerator: PeerNameColorProfilePreviewItem(
                                 context: component.context,
-                                theme: chatPreviewTheme,
-                                componentTheme: chatPreviewTheme,
-                                strings: environment.strings,
-                                sectionId: 0,
-                                fontSize: presentationData.chatFontSize,
-                                chatBubbleCorners: presentationData.chatBubbleCorners,
-                                wallpaper: chatPreviewWallpaper,
-                                dateTimeFormat: environment.dateTimeFormat,
-                                nameDisplayOrder: presentationData.nameDisplayOrder,
-                                messageItems: [messageItem]
-                            ),
-                            params: listItemParams
-                        ))),
-                        AnyComponentWithIdentity(id: 1, component: AnyComponent(ListItemComponentAdaptor(
-                            itemGenerator: PeerNameColorItem(
                                 theme: environment.theme,
-                                colors: component.context.peerNameColors,
-                                isProfile: false,
-                                currentColor: resolvedState.nameColor,
-                                updated: { [weak self] value in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.updatedPeerNameColor = value
-                                    self.state?.updated(transition: .spring(duration: 0.4))
+                                componentTheme: environment.theme,
+                                strings: environment.strings,
+                                topInset: environment.statusBarHeight,
+                                sectionId: 0,
+                                peer: peer,
+                                subtitleString: contentsData.subscriberCount.flatMap {
+                                    isGroup ? environment.strings.Conversation_StatusMembers(Int32($0)) : environment.strings.Conversation_StatusSubscribers(Int32($0))
                                 },
-                                sectionId: 0
+                                files: self.cachedIconFiles,
+                                nameDisplayOrder: presentationData.nameDisplayOrder
                             ),
-                            params: listItemParams
+                            params: ListViewItemLayoutParams(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                         ))),
-                        AnyComponentWithIdentity(id: 2, component: AnyComponent(ListActionItemComponent(
+                    ]
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 1000.0)
+            )
+            let previewSectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: previewSectionSize)
+            if let previewSectionView = self.previewSection.view {
+                if previewSectionView.superview == nil {
+                    self.scrollView.addSubview(previewSectionView)
+                }
+                transition.setFrame(view: previewSectionView, frame: previewSectionFrame)
+            }
+            contentHeight += previewSectionSize.height
+            contentHeight += sectionSpacing - 15.0
+            
+            //TODO:localize
+            var boostContents: [AnyComponentWithIdentity<Empty>] = []
+            boostContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
+                name: "Premium/Boost",
+                tintColor: environment.theme.list.itemAccentColor
+            ))))
+            boostContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                text: .markdown(
+                    text: isGroup ? "Members of your group can **boost** it so that it levels up and unlocks these features." : "Subscribers of your channel can **boost** it so that it levels up and unlocks these features.",
+                    attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize / 17.0 * 14.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                        bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize / 17.0 * 14.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                        link: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize / 17.0 * 14.0), textColor: environment.theme.list.itemAccentColor),
+                        linkAttribute: { _ in
+                            return nil
+                        }
+                    )
+                ),
+                maximumNumberOfLines: 0
+            ))))
+            let boostSectionSize = self.boostSection.update(
+                transition: transition,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    background: .all,
+                    header: nil,
+                    footer: nil,
+                    items: [
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                             theme: environment.theme,
-                            title: AnyComponent(HStack(replyLogoContents, spacing: 6.0)),
-                            icon: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
-                                context: component.context,
-                                color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main,
-                                fileId: replyFileId,
-                                file: replyFileId.flatMap { self.cachedIconFiles[$0] }
-                            ))),
-                            action: { [weak self] view in
-                                guard let self, let resolvedState = self.resolveState(), let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
-                                    return
-                                }
-                                
-                                self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.replyFileId, color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main, subject: .reply)
+                            title: AnyComponent(HStack(boostContents, spacing: 12.0)),
+                            icon: nil,
+                            action: { [weak self] _ in
+                                self?.displayBoostLevels(subject: nil)
                             }
                         )))
                     ]
@@ -1062,114 +1178,15 @@ final class ChannelAppearanceScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
             )
-            let replySectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: replySectionSize)
-            if let replySectionView = self.replySection.view {
-                if replySectionView.superview == nil {
-                    self.scrollView.addSubview(replySectionView)
+            let boostSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: boostSectionSize)
+            if let boostSectionView = self.boostSection.view {
+                if boostSectionView.superview == nil {
+                    self.scrollView.addSubview(boostSectionView)
                 }
-                transition.setFrame(view: replySectionView, frame: replySectionFrame)
+                transition.setFrame(view: boostSectionView, frame: boostSectionFrame)
             }
-            contentHeight += replySectionSize.height
-            
-            contentHeight += sectionSpacing
-            
-            if !chatThemes.isEmpty {
-                var wallpaperLogoContents: [AnyComponentWithIdentity<Empty>] = []
-                wallpaperLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: environment.strings.Channel_Appearance_Wallpaper,
-                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                        textColor: environment.theme.list.itemPrimaryTextColor
-                    )),
-                    maximumNumberOfLines: 0
-                ))))
-                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelCustomWallpaperLevel {
-                    wallpaperLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
-                        strings: environment.strings,
-                        level: themeLevel
-                    ))))
-                }
-                
-                var currentTheme = self.currentTheme
-                var selectedWallpaper: TelegramWallpaper?
-                if currentTheme == nil, let wallpaper = resolvedState.wallpaper, !wallpaper.isEmoticon {
-                    let theme: PresentationThemeReference = .builtin(.day)
-                    currentTheme = theme
-                    selectedWallpaper = wallpaper
-                }
-                
-                let wallpaperSectionSize = self.wallpaperSection.update(
-                    transition: transition,
-                    component: AnyComponent(ListSectionComponent(
-                        theme: environment.theme,
-                        header: nil,
-                        footer: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: environment.strings.Channel_Appearance_WallpaperFooter,
-                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                                textColor: environment.theme.list.freeTextColor
-                            )),
-                            maximumNumberOfLines: 0
-                        )),
-                        items: [
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                                itemGenerator: ThemeCarouselThemeItem(
-                                    context: component.context,
-                                    theme: environment.theme,
-                                    strings: environment.strings,
-                                    sectionId: 0,
-                                    themes: chatThemes,
-                                    hasNoTheme: true,
-                                    animatedEmojiStickers: component.context.animatedEmojiStickers,
-                                    themeSpecificAccentColors: [:],
-                                    themeSpecificChatWallpapers: [:],
-                                    nightMode: environment.theme.overallDarkAppearance,
-                                    channelMode: true,
-                                    selectedWallpaper: selectedWallpaper,
-                                    currentTheme: currentTheme,
-                                    updatedTheme: { [weak self] value in
-                                        guard let self, value != .builtin(.day) else {
-                                            return
-                                        }
-                                        self.currentTheme = value
-                                        self.temporaryPeerWallpaper = nil
-                                        if let value {
-                                            self.updatedPeerWallpaper = .emoticon(value.emoticon ?? "")
-                                        } else {
-                                            self.updatedPeerWallpaper = .remove
-                                        }
-                                        self.state?.updated(transition: .spring(duration: 0.4))
-                                    },
-                                    contextAction: nil
-                                ),
-                                params: listItemParams
-                            ))),
-                            AnyComponentWithIdentity(id: 1, component: AnyComponent(ListActionItemComponent(
-                                theme: environment.theme,
-                                title: AnyComponent(HStack(wallpaperLogoContents, spacing: 6.0)),
-                                icon: nil,
-                                action: { [weak self] view in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.openCustomWallpaperSetup()
-                                }
-                            )))
-                        ]
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
-                )
-                let wallpaperSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: wallpaperSectionSize)
-                if let wallpaperSectionView = self.wallpaperSection.view {
-                    if wallpaperSectionView.superview == nil {
-                        self.scrollView.addSubview(wallpaperSectionView)
-                    }
-                    transition.setFrame(view: wallpaperSectionView, frame: wallpaperSectionFrame)
-                }
-                contentHeight += wallpaperSectionSize.height
-                contentHeight += sectionSpacing
-            }
+            contentHeight += boostSectionSize.height
+            contentHeight += sectionSpacing - 8.0
             
             var profileLogoContents: [AnyComponentWithIdentity<Empty>] = []
             profileLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
@@ -1180,55 +1197,27 @@ final class ChannelAppearanceScreenComponent: Component {
                 )),
                 maximumNumberOfLines: 0
             ))))
-            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelProfileIconLevel {
+            if let boostLevel = self.boostLevel, boostLevel < (isGroup ? premiumConfiguration.minGroupProfileIconLevel : premiumConfiguration.minChannelProfileIconLevel) {
                 profileLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
                     strings: environment.strings,
                     level: profileIconLevel
                 ))))
             }
-            
-            let bannerBackground: ListSectionComponent.Background
-            if profileColor != nil {
-                bannerBackground = .range(from: 1, corners: DynamicCornerRadiusView.Corners(minXMinY: 0.0, maxXMinY: 0.0, minXMaxY: 11.0, maxXMaxY: 11.0))
-            } else {
-                bannerBackground = .range(from: 1, corners: DynamicCornerRadiusView.Corners(minXMinY: 11.0, maxXMinY: 11.0, minXMaxY: 11.0, maxXMaxY: 11.0))
-            }
             let bannerSectionSize = self.bannerSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
-                    background: bannerBackground,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_Appearance_ProfileHeader,
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
+                    background: .all,
+                    header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_Appearance_ProfileFooter,
+                            string: isGroup ? "Choose a color and a logo for the group's profile." : environment.strings.Channel_Appearance_ProfileFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
                         maximumNumberOfLines: 0
                     )),
                     items: [
-                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                            itemGenerator: PeerNameColorProfilePreviewItem(
-                                context: component.context,
-                                theme: environment.theme,
-                                componentTheme: environment.theme,
-                                strings: environment.strings,
-                                sectionId: 0,
-                                peer: peer,
-                                subtitleString: contentsData.subscriberCount.flatMap { environment.strings.Conversation_StatusSubscribers(Int32($0)) },
-                                files: self.cachedIconFiles,
-                                nameDisplayOrder: presentationData.nameDisplayOrder
-                            ),
-                            params: listItemParams
-                        ))),
                         AnyComponentWithIdentity(id: 1, component: AnyComponent(ListItemComponentAdaptor(
                             itemGenerator: PeerNameColorItem(
                                 theme: environment.theme,
@@ -1281,23 +1270,7 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             contentHeight += bannerSectionSize.height
             contentHeight += sectionSpacing
-            
-            var emojiStatusContents: [AnyComponentWithIdentity<Empty>] = []
-            emojiStatusContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(
-                    string: environment.strings.Channel_Appearance_Status,
-                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                    textColor: environment.theme.list.itemPrimaryTextColor
-                )),
-                maximumNumberOfLines: 0
-            ))))
-            if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelEmojiStatusLevel {
-                emojiStatusContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
-                    strings: environment.strings,
-                    level: emojiStatusLevel
-                ))))
-            }
-            
+                        
             let resetColorSectionSize = self.resetColorSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -1350,6 +1323,92 @@ final class ChannelAppearanceScreenComponent: Component {
                 contentHeight += sectionSpacing
             }
             
+            if isGroup {
+                //TODO:localize
+                var emojiPackContents: [AnyComponentWithIdentity<Empty>] = []
+                emojiPackContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: "Group Emoji Pack",
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemPrimaryTextColor
+                    )),
+                    maximumNumberOfLines: 0
+                ))))
+                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minGroupEmojiPackLevel {
+                    emojiPackContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
+                        strings: environment.strings,
+                        level: emojiPackLevel
+                    ))))
+                }
+                
+                
+                var emojiPackFile: TelegramMediaFile?
+                if let thumbnail = emojiPack?.thumbnail {
+                    emojiPackFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: thumbnail.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: thumbnail.immediateThumbnailData, mimeType: "", size: nil, attributes: [])
+                }
+                
+                let emojiPackSectionSize = self.emojiPackSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Choose an emoji pack that will be available to all members within the group.",
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(HStack(emojiPackContents, spacing: 6.0)),
+                                icon: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
+                                    context: component.context,
+                                    color: environment.theme.list.itemAccentColor,
+                                    fileId: emojiPack?.thumbnailFileId,
+                                    file: emojiPackFile
+                                ))),
+                                action: { [weak self] view in
+                                    guard let self, let resolvedState = self.resolveState() else {
+                                        return
+                                    }
+                                    let _ = resolvedState
+                                    self.openEmojiPackSetup()
+                                }
+                            )))
+                        ]
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                )
+                let emojiPackSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: emojiPackSectionSize)
+                if let emojiPackSectionView = self.emojiPackSection.view {
+                    if emojiPackSectionView.superview == nil {
+                        self.scrollView.addSubview(emojiPackSectionView)
+                    }
+                    transition.setFrame(view: emojiPackSectionView, frame: emojiPackSectionFrame)
+                }
+                contentHeight += emojiPackSectionSize.height
+                contentHeight += sectionSpacing
+            }
+            
+            var emojiStatusContents: [AnyComponentWithIdentity<Empty>] = []
+            emojiStatusContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                text: .plain(NSAttributedString(
+                    string: isGroup ? "Group Emoji Status" : environment.strings.Channel_Appearance_Status,
+                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                    textColor: environment.theme.list.itemPrimaryTextColor
+                )),
+                maximumNumberOfLines: 0
+            ))))
+            if let boostLevel = self.boostLevel, boostLevel < (isGroup ? premiumConfiguration.minGroupEmojiStatusLevel : premiumConfiguration.minChannelEmojiStatusLevel) {
+                emojiStatusContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
+                    strings: environment.strings,
+                    level: emojiStatusLevel
+                ))))
+            }
             let emojiStatusSectionSize = self.emojiStatusSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -1357,7 +1416,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Channel_Appearance_StatusFooter,
+                            string: isGroup ? "Choose a status that will be shown next to the group's name." : environment.strings.Channel_Appearance_StatusFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1394,7 +1453,279 @@ final class ChannelAppearanceScreenComponent: Component {
                 transition.setFrame(view: emojiStatusSectionView, frame: emojiStatusSectionFrame)
             }
             contentHeight += emojiStatusSectionSize.height
+            contentHeight += sectionSpacing
+    
+            var chatPreviewTheme: PresentationTheme = environment.theme
+            var chatPreviewWallpaper: TelegramWallpaper = presentationData.chatWallpaper
+            if let updatedWallpaper = self.updatedPeerWallpaper, case .remove = updatedWallpaper {
+            } else if let temporaryPeerWallpaper = self.temporaryPeerWallpaper {
+                chatPreviewWallpaper = temporaryPeerWallpaper
+            } else if let resolvedCurrentTheme = self.resolvedCurrentTheme {
+                chatPreviewTheme = resolvedCurrentTheme.theme
+                if let wallpaper = resolvedCurrentTheme.wallpaper {
+                    chatPreviewWallpaper = wallpaper
+                }
+            } else if let initialWallpaper = contentsData.peerWallpaper, !initialWallpaper.isEmoticon {
+                chatPreviewWallpaper = initialWallpaper
+            }
             
+            if !isGroup {
+                let messageItem = PeerNameColorChatPreviewItem.MessageItem(
+                    outgoing: false,
+                    peerId: EnginePeer.Id(namespace: peer.id.namespace, id: PeerId.Id._internalFromInt64Value(0)),
+                    author: peer.compactDisplayTitle,
+                    photo: peer.profileImageRepresentations,
+                    nameColor: resolvedState.nameColor,
+                    backgroundEmojiId: replyFileId,
+                    reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText),
+                    linkPreview: (environment.strings.Channel_Appearance_ExampleLinkWebsite, environment.strings.Channel_Appearance_ExampleLinkTitle, environment.strings.Channel_Appearance_ExampleLinkText),
+                    text: environment.strings.Channel_Appearance_ExampleText
+                )
+                
+                var replyLogoContents: [AnyComponentWithIdentity<Empty>] = []
+                replyLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: environment.strings.Channel_Appearance_NameIcon,
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemPrimaryTextColor
+                    )),
+                    maximumNumberOfLines: 0
+                ))))
+                if let boostLevel = self.boostLevel, boostLevel < premiumConfiguration.minChannelNameIconLevel {
+                    replyLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
+                        strings: environment.strings,
+                        level: replyIconLevel
+                    ))))
+                }
+                                
+                let replySectionSize = self.replySection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: environment.strings.Channel_Appearance_NameColorFooter,
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+                                itemGenerator: PeerNameColorChatPreviewItem(
+                                    context: component.context,
+                                    theme: chatPreviewTheme,
+                                    componentTheme: chatPreviewTheme,
+                                    strings: environment.strings,
+                                    sectionId: 0,
+                                    fontSize: presentationData.chatFontSize,
+                                    chatBubbleCorners: presentationData.chatBubbleCorners,
+                                    wallpaper: chatPreviewWallpaper,
+                                    dateTimeFormat: environment.dateTimeFormat,
+                                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                                    messageItems: [messageItem]
+                                ),
+                                params: listItemParams
+                            ))),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(ListItemComponentAdaptor(
+                                itemGenerator: PeerNameColorItem(
+                                    theme: environment.theme,
+                                    colors: component.context.peerNameColors,
+                                    isProfile: false,
+                                    currentColor: resolvedState.nameColor,
+                                    updated: { [weak self] value in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.updatedPeerNameColor = value
+                                        self.state?.updated(transition: .spring(duration: 0.4))
+                                    },
+                                    sectionId: 0
+                                ),
+                                params: listItemParams
+                            ))),
+                            AnyComponentWithIdentity(id: 2, component: AnyComponent(ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(HStack(replyLogoContents, spacing: 6.0)),
+                                icon: AnyComponentWithIdentity(id: 0, component: AnyComponent(EmojiActionIconComponent(
+                                    context: component.context,
+                                    color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main,
+                                    fileId: replyFileId,
+                                    file: replyFileId.flatMap { self.cachedIconFiles[$0] }
+                                ))),
+                                action: { [weak self] view in
+                                    guard let self, let resolvedState = self.resolveState(), let view = view as? ListActionItemComponent.View, let iconView = view.iconView else {
+                                        return
+                                    }
+                                    
+                                    self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.replyFileId, color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main, subject: .reply)
+                                }
+                            )))
+                        ]
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                )
+                let replySectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: replySectionSize)
+                if let replySectionView = self.replySection.view {
+                    if replySectionView.superview == nil {
+                        self.scrollView.addSubview(replySectionView)
+                    }
+                    transition.setFrame(view: replySectionView, frame: replySectionFrame)
+                }
+                contentHeight += replySectionSize.height
+                contentHeight += sectionSpacing
+            }
+            
+            if !chatThemes.isEmpty {
+                var wallpaperLogoContents: [AnyComponentWithIdentity<Empty>] = []
+                wallpaperLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: isGroup ? "Group Wallpaper" : environment.strings.Channel_Appearance_Wallpaper,
+                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                        textColor: environment.theme.list.itemPrimaryTextColor
+                    )),
+                    maximumNumberOfLines: 0
+                ))))
+                if let boostLevel = self.boostLevel, boostLevel < (isGroup ? premiumConfiguration.minGroupCustomWallpaperLevel : premiumConfiguration.minChannelCustomWallpaperLevel) {
+                    wallpaperLogoContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BoostLevelIconComponent(
+                        strings: environment.strings,
+                        level: themeLevel
+                    ))))
+                }
+                
+                var currentTheme = self.currentTheme
+                var selectedWallpaper: TelegramWallpaper?
+                if currentTheme == nil, let wallpaper = resolvedState.wallpaper, !wallpaper.isEmoticon {
+                    let theme: PresentationThemeReference = .builtin(.day)
+                    currentTheme = theme
+                    selectedWallpaper = wallpaper
+                }
+                
+                var wallpaperItems: [AnyComponentWithIdentity<Empty>] = []
+                if isGroup {
+                    let incomingMessageItem = PeerNameColorChatPreviewItem.MessageItem(
+                        outgoing: false,
+                        peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)),
+                        author: peer.compactDisplayTitle,
+                        photo: peer.profileImageRepresentations,
+                        nameColor: .blue,
+                        backgroundEmojiId: nil,
+                        reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText),
+                        linkPreview: nil,
+                        text: environment.strings.Appearance_PreviewIncomingText
+                    )
+                    
+                    let outgoingMessageItem = PeerNameColorChatPreviewItem.MessageItem(
+                        outgoing: true,
+                        peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)),
+                        author: peer.compactDisplayTitle,
+                        photo: peer.profileImageRepresentations,
+                        nameColor: .blue,
+                        backgroundEmojiId: nil,
+                        reply: nil,
+                        linkPreview: nil,
+                        text: environment.strings.Appearance_PreviewOutgoingText
+                    )
+                    
+                    wallpaperItems.append(
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+                            itemGenerator: PeerNameColorChatPreviewItem(
+                                context: component.context,
+                                theme: chatPreviewTheme,
+                                componentTheme: chatPreviewTheme,
+                                strings: environment.strings,
+                                sectionId: 0,
+                                fontSize: presentationData.chatFontSize,
+                                chatBubbleCorners: presentationData.chatBubbleCorners,
+                                wallpaper: chatPreviewWallpaper,
+                                dateTimeFormat: environment.dateTimeFormat,
+                                nameDisplayOrder: presentationData.nameDisplayOrder,
+                                messageItems: [incomingMessageItem, outgoingMessageItem]
+                            ),
+                            params: listItemParams
+                        )))
+                    )
+                }
+                wallpaperItems.append(
+                    AnyComponentWithIdentity(id: 1, component: AnyComponent(ListItemComponentAdaptor(
+                        itemGenerator: ThemeCarouselThemeItem(
+                            context: component.context,
+                            theme: environment.theme,
+                            strings: environment.strings,
+                            sectionId: 0,
+                            themes: chatThemes,
+                            hasNoTheme: true,
+                            animatedEmojiStickers: component.context.animatedEmojiStickers,
+                            themeSpecificAccentColors: [:],
+                            themeSpecificChatWallpapers: [:],
+                            nightMode: environment.theme.overallDarkAppearance,
+                            channelMode: true,
+                            selectedWallpaper: selectedWallpaper,
+                            currentTheme: currentTheme,
+                            updatedTheme: { [weak self] value in
+                                guard let self, value != .builtin(.day) else {
+                                    return
+                                }
+                                self.currentTheme = value
+                                self.temporaryPeerWallpaper = nil
+                                if let value {
+                                    self.updatedPeerWallpaper = .emoticon(value.emoticon ?? "")
+                                } else {
+                                    self.updatedPeerWallpaper = .remove
+                                }
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            },
+                            contextAction: nil
+                        ),
+                        params: listItemParams
+                    )))
+                )
+                
+                wallpaperItems.append(
+                    AnyComponentWithIdentity(id: 2, component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        title: AnyComponent(HStack(wallpaperLogoContents, spacing: 6.0)),
+                        icon: nil,
+                        action: { [weak self] view in
+                            guard let self else {
+                                return
+                            }
+                            self.openCustomWallpaperSetup()
+                        }
+                    )))
+                )
+                
+                let wallpaperSectionSize = self.wallpaperSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: isGroup ? "Set a wallpaper that will be visible for everyone in your group." : environment.strings.Channel_Appearance_WallpaperFooter,
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: wallpaperItems
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                )
+                let wallpaperSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: wallpaperSectionSize)
+                if let wallpaperSectionView = self.wallpaperSection.view {
+                    if wallpaperSectionView.superview == nil {
+                        self.scrollView.addSubview(wallpaperSectionView)
+                    }
+                    transition.setFrame(view: wallpaperSectionView, frame: wallpaperSectionFrame)
+                }
+                contentHeight += wallpaperSectionSize.height
+                contentHeight += sectionSpacing
+            }
+                        
             contentHeight += bottomContentInset
             
             var buttonContents: [AnyComponentWithIdentity<Empty>] = []
@@ -1402,7 +1733,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 Text(text: environment.strings.Channel_Appearance_ApplyButton, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             
-            let requiredLevel = requiredBoostSubject.requiredLevel(context: component.context, configuration: premiumConfiguration)
+            let requiredLevel = requiredBoostSubject.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: Int(requiredLevel),
@@ -1472,7 +1803,7 @@ final class ChannelAppearanceScreenComponent: Component {
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
             }
-            
+                        
             if !previousBounds.isEmpty, !transition.animation.isImmediate {
                 let bounds = self.scrollView.bounds
                 if bounds.maxY != previousBounds.maxY {
@@ -1480,6 +1811,8 @@ final class ChannelAppearanceScreenComponent: Component {
                     transition.animateBoundsOrigin(view: self.scrollView, from: CGPoint(x: 0.0, y: offsetY), to: CGPoint(), additive: true)
                 }
             }
+            
+            self.topOverscrollLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: -3000.0), size: CGSize(width: availableSize.width, height: 3000.0))
             
             self.updateScrolling(transition: transition)
             
@@ -1516,8 +1849,9 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.title = presentationData.strings.Channel_Appearance_Title
+        self.title = "" //presentationData.strings.Channel_Appearance_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         
         self.ready.set(.never())
         

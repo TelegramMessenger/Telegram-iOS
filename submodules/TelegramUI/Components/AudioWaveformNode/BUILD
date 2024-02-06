@@ -12,7 +12,7 @@ swift_library(
     deps = [
         "//submodules/AsyncDisplayKit",
         "//submodules/Display",
-        "//submodules/ChatPresentationInterfaceState",
+        "//submodules/AudioWaveform",
     ],
     visibility = [
         "//visibility:public",

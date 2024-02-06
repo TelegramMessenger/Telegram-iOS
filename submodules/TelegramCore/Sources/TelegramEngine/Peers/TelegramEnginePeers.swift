@@ -14,15 +14,18 @@ public typealias EngineStringIndexTokenTransliteration = StringIndexTokenTransli
 public final class OpaqueChatInterfaceState {
     public let opaqueData: Data?
     public let historyScrollMessageIndex: MessageIndex?
+    public let mediaDraftState: MediaDraftState?
     public let synchronizeableInputState: SynchronizeableChatInputState?
 
     public init(
         opaqueData: Data?,
         historyScrollMessageIndex: MessageIndex?,
+        mediaDraftState: MediaDraftState?,
         synchronizeableInputState: SynchronizeableChatInputState?
     ) {
         self.opaqueData = opaqueData
         self.historyScrollMessageIndex = historyScrollMessageIndex
+        self.mediaDraftState = mediaDraftState
         self.synchronizeableInputState = synchronizeableInputState
     }
 }
@@ -349,6 +352,10 @@ public extension TelegramEngine {
         public func updateDefaultChannelMemberBannedRights(peerId: PeerId, rights: TelegramChatBannedRights) -> Signal<Never, NoError> {
             return _internal_updateDefaultChannelMemberBannedRights(account: self.account, peerId: peerId, rights: rights)
         }
+        
+        public func updateChannelBoostsToUnlockRestrictions(peerId: PeerId, boosts: Int32) -> Signal<Never, NoError> {
+            return _internal_updateChannelBoostsToUnlockRestrictions(account: self.account, peerId: peerId, boosts: boosts)
+        }
 
         public func createChannel(title: String, description: String?, username: String? = nil) -> Signal<PeerId, CreateChannelError> {
             return _internal_createChannel(account: self.account, title: title, description: description, username: username)
@@ -416,6 +423,10 @@ public extension TelegramEngine {
         public func updateGroupSpecificStickerset(peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificStickersetError> {
             return _internal_updateGroupSpecificStickerset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
         }
+        
+        public func updateGroupSpecificEmojiset(peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificEmojisetError> {
+            return _internal_updateGroupSpecificEmojiset(postbox: self.account.postbox, network: self.account.network, peerId: peerId, info: info)
+        }
 
         public func joinChannel(peerId: PeerId, hash: String?) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
             return _internal_joinChannel(account: self.account, peerId: peerId, hash: hash)
@@ -458,6 +469,10 @@ public extension TelegramEngine {
 
         public func peerSpecificStickerPack(peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
             return _internal_peerSpecificStickerPack(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+        
+        public func peerSpecificEmojiPack(peerId: PeerId) -> Signal<PeerSpecificStickerPackData, NoError> {
+            return _internal_peerSpecificEmojiPack(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
 
         public func addRecentlySearchedPeer(peerId: PeerId) -> Signal<Void, NoError> {
@@ -863,6 +878,7 @@ public extension TelegramEngine {
                 return OpaqueChatInterfaceState(
                     opaqueData: internalState.opaqueData,
                     historyScrollMessageIndex: internalState.historyScrollMessageIndex,
+                    mediaDraftState: internalState.mediaDraftState,
                     synchronizeableInputState: internalState.synchronizeableInputState
                 )
             }
@@ -873,6 +889,7 @@ public extension TelegramEngine {
                 guard let data = try? AdaptedPostboxEncoder().encode(InternalChatInterfaceState(
                     synchronizeableInputState: state.synchronizeableInputState,
                     historyScrollMessageIndex: state.historyScrollMessageIndex,
+                    mediaDraftState: state.mediaDraftState,
                     opaqueData: state.opaqueData
                 )) else {
                     return
@@ -881,9 +898,21 @@ public extension TelegramEngine {
                 #if DEBUG
                 let _ = try! AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data)
                 #endif
+                
+                var overrideChatTimestamp: Int32?
+                if let inputState = state.synchronizeableInputState {
+                    overrideChatTimestamp = inputState.timestamp
+                }
+                
+                if let mediaDraftState = state.mediaDraftState {
+                    if let current = overrideChatTimestamp, mediaDraftState.timestamp < current {
+                    } else {
+                        overrideChatTimestamp = mediaDraftState.timestamp
+                    }
+                }
 
                 let storedState = StoredPeerChatInterfaceState(
-                    overrideChatTimestamp: state.synchronizeableInputState?.timestamp,
+                    overrideChatTimestamp: overrideChatTimestamp,
                     historyScrollMessageIndex: state.historyScrollMessageIndex,
                     associatedMessageIds: (state.synchronizeableInputState?.replySubject?.messageId).flatMap({ [$0] }) ?? [],
                     data: data
@@ -1367,6 +1396,7 @@ public func _internal_decodeStoredChatInterfaceState(state: StoredPeerChatInterf
     return OpaqueChatInterfaceState(
         opaqueData: internalState.opaqueData,
         historyScrollMessageIndex: internalState.historyScrollMessageIndex,
+        mediaDraftState: internalState.mediaDraftState,
         synchronizeableInputState: internalState.synchronizeableInputState
     )
 }

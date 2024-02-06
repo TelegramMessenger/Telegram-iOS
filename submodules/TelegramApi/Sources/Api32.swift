@@ -2888,12 +2888,44 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
+                static func setBoostsToUnblockRestrictions(channel: Api.InputChannel, boosts: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1388733202)
+                    channel.serialize(buffer, true)
+                    serializeInt32(boosts, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "channels.setBoostsToUnblockRestrictions", parameters: [("channel", String(describing: channel)), ("boosts", String(describing: boosts))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
                 static func setDiscussionGroup(broadcast: Api.InputChannel, group: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1079520178)
                     broadcast.serialize(buffer, true)
                     group.serialize(buffer, true)
                     return (FunctionDescription(name: "channels.setDiscussionGroup", parameters: [("broadcast", String(describing: broadcast)), ("group", String(describing: group))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
+                static func setEmojiStickers(channel: Api.InputChannel, stickerset: Api.InputStickerSet) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1020866743)
+                    channel.serialize(buffer, true)
+                    stickerset.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.setEmojiStickers", parameters: [("channel", String(describing: channel)), ("stickerset", String(describing: stickerset))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

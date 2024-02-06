@@ -164,38 +164,38 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             self.backdropNode.update(rect: rect, within: containerSize)
         }
         
-        var isScheduledMessages = false
-        if case .scheduledMessages = interfaceState.subject {
-            isScheduledMessages = true
-        }
-        
-        if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages && interfaceState.editMessageState == nil {
-            let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
-            if let current = self.sendButtonRadialStatusNode {
-                sendButtonRadialStatusNode = current
-            } else {
-                sendButtonRadialStatusNode = ChatSendButtonRadialStatusNode(color: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
-                sendButtonRadialStatusNode.alpha = self.sendContainerNode.alpha
-                self.sendButtonRadialStatusNode = sendButtonRadialStatusNode
-                self.addSubnode(sendButtonRadialStatusNode)
-            }
-            
-            transition.updateSublayerTransformScale(layer: self.sendContainerNode.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
-            
-            let defaultSendButtonSize: CGFloat = 25.0
-            let defaultOriginX = floorToScreenPixels((self.sendButton.bounds.width - defaultSendButtonSize) / 2.0)
-            let defaultOriginY = floorToScreenPixels((self.sendButton.bounds.height - defaultSendButtonSize) / 2.0)
-            
-            let radialStatusFrame = CGRect(origin: CGPoint(x: defaultOriginX - 4.0, y: defaultOriginY - 4.0), size: CGSize(width: 33.0, height: 33.0))
-            sendButtonRadialStatusNode.frame = radialStatusFrame
-            sendButtonRadialStatusNode.slowmodeState = slowmodeState
-        } else {
-            if let sendButtonRadialStatusNode = self.sendButtonRadialStatusNode {
-                self.sendButtonRadialStatusNode = nil
-                sendButtonRadialStatusNode.removeFromSupernode()
-            }
-            transition.updateSublayerTransformScale(layer: self.sendContainerNode.layer, scale: CGPoint(x: 1.0, y: 1.0))
-        }
+//        var isScheduledMessages = false
+//        if case .scheduledMessages = interfaceState.subject {
+//            isScheduledMessages = true
+//        }
+//        
+//        if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages && interfaceState.editMessageState == nil {
+//            let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
+//            if let current = self.sendButtonRadialStatusNode {
+//                sendButtonRadialStatusNode = current
+//            } else {
+//                sendButtonRadialStatusNode = ChatSendButtonRadialStatusNode(color: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+//                sendButtonRadialStatusNode.alpha = self.sendContainerNode.alpha
+//                self.sendButtonRadialStatusNode = sendButtonRadialStatusNode
+//                self.addSubnode(sendButtonRadialStatusNode)
+//            }
+//            
+//            transition.updateSublayerTransformScale(layer: self.sendContainerNode.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
+//            
+//            let defaultSendButtonSize: CGFloat = 25.0
+//            let defaultOriginX = floorToScreenPixels((self.sendButton.bounds.width - defaultSendButtonSize) / 2.0)
+//            let defaultOriginY = floorToScreenPixels((self.sendButton.bounds.height - defaultSendButtonSize) / 2.0)
+//            
+//            let radialStatusFrame = CGRect(origin: CGPoint(x: defaultOriginX - 4.0, y: defaultOriginY - 4.0), size: CGSize(width: 33.0, height: 33.0))
+//            sendButtonRadialStatusNode.frame = radialStatusFrame
+//            sendButtonRadialStatusNode.slowmodeState = slowmodeState
+//        } else {
+//            if let sendButtonRadialStatusNode = self.sendButtonRadialStatusNode {
+//                self.sendButtonRadialStatusNode = nil
+//                sendButtonRadialStatusNode.removeFromSupernode()
+//            }
+//            transition.updateSublayerTransformScale(layer: self.sendContainerNode.layer, scale: CGPoint(x: 1.0, y: 1.0))
+//        }
         
         transition.updateFrame(node: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
         let expanded = isMediaInputExpanded

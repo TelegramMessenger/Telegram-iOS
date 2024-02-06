@@ -190,6 +190,12 @@ public final class DisposableSet : Disposable {
         pthread_mutex_unlock(&self.lock)
     }
     
+    public func removeLast() {
+        pthread_mutex_lock(&self.lock)
+        self.disposables.removeLast()
+        pthread_mutex_unlock(&self.lock)
+    }
+    
     public func dispose() {
         var disposables: [Disposable] = []
         pthread_mutex_lock(&self.lock)

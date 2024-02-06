@@ -1435,7 +1435,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     }
     
     func replace(item: ContextControllerActionsStackItem, animated: Bool?) {
-        if let item = item as? ContextControllerActionsListStackItem, let topContainer = self.itemContainers.last, let topItem = topContainer.item as? ContextControllerActionsListStackItem, let topId = topItem.id, let id = item.id, topId == id, item.items.count == topItem.items.count {
+        if let item = item as? ContextControllerActionsListStackItem, let topContainer = self.itemContainers.first, let topItem = topContainer.item as? ContextControllerActionsListStackItem, let topId = topItem.id, let id = item.id, topId == id, item.items.count == topItem.items.count {
             if let topNode = topContainer.node as? ContextControllerActionsListStackItem.Node {
                 var matches = true
                 for i in 0 ..< item.items.count {

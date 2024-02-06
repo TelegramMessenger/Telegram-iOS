@@ -48,6 +48,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let editing: ItemListStickerPackItemEditing
     let enabled: Bool
     let playAnimatedStickers: Bool
+    let style: ItemListStyle
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
@@ -55,7 +56,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let removePack: () -> Void
     let toggleSelected: () -> Void
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, style: ItemListStyle = .blocks, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
         self.presentationData = presentationData
         self.context = context
         self.packInfo = packInfo
@@ -66,6 +67,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
         self.editing = editing
         self.enabled = enabled
         self.playAnimatedStickers = playAnimatedStickers
+        self.style = style
         self.sectionId = sectionId
         self.action = action
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
@@ -410,8 +412,20 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let verticalInset: CGFloat = 11.0
             let titleSpacing: CGFloat = 2.0
             
-            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let separatorHeight = UIScreenPixel
+            let insets: UIEdgeInsets
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
+            switch item.style {
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                insets = itemListNeighborsPlainInsets(neighbors)
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
+            }
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -543,9 +557,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                        strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
                     

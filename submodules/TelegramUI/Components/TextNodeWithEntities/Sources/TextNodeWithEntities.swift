@@ -292,6 +292,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var displaySpoilers = false
     public var displaySpoilerEffect = true
     public var spoilerColor: UIColor = .black
+    public var balancedTextLayout: Bool = false
     
     private var enableLooping: Bool = true
     

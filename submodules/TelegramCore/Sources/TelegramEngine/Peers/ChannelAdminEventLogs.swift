@@ -91,6 +91,7 @@ public enum AdminLogEventAction {
     case changeProfileColor(prevColor: PeerNameColor?, prevIcon: Int64?, newColor: PeerNameColor?, newIcon: Int64?)
     case changeWallpaper(prev: TelegramWallpaper?, new: TelegramWallpaper?)
     case changeStatus(prev: PeerEmojiStatus?, new: PeerEmojiStatus?)
+    case changeEmojiPack(prev: StickerPackReference?, new: StickerPackReference?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -414,6 +415,8 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     action = .changeWallpaper(prev: prev, new: new)
                                 case let .channelAdminLogEventActionChangeEmojiStatus(prevValue, newValue):
                                     action = .changeStatus(prev: PeerEmojiStatus(apiStatus: prevValue), new: PeerEmojiStatus(apiStatus: newValue))
+                                case let .channelAdminLogEventActionChangeEmojiStickerSet(prevStickerset, newStickerset):
+                                    action = .changeEmojiPack(prev: StickerPackReference(apiInputSet: prevStickerset), new: StickerPackReference(apiInputSet: newStickerset))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

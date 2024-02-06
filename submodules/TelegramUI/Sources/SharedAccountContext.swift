@@ -1749,6 +1749,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
+        }, openGroupBoostInfo: { _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1999,6 +2000,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .wallpapers
         case .messageTags:
             mappedSubject = .messageTags
+        case .lastSeen:
+            mappedSubject = .lastSeen
+        case .messagePrivacy:
+            mappedSubject = .messagePrivacy
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }

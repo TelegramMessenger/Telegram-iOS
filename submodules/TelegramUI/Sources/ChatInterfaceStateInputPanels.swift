@@ -376,7 +376,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 return (panel, nil)
             }
         } else {
-            if let _ = chatPresentationInterfaceState.recordedMediaPreview {
+            if let _ = chatPresentationInterfaceState.interfaceState.mediaDraftState {
                 if let currentPanel = (currentPanel as? ChatRecordingPreviewInputPanelNode) ?? (currentSecondaryPanel as? ChatRecordingPreviewInputPanelNode) {
                     return (currentPanel, nil)
                 } else {

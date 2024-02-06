@@ -431,6 +431,8 @@ public enum PremiumPerk: CaseIterable {
     case colors
     case wallpapers
     case messageTags
+    case lastSeen
+    case messagePrivacy
     
     public static var allCases: [PremiumPerk] {
         return [
@@ -451,7 +453,9 @@ public enum PremiumPerk: CaseIterable {
             .stories,
             .colors,
             .wallpapers,
-            .messageTags
+            .messageTags,
+            .lastSeen,
+            .messagePrivacy
         ]
     }
     
@@ -503,6 +507,10 @@ public enum PremiumPerk: CaseIterable {
             return "wallpapers"
         case .messageTags:
             return "saved_tags"
+        case .lastSeen:
+            return "last_seen"
+        case .messagePrivacy:
+            return "message_privacy"
         }
     }
     
@@ -544,6 +552,10 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_Wallpapers
         case .messageTags:
             return strings.Premium_MessageTags
+        case .lastSeen:
+            return strings.Premium_LastSeen
+        case .messagePrivacy:
+            return strings.Premium_MessagePrivacy
         }
     }
     
@@ -585,6 +597,10 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_WallpapersInfo
         case .messageTags:
             return strings.Premium_MessageTagsInfo
+        case .lastSeen:
+            return strings.Premium_LastSeenInfo
+        case .messagePrivacy:
+            return strings.Premium_MessagePrivacyInfo
         }
     }
     
@@ -626,6 +642,10 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/Perk/Wallpapers"
         case .messageTags:
             return "Premium/Perk/MessageTags"
+        case .lastSeen:
+            return "Premium/Perk/LastSeen"
+        case .messagePrivacy:
+            return "Premium/Perk/MessagePrivacy"
         }
     }
 }
@@ -636,6 +656,7 @@ struct PremiumIntroConfiguration {
             .stories,
             .moreUpload,
             .doubleLimits,
+            .lastSeen,
             .voiceToText,
             .fasterDownload,
             .translation,
@@ -645,6 +666,7 @@ struct PremiumIntroConfiguration {
             .colors,
             .wallpapers,
             .profileBadge,
+            .messagePrivacy,
             .advancedChatManagement,
             .noAds,
             .appIcons,
@@ -680,11 +702,11 @@ struct PremiumIntroConfiguration {
                 perks = PremiumIntroConfiguration.defaultValue.perks
             }
             #if DEBUG
-            if !perks.contains(.wallpapers) {
-                perks.append(.wallpapers)
+            if !perks.contains(.lastSeen) {
+                perks.append(.lastSeen)
             }
-            if !perks.contains(.colors) {
-                perks.append(.colors)
+            if !perks.contains(.messagePrivacy) {
+                perks.append(.messagePrivacy)
             }
             if !perks.contains(.messageTags) {
                 perks.append(.messageTags)
@@ -845,7 +867,6 @@ final class PremiumOptionComponent: CombinedComponent {
                 transition: context.transition
             )
                      
-            var discountOffset: CGFloat = 0.0
             let discountSize: CGSize
             if !component.discount.isEmpty {
                 let discount = discount.update(
@@ -853,7 +874,7 @@ final class PremiumOptionComponent: CombinedComponent {
                         text: .plain(
                             NSAttributedString(
                                 string: component.discount,
-                                font: Font.with(size: component.multiple ? 13.0 : 14.0, design: .round, weight: .semibold, traits: []),
+                                font: Font.with(size: 14.0, design: .round, weight: .semibold, traits: []),
                                 textColor: .white
                             )
                         ),
@@ -874,13 +895,7 @@ final class PremiumOptionComponent: CombinedComponent {
                     transition: context.transition
                 )
                 
-                let discountPosition: CGPoint
-                if component.multiple {
-                    discountOffset = discountSize.width + 6.0
-                    discountPosition = CGPoint(x: insets.left + discountSize.width / 2.0, y: insets.top + title.size.height + discountSize.height / 2.0)
-                } else {
-                    discountPosition = CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0)
-                }
+                let discountPosition = CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0)
                 
                 context.add(discountBackground
                     .position(discountPosition)
@@ -919,7 +934,7 @@ final class PremiumOptionComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(subtitle
-                    .position(CGPoint(x: insets.left + subtitle.size.width / 2.0 + discountOffset, y: insets.top + title.size.height + spacing + subtitle.size.height / 2.0))
+                    .position(CGPoint(x: insets.left + subtitle.size.width / 2.0, y: insets.top + title.size.height + spacing + subtitle.size.height / 2.0))
                 )
                 subtitleSize = subtitle.size
                 
@@ -1650,8 +1665,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 ApplicationSpecificNotice.dismissedPremiumAppIconsBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedPremiumWallpapersBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedMessageTagsBadge(accountManager: context.sharedContext.accountManager)
-            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge in
+                ApplicationSpecificNotice.dismissedMessageTagsBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedLastSeenBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedMessagePrivacyBadge(accountManager: context.sharedContext.accountManager)
+            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge, dismissedLastSeenBadge, dismissedMessagePrivacyBadge in
                 guard let self else {
                     return
                 }
@@ -1664,6 +1681,12 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 }
                 if !dismissedMessageTagsBadge {
                     newPerks.append(PremiumPerk.messageTags.identifier)
+                }
+                if !dismissedLastSeenBadge {
+                    newPerks.append(PremiumPerk.lastSeen.identifier)
+                }
+                if !dismissedMessagePrivacyBadge {
+                    newPerks.append(PremiumPerk.messagePrivacy.identifier)
                 }
                 self.newPerks = newPerks
                 self.updated()
@@ -1839,6 +1862,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0xef6922),
                 UIColor(rgb: 0xe95a2c),
                 UIColor(rgb: 0xe74e33),
+                UIColor(rgb: 0xe54937),
                 UIColor(rgb: 0xe3433c),
                 UIColor(rgb: 0xdb374b),
                 UIColor(rgb: 0xcb3e6d),
@@ -1848,6 +1872,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x9b4fed),
                 UIColor(rgb: 0x8958ff),
                 UIColor(rgb: 0x676bff),
+                UIColor(rgb: 0x6172ff),
                 UIColor(rgb: 0x5b79ff),
                 UIColor(rgb: 0x4492ff),
                 UIColor(rgb: 0x429bd5),
@@ -1865,11 +1890,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let layoutOptions = {
                 if let products = state.products, products.count > 1, state.isPremium == false || (!context.component.justBought && state.canUpgrade) {
                     var optionsItems: [SectionGroupComponent.Item] = []
-                    let gradientColors: [UIColor] = [
-                        UIColor(rgb: 0x8e77ff),
-                        UIColor(rgb: 0x9a6fff),
-                        UIColor(rgb: 0xb36eee)
-                    ]
                     
                     let shortestOptionPrice: (Int64, NSDecimalNumber)
                     if let product = products.first(where: { $0.id.hasSuffix(".monthly") }) {
@@ -1938,7 +1958,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                             selected: !product.isCurrent && product.id == state.selectedProductId,
                                             primaryTextColor: textColor,
                                             secondaryTextColor: subtitleColor,
-                                            accentColor: gradientColors[i],
+                                            accentColor: environment.theme.list.itemAccentColor,
                                             checkForegroundColor: environment.theme.list.itemCheckColors.foregroundColor,
                                             checkBorderColor: environment.theme.list.itemCheckColors.strokeColor
                                         )
@@ -2071,6 +2091,12 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             case .messageTags:
                                 demoSubject = .messageTags
                                 let _ = ApplicationSpecificNotice.setDismissedMessageTagsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .lastSeen:
+                                demoSubject = .lastSeen
+                                let _ = ApplicationSpecificNotice.setDismissedLastSeenBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .messagePrivacy:
+                                demoSubject = .messagePrivacy
+                                let _ = ApplicationSpecificNotice.setDismissedMessagePrivacyBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             }
                             
                             let isPremium = state?.isPremium == true

@@ -14,6 +14,14 @@ final class BadgeLabelView: UIView {
         
         var currentValue: Int32 = 0
         
+        var color: UIColor = .white {
+            didSet {
+                for view in self.labels {
+                    view.textColor = self.color
+                }
+            }
+        }
+        
         init() {
             super.init(frame: CGRect(origin: .zero, size: labelSize))
              
@@ -25,7 +33,7 @@ final class BadgeLabelView: UIView {
                 } else {
                     label.text = "\(i)"
                 }
-                label.textColor = .white
+                label.textColor = self.color
                 label.font = font
                 label.textAlignment = .center
                 label.frame = CGRect(x: 0, y: height, width: labelWidth, height: labelHeight)
@@ -81,6 +89,15 @@ final class BadgeLabelView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    var color: UIColor = .white {
+        didSet {
+            self.staticLabel.textColor = self.color
+            for (_, view) in self.itemViews {
+                view.color = self.color
+            }
+        }
+    }
+    
     func update(value: String, transition: Transition) -> CGSize {
         if value.contains(" ") {
             for (_, view) in self.itemViews {
@@ -88,7 +105,7 @@ final class BadgeLabelView: UIView {
             }
             
             if self.staticLabel.superview == nil {
-                self.staticLabel.textColor = .white
+                self.staticLabel.textColor = self.color
                 self.staticLabel.font = font
                 
                 self.addSubview(self.staticLabel)

@@ -1104,27 +1104,28 @@ public extension Api.help {
 }
 public extension Api.help {
     enum PeerColorOption: TypeConstructorDescription {
-        case peerColorOption(flags: Int32, colorId: Int32, colors: Api.help.PeerColorSet?, darkColors: Api.help.PeerColorSet?, channelMinLevel: Int32?)
+        case peerColorOption(flags: Int32, colorId: Int32, colors: Api.help.PeerColorSet?, darkColors: Api.help.PeerColorSet?, channelMinLevel: Int32?, groupMinLevel: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerColorOption(let flags, let colorId, let colors, let darkColors, let channelMinLevel):
+                case .peerColorOption(let flags, let colorId, let colors, let darkColors, let channelMinLevel, let groupMinLevel):
                     if boxed {
-                        buffer.appendInt32(-276549461)
+                        buffer.appendInt32(-1377014082)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(colorId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {colors!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {darkColors!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(channelMinLevel!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(groupMinLevel!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerColorOption(let flags, let colorId, let colors, let darkColors, let channelMinLevel):
-                return ("peerColorOption", [("flags", flags as Any), ("colorId", colorId as Any), ("colors", colors as Any), ("darkColors", darkColors as Any), ("channelMinLevel", channelMinLevel as Any)])
+                case .peerColorOption(let flags, let colorId, let colors, let darkColors, let channelMinLevel, let groupMinLevel):
+                return ("peerColorOption", [("flags", flags as Any), ("colorId", colorId as Any), ("colors", colors as Any), ("darkColors", darkColors as Any), ("channelMinLevel", channelMinLevel as Any), ("groupMinLevel", groupMinLevel as Any)])
     }
     }
     
@@ -1143,13 +1144,16 @@ public extension Api.help {
             } }
             var _5: Int32?
             if Int(_1!) & Int(1 << 3) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.help.PeerColorOption.peerColorOption(flags: _1!, colorId: _2!, colors: _3, darkColors: _4, channelMinLevel: _5)
+            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.help.PeerColorOption.peerColorOption(flags: _1!, colorId: _2!, colors: _3, darkColors: _4, channelMinLevel: _5, groupMinLevel: _6)
             }
             else {
                 return nil

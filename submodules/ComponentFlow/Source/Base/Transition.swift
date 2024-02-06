@@ -1069,7 +1069,7 @@ public struct Transition {
     }
     
     public func setShapeLayerFillColor(layer: CAShapeLayer, color: UIColor, completion: ((Bool) -> Void)? = nil) {
-        if let current = layer.layerTintColor, current == color.cgColor {
+        if let current = layer.fillColor, current == color.cgColor {
             completion?(true)
             return
         }

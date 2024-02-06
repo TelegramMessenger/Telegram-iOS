@@ -640,7 +640,7 @@ public extension ShareWithPeersScreen {
                     }
                     
                     for item in searchResults {
-                        if let peer = item.peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                        if let peer = item.peer, case .channel = peer {
                             selectedPeers.append(peer)
                             existingIds.insert(peer.id)
                         }
@@ -672,7 +672,7 @@ public extension ShareWithPeersScreen {
                             if self.initialPeerIds.contains(peer.id) {
                                 return false
                             }
-                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                            if case .channel = peer {
                                 return true
                             }
                             return false

@@ -103,7 +103,7 @@ public final class ListActionItemComponent: Component {
                 transition: transition,
                 component: component.title,
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - contentLeftInset, height: availableSize.height)
+                containerSize: CGSize(width: availableSize.width - contentLeftInset - contentRightInset, height: availableSize.height)
             )
             let titleFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: verticalInset), size: titleSize)
             if let titleView = self.title.view {

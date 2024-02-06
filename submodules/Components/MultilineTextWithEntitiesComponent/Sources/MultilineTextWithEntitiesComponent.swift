@@ -183,9 +183,6 @@ public final class MultilineTextWithEntitiesComponent: Component {
                 }
             }
             
-            let size = self.textNode.updateLayout(availableSize)
-            self.textNode.frame = CGRect(origin: .zero, size: size)
-            
             self.textNode.visibility = true
             if let context = component.context, let animationCache = component.animationCache, let animationRenderer = component.animationRenderer, let placeholderColor = component.placeholderColor {
                 self.textNode.arguments = TextNodeWithEntities.Arguments(
@@ -196,6 +193,9 @@ public final class MultilineTextWithEntitiesComponent: Component {
                     attemptSynchronous: false
                 )
             }
+            
+            let size = self.textNode.updateLayout(availableSize)
+            self.textNode.frame = CGRect(origin: .zero, size: size)
             
             return size
         }

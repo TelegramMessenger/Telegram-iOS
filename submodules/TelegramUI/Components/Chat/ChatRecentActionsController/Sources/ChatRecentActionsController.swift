@@ -168,6 +168,7 @@ public final class ChatRecentActionsController: TelegramBaseController {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openBoostToUnrestrict: {
         }, updateHistoryFilter: { _ in
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in

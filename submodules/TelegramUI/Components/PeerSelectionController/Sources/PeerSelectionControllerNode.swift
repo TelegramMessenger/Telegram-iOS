@@ -732,6 +732,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openBoostToUnrestrict: {
         }, updateHistoryFilter: { _ in
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in

@@ -175,6 +175,7 @@ public final class ChatPanelInterfaceInteraction {
     public let openPremiumRequiredForMessaging: () -> Void
     public let updateHistoryFilter: ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void
     public let updateDisplayHistoryFilterAsList: (Bool) -> Void
+    public let openBoostToUnrestrict: () -> Void
     public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
@@ -284,6 +285,7 @@ public final class ChatPanelInterfaceInteraction {
         hideTranslationPanel:  @escaping () -> Void,
         openPremiumGift: @escaping () -> Void,
         openPremiumRequiredForMessaging: @escaping () -> Void,
+        openBoostToUnrestrict: @escaping () -> Void,
         updateHistoryFilter: @escaping ((ChatPresentationInterfaceState.HistoryFilter?) -> ChatPresentationInterfaceState.HistoryFilter?) -> Void,
         updateDisplayHistoryFilterAsList: @escaping (Bool) -> Void,
         requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
@@ -394,6 +396,7 @@ public final class ChatPanelInterfaceInteraction {
         self.hideTranslationPanel = hideTranslationPanel
         self.openPremiumGift = openPremiumGift
         self.openPremiumRequiredForMessaging = openPremiumRequiredForMessaging
+        self.openBoostToUnrestrict = openBoostToUnrestrict
         self.updateHistoryFilter = updateHistoryFilter
         self.updateDisplayHistoryFilterAsList = updateDisplayHistoryFilterAsList
         self.requestLayout = requestLayout
@@ -512,6 +515,7 @@ public final class ChatPanelInterfaceInteraction {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openBoostToUnrestrict: {
         }, updateHistoryFilter: { _ in
         }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in

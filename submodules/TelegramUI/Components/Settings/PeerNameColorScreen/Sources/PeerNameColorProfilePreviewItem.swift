@@ -23,17 +23,19 @@ final class PeerNameColorProfilePreviewItem: ListViewItem, ItemListItem, ListIte
     let theme: PresentationTheme
     let componentTheme: PresentationTheme
     let strings: PresentationStrings
+    let topInset: CGFloat
     let sectionId: ItemListSectionId
     let peer: EnginePeer?
     let subtitleString: String?
     let files: [Int64: TelegramMediaFile]
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, peer: EnginePeer?, subtitleString: String? = nil, files: [Int64: TelegramMediaFile], nameDisplayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, theme: PresentationTheme, componentTheme: PresentationTheme, strings: PresentationStrings, topInset: CGFloat, sectionId: ItemListSectionId, peer: EnginePeer?, subtitleString: String? = nil, files: [Int64: TelegramMediaFile], nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.theme = theme
         self.componentTheme = componentTheme
         self.strings = strings
+        self.topInset = topInset
         self.sectionId = sectionId
         self.peer = peer
         self.subtitleString = subtitleString
@@ -143,7 +145,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
         return { [weak self] item, params, neighbors in
             let separatorHeight = UIScreenPixel
             
-            let contentSize = CGSize(width: params.width, height: 210.0)
+            let contentSize = CGSize(width: params.width, height: 210.0 + item.topInset)
             var insets = itemListNeighborsGroupedInsets(neighbors, params)
             if params.width <= 320.0 {
                 insets.top = 0.0
@@ -215,7 +217,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 let coverFrame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
                 
                 let avatarSize: CGFloat = 104.0
-                let avatarFrame = CGRect(origin: CGPoint(x: floor((coverFrame.width - avatarSize) * 0.5), y: coverFrame.minY + 24.0), size: CGSize(width: avatarSize, height: avatarSize))
+                let avatarFrame = CGRect(origin: CGPoint(x: floor((coverFrame.width - avatarSize) * 0.5), y: coverFrame.minY + item.topInset + 24.0), size: CGSize(width: avatarSize, height: avatarSize))
                 
                 let _ = self.background.update(
                     transition: .immediate,
@@ -259,7 +261,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 if self.avatarNode.supernode == nil {
                     self.addSubnode(self.avatarNode)
                 }
-                self.avatarNode.frame = avatarFrame.offsetBy(dx: coverFrame.minX, dy: coverFrame.minY)
+                self.avatarNode.frame = avatarFrame.offsetBy(dx: coverFrame.minX, dy: 0.0)
                 
                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
                 

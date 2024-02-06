@@ -33,9 +33,10 @@ private final class ChannelPermissionsControllerArguments {
     let presentConversionToBroadcastGroup: () -> Void
     let openChannelExample: () -> Void
     let updateSlowmode: (Int32) -> Void
+    let updateUnrestrictBoosters: (Int32) -> Void
     let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -48,6 +49,7 @@ private final class ChannelPermissionsControllerArguments {
         self.presentConversionToBroadcastGroup = presentConversionToBroadcastGroup
         self.openChannelExample = openChannelExample
         self.updateSlowmode = updateSlowmode
+        self.updateUnrestrictBoosters = updateUnrestrictBoosters
         self.toggleIsOptionExpanded = toggleIsOptionExpanded
     }
 }
@@ -56,6 +58,7 @@ private enum ChannelPermissionsSection: Int32 {
     case permissions
     case slowmode
     case conversion
+    case unrestrictBoosters
     case kicked
     case exceptions
 }
@@ -78,6 +81,9 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
     case slowmodeInfo(PresentationTheme, String)
+    case unrestrictBoostersSwitch(PresentationTheme, String, Bool)
+    case unrestrictBoosters(PresentationTheme, PresentationStrings, Int32)
+    case unrestrictBoostersInfo(PresentationTheme, String)
     case conversionHeader(PresentationTheme, String)
     case conversion(PresentationTheme, String)
     case conversionInfo(PresentationTheme, String)
@@ -94,6 +100,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ChannelPermissionsSection.slowmode.rawValue
             case .conversionHeader, .conversion, .conversionInfo:
                 return ChannelPermissionsSection.conversion.rawValue
+            case .unrestrictBoostersSwitch, .unrestrictBoosters, .unrestrictBoostersInfo:
+                return ChannelPermissionsSection.unrestrictBoosters.rawValue
             case .kicked:
                 return ChannelPermissionsSection.kicked.rawValue
             case .exceptionsHeader, .add, .peerItem:
@@ -113,18 +121,24 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(999)
             case .conversionInfo:
                 return .index(1000)
-            case .slowmodeHeader:
+            case .unrestrictBoostersSwitch:
                 return .index(1001)
-            case .slowmode:
+            case .unrestrictBoosters:
                 return .index(1002)
-            case .slowmodeInfo:
+            case .unrestrictBoostersInfo:
                 return .index(1003)
-            case .kicked:
+            case .slowmodeHeader:
                 return .index(1004)
-            case .exceptionsHeader:
+            case .slowmode:
                 return .index(1005)
-            case .add:
+            case .slowmodeInfo:
                 return .index(1006)
+            case .kicked:
+                return .index(1007)
+            case .exceptionsHeader:
+                return .index(1008)
+            case .add:
+                return .index(1009)
             case let .peerItem(_, _, _, _, _, participant, _, _, _, _):
                 return .peer(participant.peer.id)
         }
@@ -180,7 +194,25 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .kicked(lhsTheme, lhsText, lhsValue):
+            case let .unrestrictBoostersSwitch(lhsTheme, lhsTitle, lhsValue):
+                if case let .unrestrictBoostersSwitch(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .unrestrictBoosters(lhsTheme, lhsStrings, lhsValue):
+                if case let .unrestrictBoosters(rhsTheme, rhsStrings, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .unrestrictBoostersInfo(lhsTheme, lhsValue):
+                if case let .unrestrictBoostersInfo(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+                case let .kicked(lhsTheme, lhsText, lhsValue):
                 if case let .kicked(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
                 } else {
@@ -325,6 +357,16 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(value), sectionId: self.section) { _ in
                     arguments.openChannelExample()
                 }
+            case let .unrestrictBoostersSwitch(_, title, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateUnrestrictBoosters(value ? 1 : 0)
+                })
+            case let .unrestrictBoosters(theme, strings, value):
+                return ChatUnrestrictBoostersItem(theme: theme, strings: strings, value: value, enabled: true, sectionId: self.section, updated: { value in
+                    arguments.updateUnrestrictBoosters(value)
+                })
+            case let .unrestrictBoostersInfo(_, value):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
             case let .kicked(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openKicked()
@@ -379,6 +421,7 @@ private struct ChannelPermissionsControllerState: Equatable {
     var searchingMembers: Bool = false
     var modifiedRightsFlags: TelegramChatBannedRightsFlags?
     var modifiedSlowmodeTimeout: Int32?
+    var modifiedUnrestrictBoosters: Int32?
     var expandedPermissions = Set<TelegramChatBannedRightsFlags>()
 }
 
@@ -564,6 +607,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         }
         
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
+        
         var rightIndex: Int = 0
         for (rights, correspondingAdminRight) in allGroupPermissionList(peer: .channel(channel), expandMedia: false) {
             var enabled = true
@@ -602,8 +646,26 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).string))
         }
         
+        let canSendText = !effectiveRightsFlags.contains(.banSendText)
+        let canSendMedia = banSendMediaSubList().allSatisfy({ !effectiveRightsFlags.contains($0.0) })
+        
+        let slowModeTimeout = state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)
+        
+        if !canSendText || !canSendMedia || slowModeTimeout > 0 {
+            let unrestrictBoosters = state.modifiedUnrestrictBoosters ?? (cachedData.boostsToUnrestrict ?? 0)
+            let unrestrictEnabled = unrestrictBoosters > 0
+            
+            entries.append(.unrestrictBoostersSwitch(presentationData.theme, presentationData.strings.GroupInfo_Permissions_DontRestrictBoosters, unrestrictEnabled))
+            if unrestrictEnabled {
+                entries.append(.unrestrictBoosters(presentationData.theme, presentationData.strings, max(1, unrestrictBoosters)))
+                entries.append(.unrestrictBoostersInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_DontRestrictBoostersInfo))
+            } else {
+                entries.append(.unrestrictBoostersInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_DontRestrictBoostersEnableInfo))
+            }
+        }
+        
         entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
-        entries.append(.slowmode(presentationData.theme, presentationData.strings, state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)))
+        entries.append(.slowmode(presentationData.theme, presentationData.strings, slowModeTimeout))
         entries.append(.slowmodeInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeInfo))
         
         entries.append(.kicked(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Removed, cachedData.participantsSummary.kickedCount.flatMap({ $0 == 0 ? "" : "\($0)" }) ?? ""))
@@ -717,6 +779,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     
     let updateDefaultRightsDisposable = MetaDisposable()
     actionsDisposable.add(updateDefaultRightsDisposable)
+    
+    let updateUnrestrictBoostersDisposable = MetaDisposable()
+    actionsDisposable.add(updateUnrestrictBoostersDisposable)
     
     let peerView = Promise<PeerView>()
     peerView.set(sourcePeerId.get()
@@ -1074,6 +1139,19 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     }
                 }))
             }
+        })
+    }, updateUnrestrictBoosters: { value in
+        updateState { state in
+            var state = state
+            state.modifiedUnrestrictBoosters = value
+            return state
+        }
+        
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { view in
+            updateUnrestrictBoostersDisposable.set((context.engine.peers.updateChannelBoostsToUnlockRestrictions(peerId: view.peerId, boosts: value)
+            |> deliverOnMainQueue).start())
         })
     }, toggleIsOptionExpanded: { flags in
         updateState { state in

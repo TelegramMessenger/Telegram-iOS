@@ -45,6 +45,11 @@ public final class EngineChatList: Equatable {
             self.isUnread = isUnread
         }
     }
+    
+    public enum MediaDraftContentType: Int32 {
+        case audio
+        case video
+    }
 
     public final class Item: Equatable {
         public enum Id: Hashable {
@@ -131,6 +136,7 @@ public final class EngineChatList: Equatable {
         public let storyStats: StoryStats?
         public let displayAsTopicList: Bool
         public let isPremiumRequiredToMessage: Bool
+        public let mediaDraftContentType: EngineChatList.MediaDraftContentType?
 
         public init(
             id: Id,
@@ -151,7 +157,8 @@ public final class EngineChatList: Equatable {
             autoremoveTimeout: Int32?,
             storyStats: StoryStats?,
             displayAsTopicList: Bool,
-            isPremiumRequiredToMessage: Bool
+            isPremiumRequiredToMessage: Bool,
+            mediaDraftContentType: EngineChatList.MediaDraftContentType?
         ) {
             self.id = id
             self.index = index
@@ -172,6 +179,7 @@ public final class EngineChatList: Equatable {
             self.storyStats = storyStats
             self.displayAsTopicList = displayAsTopicList
             self.isPremiumRequiredToMessage = isPremiumRequiredToMessage
+            self.mediaDraftContentType = mediaDraftContentType
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -230,6 +238,9 @@ public final class EngineChatList: Equatable {
                 return false
             }
             if lhs.isPremiumRequiredToMessage != rhs.isPremiumRequiredToMessage {
+                return false
+            }
+            if lhs.mediaDraftContentType != rhs.mediaDraftContentType {
                 return false
             }
             return true
@@ -467,11 +478,13 @@ extension EngineChatList.Item {
             }
             
             var draft: EngineChatList.Draft?
+            var mediaDraftContentType: EngineChatList.MediaDraftContentType?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
                     if let text = opaqueState.synchronizeableInputState?.text {
                         draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
                     }
+                    mediaDraftContentType = opaqueState.mediaDraftState?.contentType
                 }
             }
             
@@ -536,7 +549,8 @@ extension EngineChatList.Item {
                 autoremoveTimeout: autoremoveTimeout,
                 storyStats: entryData.storyStats,
                 displayAsTopicList: displayAsTopicList,
-                isPremiumRequiredToMessage: isPremiumRequiredToMessage
+                isPremiumRequiredToMessage: isPremiumRequiredToMessage,
+                mediaDraftContentType: mediaDraftContentType
             )
         case .HoleEntry:
             return nil

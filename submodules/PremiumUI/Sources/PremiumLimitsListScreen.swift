@@ -363,7 +363,7 @@ public class PremiumLimitsListScreen: ViewController {
             let backgroundSize = self.backgroundView.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    GradientBackgroundComponent(colors: [
+                    PremiumGradientBackgroundComponent(colors: [
                         UIColor(rgb: 0x0077ff),
                         UIColor(rgb: 0x6b93ff),
                         UIColor(rgb: 0x8878ff),
@@ -761,7 +761,45 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
-                
+                availableItems[.lastSeen] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.lastSeen,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["last_seen"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_LastSeen,
+                                text: strings.Premium_LastSeenInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.messagePrivacy] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messagePrivacy,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["message_privacy"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_MessagePrivacy,
+                                text: strings.Premium_MessagePrivacyInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+            
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }
                     let initialIndex: Int

@@ -866,6 +866,9 @@ func openResolvedUrlImpl(
                 }
             })
         case let .boost(peerId, status, myBoostStatus):
+            guard let status else {
+                return
+            }
             var isCurrent = false
             if case let .chat(chatPeerId, _, _) = urlContext, chatPeerId == peerId {
                 isCurrent = true
@@ -883,32 +886,25 @@ func openResolvedUrlImpl(
                 }
             }
         
-            PremiumBoostScreen(
+            let controller = PremiumBoostLevelsScreen(
                 context: context,
-                contentContext: contentContext,
                 peerId: peerId,
-                isCurrent: isCurrent,
+                mode: .user(mode: isCurrent ? .current : .external),
                 status: status,
                 myBoostStatus: myBoostStatus,
-                forceDark: forceDark,
-                openPeer: { peer in
+                openPeer:  { peer in
                     openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
                 },
-                presentController: { [weak navigationController] c in
-                    (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
-                },
-                pushController: { [weak navigationController] c in
-                    navigationController?.pushViewController(c)
-                    
-                    if c is PremiumLimitScreen {
-                        if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
-                            storyProgressPauseContext.update(c)
-                        }
-                    }
-                }, dismissed: {
-                    dismissedImpl?()
-                }
+                forceDark: forceDark
             )
+            controller.disposed = {
+                dismissedImpl?()
+            }
+            navigationController?.pushViewController(controller)
+        
+            if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
+                storyProgressPauseContext.update(controller)
+            }
         case let .premiumGiftCode(slug):
             var forceDark = false
             if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {
