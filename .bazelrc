@@ -17,7 +17,7 @@ build --swiftcopt=-whole-module-optimization
 build --per_file_copt=".*\.m$","@-fno-objc-msgsend-selector-stubs"
 build --per_file_copt=".*\.mm$","@-fno-objc-msgsend-selector-stubs"
 
-build --linkopt="-ld_classic"
+#build --linkopt="-ld_classic"
 
 build --features=debug_prefix_map_pwd_is_dot
 build --features=swift.cacheable_swiftmodules
@@ -30,3 +30,4 @@ build --spawn_strategy=standalone
 build --strategy=SwiftCompile=standalone
 build --define RULES_SWIFT_BUILD_DUMMY_WORKER=1
 
+build --noenable_bzlmod
