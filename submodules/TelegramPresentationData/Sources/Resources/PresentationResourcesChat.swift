@@ -1108,6 +1108,12 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatFreeCloseButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeCloseButtonIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SideCloseIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
+        })
+    }
+    
     public static func chatKeyboardActionButtonMessageIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatKeyboardActionButtonMessageIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: theme.chat.inputButtonPanel.buttonTextColor)

@@ -1542,7 +1542,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         let isAd = item.content.firstMessage.adAttribute != nil
         if isAd {
-            needsShareButton = false
+            needsShareButton = true
         }
         for attribute in item.content.firstMessage.attributes {
             if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
@@ -3879,6 +3879,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
                 var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                
+                if item.message.adAttribute != nil {
+                    buttonFrame.origin.y = backgroundFrame.minY + 1.0
+                }
+                
                 if let shareButtonOffset = shareButtonOffset {
                     if incoming {
                         buttonFrame.origin.x = shareButtonOffset.x
@@ -3902,6 +3907,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
                 var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                
+                if item.message.adAttribute != nil {
+                    buttonFrame.origin.y = backgroundFrame.minY + 1.0
+                }
+                
                 if let shareButtonOffset = shareButtonOffset {
                     if incoming {
                         buttonFrame.origin.x = shareButtonOffset.x
@@ -4941,7 +4951,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     @objc private func shareButtonPressed() {
         if let item = self.item {
-            if case .pinnedMessages = item.associatedData.subject {
+            if item.message.adAttribute != nil {
+                item.controllerInteraction.openNoAdsDemo()
+            } else if case .pinnedMessages = item.associatedData.subject {
                 item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
             } else if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
