@@ -259,14 +259,14 @@ public extension TelegramChannel {
         }
     }
     
-    func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> (Int32, Bool)? {
+    func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags, ignoreDefault: Bool = false) -> (Int32, Bool)? {
         if self.flags.contains(.isCreator) {
             return nil
         }
         if let _ = self.adminRights {
             return nil
         }
-        if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(rights) {
+        if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(rights) && !ignoreDefault {
             return (Int32.max, false)
         }
         if let bannedRights = self.bannedRights, bannedRights.flags.contains(rights) {

@@ -5485,6 +5485,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
+                        var appliedBoosts: Int32?
+                        var boostsToUnrestrict: Int32?
+                        if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                            appliedBoosts = cachedChannelData.appliedBoosts
+                            boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                        }
+                        
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                             return $0.updatedPeer { _ in
                                 return renderedPeer
@@ -5495,6 +5502,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedHasSearchTags(hasSearchTags)
                                 .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                 .updatedHasSavedChats(hasSavedChats)
+                                .updatedAppliedBoosts(appliedBoosts)
+                                .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                 .updatedInterfaceState { interfaceState in
                                     var interfaceState = interfaceState
                                     
@@ -7300,7 +7309,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var slowmodeState: ChatSlowmodeState?
                 if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
-                    if let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
+                    
+                    var canBypassRestrictions = false
+                    if let boostsToUnrestrict = cachedData.boostsToUnrestrict, let appliedBoosts = cachedData.appliedBoosts, appliedBoosts >= boostsToUnrestrict {
+                        canBypassRestrictions = true
+                    }
+                    if !canBypassRestrictions, let channel = combinedInitialData.initialData?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
                         if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
                             slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
                         }
@@ -7663,11 +7677,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var premiumGiftOptions: [CachedPremiumGiftOption] = []
                     if let cachedData = cachedData as? CachedChannelData {
                         pinnedMessageId = cachedData.pinnedMessageId
-                        if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
-                            if hasPendingMessages {
-                                slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .pendingMessages)
-                            } else if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
-                                slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
+                        if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
+                            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
+                                if hasPendingMessages {
+                                    slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .pendingMessages)
+                                } else if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
+                                    slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
+                                }
                             }
                         }
                         if let activeCall = cachedData.activeCall {

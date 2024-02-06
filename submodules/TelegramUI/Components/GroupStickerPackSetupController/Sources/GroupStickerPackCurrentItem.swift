@@ -13,7 +13,7 @@ import StickerResources
 import AppBundle
 
 enum GroupStickerPackCurrentItemContent: Equatable {
-    case notFound
+    case notFound(isEmoji: Bool)
     case searching
     case found(packInfo: StickerPackCollectionInfo, topItem: StickerPackItem?, subtitle: String)
 }
@@ -25,14 +25,16 @@ final class GroupStickerPackCurrentItem: ListViewItem, ItemListItem {
     let content: GroupStickerPackCurrentItemContent
     let sectionId: ItemListSectionId
     let action: (() -> Void)?
+    let remove: (() -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, content: GroupStickerPackCurrentItemContent, sectionId: ItemListSectionId, action: (() -> Void)?) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, content: GroupStickerPackCurrentItemContent, sectionId: ItemListSectionId, action: (() -> Void)?, remove: (() -> Void)?) {
         self.theme = theme
         self.strings = strings
         self.account = account
         self.content = content
         self.sectionId = sectionId
         self.action = action
+        self.remove = remove
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -97,6 +99,9 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
     private let statusNode: TextNode
     private let activityIndicator: ActivityIndicator
     
+    private let removeButton: HighlightTrackingButtonNode
+    private let removeButtonIcon: ASImageNode
+    
     private var item: GroupStickerPackCurrentItem?
     
     private var editableControlNode: ItemListEditableControlNode?
@@ -150,6 +155,10 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.removeButton = HighlightTrackingButtonNode(pointerStyle: nil)
+        self.removeButtonIcon = ASImageNode()
+        self.removeButtonIcon.displaysAsynchronously = false
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.imageNode)
@@ -157,6 +166,8 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.statusNode)
         self.addSubnode(self.notFoundNode)
         self.addSubnode(self.activityIndicator)
+        
+        self.addSubnode(self.removeButton)
     }
     
     deinit {
@@ -191,9 +202,9 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             }
             
             switch item.content {
-                case .notFound:
-                    titleAttributedString = NSAttributedString(string: item.strings.Channel_Stickers_NotFound, font: titleFont, textColor: item.theme.list.itemDestructiveColor)
-                    statusAttributedString = NSAttributedString(string: item.strings.Channel_Stickers_NotFoundHelp, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
+                case let .notFound(isEmoji):
+                    titleAttributedString = NSAttributedString(string: isEmoji ? item.strings.Group_Emoji_NotFound : item.strings.Channel_Stickers_NotFound, font: titleFont, textColor: item.theme.list.itemDestructiveColor)
+                    statusAttributedString = NSAttributedString(string: isEmoji ? item.strings.Group_Emoji_NotFoundHelp : item.strings.Channel_Stickers_NotFoundHelp, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 case .searching:
                     titleAttributedString = NSAttributedString(string: item.strings.Channel_Stickers_Searching, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                     statusAttributedString = NSAttributedString(string: "", font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)

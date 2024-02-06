@@ -1490,10 +1490,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.attachmentButton.accessibilityTraits = (!isSlowmodeActive || isMediaEnabled) ? [.button] : [.button, .notEnabled]
         self.attachmentButtonDisabledNode.isHidden = !isSlowmodeActive || isMediaEnabled
         
+        let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: interfaceState)
+        
         var sendingTextDisabled = false
         if interfaceState.interfaceState.editMessage == nil {
             if let peer = interfaceState.renderedPeer?.peer {
-                if let channel = peer as? TelegramChannel, channel.hasBannedPermission(.banSendText) != nil {
+                if let channel = peer as? TelegramChannel, channel.hasBannedPermission(.banSendText, ignoreDefault: canBypassRestrictions) != nil {
                     sendingTextDisabled = true
                 } else if let group = peer as? TelegramGroup, group.hasBannedPermission(.banSendText) {
                     sendingTextDisabled = true
@@ -2589,7 +2591,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             mediaInputDisabled = true
         } else if interfaceState.hasActiveGroupCall {
             mediaInputDisabled = true
-        } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendVoice) != nil, channel.hasBannedPermission(.banSendInstantVideos) != nil {
+        } else if let channel = interfaceState.renderedPeer?.peer as? TelegramChannel, channel.hasBannedPermission(.banSendVoice, ignoreDefault: canBypassRestrictions) != nil, channel.hasBannedPermission(.banSendInstantVideos, ignoreDefault: canBypassRestrictions) != nil {
             mediaInputDisabled = true
         } else if let group = interfaceState.renderedPeer?.peer as? TelegramGroup, group.hasBannedPermission(.banSendVoice), group.hasBannedPermission(.banSendInstantVideos) {
             mediaInputDisabled = true

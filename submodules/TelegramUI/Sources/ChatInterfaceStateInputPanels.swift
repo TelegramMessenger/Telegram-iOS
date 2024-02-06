@@ -9,6 +9,16 @@ import ChatBotStartInputPanelNode
 import ChatChannelSubscriberInputPanelNode
 import ChatMessageSelectionInputPanelNode
 
+func canBypassRestrictions(chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
+    guard let boostsToUnrestrict = chatPresentationInterfaceState.boostsToUnrestrict else {
+        return false
+    }
+    if let appliedBoosts = chatPresentationInterfaceState.appliedBoosts, appliedBoosts >= boostsToUnrestrict {
+        return true
+    }
+    return false
+}
+
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
         return (nil, nil)
@@ -250,7 +260,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
                         
-            if case .group = channel.info, isMember && !channel.hasPermission(.sendSomething) && !channel.flags.contains(.isGigagroup) {
+            if case .group = channel.info, isMember && !channel.hasPermission(.sendSomething) && !canBypassRestrictions(chatPresentationInterfaceState: chatPresentationInterfaceState) && !channel.flags.contains(.isGigagroup) {
                 if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                     return (currentPanel, nil)
                 } else {

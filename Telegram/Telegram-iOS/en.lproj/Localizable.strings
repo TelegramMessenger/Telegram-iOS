@@ -11164,6 +11164,8 @@ Sorry for the inconvenience.";
 "Group.Appearance.Wallpaper" = "Group Wallpaper";
 "Group.Appearance.WallpaperFooter" = "Set a wallpaper that will be visible for everyone in your group.";
 
+"Group.Appearance.ChooseFromGallery" = "Choose From Gallery";
+
 "PeerInfo.Group.Boost" = "Boost Group";
 
 "BoostGift.Groups.PrivateGroup.Title" = "Group is Private";
@@ -11182,3 +11184,11 @@ Sorry for the inconvenience.";
 "BoostGift.GroupsOrChannels.Search" = "Search Groups and Channels";
 "BoostGift.GroupsOrChannels.MaximumReached" = "You can select maximum %@ groups and channels.";
 "BoostGift.GroupsOrChannels.Save" = "Save Groups and Channels";
+
+"Group.Emoji.Title" = "Group Emoji Pack";
+"Group.Emoji.Info" = "All members will be able to use these emoji in the group, even if they don't have Telegram Premium.";
+"Group.Emoji.YourEmoji" = "CHOOSE EMOJI PACK";
+"Group.Emoji.Placeholder" = "emojiset";
+
+"Group.Emoji.NotFound" = "Emoji pack not found";
+"Group.Emoji.NotFoundHelp" = "Try again or choose from the list below";
