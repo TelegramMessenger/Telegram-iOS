@@ -963,7 +963,7 @@ public final class ManagedAudioSession: NSObject {
         if case let .record(_, video, _) = type, video, let input = AVAudioSession.sharedInstance().availableInputs?.first {
             if let dataSources = input.dataSources {
                 for source in dataSources {
-                    if source.dataSourceName.contains("Front") {
+                    if source.dataSourceName.contains("Bottom") {
                         try? input.setPreferredDataSource(source)
                         break
                     }

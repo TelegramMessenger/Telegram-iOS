@@ -672,6 +672,7 @@ final class PenTool: DrawingElement {
             return self.start.location.distance(to: self.end.location)
         }
     }
+    
     private func smoothPoints(_ input: SmootherInput) -> [Point] {
         let segmentDistance: CGFloat = 6.0
         let distance = input.distance

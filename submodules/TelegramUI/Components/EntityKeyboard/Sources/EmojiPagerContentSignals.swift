@@ -1257,8 +1257,7 @@ public extension EmojiPagerContentComponent {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        //TODO:localize
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: peerSpecificPack.info.title, subtitle: nil, badge: "GROUP EMOJI", isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: peerSpecificPack.info.title, subtitle: nil, badge: strings.Emoji_GroupEmoji, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
                 

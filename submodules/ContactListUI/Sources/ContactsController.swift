@@ -118,6 +118,7 @@ public class ContactsController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private var authorizationDisposable: Disposable?
+    private var selectionDisposable: Disposable?
     private var actionDisposable = MetaDisposable()
     private let sortOrderPromise = Promise<ContactsSortOrder>()
     private let isInVoiceOver = ValuePromise<Bool>(false)
@@ -234,6 +235,7 @@ public class ContactsController: ViewController {
         self.presentationDataDisposable?.dispose()
         self.authorizationDisposable?.dispose()
         self.actionDisposable.dispose()
+        self.selectionDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
@@ -343,8 +345,21 @@ public class ContactsController: ViewController {
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { peer, _ in
-            openPeer(peer, false)
+        self.contactsNode.contactListNode.openPeer = { [weak self] peer, _ in
+            guard let self else {
+                return
+            }
+            if let _ = self.contactsNode.contactListNode.selectionState {
+                self.contactsNode.contactListNode.updateSelectionState({ current in
+                    if let updatedState = current?.withToggledPeerId(peer.id), !updatedState.selectedPeerIndices.isEmpty {
+                        return updatedState
+                    } else {
+                        return nil
+                    }
+                })
+            } else {
+                openPeer(peer, false)
+            }
         }
         
         self.contactsNode.requestAddContact = { [weak self] phoneNumber in
@@ -471,7 +486,44 @@ public class ContactsController: ViewController {
             self?.presentSortMenu(sourceView: sourceNode.view, gesture: gesture)
         }
         
+        let previousToolbarValue = Atomic<Toolbar?>(value: nil)
+        self.selectionDisposable = (self.contactsNode.contactListNode.selectionStateSignal
+        |> deliverOnMainQueue).start(next: { [weak self] state in
+            guard let self, let layout = self.validLayout else {
+                return
+            }
+            
+            let toolbar: Toolbar?
+            if let state, state.selectedPeerIndices.count > 0 {
+                toolbar = Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: self.presentationData.strings.ContactList_DeleteConfirmation(Int32(state.selectedPeerIndices.count)), isEnabled: true, color: .custom(self.presentationData.theme.actionSheet.destructiveActionTextColor)))
+            } else {
+                toolbar = nil
+            }
+            
+            let _ = self.contactsNode.updateNavigationBar(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
+            
+            var transition: ContainedViewLayoutTransition = .immediate
+            let previousToolbar = previousToolbarValue.swap(toolbar)
+            if (previousToolbar == nil) != (toolbar == nil) {
+                transition = .animated(duration: 0.4, curve: .spring)
+            }
+            self.setToolbar(toolbar, transition: transition)
+        })
+        
         self.displayNodeDidLoad()
+    }
+    
+    override public func toolbarActionSelected(action: ToolbarActionOption) {
+        guard case .middle = action, let selectionState = self.contactsNode.contactListNode.selectionState else {
+            return
+        }
+        var peerIds: [EnginePeer.Id] = []
+        for contactPeerId in selectionState.selectedPeerIndices.keys {
+            if case let .peer(peerId) = contactPeerId {
+                peerIds.append(peerId)
+            }
+        }
+        self.requestDeleteContacts(peerIds: peerIds)
     }
     
     override public func viewWillAppear(_ animated: Bool) {
@@ -587,6 +639,9 @@ public class ContactsController: ViewController {
     }
     
     public func requestDeleteContacts(peerIds: [EnginePeer.Id]) {
+        guard !peerIds.isEmpty else {
+            return
+        }
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
         
@@ -602,6 +657,10 @@ public class ContactsController: ViewController {
             
             guard let self else {
                 return
+            }
+            
+            self.contactsNode.contactListNode.updateSelectionState { _ in
+                return nil
             }
             
             self.contactsNode.contactListNode.updatePendingRemovalPeerIds { state in

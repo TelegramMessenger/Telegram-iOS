@@ -1067,7 +1067,7 @@ public final class Camera {
         }
     }
 }
-e
+
 public final class CameraHolder {
     public let camera: Camera
     public let previewView: CameraPreviewView

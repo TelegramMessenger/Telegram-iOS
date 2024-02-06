@@ -675,7 +675,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedViewForumAsMessages(.known(forumViewAsMessages))
                                                     .withUpdatedWallpaper(wallpaper)
                                                     .withUpdatedBoostsToUnrestrict(boostsUnrestrict)
-                                                    .withUpdateAppliedBoosts(appliedBoosts)
+                                                    .withUpdatedAppliedBoosts(appliedBoosts)
                                                     .withUpdatedEmojiPack(emojiPack)
                                             })
                                         

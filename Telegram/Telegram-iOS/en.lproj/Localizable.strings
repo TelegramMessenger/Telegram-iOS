@@ -11092,3 +11092,8 @@ Sorry for the inconvenience.";
 
 "Notification.Boost.SingleYou" = "You boosted the group";
 "Notification.Boost.MultipleYou" = "You boosted the group %1$@";
+
+"Contacts.SelectedContacts_1" = "%@ Selected";
+"Contacts.SelectedContacts_any" = "%@ Selected";
+
+"Emoji.GroupEmoji" = "GROUP EMOJI";
