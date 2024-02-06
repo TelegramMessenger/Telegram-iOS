@@ -774,11 +774,11 @@ final class ChannelAppearanceScreenComponent: Component {
                     if let result {
                         self.cachedIconFiles[result.fileId.id] = result
                     }
-                    switch subject {
-                    case .status:
-                        self.updatedPeerStatus = (result?.fileId.id).flatMap { PeerEmojiStatus(fileId: $0, expirationDate: timestamp) }
-                    default:
-                        break
+           
+                    if let result {
+                        self.updatedPeerStatus = PeerEmojiStatus(fileId: result.fileId.id, expirationDate: timestamp)
+                    } else {
+                        self.updatedPeerStatus = .some(nil)
                     }
                     self.state?.updated(transition: .spring(duration: 0.4))
                 })
@@ -792,11 +792,19 @@ final class ChannelAppearanceScreenComponent: Component {
                     }
                     switch subject {
                     case .reply:
-                        self.updatedPeerNameEmoji = (result?.fileId.id)
+                        if let result {
+                            self.updatedPeerNameEmoji = result.fileId.id
+                        } else {
+                            self.updatedPeerNameEmoji = .some(nil)
+                        }
                     case .profile:
-                        self.updatedPeerProfileEmoji = (result?.fileId.id)
-                    case .status:
-                        self.updatedPeerStatus = (result?.fileId.id).flatMap { PeerEmojiStatus(fileId: $0, expirationDate: nil) }
+                        if let result {
+                            self.updatedPeerProfileEmoji = result.fileId.id
+                        } else {
+                            self.updatedPeerProfileEmoji = .some(nil)
+                        }
+                    default:
+                        break
                     }
                     self.state?.updated(transition: .spring(duration: 0.4))
                 })
@@ -1066,11 +1074,10 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Appearance", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.Channel_Appearance_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -1137,7 +1144,6 @@ final class ChannelAppearanceScreenComponent: Component {
             contentHeight += previewSectionSize.height
             contentHeight += sectionSpacing - 15.0
             
-            //TODO:localize
             var boostContents: [AnyComponentWithIdentity<Empty>] = []
             boostContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
                 name: "Premium/Boost",
@@ -1145,7 +1151,7 @@ final class ChannelAppearanceScreenComponent: Component {
             ))))
             boostContents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                 text: .markdown(
-                    text: isGroup ? "Members of your group can **boost** it so that it levels up and unlocks these features." : "Subscribers of your channel can **boost** it so that it levels up and unlocks these features.",
+                    text: isGroup ? environment.strings.Group_Appearance_BoostInfo : environment.strings.Channel_Appearance_BoostInfo,
                     attributes: MarkdownAttributes(
                         body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.baseDisplaySize / 17.0 * 14.0), textColor: environment.theme.list.itemPrimaryTextColor),
                         bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.baseDisplaySize / 17.0 * 14.0), textColor: environment.theme.list.itemPrimaryTextColor),
@@ -1211,7 +1217,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: isGroup ? "Choose a color and a logo for the group's profile." : environment.strings.Channel_Appearance_ProfileFooter,
+                            string: isGroup ? environment.strings.Group_Appearance_ProfileFooter : environment.strings.Channel_Appearance_ProfileFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1324,11 +1330,10 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             if isGroup {
-                //TODO:localize
                 var emojiPackContents: [AnyComponentWithIdentity<Empty>] = []
                 emojiPackContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "Group Emoji Pack",
+                        string: environment.strings.Group_Appearance_GroupEmoji,
                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                         textColor: environment.theme.list.itemPrimaryTextColor
                     )),
@@ -1354,7 +1359,7 @@ final class ChannelAppearanceScreenComponent: Component {
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Choose an emoji pack that will be available to all members within the group.",
+                                string: environment.strings.Group_Appearance_GroupEmojiFooter,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1397,7 +1402,7 @@ final class ChannelAppearanceScreenComponent: Component {
             var emojiStatusContents: [AnyComponentWithIdentity<Empty>] = []
             emojiStatusContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                 text: .plain(NSAttributedString(
-                    string: isGroup ? "Group Emoji Status" : environment.strings.Channel_Appearance_Status,
+                    string: isGroup ? environment.strings.Group_Appearance_Status : environment.strings.Channel_Appearance_Status,
                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                     textColor: environment.theme.list.itemPrimaryTextColor
                 )),
@@ -1416,7 +1421,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: isGroup ? "Choose a status that will be shown next to the group's name." : environment.strings.Channel_Appearance_StatusFooter,
+                            string: isGroup ? environment.strings.Group_Appearance_StatusFooter : environment.strings.Channel_Appearance_StatusFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1582,7 +1587,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 var wallpaperLogoContents: [AnyComponentWithIdentity<Empty>] = []
                 wallpaperLogoContents.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: isGroup ? "Group Wallpaper" : environment.strings.Channel_Appearance_Wallpaper,
+                        string: isGroup ? environment.strings.Group_Appearance_Wallpaper : environment.strings.Channel_Appearance_Wallpaper,
                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                         textColor: environment.theme.list.itemPrimaryTextColor
                     )),
@@ -1610,7 +1615,7 @@ final class ChannelAppearanceScreenComponent: Component {
                         peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)),
                         author: peer.compactDisplayTitle,
                         photo: peer.profileImageRepresentations,
-                        nameColor: .blue,
+                        nameColor: .red,
                         backgroundEmojiId: nil,
                         reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText),
                         linkPreview: nil,
@@ -1704,7 +1709,7 @@ final class ChannelAppearanceScreenComponent: Component {
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: isGroup ? "Set a wallpaper that will be visible for everyone in your group." : environment.strings.Channel_Appearance_WallpaperFooter,
+                                string: isGroup ? environment.strings.Group_Appearance_WallpaperFooter : environment.strings.Channel_Appearance_WallpaperFooter,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1849,7 +1854,7 @@ public class ChannelAppearanceScreen: ViewControllerComponentContainer {
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: updatedPresentationData)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.title = "" //presentationData.strings.Channel_Appearance_Title
+        self.title = ""
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
         

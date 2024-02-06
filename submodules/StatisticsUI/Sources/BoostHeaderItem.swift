@@ -26,8 +26,9 @@ final class BoostHeaderItem: ItemListControllerHeaderItem {
     let createGiveaway: () -> Void
     let openFeatures: () -> Void
     let back: () -> Void
+    let updateStatusBar: (StatusBarStyle) -> Void
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, status: ChannelBoostStatus, title: String, text: String, openBoost: @escaping () -> Void, createGiveaway: @escaping () -> Void, openFeatures: @escaping () -> Void, back: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, status: ChannelBoostStatus, title: String, text: String, openBoost: @escaping () -> Void, createGiveaway: @escaping () -> Void, openFeatures: @escaping () -> Void, back: @escaping () -> Void, updateStatusBar: @escaping (StatusBarStyle) -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -38,6 +39,7 @@ final class BoostHeaderItem: ItemListControllerHeaderItem {
         self.createGiveaway = createGiveaway
         self.openFeatures = openFeatures
         self.back = back
+        self.updateStatusBar = updateStatusBar
     }
     
     func isEqual(to: ItemListControllerHeaderItem) -> Bool {
@@ -163,6 +165,12 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         
         let scrolledUp = topPanelAlpha < 0.5
         self.backButton.updateContentsColor(backgroundColor: scrolledUp ? UIColor(white: 1.0, alpha: 0.2) : .clear, contentsColor: scrolledUp ? .white : self.item.theme.rootController.navigationBar.accentTextColor, canBeExpanded: !scrolledUp, transition: .animated(duration: 0.2, curve: .easeInOut))
+        
+        if scrolledUp {
+            self.item.updateStatusBar(.White)
+        } else {
+            self.item.updateStatusBar(.Ignore)
+        }
         
         if let hostView = self.hostView {
             hostView.center = CGPoint(x: layout.size.width / 2.0, y: hostView.frame.height / 2.0 - contentOffset)

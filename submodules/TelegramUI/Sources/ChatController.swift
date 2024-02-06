@@ -15687,27 +15687,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
                 displayDuration: .default,
                 cornerRadius: 10.0,
-                shouldDismissOnTouch: { point, _ in
+                shouldDismissOnTouch: { _, _ in
                     return .ignore
                 }
             )
             self.present(tooltipScreen, in: .current)
-            
-            
-//            self.emojiTooltipController?.dismiss()
-//            let tooltipController = TooltipController(content: .attributedText(text), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 3.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 8.0)
-//            self.emojiTooltipController = tooltipController
-//            tooltipController.dismissed = { [weak self, weak tooltipController] _ in
-//                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.emojiTooltipController === tooltipController {
-//                    strongSelf.emojiTooltipController = nil
-//                }
-//            }
-//            self.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-//                if let strongSelf = self {
-//                    return (strongSelf.chatDisplayNode, rect.offsetBy(dx: 0.0, dy: -3.0))
-//                }
-//                return nil
-//            }))
         })
     }
     

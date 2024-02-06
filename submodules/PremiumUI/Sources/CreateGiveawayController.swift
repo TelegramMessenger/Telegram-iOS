@@ -832,7 +832,7 @@ public enum CreateGiveawaySubject {
     case prepaid(PrepaidGiveaway)
 }
 
-public func createGiveawayController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, subject: CreateGiveawaySubject,  completion: (() -> Void)? = nil) -> ViewController {
+public func createGiveawayController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, subject: CreateGiveawaySubject, completion: (() -> Void)? = nil) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let initialSubscriptions: Int32
@@ -864,6 +864,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let updateState: ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
+    
+    let isGroupValue = Atomic<Bool>(value: false)
     
     let productsValue = Atomic<[PremiumGiftProduct]?>(value: nil)
 
@@ -967,6 +969,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         if let peer = peersMap[peerId], case let .channel(channel) = peer, case .group = channel.info {
             isGroup = true
         }
+        let _ = isGroupValue.swap(isGroup)
                 
         let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.BoostGift_Title, text: isGroup ? presentationData.strings.BoostGift_Group_Description : presentationData.strings.BoostGift_Description, cancel: {
             dismissImpl?()
@@ -1258,11 +1261,11 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     }
     
     openChannelsSelectionImpl = {
+        let isGroup = isGroupValue.with { $0 }
         let state = stateValue.with { $0 }
-        
         let stateContext = ShareWithPeersScreen.StateContext(
             context: context,
-            subject: .channels(exclude: Set([peerId]), searchQuery: nil),
+            subject: .channels(isGroup: isGroup, exclude: Set([peerId]), searchQuery: nil),
             initialPeerIds: Set(state.channels.filter { $0 != peerId })
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { _ in

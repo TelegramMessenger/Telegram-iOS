@@ -5733,8 +5733,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
                         if case .group = channel.info {
-                            //TODO:localized
-                            items.append(.action(ContextMenuActionItem(text: "Boost Group", badge: ContextMenuActionBadge(value: "NEW", color: .accent, style: .label), icon: { theme in
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_Group_Boost, badge: ContextMenuActionBadge(value: presentationData.strings.Settings_New, color: .accent, style: .label), icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)

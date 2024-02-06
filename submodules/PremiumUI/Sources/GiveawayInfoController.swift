@@ -35,14 +35,14 @@ public func presentGiveawayInfoController(
         let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway
         let giveawayResults = message.media.first(where: { $0 is TelegramMediaGiveawayResults }) as? TelegramMediaGiveawayResults
         
-        var channelPeerId: EnginePeer.Id?
-        if let giveaway {
-            if let peerId = giveaway.channelPeerIds.first {
-                channelPeerId = peerId
-            }
-        } else if let _ = giveawayResults {
-            channelPeerId = message.author?.id
-        }
+//        var channelPeerId: EnginePeer.Id?
+//        if let giveaway {
+//            if let peerId = giveaway.channelPeerIds.first {
+//                channelPeerId = peerId
+//            }
+//        } else if let _ = giveawayResults {
+//            channelPeerId = message.author?.id
+//        }
         
         var quantity: Int32 = 0
         if let giveaway {
@@ -88,9 +88,15 @@ public func presentGiveawayInfoController(
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
+        let author = message.forwardInfo?.author ?? message.author?._asPeer()
+        var isGroup = false
+        if let channel = author as? TelegramChannel, case .group = channel.info {
+            isGroup = true
+        }
+        
         var peerName = ""
-        if let peerId = channelPeerId, let peer = message.peers[peerId] {
-            peerName = EnginePeer(peer).compactDisplayTitle
+        if let channel = author as? TelegramChannel {
+            peerName = EnginePeer(channel).compactDisplayTitle
         }
         
         let timeZone = TimeZone.current
@@ -110,8 +116,6 @@ public func presentGiveawayInfoController(
         if let prizeDescription, !prizeDescription.isEmpty {
             additionalPrizes = "\n\n" + presentationData.strings.Chat_Giveaway_Info_AdditionalPrizes(peerName, "\(quantity) \(prizeDescription)").string
         }
-        
-        let isGroup = "".isEmpty
         
         switch giveawayInfo {
         case let .ongoing(start, status):

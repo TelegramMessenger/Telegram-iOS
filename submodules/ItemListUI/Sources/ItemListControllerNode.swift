@@ -991,7 +991,7 @@ open class ItemListControllerNode: ASDisplayNode {
             if updateSearchItem {
                 self.requestLayout?(.animated(duration: 0.3, curve: .spring))
             } else if updateToolbarItem || updateHeaderItem || updateFooterItem, let (layout, navigationBarHeight, additionalInsets) = self.validLayout {
-                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .spring), additionalInsets: additionalInsets)
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: updateHeaderItem ? .immediate : .animated(duration: 0.3, curve: .spring), additionalInsets: additionalInsets)
             }
         }
     }

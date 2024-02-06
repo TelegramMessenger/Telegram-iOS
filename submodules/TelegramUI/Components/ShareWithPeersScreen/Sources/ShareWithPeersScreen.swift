@@ -1469,9 +1469,8 @@ final class ShareWithPeersScreenComponent: Component {
                                                     title = environment.strings.BoostGift_Channels_PrivateChannel_Title
                                                     text = environment.strings.BoostGift_Channels_PrivateChannel_Text
                                                 case .group:
-                                                    //TODO:localize
-                                                    title = "Group is Private"
-                                                    text = "Are you sure you want to add a private group? Users won't be able to join it without an invite link."
+                                                    title = environment.strings.BoostGift_Groups_PrivateGroup_Title
+                                                    text = environment.strings.BoostGift_Groups_PrivateGroup_Text
                                                 }
                                                 
                                                 let alertController = textAlertController(
@@ -1704,7 +1703,7 @@ final class ShareWithPeersScreenComponent: Component {
                     searchQuery = query
                 } else if case let .members(_, query) = searchStateContext.subject {
                     searchQuery = query
-                } else if case let .channels(_, query) = searchStateContext.subject {
+                } else if case let .channels(_, _, query) = searchStateContext.subject {
                     searchQuery = query
                 }
                 searchResultsAreEmpty = value.peers.isEmpty
@@ -2089,8 +2088,8 @@ final class ShareWithPeersScreenComponent: Component {
                     
                     let searchSubject: ShareWithPeersScreen.StateContext.Subject
                     switch component.stateContext.subject {
-                    case let .channels(exclude, _):
-                        searchSubject = .channels(exclude: exclude, searchQuery: searchQuery)
+                    case let .channels(isGroup, exclude, _):
+                        searchSubject = .channels(isGroup: isGroup, exclude: exclude, searchQuery: searchQuery)
                     case let .members(peerId, _):
                         searchSubject = .members(peerId: peerId, searchQuery: searchQuery)
                     default:
@@ -2394,11 +2393,10 @@ final class ShareWithPeersScreenComponent: Component {
                 title = environment.strings.BoostGift_Subscribers_Title
                 subtitle = environment.strings.BoostGift_Subscribers_Subtitle("\(10)").string
                 actionButtonTitle = environment.strings.BoostGift_Subscribers_Save
-            case .channels:
-                //TODO:localize
-                title = "Add Groups or Channels"// environment.strings.BoostGift_Channels_Title
-                subtitle = "select up to \(component.context.userLimits.maxGiveawayChannelsCount) groups or channels" //environment.strings.BoostGift_Channels_Subtitle("\(component.context.userLimits.maxGiveawayChannelsCount)").string
-                actionButtonTitle = "Save Groups and Channels" // environment.strings.BoostGift_Channels_Save
+            case let .channels(isGroup, _, _):
+                title = isGroup ? environment.strings.BoostGift_GroupsOrChannels_Title : environment.strings.BoostGift_ChannelsOrGroups_Title
+                subtitle = isGroup ? environment.strings.BoostGift_GroupsOrChannels_Subtitle("\(component.context.userLimits.maxGiveawayChannelsCount)").string : environment.strings.BoostGift_ChannelsOrGroups_Subtitle("\(component.context.userLimits.maxGiveawayChannelsCount)").string
+                actionButtonTitle = isGroup ? environment.strings.BoostGift_GroupsOrChannels_Save : environment.strings.BoostGift_ChannelsOrGroups_Save
             }
             
             let titleComponent: AnyComponent<Empty>

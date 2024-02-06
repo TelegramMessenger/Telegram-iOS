@@ -12,6 +12,7 @@ import PresentationDataUtils
 import AccountContext
 import WallpaperBackgroundNode
 import ListItemComponentAdaptor
+import ChatMessageItemImpl
 
 final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     struct MessageItem: Equatable {
@@ -318,8 +319,8 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                         node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node.frame.size), within: layoutSize)
                         topOffset += node.frame.size.height
                         
-                        if let header = node.headers()?.last {
-                            let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: 7.0), size: CGSize(width: layoutSize.width, height: header.height))
+                        if let header = node.headers()?.first(where: { $0 is ChatMessageAvatarHeader }) {
+                            let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: 3.0 + node.frame.minY), size: CGSize(width: layoutSize.width, height: header.height))
                             let stickLocationDistanceFactor: CGFloat = 0.0
                             
                             let id = header.id

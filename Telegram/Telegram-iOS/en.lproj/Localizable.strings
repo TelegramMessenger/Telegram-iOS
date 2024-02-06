@@ -11149,3 +11149,36 @@ Sorry for the inconvenience.";
 "Contacts.SelectedContacts_any" = "%@ Selected";
 
 "Emoji.GroupEmoji" = "GROUP EMOJI";
+
+"Channel.Appearance.BoostInfo" = "Subscribers of your channel can **boost** it so that it levels up and unlocks these features.";
+"Group.Appearance.BoostInfo" = "Members of your group can **boost** it so that it levels up and unlocks these features.";
+
+"Group.Appearance.ProfileFooter" = "Choose a color and a logo for the group's profile.";
+
+"Group.Appearance.GroupEmoji" = "Group Emoji Pack";
+"Group.Appearance.GroupEmojiFooter" = "Choose an emoji pack that will be available to all members within the group.";
+
+"Group.Appearance.Status" = "Group Emoji Status";
+"Group.Appearance.StatusFooter" = "Choose a status that will be shown next to the group's name.";
+
+"Group.Appearance.Wallpaper" = "Group Wallpaper";
+"Group.Appearance.WallpaperFooter" = "Set a wallpaper that will be visible for everyone in your group.";
+
+"PeerInfo.Group.Boost" = "Boost Group";
+
+"BoostGift.Groups.PrivateGroup.Title" = "Group is Private";
+"BoostGift.Groups.PrivateGroup.Text" = "Are you sure you want to add a private group? Users won't be able to join it without an invite link.";
+
+"BoostGift.ChannelsOrGroups.Title" = "Add Channels or Groups";
+"BoostGift.ChannelsOrGroups.Subtitle" = "select up to %@ channels or groups";
+"BoostGift.ChannelsOrGroups.SectionTitle" = "CHANNELS AND GROUPS";
+"BoostGift.ChannelsOrGroups.Search" = "Search Channels and Groups";
+"BoostGift.ChannelsOrGroups.MaximumReached" = "You can select maximum %@ channels and groups.";
+"BoostGift.ChannelsOrGroups.Save" = "Save Channels and Groups";
+
+"BoostGift.GroupsOrChannels.Title" = "Add Groups or Channels";
+"BoostGift.GroupsOrChannels.Subtitle" = "select up to %@ groups or channels";
+"BoostGift.GroupsOrChannels.SectionTitle" = "GROUPS AND CHANNELS";
+"BoostGift.GroupsOrChannels.Search" = "Search Groups and Channels";
+"BoostGift.GroupsOrChannels.MaximumReached" = "You can select maximum %@ groups and channels.";
+"BoostGift.GroupsOrChannels.Save" = "Save Groups and Channels";

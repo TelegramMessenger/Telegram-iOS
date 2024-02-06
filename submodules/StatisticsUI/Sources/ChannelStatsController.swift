@@ -1103,6 +1103,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     var navigateToChatImpl: ((EnginePeer) -> Void)?
     var navigateToMessageImpl: ((EngineMessage.Id) -> Void)?
     var openBoostImpl: ((Bool) -> Void)?
+    var updateStatusBarImpl: ((StatusBarStyle) -> Void)?
     
     let arguments = ChannelStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return statsContext.loadDetailedGraph(graph, x: x)
@@ -1317,6 +1318,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 openBoostImpl?(true)
             }, back: {
                 dismissImpl?()
+            }, updateStatusBar: { style in
+                updateStatusBarImpl?(style)
             })
             leftNavigationButton = ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {})
             boostsOnly = true
@@ -1516,6 +1519,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 controller?.push(boostController)
             })
         }
+    }
+    updateStatusBarImpl = { [weak controller] style in
+        controller?.setStatusBarStyle(style, animated: true)
     }
     return controller
 }

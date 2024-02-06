@@ -49,7 +49,7 @@ public extension ShareWithPeersScreen {
             case contacts(base: EngineStoryPrivacy.Base)
             case contactsSearch(query: String, onlyContacts: Bool)
             case members(peerId: EnginePeer.Id, searchQuery: String?)
-            case channels(exclude: Set<EnginePeer.Id>, searchQuery: String?)
+            case channels(isGroup: Bool, exclude: Set<EnginePeer.Id>, searchQuery: String?)
         }
         
         var stateValue: State?
@@ -590,7 +590,7 @@ public extension ShareWithPeersScreen {
                 self.stateDisposable = combinedDisposable
                 
                 self.listControl = disposableAndLoadMoreControl.1
-            case let .channels(excludePeerIds, searchQuery):
+            case let .channels(_, excludePeerIds, searchQuery):
                 self.stateDisposable = (combineLatest(
                     context.engine.messages.chatList(group: .root, count: 500) |> take(1),
                     searchQuery.flatMap { context.engine.contacts.searchLocalPeers(query: $0) } ?? .single([]),

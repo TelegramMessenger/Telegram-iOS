@@ -49,6 +49,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/BoostLevelIconComponent",
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/GroupStickerPackSetupController",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
     ],
     visibility = [
         "//visibility:public",

@@ -362,7 +362,11 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             let participantsText: String
             let countriesText: String
             
-            let isGroup = "".isEmpty
+            let author = item.message.forwardInfo?.author ?? item.message.author
+            var isGroup = false
+            if let channel = author as? TelegramChannel, case .group = channel.info {
+                isGroup = true
+            }
             
             if let giveaway {
                 if giveaway.flags.contains(.onlyNewSubscribers) {
