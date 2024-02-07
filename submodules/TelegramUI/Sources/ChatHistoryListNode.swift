@@ -1690,7 +1690,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 
                 let alwaysDisplayTranscribeButton = ChatMessageItemAssociatedData.DisplayTranscribeButton(
                     canBeDisplayed: suggestAudioTranscription.0 < 2,
-                    displayForNotConsumed: suggestAudioTranscription.1
+                    displayForNotConsumed: suggestAudioTranscription.1,
+                    providedByGroupBoost: false
                 )
                 
                 var translateToLanguage: String?
