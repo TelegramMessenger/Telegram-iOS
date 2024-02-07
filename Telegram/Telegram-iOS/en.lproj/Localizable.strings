@@ -11207,4 +11207,10 @@ Sorry for the inconvenience.";
 "GroupBoost.CustomWallpaper" = "Set Custom Group Wallpaper";
 "GroupBoost.EnableCustomWallpaperLevelText" = "Your group needs **Level %1$@** to set custom group wallpaper.";
 
+"GroupBoost.EmojiPack" = "Set Group Emoji Pack";
 "GroupBoost.EnableEmojiPackLevelText" = "Your group needs **Level %1$@** to set emoji pack.";
+
+"GroupBoost.AudioTranscription" = "Audio Transcription";
+
+"GroupBoost.AdditionalFeatures" = "Additional Features";
+"GroupBoost.AdditionalFeaturesText" = "By gaining **boosts**, your group reaches higher levels and unlocks more features.";

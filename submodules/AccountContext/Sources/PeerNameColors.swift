@@ -88,6 +88,7 @@ public class PeerNameColors: Equatable {
             profileStoryDarkColors: [:],
             profileDisplayOrder: [],
             nameColorsChannelMinRequiredBoostLevel: [:],
+            profileColorsChannelMinRequiredBoostLevel: [:],
             profileColorsGroupMinRequiredBoostLevel: [:]
         )
     }
@@ -105,6 +106,7 @@ public class PeerNameColors: Equatable {
     public let profileDisplayOrder: [Int32]
     
     public let nameColorsChannelMinRequiredBoostLevel: [Int32: Int32]
+    public let profileColorsChannelMinRequiredBoostLevel: [Int32: Int32]
     public let profileColorsGroupMinRequiredBoostLevel: [Int32: Int32]
     
     public func get(_ color: PeerNameColor, dark: Bool = false) -> Colors {
@@ -158,6 +160,7 @@ public class PeerNameColors: Equatable {
         profileStoryDarkColors: [Int32: Colors],
         profileDisplayOrder: [Int32],
         nameColorsChannelMinRequiredBoostLevel: [Int32: Int32],
+        profileColorsChannelMinRequiredBoostLevel: [Int32: Int32],
         profileColorsGroupMinRequiredBoostLevel: [Int32: Int32]
     ) {
         self.colors = colors
@@ -171,6 +174,7 @@ public class PeerNameColors: Equatable {
         self.profileStoryDarkColors = profileStoryDarkColors
         self.profileDisplayOrder = profileDisplayOrder
         self.nameColorsChannelMinRequiredBoostLevel = nameColorsChannelMinRequiredBoostLevel
+        self.profileColorsChannelMinRequiredBoostLevel = profileColorsChannelMinRequiredBoostLevel
         self.profileColorsGroupMinRequiredBoostLevel = profileColorsGroupMinRequiredBoostLevel
     }
     
@@ -187,6 +191,7 @@ public class PeerNameColors: Equatable {
         var profileDisplayOrder: [Int32] = []
         
         var nameColorsChannelMinRequiredBoostLevel: [Int32: Int32] = [:]
+        var profileColorsChannelMinRequiredBoostLevel: [Int32: Int32] = [:]
         var profileColorsGroupMinRequiredBoostLevel: [Int32: Int32] = [:]
         
         if !availableReplyColors.options.isEmpty {
@@ -216,6 +221,9 @@ public class PeerNameColors: Equatable {
             
         if !availableProfileColors.options.isEmpty {
             for option in availableProfileColors.options {
+                if let requiredChannelMinBoostLevel = option.value.requiredChannelMinBoostLevel {
+                    profileColorsChannelMinRequiredBoostLevel[option.key] = requiredChannelMinBoostLevel
+                }
                 if let requiredGroupMinBoostLevel = option.value.requiredGroupMinBoostLevel {
                     profileColorsGroupMinRequiredBoostLevel[option.key] = requiredGroupMinBoostLevel
                 }
@@ -257,6 +265,7 @@ public class PeerNameColors: Equatable {
             profileStoryDarkColors: profileStoryDarkColors,
             profileDisplayOrder: profileDisplayOrder,
             nameColorsChannelMinRequiredBoostLevel: nameColorsChannelMinRequiredBoostLevel,
+            profileColorsChannelMinRequiredBoostLevel: profileColorsChannelMinRequiredBoostLevel,
             profileColorsGroupMinRequiredBoostLevel: profileColorsGroupMinRequiredBoostLevel
         )
     }

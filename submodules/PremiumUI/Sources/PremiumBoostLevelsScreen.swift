@@ -398,6 +398,7 @@ private final class SheetContent: CombinedComponent {
     let insets: UIEdgeInsets
         
     let peerId: EnginePeer.Id
+    let isGroup: Bool
     let mode: PremiumBoostLevelsScreen.Mode
     let status: ChannelBoostStatus?
     let boostState: InternalBoostState.DisplayData?
@@ -414,6 +415,7 @@ private final class SheetContent: CombinedComponent {
          strings: PresentationStrings,
          insets: UIEdgeInsets,
          peerId: EnginePeer.Id,
+         isGroup: Bool,
          mode: PremiumBoostLevelsScreen.Mode,
          status: ChannelBoostStatus?,
          boostState: InternalBoostState.DisplayData?,
@@ -429,6 +431,7 @@ private final class SheetContent: CombinedComponent {
         self.strings = strings
         self.insets = insets
         self.peerId = peerId
+        self.isGroup = isGroup
         self.mode = mode
         self.status = status
         self.boostState = boostState
@@ -451,6 +454,9 @@ private final class SheetContent: CombinedComponent {
             return false
         }
         if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.isGroup != rhs.isGroup {
             return false
         }
         if lhs.mode != rhs.mode {
@@ -547,10 +553,7 @@ private final class SheetContent: CombinedComponent {
             let iconName = "Premium/Boost"
             let peerName = state.peer?.compactDisplayTitle ?? ""
             
-            var isGroup = false
-            if let peer = state.peer, case let .channel(channel) = peer, case .group = channel.info {
-                isGroup = true
-            }
+            let isGroup = component.isGroup
             
             let level: Int
             let boosts: Int
@@ -681,7 +684,7 @@ private final class SheetContent: CombinedComponent {
                     isCurrent = mode == .current
                 }
             case .features:
-                textString = "By gaining **boosts**, your group reaches higher levels and unlocks more features."
+                textString = strings.GroupBoost_AdditionalFeaturesText
             }
             
             let defaultTitle = strings.ChannelBoost_Level("\(level)").string
@@ -1062,7 +1065,7 @@ private final class SheetContent: CombinedComponent {
             var profileColorsAtLevel: [(Int32, Int32)] = []
             var profileColorsCountMap: [Int32: Int32] = [:]
             for color in context.component.context.peerNameColors.profileDisplayOrder {
-                if let level = context.component.context.peerNameColors.profileColorsGroupMinRequiredBoostLevel[color] {
+                if let level = isGroup ? context.component.context.peerNameColors.profileColorsGroupMinRequiredBoostLevel[color] : context.component.context.peerNameColors.profileColorsChannelMinRequiredBoostLevel[color]  {
                     if let current = profileColorsCountMap[level] {
                         profileColorsCountMap[level] = current + 1
                     } else {
@@ -1102,11 +1105,6 @@ private final class SheetContent: CombinedComponent {
                     if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.audioTranscription)
                     }
-                    
-//                    if level >= premiumConfiguration.minChannelProfileColorLevel {
-//                        let delta = min(level - premiumConfiguration.minChannelProfileColorLevel + 1, 2)
-//                        perks.append(.profileColor(8 * delta))
-//                    }
                     
                     var profileColorsCount: Int32 = 0
                     for (colorLevel, count) in profileColorsAtLevel {
@@ -1301,56 +1299,63 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
             
             let component = context.component
             
-            var isGroup = false
-            if let peer = state.peer, case let .channel(channel) = peer, case .group = channel.info {
-                isGroup = true
+            var isGroup: Bool?
+            if let peer = state.peer {
+                if case let .channel(channel) = peer, case .group = channel.info {
+                    isGroup = true
+                } else {
+                    isGroup = false
+                }
             }
             
-            let scroll = scroll.update(
-                component: ScrollComponent<Empty>(
-                    content: AnyComponent(
-                        SheetContent(
-                            context: component.context,
-                            theme: component.theme,
-                            strings: component.strings,
-                            insets: .zero,
-                            peerId: component.peerId,
-                            mode: component.mode,
-                            status: component.status,
-                            boostState: component.boostState,
-                            boost: component.boost,
-                            copyLink: component.copyLink,
-                            dismiss: component.dismiss,
-                            openStats: component.openStats,
-                            openGift: component.openGift,
-                            openPeer: component.openPeer
-                        )
+            if let isGroup {
+                let scroll = scroll.update(
+                    component: ScrollComponent<Empty>(
+                        content: AnyComponent(
+                            SheetContent(
+                                context: component.context,
+                                theme: component.theme,
+                                strings: component.strings,
+                                insets: .zero,
+                                peerId: component.peerId,
+                                isGroup: isGroup,
+                                mode: component.mode,
+                                status: component.status,
+                                boostState: component.boostState,
+                                boost: component.boost,
+                                copyLink: component.copyLink,
+                                dismiss: component.dismiss,
+                                openStats: component.openStats,
+                                openGift: component.openGift,
+                                openPeer: component.openPeer
+                            )
+                        ),
+                        contentInsets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0),
+                        contentOffsetUpdated: { [weak state] topContentOffset, _ in
+                            state?.topContentOffset = topContentOffset
+                            Queue.mainQueue().justDispatch {
+                                state?.updated(transition: .immediate)
+                            }
+                        },
+                        contentOffsetWillCommit: { _ in }
                     ),
-                    contentInsets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 34.0, right: 0.0),
-                    contentOffsetUpdated: { [weak state] topContentOffset, _ in
-                        state?.topContentOffset = topContentOffset
-                        Queue.mainQueue().justDispatch {
-                            state?.updated(transition: .immediate)
-                        }
-                    },
-                    contentOffsetWillCommit: { _ in }
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-                        
-            let background = background.update(
-                component: Rectangle(color: theme.overallDarkAppearance ? theme.list.blocksBackgroundColor : theme.list.plainBackgroundColor),
-                availableSize: scroll.size,
-                transition: context.transition
-            )
-            context.add(background
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
-            )
-     
-            context.add(scroll
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: scroll.size.height / 2.0))
-            )
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let background = background.update(
+                    component: Rectangle(color: theme.overallDarkAppearance ? theme.list.blocksBackgroundColor : theme.list.plainBackgroundColor),
+                    availableSize: scroll.size,
+                    transition: context.transition
+                )
+                context.add(background
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
+                )
+                
+                context.add(scroll
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: scroll.size.height / 2.0))
+                )
+            }
             
             let topPanel = topPanel.update(
                 component: BlurredBackgroundComponent(
@@ -1399,13 +1404,12 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                         case .customWallpaper:
                             titleString = strings.ChannelBoost_CustomWallpaper
                         case .audioTranscription:
-                            //TODO:localize
-                            titleString = "Audio Transcription"
+                            titleString = strings.GroupBoost_AudioTranscription
                         case .emojiPack:
-                            titleString = "Set Group Emoji Pack"
+                            titleString = strings.GroupBoost_EmojiPack
                         }
                     } else {
-                        titleString = isGroup ? strings.GroupBoost_Title_Current : strings.ChannelBoost_Title_Current
+                        titleString = isGroup == true ? strings.GroupBoost_Title_Current : strings.ChannelBoost_Title_Current
                     }
                 } else {
                     titleString = strings.ChannelBoost_MaxLevelReached
@@ -1418,16 +1422,15 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                 
                 if let _ = remaining {
                     if case .current = mode {
-                        titleString = isGroup ? strings.GroupBoost_Title_Current : strings.ChannelBoost_Title_Current
+                        titleString = isGroup == true ? strings.GroupBoost_Title_Current : strings.ChannelBoost_Title_Current
                     } else {
-                        titleString = isGroup ? strings.GroupBoost_Title_Other : strings.ChannelBoost_Title_Other
+                        titleString = isGroup == true ? strings.GroupBoost_Title_Other : strings.ChannelBoost_Title_Other
                     }
                 } else {
                     titleString = strings.ChannelBoost_MaxLevelReached
                 }
             case .features:
-                //TODO:localize
-                titleString = "Additional Features"
+                titleString = strings.GroupBoost_AdditionalFeatures
                 titleFont = Font.semibold(20.0)
             }
 
@@ -1523,7 +1526,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width - closeButton.size.width, y: 28.0))
             )
             
-            return scroll.size
+            return context.availableSize
         }
     }
 }
