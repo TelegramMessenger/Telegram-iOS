@@ -942,7 +942,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         replyCount: dateReplies,
                         isPinned: arguments.isPinned && !arguments.associatedData.isInPinnedListMode,
                         hasAutoremove: arguments.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: arguments.message, isInline: arguments.associatedData.isInline),
+                        canViewReactionList: canViewMessageReactionList(message: arguments.topMessage, isInline: arguments.associatedData.isInline),
                         animationCache: arguments.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: arguments.controllerInteraction.presentationContext.animationRenderer
                     ))
