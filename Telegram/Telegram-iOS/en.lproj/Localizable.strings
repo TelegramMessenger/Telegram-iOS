@@ -11224,3 +11224,5 @@ Sorry for the inconvenience.";
 "GroupBoost.Info" = "Members of your group can **boost** it so that it **levels up** and gets **exclusive features**.";
 
 "Chat.GroupEmojiTooltip" = "All members of this group can\nuse the # **%@** pack";
+
+"GroupBoost.AskToBoost" = "Ask your **Premium** members to boost your group with this link:";

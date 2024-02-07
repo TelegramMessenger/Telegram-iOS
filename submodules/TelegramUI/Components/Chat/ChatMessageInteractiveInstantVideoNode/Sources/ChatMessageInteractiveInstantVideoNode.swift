@@ -841,6 +841,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             } else {
                                 displayTranscribe = false
                             }
+                        } else if item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                            displayTranscribe = true
                         }
                     }
                     
@@ -1813,12 +1815,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                 }
             } else {
-                guard item.associatedData.isPremium else {
+                guard item.associatedData.isPremium || item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost else {
                     if self.hapticFeedback == nil {
                         self.hapticFeedback = HapticFeedback()
                     }
                     self.hapticFeedback?.impact(.medium)
-                    
                     
                     let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                         if case .undo = action {

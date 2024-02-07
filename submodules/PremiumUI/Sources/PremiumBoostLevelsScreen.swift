@@ -644,7 +644,7 @@ private final class SheetContent: CombinedComponent {
                     }
                     
                     if needsSecondParagraph {
-                        textString += "\n\n\(strings.ChannelBoost_AskToBoost)"
+                        textString += "\n\n\(isGroup ? strings.GroupBoost_AskToBoost : strings.ChannelBoost_AskToBoost)"
                     }
                 } else {
                     textString = strings.ChannelBoost_MaxLevelReached_Text(peerName, "\(level)").string
@@ -1102,10 +1102,6 @@ private final class SheetContent: CombinedComponent {
                         perks.append(.nameColor(nameColorsCount))
                     }
                     
-                    if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.audioTranscription)
-                    }
-                    
                     var profileColorsCount: Int32 = 0
                     for (colorLevel, count) in profileColorsAtLevel {
                         if level >= colorLevel {
@@ -1115,13 +1111,17 @@ private final class SheetContent: CombinedComponent {
                     if profileColorsCount > 0 {
                         perks.append(.profileColor(profileColorsCount))
                     }
-                    
+                
+                    if isGroup && level >= requiredBoostSubjectLevel(subject: .emojiPack, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+                        perks.append(.emojiPack)
+                    }
+                
                     if level >= requiredBoostSubjectLevel(subject: .profileIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.profileIcon)
                     }
                     
                     if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
-                        perks.append(.emojiPack)
+                        perks.append(.audioTranscription)
                     }
                     
                     var linkColorsCount: Int32 = 0

@@ -361,7 +361,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 }
             } else {
-                guard arguments.associatedData.isPremium else {
+                guard arguments.associatedData.isPremium || arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost else {
                     if self.hapticFeedback == nil {
                         self.hapticFeedback = HapticFeedback()
                     }
@@ -771,6 +771,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else if arguments.incoming && isConsumed == false && arguments.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
                             displayTranscribe = true
                         }
+                    } else if arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                        displayTranscribe = true
                     }
                 }
                 

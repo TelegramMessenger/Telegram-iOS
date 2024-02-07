@@ -205,7 +205,7 @@ public struct PremiumConfiguration {
                 minChannelEmojiStatusLevel: get(data["channel_emoji_status_level_min"]) ?? defaultValue.minChannelEmojiStatusLevel,
                 minChannelWallpaperLevel: get(data["channel_wallpaper_level_min"]) ?? defaultValue.minChannelWallpaperLevel,
                 minChannelCustomWallpaperLevel: get(data["channel_custom_wallpaper_level_min"]) ?? defaultValue.minChannelCustomWallpaperLevel,
-                minGroupProfileIconLevel: get(data["group_profile_bg_icon_level_min "]) ?? defaultValue.minGroupProfileIconLevel,
+                minGroupProfileIconLevel: get(data["group_profile_bg_icon_level_min"]) ?? defaultValue.minGroupProfileIconLevel,
                 minGroupEmojiStatusLevel: get(data["group_emoji_status_level_min"]) ?? defaultValue.minGroupEmojiStatusLevel,
                 minGroupWallpaperLevel: get(data["group_wallpaper_level_min"]) ?? defaultValue.minGroupWallpaperLevel,
                 minGroupCustomWallpaperLevel: get(data["group_custom_wallpaper_level_min"]) ?? defaultValue.minGroupCustomWallpaperLevel,
