@@ -945,8 +945,8 @@ final class ChannelAppearanceScreenComponent: Component {
             }
             
             let profileColor = resolvedState.profileColor
-            if profileColor != nil {
-                requiredBoostSubjects.append(.profileColors)
+            if let profileColor {
+                requiredBoostSubjects.append(.profileColors(colors: profileColor))
             }
             
             let backgroundFileId = resolvedState.backgroundFileId

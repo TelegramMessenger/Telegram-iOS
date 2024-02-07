@@ -11109,8 +11109,6 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Info.Group.OngoingIntro" = "The giveaway is sponsored by the admins of **%1$@**, who acquired %2$@ for %3$@ for its members.";
 "Chat.Giveaway.Info.Group.EndedIntro" = "The giveaway was sponsored by the admins of **%1$@**, who acquired %2$@ for %3$@ for its members.";
 
-"ChannelBoost.EnableGroupEmojiPackLevelText" = "Your group needs **Level %1$@** to set emoji pack.";
-
 "Premium.LastSeen" = "Last Seen Times";
 "Premium.LastSeenInfo" = "View the last seen and read times of others even if you hide yours.";
 "Premium.LastSeen.Proceed" = "About Telegram Premium";
@@ -11192,3 +11190,21 @@ Sorry for the inconvenience.";
 
 "Group.Emoji.NotFound" = "Emoji pack not found";
 "Group.Emoji.NotFoundHelp" = "Try again or choose from the list below";
+
+
+"GroupBoost.ProfileColor" = "Set Cover Color";
+"GroupBoost.EnableProfileColorLevelText" = "Your group needs **Level %1$@** to change group cover color.";
+
+"GroupBoost.ProfileIcon" = "Set Cover Icon";
+"GroupBoost.EnableProfileIconLevelText" = "Your group needs **Level %1$@** to change group cover icon.";
+
+"GroupBoost.EmojiStatus" = "Use Emoji Statuses";
+"GroupBoost.EnableEmojiStatusLevelText" = "Your group needs **Level %1$@** to use emoji statuses.";
+
+"GroupBoost.Wallpaper" = "Set Group Wallpaper";
+"GroupBoost.EnableWallpaperLevelText" = "Your group needs **Level %1$@** to set group wallpaper.";
+
+"GroupBoost.CustomWallpaper" = "Set Custom Group Wallpaper";
+"GroupBoost.EnableCustomWallpaperLevelText" = "Your group needs **Level %1$@** to set custom group wallpaper.";
+
+"GroupBoost.EnableEmojiPackLevelText" = "Your group needs **Level %1$@** to set emoji pack.";

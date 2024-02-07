@@ -28,20 +28,21 @@ func requiredBoostSubjectLevel(subject: BoostSubject, group: Bool, context: Acco
     case let .channelReactions(reactionCount):
         return reactionCount
     case let .nameColors(colors):
-        if group {
-            if let value = context.peerNameColors.nameColorsGroupMinRequiredBoostLevel[colors.rawValue] {
-                return value
-            }
-        } else {
-            if let value = context.peerNameColors.nameColorsChannelMinRequiredBoostLevel[colors.rawValue] {
-                return value
-            }
+        if let value = context.peerNameColors.nameColorsChannelMinRequiredBoostLevel[colors.rawValue] {
+            return value
         }
         return 1
     case .nameIcon:
         return configuration.minChannelNameIconLevel
-    case .profileColors:
-        return configuration.minChannelProfileColorLevel
+    case let .profileColors(colors):
+        if group {
+            if let value = context.peerNameColors.profileColorsGroupMinRequiredBoostLevel[colors.rawValue] {
+                return value
+            }
+        } else {
+            return configuration.minChannelProfileColorLevel
+        }
+        return 1
     case .profileIcon:
         return group ? configuration.minGroupProfileIconLevel : configuration.minChannelProfileIconLevel
     case .emojiStatus:
@@ -62,7 +63,7 @@ public enum BoostSubject: Equatable {
     case channelReactions(reactionCount: Int32)
     case nameColors(colors: PeerNameColor)
     case nameIcon
-    case profileColors
+    case profileColors(colors: PeerNameColor)
     case profileIcon
     case emojiStatus
     case wallpaper
@@ -616,19 +617,19 @@ private final class SheetContent: CombinedComponent {
                         case .nameIcon:
                             textString = strings.ChannelBoost_EnableNameIconLevelText("\(premiumConfiguration.minChannelNameIconLevel)").string
                         case .profileColors:
-                            textString = strings.ChannelBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string : strings.ChannelBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string
                         case .profileIcon:
-                            textString = strings.ChannelBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string : strings.ChannelBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string
                         case .emojiStatus:
-                            textString = strings.ChannelBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string : strings.ChannelBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string
                         case .wallpaper:
-                            textString = strings.ChannelBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string : strings.ChannelBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string
                         case .customWallpaper:
-                            textString = strings.ChannelBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string : strings.ChannelBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string
                         case .audioTranscription:
                             textString = ""
                         case .emojiPack:
-                            textString = strings.ChannelBoost_EnableGroupEmojiPackLevelText("\(premiumConfiguration.minGroupEmojiPackLevel)").string
+                            textString = strings.GroupBoost_EnableEmojiPackLevelText("\(premiumConfiguration.minGroupEmojiPackLevel)").string
                         }
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
@@ -1058,6 +1059,21 @@ private final class SheetContent: CombinedComponent {
                 nameColorsAtLevel.append((key, value))
             }
             
+            var profileColorsAtLevel: [(Int32, Int32)] = []
+            var profileColorsCountMap: [Int32: Int32] = [:]
+            for color in context.component.context.peerNameColors.profileDisplayOrder {
+                if let level = context.component.context.peerNameColors.profileColorsGroupMinRequiredBoostLevel[color] {
+                    if let current = profileColorsCountMap[level] {
+                        profileColorsCountMap[level] = current + 1
+                    } else {
+                        profileColorsCountMap[level] = 1
+                    }
+                }
+            }
+            for (key, value) in profileColorsCountMap {
+                profileColorsAtLevel.append((key, value))
+            }
+            
             var isFeatures = false
             if case .features = component.mode {
                 isFeatures = true
@@ -1083,19 +1099,30 @@ private final class SheetContent: CombinedComponent {
                         perks.append(.nameColor(nameColorsCount))
                     }
                     
-                    if isGroup && level >= premiumConfiguration.minGroupAudioTranscriptionLevel {
+                    if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.audioTranscription)
                     }
                     
-                    if level >= premiumConfiguration.minChannelProfileColorLevel {
-                        let delta = min(level - premiumConfiguration.minChannelProfileColorLevel + 1, 2)
-                        perks.append(.profileColor(8 * delta))
+//                    if level >= premiumConfiguration.minChannelProfileColorLevel {
+//                        let delta = min(level - premiumConfiguration.minChannelProfileColorLevel + 1, 2)
+//                        perks.append(.profileColor(8 * delta))
+//                    }
+                    
+                    var profileColorsCount: Int32 = 0
+                    for (colorLevel, count) in profileColorsAtLevel {
+                        if level >= colorLevel {
+                            profileColorsCount += count
+                        }
                     }
-                    if level >= premiumConfiguration.minChannelProfileIconLevel {
+                    if profileColorsCount > 0 {
+                        perks.append(.profileColor(profileColorsCount))
+                    }
+                    
+                    if level >= requiredBoostSubjectLevel(subject: .profileIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.profileIcon)
                     }
                     
-                    if isGroup && level >= premiumConfiguration.minGroupAudioTranscriptionLevel {
+                    if isGroup && level >= requiredBoostSubjectLevel(subject: .audioTranscription, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.emojiPack)
                     }
                     
@@ -1109,16 +1136,16 @@ private final class SheetContent: CombinedComponent {
                         perks.append(.linkColor(linkColorsCount))
                     }
                                         
-                    if !isGroup && level >= premiumConfiguration.minChannelNameIconLevel {
+                    if !isGroup && level >= requiredBoostSubjectLevel(subject: .nameIcon, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.linkIcon)
                     }
-                    if level >= premiumConfiguration.minChannelEmojiStatusLevel {
+                    if level >= requiredBoostSubjectLevel(subject: .emojiStatus, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.emojiStatus)
                     }
-                    if level >= premiumConfiguration.minChannelWallpaperLevel {
+                    if level >= requiredBoostSubjectLevel(subject: .wallpaper, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.wallpaper(8))
                     }
-                    if level >= premiumConfiguration.minChannelCustomWallpaperLevel {
+                    if level >= requiredBoostSubjectLevel(subject: .customWallpaper, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                         perks.append(.customWallpaper)
                     }
                     
