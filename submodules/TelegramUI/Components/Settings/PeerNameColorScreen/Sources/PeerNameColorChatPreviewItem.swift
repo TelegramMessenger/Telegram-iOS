@@ -35,7 +35,7 @@ final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem, ListItemCo
             if lhs.backgroundEmojiId != rhs.backgroundEmojiId {
                 return false
             }
-            if let lhsReply = lhs.reply, let rhsReply = rhs.reply, lhsReply.0 != rhsReply.0 || lhsReply.1 != rhsReply.1 {
+            if let lhsReply = lhs.reply, let rhsReply = rhs.reply, lhsReply.0 != rhsReply.0 || lhsReply.1 != rhsReply.1  || lhsReply.2 != rhsReply.2 {
                 return false
             } else if (lhs.reply == nil) != (rhs.reply == nil) {
                 return false
@@ -57,7 +57,7 @@ final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem, ListItemCo
         let photo: [TelegramMediaImageRepresentation]
         let nameColor: PeerNameColor
         let backgroundEmojiId: Int64?
-        let reply: (String, String)?
+        let reply: (String, String, PeerNameColor)?
         let linkPreview: (String, String, String)?
         let text: String
     }
@@ -220,15 +220,19 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
             var items: [ListViewItem] = []
             for messageItem in item.messageItems.reversed() {
                 let authorPeerId = messageItem.peerId
+                let replyAuthorPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(10))
                 
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var messages = SimpleDictionary<MessageId, Message>()
                 
                 peers[authorPeerId] = TelegramUser(id: authorPeerId, accessHash: nil, firstName: messageItem.author, lastName: "", username: nil, phone: nil, photo: messageItem.photo, botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: messageItem.nameColor, backgroundEmojiId: messageItem.backgroundEmojiId, profileColor: nil, profileBackgroundEmojiId: nil)
                 
+                
                 let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
-                if let (_, text) = messageItem.reply {
-                    messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: text, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                if let (replyAuthor, text, replyColor) = messageItem.reply {
+                    peers[replyAuthorPeerId] = TelegramUser(id: authorPeerId, accessHash: nil, firstName: replyAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: replyColor, backgroundEmojiId: messageItem.backgroundEmojiId, profileColor: nil, profileBackgroundEmojiId: nil)
+                    
+                    messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[replyAuthorPeerId], text: text, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 }
                 
                 var media: [Media] = []

@@ -963,10 +963,10 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             if let boostersState, boostersState.count > 0 {
                 boostersTitle = presentationData.strings.Stats_Boosts_Boosts(boostersState.count)
                 boostersPlaceholder = nil
-                boostersFooter = isGroup ? "Your group is currently boosted by these members." : presentationData.strings.Stats_Boosts_BoostersInfo
+                boostersFooter = isGroup ? presentationData.strings.Stats_Boosts_Group_BoostersInfo : presentationData.strings.Stats_Boosts_BoostersInfo
             } else {
                 boostersTitle = presentationData.strings.Stats_Boosts_BoostsNone
-                boostersPlaceholder = presentationData.strings.Stats_Boosts_NoBoostersYet
+                boostersPlaceholder = isGroup ? presentationData.strings.Stats_Boosts_Group_NoBoostersYet : presentationData.strings.Stats_Boosts_NoBoostersYet
                 boostersFooter = nil
             }
             entries.append(.boostersTitle(presentationData.theme, boostersTitle))
@@ -1303,14 +1303,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             return map
         }
                 
-        //TODO:localize
         var title: ItemListControllerTitle
         var headerItem: BoostHeaderItem?
         var leftNavigationButton: ItemListNavigationButton?
         var boostsOnly = false
         if isGroup, section == .boosts, let boostStatus {
             title = .text("")
-            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostStatus, title: "Boost Group", text: "Members of your group can **boost** it so that it **levels up** and gets **exclusive features**.", openBoost: {
+            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostStatus, title: presentationData.strings.GroupBoost_Title, text: presentationData.strings.GroupBoost_Info, openBoost: {
                 openBoostImpl?(false)
             }, createGiveaway: {
                 arguments.openGifts()

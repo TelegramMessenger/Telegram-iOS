@@ -1493,7 +1493,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     photo: peer.profileImageRepresentations,
                     nameColor: resolvedState.nameColor,
                     backgroundEmojiId: replyFileId,
-                    reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText),
+                    reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText, resolvedState.nameColor),
                     linkPreview: (environment.strings.Channel_Appearance_ExampleLinkWebsite, environment.strings.Channel_Appearance_ExampleLinkTitle, environment.strings.Channel_Appearance_ExampleLinkText),
                     text: environment.strings.Channel_Appearance_ExampleText
                 )
@@ -1624,11 +1624,11 @@ final class ChannelAppearanceScreenComponent: Component {
                     let incomingMessageItem = PeerNameColorChatPreviewItem.MessageItem(
                         outgoing: false,
                         peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)),
-                        author: peer.compactDisplayTitle,
-                        photo: peer.profileImageRepresentations,
+                        author: environment.strings.Group_Appearance_PreviewAuthor,
+                        photo: [],
                         nameColor: .red,
-                        backgroundEmojiId: nil,
-                        reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText),
+                        backgroundEmojiId: 5301072507598550489,
+                        reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText, .violet),
                         linkPreview: nil,
                         text: environment.strings.Appearance_PreviewIncomingText
                     )

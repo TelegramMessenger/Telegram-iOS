@@ -315,7 +315,7 @@ private func peerNameColorScreenEntries(
             photo: peer.profileImageRepresentations,
             nameColor: nameColor,
             backgroundEmojiId: backgroundEmojiId,
-            reply: (peer.compactDisplayTitle, replyText),
+            reply: (peer.compactDisplayTitle, replyText, nameColor),
             linkPreview: (presentationData.strings.NameColor_ChatPreview_LinkSite, presentationData.strings.NameColor_ChatPreview_LinkTitle, presentationData.strings.NameColor_ChatPreview_LinkText),
             text: messageText
         )

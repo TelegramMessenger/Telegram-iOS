@@ -318,7 +318,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(stars
-                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0 + 20.0))
+                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0 + 10.0))
             )
             
             let level = component.status.level

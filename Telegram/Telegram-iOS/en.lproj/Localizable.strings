@@ -11214,3 +11214,13 @@ Sorry for the inconvenience.";
 
 "GroupBoost.AdditionalFeatures" = "Additional Features";
 "GroupBoost.AdditionalFeaturesText" = "By gaining **boosts**, your group reaches higher levels and unlocks more features.";
+
+"Stats.Boosts.Group.NoBoostersYet" = "No users currently boost your group";
+"Stats.Boosts.Group.BoostersInfo" = "Your group is currently boosted by these members.";
+
+"Group.Appearance.PreviewAuthor" = "Jessica";
+
+"GroupBoost.Title" = "Boost Group";
+"GroupBoost.Info" = "Members of your group can **boost** it so that it **levels up** and gets **exclusive features**.";
+
+"Chat.GroupEmojiTooltip" = "All members of this group can\nuse the # **%@** pack";

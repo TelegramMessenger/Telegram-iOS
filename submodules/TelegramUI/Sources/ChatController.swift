@@ -15673,10 +15673,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let emojiPack = (self.peerView?.cachedData as? CachedChannelData)?.emojiPack, let thumbnailFileId = emojiPack.thumbnailFileId else {
             return
         }
-        //TODO:localize
         let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [thumbnailFileId])
-        |> deliverOnMainQueue).start(next: { files in
-            guard let emojiFile = files.values.first else {
+        |> deliverOnMainQueue).start(next: { [weak self] files in
+            guard let self, let emojiFile = files.values.first else {
                 return
             }
             
@@ -15687,7 +15686,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return nil
             })
             
-            let text = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("All members of this group can\nuse the # **\(emojiPack.title)** pack", attributes: markdownAttributes))
+            let text = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(self.presentationData.strings.Chat_GroupEmojiTooltip(emojiPack.title).string, attributes: markdownAttributes))
             
             let range = (text.string as NSString).range(of: "#")
             if range.location != NSNotFound {
@@ -15699,7 +15698,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 account: self.context.account,
                 sharedContext: self.context.sharedContext,
                 text: .attributedString(text: text),
-//                style: .customBlur(UIColor(rgb: 0x000000, alpha: 0.8), 2.0),
                 location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
                 displayDuration: .default,
                 cornerRadius: 10.0,
