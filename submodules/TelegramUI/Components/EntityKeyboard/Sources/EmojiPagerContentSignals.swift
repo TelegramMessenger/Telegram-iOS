@@ -608,7 +608,7 @@ public extension EmojiPagerContentComponent {
                     }
                 }
                 
-                for file in iconStatusEmoji {
+                for file in iconStatusEmoji.prefix(7) {
                     if existingIds.contains(file.fileId) {
                         continue
                     }
