@@ -910,7 +910,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 } else {
                     if message.id.peerId.isGroupOrChannel {
-                        attributedString = NSAttributedString(string: strings.Notification_ChannelChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                        var isGroup = false
+                        let messagePeer = message.peers[message.id.peerId]
+                        if let channel = messagePeer as? TelegramChannel, case .group = channel.info {
+                            isGroup = true
+                        }
+                        attributedString = NSAttributedString(string: isGroup ? strings.Notification_GroupChangedWallpaper : strings.Notification_ChannelChangedWallpaper, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])

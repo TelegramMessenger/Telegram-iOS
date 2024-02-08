@@ -644,7 +644,7 @@ private final class SheetContent: CombinedComponent {
                     }
                     
                     if needsSecondParagraph {
-                        textString += "\n\n\(isGroup ? strings.GroupBoost_AskToBoost : strings.ChannelBoost_AskToBoost)"
+                        textString += " \(isGroup ? strings.GroupBoost_PremiumUsersCanBoost : strings.ChannelBoost_PremiumUsersCanBoost)"
                     }
                 } else {
                     textString = strings.ChannelBoost_MaxLevelReached_Text(peerName, "\(level)").string

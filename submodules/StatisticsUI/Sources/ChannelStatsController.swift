@@ -1034,11 +1034,11 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             
             entries.append(.boostLinkTitle(presentationData.theme, presentationData.strings.Stats_Boosts_LinkHeader))
             entries.append(.boostLink(presentationData.theme, boostData.url))
-            entries.append(.boostLinkInfo(presentationData.theme, isGroup ? "Share this link with your members to get more boosts." : presentationData.strings.Stats_Boosts_LinkInfo))
+            entries.append(.boostLinkInfo(presentationData.theme, isGroup ? presentationData.strings.Stats_Boosts_Group_LinkInfo : presentationData.strings.Stats_Boosts_LinkInfo))
             
             if giveawayAvailable {
                 entries.append(.gifts(presentationData.theme, presentationData.strings.Stats_Boosts_GetBoosts))
-                entries.append(.giftsInfo(presentationData.theme, isGroup ? "Get more boosts for your group by gifting Premium to your subscribers." : presentationData.strings.Stats_Boosts_GetBoostsInfo))
+                entries.append(.giftsInfo(presentationData.theme, isGroup ? presentationData.strings.Stats_Boosts_Group_GetBoostsInfo : presentationData.strings.Stats_Boosts_GetBoostsInfo))
             }
         }
     }

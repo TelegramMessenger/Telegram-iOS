@@ -1750,7 +1750,7 @@ final class ChannelAppearanceScreenComponent: Component {
             )))
             
             let requiredLevel = requiredBoostSubject.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration)
-            if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
+            if let boostLevel = self.boostLevel, requiredLevel > boostLevel && !resolvedState.changes.isEmpty {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: Int(requiredLevel),
                     theme: environment.theme,

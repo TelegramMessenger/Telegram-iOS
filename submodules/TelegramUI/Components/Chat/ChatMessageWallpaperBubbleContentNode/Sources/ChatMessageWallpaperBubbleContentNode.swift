@@ -286,7 +286,12 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
                         let authorName = item.message.author.flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
                         text = item.presentationData.strings.Channel_AdminLog_ChannelChangedWallpaper(authorName).string
                     } else if item.message.id.peerId.isGroupOrChannel {
-                        text = item.presentationData.strings.Notification_ChannelChangedWallpaper
+                        var isGroup = false
+                        let messagePeer = item.message.peers[item.message.id.peerId]
+                        if let channel = messagePeer as? TelegramChannel, case .group = channel.info {
+                            isGroup = true
+                        }
+                        text = isGroup ? item.presentationData.strings.Notification_GroupChangedWallpaper : item.presentationData.strings.Notification_ChannelChangedWallpaper
                     } else {
                         text = item.presentationData.strings.Notification_ChangedWallpaper(peerName).string
                     }

@@ -11225,4 +11225,16 @@ Sorry for the inconvenience.";
 
 "Chat.GroupEmojiTooltip" = "All members of this group can\nuse the # **%@** pack";
 
-"GroupBoost.AskToBoost" = "Ask your **Premium** members to boost your group with this link:";
+"ChannelBoost.PremiumUsersCanBoost" = "**Premium** users can boost your channel with this link:";
+"GroupBoost.PremiumUsersCanBoost" = "**Premium** users can boost your group with this link:";
+
+"Stats.Boosts.Group.LinkInfo" = "Share this link with your members to get more boosts.";
+
+"Stats.Boosts.Group.GetBoostsInfo" = "Get more boosts for your group by gifting Premium to your members.";
+
+"Message.GiveawayStartedGroup" = "Group started a giveaway";
+
+"GroupBoost.Error.BoostTooOftenText" = "You can change the group you boost only once a day. Next time you can boost is in **%@**.";
+"GroupBoost.Error.PremiumNeededText" = "Only **Telegram Premium** subscribers can boost groups. Do you want to subscribe to **Telegram Premium**?";
+
+"Notification.GroupChangedWallpaper" = "Group set a new wallpaper";

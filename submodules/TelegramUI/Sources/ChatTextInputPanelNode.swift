@@ -1069,6 +1069,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     guard let controller = strongSelf.interfaceInteraction?.chatController() as? ChatControllerImpl else {
                         return
                     }
+                    
+                    if let boostsToUnrestrict = strongSelf.presentationInterfaceState?.boostsToUnrestrict, boostsToUnrestrict > 0 {
+                        strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                        return
+                    }
+                    
                     controller.controllerInteraction?.displayUndo(.universal(animation: "premium_unlock", scale: 1.0, colors: ["__allcolors__": UIColor(white: 1.0, alpha: 1.0)], title: nil, text: controller.restrictedSendingContentsText(), customUndoText: nil, timeout: nil))
                 } else {
                     strongSelf.ensureFocused()
@@ -1951,11 +1957,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         var rightSlowModeInset: CGFloat = 0.0
         var slowModeButtonSize: CGSize = .zero
-        if let presentationInterfaceState = self.presentationInterfaceState {
+        if let presentationInterfaceState = self.presentationInterfaceState, (presentationInterfaceState.boostsToUnrestrict ?? 0) > 0 {
             slowModeButtonSize = self.slowModeButton.update(size: CGSize(width: width, height: 44.0), interfaceState: presentationInterfaceState)
-            if inputHasText {
-                rightSlowModeInset = slowModeButtonSize.width - 33.0
-            }
+            rightSlowModeInset = max(0.0, slowModeButtonSize.width - 33.0)
         }
         self.rightSlowModeInset = rightSlowModeInset
         
@@ -2465,7 +2469,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             self.textPlaceholderNode.alpha = 1.0
         }
         
-        if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages {
+        if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages && rightSlowModeInset.isZero {
             let slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode
             if let current = self.slowmodePlaceholderNode {
                 slowmodePlaceholderNode = current
@@ -2484,7 +2488,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             slowmodePlaceholderNode.removeFromSupernode()
         }
 
-        if (interfaceState.slowmodeState != nil && !isScheduledMessages && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
+        if (interfaceState.slowmodeState != nil && rightSlowModeInset.isZero && !isScheduledMessages && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
             self.textPlaceholderNode.isHidden = true
             self.slowmodePlaceholderNode?.isHidden = inputHasText
         } else {
@@ -3637,7 +3641,30 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 }
             }
             
-            if (hasText || self.keepSendButtonEnabled && !mediaInputIsActive) {
+            let hasSlowModeButton = self.rightSlowModeInset > 0.0
+            if hasSlowModeButton {
+                hideMicButton = true
+                if self.slowModeButton.alpha.isZero {
+                    self.slowModeButton.alpha = 1.0
+                    if animated {
+                        self.slowModeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        if animateWithBounce {
+                            self.slowModeButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                        } else {
+                            self.slowModeButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
+                        }
+                    }
+                }
+            } else {
+                if !self.slowModeButton.alpha.isZero {
+                    self.slowModeButton.alpha = 0.0
+                    if animated {
+                        self.slowModeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
+                }
+            }
+            
+            if (hasText || self.keepSendButtonEnabled && !mediaInputIsActive && !hasSlowModeButton) {
                 hideMicButton = true
                 
                 if self.actionButtons.sendContainerNode.alpha.isZero && self.rightSlowModeInset.isZero {
@@ -3656,17 +3683,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         }
                     }
                 }
-                if self.slowModeButton.alpha.isZero && self.rightSlowModeInset > 0.0 {
-                    self.slowModeButton.alpha = 1.0
-                    if animated {
-                        self.slowModeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                        if animateWithBounce {
-                            self.slowModeButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                        } else {
-                            self.slowModeButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
-                        }
-                    }
-                }
             } else {
                 if !self.actionButtons.sendContainerNode.alpha.isZero {
                     self.actionButtons.sendContainerNode.alpha = 0.0
@@ -3681,12 +3697,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                             }
                         })
                         self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                    }
-                }
-                if !self.slowModeButton.alpha.isZero {
-                    self.slowModeButton.alpha = 0.0
-                    if animated {
-                        self.slowModeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                     }
                 }
             }
@@ -4712,6 +4722,7 @@ private final class BoostSlowModeButton: HighlightTrackingButtonNode {
         self.iconNode.image = generateClearImage(color: .white)
         
         self.textNode = ImmediateAnimatedCountLabelNode()
+        self.textNode.alwaysOneDirection = true
         self.textNode.isUserInteractionEnabled = false
         
         super.init(pointerStyle: pointerStyle)
@@ -4723,9 +4734,15 @@ private final class BoostSlowModeButton: HighlightTrackingButtonNode {
         
     func update(size: CGSize, interfaceState: ChatPresentationInterfaceState) -> CGSize {
         var text = ""
-        if let slowmodeState = interfaceState.slowmodeState, case let .timestamp(validUntilTimestamp) = slowmodeState.variant {
-            let timestamp = CGFloat(Date().timeIntervalSince1970)
-            let relativeTimestamp = CGFloat(validUntilTimestamp) - timestamp
+        if let slowmodeState = interfaceState.slowmodeState {
+            let relativeTimestamp: CGFloat
+            switch slowmodeState.variant {
+            case let .timestamp(validUntilTimestamp):
+                let timestamp = CGFloat(Date().timeIntervalSince1970)
+                relativeTimestamp = CGFloat(validUntilTimestamp) - timestamp
+            case .pendingMessages:
+                relativeTimestamp = CGFloat(slowmodeState.timeout)
+            }
             text = stringForDuration(Int32(relativeTimestamp))
             
             self.updateTimer?.invalidate()

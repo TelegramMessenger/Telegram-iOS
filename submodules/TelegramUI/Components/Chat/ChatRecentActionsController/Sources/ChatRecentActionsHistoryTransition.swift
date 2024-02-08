@@ -121,7 +121,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
         return self.id
     }
     
-    func item(context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction) -> ListViewItem {
+    func item(context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction, chatThemes: [TelegramTheme]) -> ListViewItem {
         switch self.entry.event.action {
             case let .changeTitle(_, new):
                 var peers = SimpleDictionary<PeerId, Peer>()
@@ -2117,7 +2117,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
             }
             
             let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
-            return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+            return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, savedMessageTags: nil, defaultReaction: nil, isPremium: false, accountPeer: nil, chatThemes: chatThemes), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
         case let .changeEmojiPack(_, new):
             var peers = SimpleDictionary<PeerId, Peer>()
             var author: Peer?
@@ -2175,12 +2175,12 @@ struct ChatRecentActionsHistoryTransition {
     let isEmpty: Bool
 }
 
-func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction) -> ChatRecentActionsHistoryTransition {
+func chatRecentActionsHistoryPreparedTransition(from fromEntries: [ChatRecentActionsEntry], to toEntries: [ChatRecentActionsEntry], type: ChannelAdminEventLogUpdateType, canLoadEarlier: Bool, displayingResults: Bool, context: AccountContext, peer: Peer, controllerInteraction: ChatControllerInteraction, chatThemes: [TelegramTheme]) -> ChatRecentActionsHistoryTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes), directionHint: nil) }
     
     return ChatRecentActionsHistoryTransition(filteredEntries: toEntries, type: type, deletions: deletions, insertions: insertions, updates: updates, canLoadEarlier: canLoadEarlier, displayingResults: displayingResults, isEmpty: toEntries.isEmpty)
 }

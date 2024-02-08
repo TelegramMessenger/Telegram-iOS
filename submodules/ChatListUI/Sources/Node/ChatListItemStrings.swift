@@ -309,7 +309,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         if let forwardInfo = message.forwardInfo, let author = forwardInfo.author {
                             messageText = strings.Message_GiveawayStartedOther(EnginePeer(author).compactDisplayTitle).string
                         } else {
-                            messageText = strings.Message_GiveawayStarted
+                            messageText = isPeerGroup ? strings.Message_GiveawayStartedGroup : strings.Message_GiveawayStarted
                         }
                     case let results as TelegramMediaGiveawayResults:
                         if results.winnersCount == 0 {

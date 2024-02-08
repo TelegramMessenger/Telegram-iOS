@@ -9536,6 +9536,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0 {
+                strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                return
+            }
+            
             let subjectFlags: [TelegramChatBannedRightsFlags]
             switch subject {
             case .stickers:
