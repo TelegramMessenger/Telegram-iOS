@@ -48,7 +48,7 @@ public extension ShareWithPeersScreen {
             case chats(blocked: Bool)
             case contacts(base: EngineStoryPrivacy.Base)
             case contactsSearch(query: String, onlyContacts: Bool)
-            case members(peerId: EnginePeer.Id, searchQuery: String?)
+            case members(isGroup: Bool, peerId: EnginePeer.Id, searchQuery: String?)
             case channels(isGroup: Bool, exclude: Set<EnginePeer.Id>, searchQuery: String?)
         }
         
@@ -515,7 +515,7 @@ public extension ShareWithPeersScreen {
                     
                     self.readySubject.set(true)
                 })
-            case let .members(peerId, searchQuery):
+            case let .members(_, peerId, searchQuery):
                 let membersState = Promise<ChannelMemberListState>()
                 let contactsState = Promise<ChannelMemberListState>()
 

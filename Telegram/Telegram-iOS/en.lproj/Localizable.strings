@@ -11101,8 +11101,6 @@ Sorry for the inconvenience.";
 
 "Notification.GiveawayStartedGroup" = "%1$@ just started a giveaway of Telegram Premium subscriptions for its members.";
 
-"Chat.Giveaway.Message.Group.Participants" = "All subscribers of this group:";
-
 "Chat.Giveaway.Info.Group.RandomMembers_1" = "**%@** random member";
 "Chat.Giveaway.Info.Group.RandomMembers_any" = "**%@** random members";
 
@@ -11238,3 +11236,25 @@ Sorry for the inconvenience.";
 "GroupBoost.Error.PremiumNeededText" = "Only **Telegram Premium** subscribers can boost groups. Do you want to subscribe to **Telegram Premium**?";
 
 "Notification.GroupChangedWallpaper" = "Group set a new wallpaper";
+"Notification.YouChangedGroupWallpaper" = "You set a new wallpaper for this group";
+
+"WallpaperPreview.GroupHeader" = "All members will see this wallpaper";
+
+"GroupBoost.BoostGroup" = "Boost Group";
+
+"Chat.Giveaway.Info.NotAllowedAdminGroup" = "You are not eligible to participate in this giveaway, because you are an admin of participating group (**%@**).";
+
+"Chat.Giveaway.Message.Group.Participants" = "All members of this group:";
+"Chat.Giveaway.Message.Group.ParticipantsNew" = "All users who join this group after this date:";
+
+"Chat.Giveaway.Message.Group.ParticipantsMany" = "All subscribers of the channels below:";
+"Chat.Giveaway.Message.Group.ParticipantsNewMany" = "All users who join the groups below after this date:";
+
+"Story.Privacy.KeepOnGroupPage" = "Post to Group Page";
+"Story.Privacy.KeepOnGroupPageInfo" = "Keep this story on group page even after it expires in %@.";
+"Story.Privacy.TooltipStoryArchivedGroup" = "Users will see this story on the group page even after it expires.";
+
+"BoostGift.Members.Subtitle" = "select up to %@ members";
+"BoostGift.Members.SectionTitle" = "MEMBERS";
+"BoostGift.Members.Search" = "Search Members";
+"BoostGift.Members.MaximumReached" = "You can select maximum %@ members.";

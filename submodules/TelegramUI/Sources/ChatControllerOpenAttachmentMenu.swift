@@ -44,11 +44,12 @@ extension ChatControllerImpl {
         }
                 
         let context = self.context
-        
         let inputIsActive = self.presentationInterfaceState.inputMode == .text
         
         self.chatDisplayNode.dismissInput()
-                
+        
+        let canByPassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: self.presentationInterfaceState)
+        
         var banSendText: (Int32, Bool)?
         var bannedSendPhotos: (Int32, Bool)?
         var bannedSendVideos: (Int32, Bool)?
@@ -60,19 +61,19 @@ extension ChatControllerImpl {
         } else if peer is TelegramSecretChat {
             canSendPolls = false
         } else if let channel = peer as? TelegramChannel {
-            if let value = channel.hasBannedPermission(.banSendPhotos) {
+            if let value = channel.hasBannedPermission(.banSendPhotos, ignoreDefault: canByPassRestrictions) {
                 bannedSendPhotos = value
             }
-            if let value = channel.hasBannedPermission(.banSendVideos) {
+            if let value = channel.hasBannedPermission(.banSendVideos, ignoreDefault: canByPassRestrictions) {
                 bannedSendVideos = value
             }
-            if let value = channel.hasBannedPermission(.banSendFiles) {
+            if let value = channel.hasBannedPermission(.banSendFiles, ignoreDefault: canByPassRestrictions) {
                 bannedSendFiles = value
             }
-            if let value = channel.hasBannedPermission(.banSendText) {
+            if let value = channel.hasBannedPermission(.banSendText, ignoreDefault: canByPassRestrictions) {
                 banSendText = value
             }
-            if channel.hasBannedPermission(.banSendPolls) != nil {
+            if channel.hasBannedPermission(.banSendPolls, ignoreDefault: canByPassRestrictions) != nil {
                 canSendPolls = false
             }
         } else if let group = peer as? TelegramGroup {

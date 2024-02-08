@@ -1692,6 +1692,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendStickers) != nil {
+                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                    return false
+                }
+            }
+            
             var attributes: [MessageAttribute] = []
             if let query = query {
                 attributes.append(EmojiSearchQueryMessageAttribute(query: query))
@@ -1837,6 +1844,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return false
                 }
                 
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
+                    if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                        strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                        return false
+                    }
+                }
+                
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.collapseInput()
@@ -1879,6 +1893,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceView, sourceRect)
                 return false
+            }
+            
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
+                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                    return false
+                }
             }
             
             strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting, resetTextInputState: resetTextInputState)
@@ -9538,10 +9559,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0 {
-                strongSelf.interfaceInteraction?.openBoostToUnrestrict()
-                return
-            }
+
+            let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState)
             
             let subjectFlags: [TelegramChatBannedRightsFlags]
             switch subject {
@@ -9554,7 +9573,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var bannedPermission: (Int32, Bool)? = nil
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                 for subjectFlag in subjectFlags {
-                    if let value = channel.hasBannedPermission(subjectFlag) {
+                    if let value = channel.hasBannedPermission(subjectFlag, ignoreDefault: canBypassRestrictions) {
                         bannedPermission = value
                         break
                     }
@@ -9566,6 +9585,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
+            }
+            
+            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0, bannedPermission == nil {
+                strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                return
             }
             
             var displayToast = false

@@ -1077,6 +1077,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         if hasSavedMessages, hasSavedMessagesChats, var availablePanesValue = availablePanes {
                             if let index = availablePanesValue.firstIndex(of: .media) {
                                 availablePanesValue.insert(.savedMessages, at: index + 1)
+                            } else if let index = availablePanesValue.firstIndex(of: .stories) {
+                                availablePanesValue.insert(.savedMessages, at: index + 1)
                             } else {
                                 availablePanesValue.insert(.savedMessages, at: 0)
                             }
@@ -1240,6 +1242,23 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let requestsContextPromise = Promise<PeerInvitationImportersContext?>(nil)
             let requestsStatePromise = Promise<PeerInvitationImportersState?>(nil)
             
+            let storyListContext: PeerStoryListContext?
+            let hasStories: Signal<Bool?, NoError>
+            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                storyListContext = PeerStoryListContext(account: context.account, peerId: peerId, isArchived: false)
+                hasStories = storyListContext!.state
+                |> map { state -> Bool? in
+                    if !state.hasCache {
+                        return nil
+                    }
+                    return !state.items.isEmpty
+                }
+                |> distinctUntilChanged
+            } else {
+                storyListContext = nil
+                hasStories = .single(false)
+            }
+            
             let threadData: Signal<MessageHistoryThreadData?, NoError>
             if case let .replyThread(message) = chatLocation {
                 let threadId = message.threadId
@@ -1306,6 +1325,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
+                hasStories,
                 threadData,
                 context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
                 accountIsPremium,
@@ -1313,12 +1333,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessagesChats,
                 hasSavedMessageTags
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView, accountIsPremium, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, threadData, preferencesView, accountIsPremium, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
                 }
-                
+                                
                 var availablePanes = availablePanes
                 if let membersData = membersData, case .longList = membersData {
                     if availablePanes != nil {
@@ -1328,17 +1348,24 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                 }
                 
-                if case .peer = chatLocation {
-                    if hasSavedMessages, hasSavedMessagesChats, var availablePanesValue = availablePanes {
-                        if let index = availablePanesValue.firstIndex(of: .media) {
-                            availablePanesValue.insert(.savedMessages, at: index + 1)
-                        } else {
-                            availablePanesValue.insert(.savedMessages, at: 0)
+                if let hasStories {
+                    if hasStories {
+                        availablePanes?.insert(.stories, at: 0)
+                    }
+                    if case .peer = chatLocation {
+                        if hasSavedMessages, hasSavedMessagesChats, var availablePanesValue = availablePanes {
+                            if let index = availablePanesValue.firstIndex(of: .media) {
+                                availablePanesValue.insert(.savedMessages, at: index + 1)
+                            } else if let index = availablePanesValue.firstIndex(of: .stories) {
+                                availablePanesValue.insert(.savedMessages, at: index + 1)
+                            } else {
+                                availablePanesValue.insert(.savedMessages, at: 0)
+                            }
+                            availablePanes = availablePanesValue
                         }
-                        availablePanes = availablePanesValue
                     }
                 }
-                
+                                
                 var canManageInvitations = false
                 if let group = peerViewMainPeer(peerView) as? TelegramGroup {
                     let previousValue = wasUpgradedGroup.swap(group.migrationReference != nil)
@@ -1389,7 +1416,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     groupsInCommon: nil,
                     linkedDiscussionPeer: discussionPeer,
                     members: membersData,
-                    storyListContext: nil,
+                    storyListContext: storyListContext,
                     encryptionKeyFingerprint: nil,
                     globalSettings: nil,
                     invitations: invitations,

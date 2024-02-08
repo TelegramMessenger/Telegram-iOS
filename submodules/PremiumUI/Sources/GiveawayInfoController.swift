@@ -35,15 +35,6 @@ public func presentGiveawayInfoController(
         let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway
         let giveawayResults = message.media.first(where: { $0 is TelegramMediaGiveawayResults }) as? TelegramMediaGiveawayResults
         
-//        var channelPeerId: EnginePeer.Id?
-//        if let giveaway {
-//            if let peerId = giveaway.channelPeerIds.first {
-//                channelPeerId = peerId
-//            }
-//        } else if let _ = giveawayResults {
-//            channelPeerId = message.author?.id
-//        }
-        
         var quantity: Int32 = 0
         if let giveaway {
             quantity = giveaway.quantity
@@ -173,10 +164,14 @@ public func presentGiveawayInfoController(
                     participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedJoinedEarly(joinDate).string
                 case let .channelAdmin(adminId):
                     var channelName = peerName
+                    var isGroup = false
                     if let maybePeer = peerMap[adminId], let peer = maybePeer {
                         channelName = peer.compactDisplayTitle
+                        if case let .channel(channel) = peer, case .group = channel.info {
+                            isGroup = true
+                        }
                     }
-                    participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedAdmin(channelName).string
+                    participation = isGroup ? presentationData.strings.Chat_Giveaway_Info_NotAllowedAdminGroup(channelName).string : presentationData.strings.Chat_Giveaway_Info_NotAllowedAdmin(channelName).string
                 case .disallowedCountry:
                     participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedCountry
                 }

@@ -540,6 +540,10 @@ final class ChannelAppearanceScreenComponent: Component {
             if self.isApplyingSettings {
                 return
             }
+            if resolvedState.changes.isEmpty {
+                self.environment?.controller()?.dismiss()
+                return
+            }
             
             let requiredLevel = requiredBoostSubject.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {

@@ -4743,13 +4743,17 @@ private final class BoostSlowModeButton: HighlightTrackingButtonNode {
             case .pendingMessages:
                 relativeTimestamp = CGFloat(slowmodeState.timeout)
             }
-            text = stringForDuration(Int32(relativeTimestamp))
             
             self.updateTimer?.invalidate()
-            self.updateTimer = SwiftSignalKit.Timer(timeout: 1.0 / 60.0, repeat: false, completion: { [weak self] in
-                self?.requestUpdate()
-            }, queue: .mainQueue())
-            self.updateTimer?.start()
+            
+            if relativeTimestamp >= 0.0 {
+                text = stringForDuration(Int32(relativeTimestamp))
+                
+                self.updateTimer = SwiftSignalKit.Timer(timeout: 1.0 / 60.0, repeat: false, completion: { [weak self] in
+                    self?.requestUpdate()
+                }, queue: .mainQueue())
+                self.updateTimer?.start()
+            }
         } else {
             self.updateTimer?.invalidate()
             self.updateTimer = nil

@@ -1698,11 +1698,15 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         var stickersEnabled = true
         var emojiEnabled = true
         if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
-            if peer.hasBannedPermission(.banSendStickers) != nil {
-                stickersEnabled = false
-            }
-            if peer.hasBannedPermission(.banSendText) != nil {
-                emojiEnabled = false
+            if let boostsToUnrestrict = interfaceState.boostsToUnrestrict, boostsToUnrestrict > 0 {
+                
+            } else {
+                if peer.hasBannedPermission(.banSendStickers) != nil {
+                    stickersEnabled = false
+                }
+                if peer.hasBannedPermission(.banSendText) != nil {
+                    emojiEnabled = false
+                }
             }
         } else if let peer = interfaceState.renderedPeer?.peer as? TelegramGroup {
             if peer.hasBannedPermission(.banSendStickers) {

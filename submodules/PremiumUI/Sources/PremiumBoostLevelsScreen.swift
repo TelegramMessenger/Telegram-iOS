@@ -1183,10 +1183,14 @@ private final class SheetContent: CombinedComponent {
 }
 
 private final class BoostLevelsContainerComponent: CombinedComponent {
+    class ExternalState {
+        var isGroup: Bool = false
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    
+    let externalState: ExternalState
     let peerId: EnginePeer.Id
     let mode: PremiumBoostLevelsScreen.Mode
     let status: ChannelBoostStatus?
@@ -1202,6 +1206,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        externalState: ExternalState,
         peerId: EnginePeer.Id,
         mode: PremiumBoostLevelsScreen.Mode,
         status: ChannelBoostStatus?,
@@ -1216,6 +1221,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.externalState = externalState
         self.peerId = peerId
         self.mode = mode
         self.status = status
@@ -1309,6 +1315,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
             }
             
             if let isGroup {
+                component.externalState.isGroup = isGroup
                 let scroll = scroll.update(
                     component: ScrollComponent<Empty>(
                         content: AnyComponent(
@@ -1556,6 +1563,8 @@ public class PremiumBoostLevelsScreen: ViewController {
         let footerContainerView: UIView
         let footerView: ComponentHostView<Empty>
                 
+        private let externalState = BoostLevelsContainerComponent.ExternalState()
+        
         private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
         private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
@@ -1819,6 +1828,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                         context: controller.context,
                         theme: self.presentationData.theme,
                         strings: self.presentationData.strings,
+                        externalState: self.externalState,
                         peerId: controller.peerId,
                         mode: controller.mode,
                         status: controller.status,
@@ -1868,13 +1878,20 @@ public class PremiumBoostLevelsScreen: ViewController {
             var footerHeight: CGFloat = 8.0 + 50.0
             footerHeight += layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : 8.0
             
+            let actionTitle: String
+            if self.currentMyBoostCount > 0 {
+                actionTitle = self.presentationData.strings.ChannelBoost_BoostAgain
+            } else {
+                actionTitle = self.externalState.isGroup ? self.presentationData.strings.GroupBoost_BoostGroup : self.presentationData.strings.ChannelBoost_BoostChannel
+            }
+            
             let footerSize = self.footerView.update(
                 transition: .immediate,
                 component: AnyComponent(
                     FooterComponent(
                         context: controller.context,
                         theme: self.presentationData.theme,
-                        title: self.currentMyBoostCount > 0 ? "Boost Again" : "Boost Group",
+                        title: actionTitle,
                         action: { [weak self] in
                             guard let self else {
                                 return

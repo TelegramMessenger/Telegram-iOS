@@ -1051,6 +1051,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     }
     
     buyActionImpl = { [weak controller] in
+        let isGroup = isGroupValue.with { $0 }
+        
         let state = stateValue.with { $0 }
 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1131,10 +1133,10 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                                 switch state.mode {
                                 case .giveaway:
                                     title = presentationData.strings.BoostGift_GiveawayCreated_Title
-                                    text = presentationData.strings.BoostGift_GiveawayCreated_Text
+                                    text = isGroup ? presentationData.strings.BoostGift_Group_GiveawayCreated_Text : presentationData.strings.BoostGift_GiveawayCreated_Text
                                 case .gift:
                                     title = presentationData.strings.BoostGift_PremiumGifted_Title
-                                    text = presentationData.strings.BoostGift_PremiumGifted_Text
+                                    text = isGroup ? presentationData.strings.BoostGift_Group_PremiumGifted_Text : presentationData.strings.BoostGift_PremiumGifted_Text
                                 }
                                 
                                 let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
@@ -1224,11 +1226,11 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     }
     
     openPeersSelectionImpl = {
+        let isGroup = isGroupValue.with { $0 }
         let state = stateValue.with { $0 }
-        
         let stateContext = ShareWithPeersScreen.StateContext(
             context: context,
-            subject: .members(peerId: peerId, searchQuery: nil),
+            subject: .members(isGroup: isGroup, peerId: peerId, searchQuery: nil),
             initialPeerIds: Set(state.peers)
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { _ in
