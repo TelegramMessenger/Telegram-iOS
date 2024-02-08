@@ -120,6 +120,7 @@ import VideoMessageCameraScreen
 import TopMessageReactions
 import PeerInfoScreen
 import AudioWaveform
+import PeerNameColorScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -961,11 +962,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentThemeSelection()
                             return true
                         case let .setChatWallpaper(wallpaper, _):
-                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                                strongSelf.presentThemeSelection()
+                            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 return true
                             }
-                            if peer is TelegramChannel {
+                            if let peer = peer as? TelegramChannel, peer.hasPermission(.changeInfo) {
+                                let _ = (context.engine.peers.getChannelBoostStatus(peerId: peer.id)
+                                |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peerId: peer.id, boostStatus: boostStatus))
+                                })
+                                return true
+                            }
+                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                                strongSelf.presentThemeSelection()
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()

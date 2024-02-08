@@ -11258,3 +11258,5 @@ Sorry for the inconvenience.";
 "BoostGift.Members.SectionTitle" = "MEMBERS";
 "BoostGift.Members.Search" = "Search Members";
 "BoostGift.Members.MaximumReached" = "You can select maximum %@ members.";
+
+"Chat.ErrorCantBoost" = "Sorry, you can't boost this group or channel.";
