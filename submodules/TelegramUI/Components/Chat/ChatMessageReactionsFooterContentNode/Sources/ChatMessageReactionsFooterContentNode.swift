@@ -490,7 +490,7 @@ public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleConte
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
+            item.controllerInteraction.updateMessageReaction(item.topMessage, .reaction(value), false, sourceView)
         }
         
         self.buttonsNode.openReactionPreview = { [weak self] gesture, sourceNode, value in

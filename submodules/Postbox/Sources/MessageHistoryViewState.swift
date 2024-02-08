@@ -55,8 +55,6 @@ private extension MessageHistoryInput {
                 }
             }
             
-            var items = postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: tag, customTag: customTag, threadId: threadId, from: fromIndex, includeFrom: includeFrom, to: toIndex, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, limit: limit)
-            
             var shouldAddFromSameGroup = false
             if let tagInfo {
                 switch tagInfo {
@@ -66,6 +64,9 @@ private extension MessageHistoryInput {
                     shouldAddFromSameGroup = true
                 }
             }
+            
+            var items = postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: tag, customTag: customTag, threadId: threadId, from: fromIndex, includeFrom: includeFrom || shouldAddFromSameGroup, to: toIndex, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, limit: limit)
+            
             if shouldAddFromSameGroup {
                 enum Direction {
                     case lowToHigh
@@ -88,7 +89,7 @@ private extension MessageHistoryInput {
                         case .highToLow:
                             group = group.filter { item in
                                 if includeFrom {
-                                    return item.index >= toIndex && item.index < fromIndex
+                                    return item.index > toIndex && item.index <= fromIndex
                                 } else {
                                     return item.index > toIndex && item.index < fromIndex
                                 }
@@ -127,9 +128,23 @@ private extension MessageHistoryInput {
                     for i in 0 ..< items.count {
                         processItem(index: i, direction: .lowToHigh)
                     }
+                    items = items.filter { item in
+                        if includeFrom {
+                            return item.index >= fromIndex && item.index < toIndex
+                        } else {
+                            return item.index > fromIndex && item.index < toIndex
+                        }
+                    }
                 } else {
                     for i in (0 ..< items.count).reversed() {
                         processItem(index: i, direction: .highToLow)
+                    }
+                    items = items.filter { item in
+                        if includeFrom {
+                            return item.index > toIndex && item.index <= fromIndex
+                        } else {
+                            return item.index > toIndex && item.index < fromIndex
+                        }
                     }
                 }
             }
