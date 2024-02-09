@@ -180,6 +180,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.notFoundNode)
         self.addSubnode(self.activityIndicator)
         
+        self.addSubnode(self.removeButtonIcon)
         self.addSubnode(self.removeButton)
         
         var firstTime = true
@@ -195,10 +196,27 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             }
             firstTime = false
         }
+        
+        self.removeButton.addTarget(self, action: #selector(self.removeButtonPressed), forControlEvents: .touchUpInside)
+        self.removeButton.highligthedChanged = { [weak self] highlighted in
+            if let self {
+                if highlighted {
+                    self.removeButtonIcon.layer.removeAnimation(forKey: "opacity")
+                    self.removeButtonIcon.alpha = 0.4
+                } else {
+                    self.removeButtonIcon.alpha = 1.0
+                    self.removeButtonIcon.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
     }
     
     deinit {
         self.fetchDisposable.dispose()
+    }
+    
+    @objc private func removeButtonPressed() {
+        self.item?.remove?()
     }
     
     private func removePlaceholder(animated: Bool) {
@@ -330,6 +348,14 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.activityIndicator.isHidden = true
                     }
                     
+                    if case .found = item.content {
+                        strongSelf.removeButtonIcon.isHidden = false
+                        strongSelf.removeButton.isHidden = false
+                    } else {
+                        strongSelf.removeButtonIcon.isHidden = true
+                        strongSelf.removeButton.isHidden = true
+                    }
+                    
                     let revealOffset = strongSelf.revealOffset
                     
                     let transition: ContainedViewLayoutTransition = .immediate
@@ -377,6 +403,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.removeButtonIcon.image = PresentationResourcesItemList.itemListRemoveIconImage(item.theme)
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
@@ -403,17 +430,16 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                         transition.updateFrame(node: strongSelf.notFoundNode, frame: CGRect(origin: CGPoint(x: params.leftInset + 15.0 + floor((boundingSize.width - image.size.width) / 2.0), y: 13.0 + floor((boundingSize.height - image.size.height) / 2.0)), size: image.size))
                     }
                     
-                    
-                    
                     if let updatedImageSignal = updatedImageSignal {
                         strongSelf.imageNode.setSignal(updatedImageSignal)
                     }
                     let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: 11.0 + floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
                     transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                     
-                    
-                    
-                    
+                    strongSelf.removeButton.frame = CGRect(origin: CGPoint(x: layoutSize.width - params.rightInset - layoutSize.height, y: 0.0), size: CGSize(width: layoutSize.height, height: layoutSize.height))
+                    if let icon = strongSelf.removeButtonIcon.image {
+                        strongSelf.removeButtonIcon.frame = CGRect(origin: CGPoint(x: layoutSize.width - params.rightInset - icon.size.width - 18.0, y: floor((layoutSize.height - icon.size.height) / 2.0)), size: icon.size)
+                    }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     

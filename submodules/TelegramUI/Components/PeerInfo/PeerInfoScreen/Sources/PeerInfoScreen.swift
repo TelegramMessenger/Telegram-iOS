@@ -1588,18 +1588,16 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             case .broadcast:
                 let ItemUsername = 1
                 let ItemPeerColor = 2
-                let ItemInviteLinks = 4
-                let ItemDiscussionGroup = 5
-                let ItemSignMessages = 6
-                let ItemSignMessagesHelp = 7
-                let ItemDeleteChannel = 8
-                let ItemReactions = 9
-                let ItemAdmins = 10
-                let ItemMembers = 11
-                let ItemMemberRequests = 12
-                let ItemStats = 13
-                let ItemBanned = 14
-                let ItemRecentActions = 15
+                let ItemInviteLinks = 3
+                let ItemDiscussionGroup = 4
+                let ItemDeleteChannel = 5
+                let ItemReactions = 6
+                let ItemAdmins = 7
+                let ItemMembers = 8
+                let ItemMemberRequests = 9
+                let ItemStats = 10
+                let ItemBanned = 11
+                let ItemRecentActions = 12
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1708,19 +1706,19 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }))
                 }
                 
-                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendSomething)) {
-                    let messagesShouldHaveSignatures: Bool
-                    switch channel.info {
-                    case let .broadcast(info):
-                        messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
-                    default:
-                        messagesShouldHaveSignatures = false
-                    }
-                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
-                        interaction.editingToggleMessageSignatures(value)
-                    }))
-                    items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
-                }
+//                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendSomething)) {
+//                    let messagesShouldHaveSignatures: Bool
+//                    switch channel.info {
+//                    case let .broadcast(info):
+//                        messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
+//                    default:
+//                        messagesShouldHaveSignatures = false
+//                    }
+//                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
+//                        interaction.editingToggleMessageSignatures(value)
+//                    }))
+//                    items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
+//                }
                 
                 var canEditMembers = false
                 if channel.hasPermission(.banMembers) && (channel.adminRights != nil || channel.flags.contains(.isCreator)) {

@@ -4703,6 +4703,7 @@ private func generateClearImage(color: UIColor) -> UIImage? {
 
 
 private final class BoostSlowModeButton: HighlightTrackingButtonNode {
+    let containerNode: ASDisplayNode
     let backgroundNode: ASImageNode
     let textNode: ImmediateAnimatedCountLabelNode
     let iconNode: ASImageNode
@@ -4712,6 +4713,8 @@ private final class BoostSlowModeButton: HighlightTrackingButtonNode {
     var requestUpdate: () -> Void = {}
     
     override init(pointerStyle: PointerStyle? = nil) {
+        self.containerNode = ASDisplayNode()
+        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.clipsToBounds = true
@@ -4727,9 +4730,20 @@ private final class BoostSlowModeButton: HighlightTrackingButtonNode {
         
         super.init(pointerStyle: pointerStyle)
         
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.backgroundNode)
+        self.containerNode.addSubnode(self.iconNode)
+        self.containerNode.addSubnode(self.textNode)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let self {
+                if highlighted {
+                    self.containerNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
+                } else if let presentationLayer = self.containerNode.layer.presentation() {
+                    self.containerNode.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                }
+            }
+        }
     }
         
     func update(size: CGSize, interfaceState: ChatPresentationInterfaceState) -> CGSize {
@@ -4778,6 +4792,8 @@ private final class BoostSlowModeButton: HighlightTrackingButtonNode {
         let textSize = self.textNode.updateLayout(size: CGSize(width: 200.0, height: 100.0), animated: true)
         let totalSize = CGSize(width: textSize.width > 0.0 ? textSize.width + 38.0 : 33.0, height: 33.0)
         
+        self.containerNode.bounds = CGRect(origin: .zero, size: totalSize)
+        self.containerNode.position = CGPoint(x: totalSize.width / 2.0, y: totalSize.height / 2.0)
         self.backgroundNode.frame = CGRect(origin: .zero, size: totalSize)
         self.backgroundNode.cornerRadius = totalSize.height / 2.0
         self.textNode.frame = CGRect(origin: CGPoint(x: 9.0, y: floorToScreenPixels((totalSize.height - textSize.height) / 2.0)), size: textSize)
