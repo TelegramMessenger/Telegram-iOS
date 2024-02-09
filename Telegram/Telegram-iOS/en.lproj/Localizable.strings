@@ -10222,6 +10222,10 @@ Sorry for the inconvenience.";
 "ReassignBoost.Boosts_any" = "%@ boosts are reassigned";
 "ReassignBoost.OtherChannels_1" = "%@ other channel";
 "ReassignBoost.OtherChannels_any" = "%@ other channels";
+"ReassignBoost.OtherGroups_1" = "%@ other group";
+"ReassignBoost.OtherGroups_any" = "%@ other groups";
+"ReassignBoost.OtherGroupsAndChannels_1" = "%@ other group and channel";
+"ReassignBoost.OtherGroupsAndChannels_any" = "%@ other groups and channels";
 
 "ChannelBoost.MoreBoosts.Title" = "More Boosts Needed";
 "ChannelBoost.MoreBoosts.Text" = "To boost **%1$@** again, gift **Telegram Premium** to a friend and get **%2$@** additional boosts.";
@@ -11247,7 +11251,7 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.Group.Participants" = "All members of this group:";
 "Chat.Giveaway.Message.Group.ParticipantsNew" = "All users who join this group after this date:";
 
-"Chat.Giveaway.Message.Group.ParticipantsMany" = "All subscribers of the channels below:";
+"Chat.Giveaway.Message.Group.ParticipantsMany" = "All members of the groups below:";
 "Chat.Giveaway.Message.Group.ParticipantsNewMany" = "All users who join the groups below after this date:";
 
 "Story.Privacy.KeepOnGroupPage" = "Post to Group Page";
@@ -11260,3 +11264,15 @@ Sorry for the inconvenience.";
 "BoostGift.Members.MaximumReached" = "You can select maximum %@ members.";
 
 "Chat.ErrorCantBoost" = "Sorry, you can't boost this group or channel.";
+
+"ChannelBoost.Boost" = "Boost";
+"ChannelBoost.Copy" = "Copy";
+
+"Chat.Giveaway.Info.OtherGroups_1" = "**%@** other listed group";
+"Chat.Giveaway.Info.OtherGroups_any" = "**%@** other listed groups";
+
+"Chat.Giveaway.Info.OtherGroupsAndChannels_1" = "**%@** other listed group and channel";
+"Chat.Giveaway.Info.OtherGroupsAndChannels_any" = "**%@** other listed groups and channels";
+
+"Chat.Giveaway.Info.OtherChannelsAndGroups_1" = "**%@** other listed channel and group";
+"Chat.Giveaway.Info.OtherChannelsAndGroups_any" = "**%@** other listed channels and groups";
