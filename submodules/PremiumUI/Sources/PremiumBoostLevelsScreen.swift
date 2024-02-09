@@ -564,8 +564,8 @@ private final class SheetContent: CombinedComponent {
                 level = Int(boostState.level)
                 boosts = Int(boostState.boosts)
                 if let nextLevelBoosts = boostState.nextLevelBoosts {
-                    remaining = Int(nextLevelBoosts - boostState.boosts)
-                    progress = CGFloat(boostState.boosts - boostState.currentLevelBoosts) / CGFloat(nextLevelBoosts - boostState.currentLevelBoosts)
+                    remaining = max(0, Int(nextLevelBoosts - boostState.boosts))
+                    progress = max(0.0, min(1.0, CGFloat(boostState.boosts - boostState.currentLevelBoosts) / CGFloat(nextLevelBoosts - boostState.currentLevelBoosts)))
                 } else {
                     remaining = nil
                     progress = 1.0
@@ -575,8 +575,8 @@ private final class SheetContent: CombinedComponent {
                 level = status.level
                 boosts = status.boosts
                 if let nextLevelBoosts = status.nextLevelBoosts {
-                    remaining = nextLevelBoosts - status.boosts
-                    progress = CGFloat(status.boosts - status.currentLevelBoosts) / CGFloat(nextLevelBoosts - status.currentLevelBoosts)
+                    remaining = max(0, nextLevelBoosts - status.boosts)
+                    progress = max(0.0, min(1.0, CGFloat(status.boosts - status.currentLevelBoosts) / CGFloat(nextLevelBoosts - status.currentLevelBoosts)))
                 } else {
                     remaining = nil
                     progress = 1.0
@@ -589,9 +589,7 @@ private final class SheetContent: CombinedComponent {
                 progress = 0.0
                 myBoostCount = 0
             }
-            
-            let badgeText = "\(boosts)"
-                
+                            
             var textString = ""
 
             var isCurrent = false
@@ -798,7 +796,7 @@ private final class SheetContent: CombinedComponent {
                         activeValue: premiumValue,
                         activeTitleColor: .white,
                         badgeIconName: iconName,
-                        badgeText: badgeText,
+                        badgeText: "\(boosts)",
                         badgePosition: progress,
                         badgeGraphPosition: progress,
                         invertProgress: true,
