@@ -1807,7 +1807,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = transcribedText(message: item.message)
-        if transcriptionText == nil {
+        if transcriptionText == nil && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
             if premiumConfiguration.audioTransciptionTrialCount > 0 {
                 if !item.associatedData.isPremium {
                     if self.presentAudioTranscriptionTooltip(finished: false) {
@@ -1815,7 +1815,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                 }
             } else {
-                guard item.associatedData.isPremium || item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost else {
+                guard item.associatedData.isPremium else {
                     if self.hapticFeedback == nil {
                         self.hapticFeedback = HapticFeedback()
                     }
@@ -1875,7 +1875,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.transcribeDisposable?.dispose()
                     strongSelf.transcribeDisposable = nil
                     
-                    if let item = strongSelf.item, !item.associatedData.isPremium {
+                    if let item = strongSelf.item, !item.associatedData.isPremium && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
                         Queue.mainQueue().after(0.1, {
                             let _ = strongSelf.presentAudioTranscriptionTooltip(finished: true)
                         })
