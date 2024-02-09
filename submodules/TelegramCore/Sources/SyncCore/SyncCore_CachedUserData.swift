@@ -114,7 +114,7 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
     }
 }
 
-public enum PeerNameColor: Equatable {
+public enum PeerNameColor: Hashable {
     case red
     case orange
     case violet

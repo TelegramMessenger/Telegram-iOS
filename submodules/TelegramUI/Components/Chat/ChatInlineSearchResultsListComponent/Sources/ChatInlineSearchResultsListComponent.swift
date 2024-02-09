@@ -757,7 +757,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                                 autoremoveTimeout: nil,
                                 storyState: nil,
                                 requiresPremiumForMessaging: false,
-                                displayAsTopicList: false
+                                displayAsTopicList: false,
+                                tags: []
                             )),
                             editing: false,
                             hasActiveRevealControls: false,

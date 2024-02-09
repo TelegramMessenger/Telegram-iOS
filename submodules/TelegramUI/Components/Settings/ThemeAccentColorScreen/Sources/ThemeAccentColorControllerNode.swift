@@ -939,7 +939,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     autoremoveTimeout: nil,
                     storyState: nil,
                     requiresPremiumForMessaging: false,
-                    displayAsTopicList: false
+                    displayAsTopicList: false,
+                    tags: []
                 )),
                 editing: false,
                 hasActiveRevealControls: false,

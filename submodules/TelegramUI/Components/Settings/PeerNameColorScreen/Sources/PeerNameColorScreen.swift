@@ -13,6 +13,7 @@ import AccountContext
 import UndoUI
 import EntityKeyboard
 import PremiumUI
+import PeerNameColorItem
 
 private final class PeerNameColorScreenArguments {
     let context: AccountContext

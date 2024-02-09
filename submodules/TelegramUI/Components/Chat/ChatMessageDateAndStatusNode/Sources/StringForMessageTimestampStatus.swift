@@ -88,6 +88,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     
     if let sourceAuthorInfo = message.sourceAuthorInfo, let orignalDate = sourceAuthorInfo.orignalDate {
         timestamp = orignalDate
+        isLocalTimestamp = false
     }
     
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
@@ -102,7 +103,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         
         var t: time_t = time_t(timestamp)
         var timeinfo: tm = tm()
-        gmtime_r(&t, &timeinfo)
+        localtime_r(&t, &timeinfo)
         
         var now: time_t = time_t(nowTimestamp)
         var timeinfoNow: tm = tm()

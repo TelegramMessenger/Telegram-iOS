@@ -50,6 +50,7 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/GroupStickerPackSetupController",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
+        "//submodules/TelegramUI/Components/Settings/PeerNameColorItem",
     ],
     visibility = [
         "//visibility:public",

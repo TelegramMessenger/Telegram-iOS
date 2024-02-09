@@ -51,6 +51,8 @@ import PeerInfoScreen
 import ChatQrCodeScreen
 import UndoUI
 import ChatMessageNotificationItem
+import BusinessSetupScreen
+import ChatbotSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1876,6 +1878,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeArchiveSettingsController(context: AccountContext) -> ViewController {
         return archiveSettingsController(context: context)
+    }
+    
+    public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
+        return BusinessSetupScreen(context: context)
+    }
+    
+    public func makeChatbotSetupScreen(context: AccountContext) -> ViewController {
+        return ChatbotSetupScreen(context: context)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {

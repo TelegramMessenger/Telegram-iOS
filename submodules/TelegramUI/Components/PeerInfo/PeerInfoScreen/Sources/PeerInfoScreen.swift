@@ -105,6 +105,7 @@ import BoostLevelIconComponent
 import PeerInfoChatPaneNode
 import PeerInfoChatListPaneNode
 import GroupStickerPackSetupController
+import PeerNameColorItem
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -509,6 +510,7 @@ private enum PeerInfoSettingsSection {
     case rememberPassword
     case emojiStatus
     case powerSaving
+    case businessSetup
 }
 
 private enum PeerInfoReportType {
@@ -924,7 +926,11 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
         }))
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
+        //TODO:localize
+        /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Telegram Business", icon: PresentationResourcesSettings.chatFolders, action: {
+            interaction.openSettings(.businessSetup)
+        }))*/
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
             interaction.openSettings(.premiumGift)
         }))
     }
@@ -8942,6 +8948,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.headerNode.invokeDisplayPremiumIntro()
         case .powerSaving:
             push(energySavingSettingsScreen(context: self.context))
+        case .businessSetup:
+            push(self.context.sharedContext.makeBusinessSetupScreen(context: self.context))
         }
     }
     

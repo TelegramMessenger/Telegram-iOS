@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ListActionItemComponent",
-    module_name = "ListActionItemComponent",
+    name = "ListTextFieldItemComponent",
+    module_name = "ListTextFieldItemComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -13,8 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/ComponentFlow",
         "//submodules/TelegramPresentationData",
-        "//submodules/TelegramUI/Components/ListSectionComponent",
-        "//submodules/SwitchNode",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

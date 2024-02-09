@@ -432,6 +432,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/TopMessageReactions",
         "//submodules/TelegramUI/Components/Chat/SavedTagNameAlertController",
         "//submodules/TelegramUI/Components/Chat/ChatInlineSearchResultsListComponent",
+        "//submodules/TelegramUI/Components/Settings/BusinessSetupScreen",
+        "//submodules/TelegramUI/Components/Settings/ChatbotSetupScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

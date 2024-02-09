@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ListActionItemComponent",
-    module_name = "ListActionItemComponent",
+    name = "BackButtonComponent",
+    module_name = "BackButtonComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,11 +10,9 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/Display",
         "//submodules/ComponentFlow",
-        "//submodules/TelegramPresentationData",
-        "//submodules/TelegramUI/Components/ListSectionComponent",
-        "//submodules/SwitchNode",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/Display",
     ],
     visibility = [
         "//visibility:public",

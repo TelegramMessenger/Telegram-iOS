@@ -100,6 +100,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",
         "//submodules/TelegramUI/Components/Settings/ArchiveInfoScreen",
         "//submodules/TelegramUI/Components/Settings/NewSessionInfoScreen",
+        "//submodules/TelegramUI/Components/Settings/PeerNameColorItem",
     ],
     visibility = [
         "//visibility:public",

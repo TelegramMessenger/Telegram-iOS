@@ -930,6 +930,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, all: Bool) -> ViewController
     func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController
     func makeArchiveSettingsController(context: AccountContext) -> ViewController
+    func makeBusinessSetupScreen(context: AccountContext) -> ViewController
+    func makeChatbotSetupScreen(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>

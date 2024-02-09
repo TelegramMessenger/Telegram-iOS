@@ -22,6 +22,7 @@ import PeerNameColorScreen
 import ThemeCarouselItem
 import ThemeAccentColorScreen
 import WallpaperGridScreen
+import PeerNameColorItem
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext

@@ -39,9 +39,20 @@ public enum ItemListSectionHeaderActivityIndicator {
 }
 
 public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
+    public struct BadgeStyle: Equatable {
+        public var background: UIColor
+        public var foreground: UIColor
+        
+        public init(background: UIColor, foreground: UIColor) {
+            self.background = background
+            self.foreground = foreground
+        }
+    }
+    
     let presentationData: ItemListPresentationData
     let text: String
     let badge: String?
+    let badgeStyle: BadgeStyle?
     let multiline: Bool
     let activityIndicator: ItemListSectionHeaderActivityIndicator
     let accessoryText: ItemListSectionHeaderAccessoryText?
@@ -51,10 +62,11 @@ public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     
     public let isAlwaysPlain: Bool = true
     
-    public init(presentationData: ItemListPresentationData, text: String, badge: String? = nil, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, actionText: String? = nil, action: (() -> Void)? = nil, sectionId: ItemListSectionId) {
+    public init(presentationData: ItemListPresentationData, text: String, badge: String? = nil, badgeStyle: BadgeStyle? = nil, multiline: Bool = false, activityIndicator: ItemListSectionHeaderActivityIndicator = .none, accessoryText: ItemListSectionHeaderAccessoryText? = nil, actionText: String? = nil, action: (() -> Void)? = nil, sectionId: ItemListSectionId) {
         self.presentationData = presentationData
         self.text = text
         self.badge = badge
+        self.badgeStyle = badgeStyle
         self.multiline = multiline
         self.activityIndicator = activityIndicator
         self.accessoryText = accessoryText
@@ -149,8 +161,13 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
             
             var badgeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if let badge = item.badge {
-                let badgeFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize * 11.0 / 13.0)
-                badgeLayoutAndApply = makeBadgeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: badge, font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                if item.badgeStyle != nil {
+                    let badgeFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize * 12.0 / 13.0)
+                    badgeLayoutAndApply = makeBadgeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: badge, font: badgeFont, textColor: item.badgeStyle?.foreground ?? item.presentationData.theme.list.itemCheckColors.foregroundColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                } else {
+                    let badgeFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize * 11.0 / 13.0)
+                    badgeLayoutAndApply = makeBadgeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: badge, font: badgeFont, textColor: item.badgeStyle?.foreground ?? item.presentationData.theme.list.itemCheckColors.foregroundColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                }
             }
             
             let badgeSpacing: CGFloat = 6.0
@@ -245,7 +262,12 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                     if let badgeLayoutAndApply {
                         let badgeTextNode = badgeLayoutAndApply.1()
                         let badgeSideInset: CGFloat = 4.0
-                        let badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + badgeLayoutAndApply.0.size.width, height: badgeLayoutAndApply.0.size.height + 3.0)
+                        let badgeBackgroundSize: CGSize
+                        if item.badgeStyle != nil {
+                            badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + badgeLayoutAndApply.0.size.width, height: badgeLayoutAndApply.0.size.height + 3.0)
+                        } else {
+                            badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + badgeLayoutAndApply.0.size.width, height: badgeLayoutAndApply.0.size.height + 3.0)
+                        }
                         let badgeBackgroundFrame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + badgeSpacing, y: strongSelf.titleNode.frame.minY - UIScreenPixel + floorToScreenPixels((strongSelf.titleNode.bounds.height - badgeBackgroundSize.height) * 0.5)), size: badgeBackgroundSize)
                         
                         let badgeBackgroundLayer: SimpleLayer
@@ -264,7 +286,7 @@ public class ItemListSectionHeaderItemNode: ListViewItemNode {
                         }
                         
                         badgeBackgroundLayer.frame = badgeBackgroundFrame
-                        badgeBackgroundLayer.backgroundColor = item.presentationData.theme.list.itemCheckColors.fillColor.cgColor
+                        badgeBackgroundLayer.backgroundColor = item.badgeStyle?.background.cgColor ?? item.presentationData.theme.list.itemCheckColors.fillColor.cgColor
                         badgeBackgroundLayer.cornerRadius = 5.0
                         
                         badgeTextNode.frame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.minX + floor((badgeBackgroundFrame.width - badgeLayoutAndApply.0.size.width) * 0.5), y: badgeBackgroundFrame.minY + 1.0 + floorToScreenPixels((badgeBackgroundFrame.height - badgeLayoutAndApply.0.size.height) * 0.5)), size: badgeLayoutAndApply.0.size)

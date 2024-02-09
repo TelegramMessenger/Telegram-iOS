@@ -210,7 +210,8 @@ public final class ChatListShimmerNode: ASDisplayNode {
                     autoremoveTimeout: nil,
                     storyState: nil,
                     requiresPremiumForMessaging: false,
-                    displayAsTopicList: false
+                    displayAsTopicList: false,
+                    tags: []
                 )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             

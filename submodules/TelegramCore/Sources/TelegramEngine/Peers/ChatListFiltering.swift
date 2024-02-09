@@ -182,6 +182,7 @@ public struct ChatListFilterData: Equatable, Hashable {
     public var excludeArchived: Bool
     public var includePeers: ChatListFilterIncludePeers
     public var excludePeers: [PeerId]
+    public var color: PeerNameColor?
     
     public init(
         isShared: Bool,
@@ -191,7 +192,8 @@ public struct ChatListFilterData: Equatable, Hashable {
         excludeRead: Bool,
         excludeArchived: Bool,
         includePeers: ChatListFilterIncludePeers,
-        excludePeers: [PeerId]
+        excludePeers: [PeerId],
+        color: PeerNameColor?
     ) {
         self.isShared = isShared
         self.hasSharedLinks = hasSharedLinks
@@ -201,6 +203,7 @@ public struct ChatListFilterData: Equatable, Hashable {
         self.excludeArchived = excludeArchived
         self.includePeers = includePeers
         self.excludePeers = excludePeers
+        self.color = color
     }
     
     public mutating func addIncludePeer(peerId: PeerId) -> Bool {
@@ -262,7 +265,8 @@ public enum ChatListFilter: Codable, Equatable {
                     peers: (try container.decode([Int64].self, forKey: "includePeers")).map(PeerId.init),
                     pinnedPeers: (try container.decode([Int64].self, forKey: "pinnedPeers")).map(PeerId.init)
                 ),
-                excludePeers: (try container.decode([Int64].self, forKey: "excludePeers")).map(PeerId.init)
+                excludePeers: (try container.decode([Int64].self, forKey: "excludePeers")).map(PeerId.init),
+                color: (try container.decodeIfPresent(Int32.self, forKey: "color")).flatMap(PeerNameColor.init(rawValue:))
             )
             self = .filter(id: id, title: title, emoticon: emoticon, data: data)
         }
@@ -292,6 +296,7 @@ public enum ChatListFilter: Codable, Equatable {
                 try container.encode(data.includePeers.peers.map { $0.toInt64() }, forKey: "includePeers")
                 try container.encode(data.includePeers.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
                 try container.encode(data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")
+                try container.encodeIfPresent(data.color?.rawValue, forKey: "color")
         }
     }
 }
@@ -347,7 +352,8 @@ extension ChatListFilter {
                         default:
                             return nil
                         }
-                    }
+                    },
+                    color: nil
                 )
             )
         case let .dialogFilterChatlist(flags, id, title, emoticon, pinnedPeers, includePeers):
@@ -385,7 +391,8 @@ extension ChatListFilter {
                             return nil
                         }
                     }),
-                    excludePeers: []
+                    excludePeers: [],
+                    color: nil
                 )
             )
         }
@@ -882,12 +889,15 @@ struct ChatListFiltersState: Codable, Equatable {
     
     var updates: [ChatListFilterUpdates]
     
-    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil, updates: [])
+    var displayTags: Bool
     
-    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?, updates: [ChatListFilterUpdates]) {
+    static var `default` = ChatListFiltersState(filters: [], remoteFilters: nil, updates: [], displayTags: false)
+    
+    fileprivate init(filters: [ChatListFilter], remoteFilters: [ChatListFilter]?, updates: [ChatListFilterUpdates], displayTags: Bool) {
         self.filters = filters
         self.remoteFilters = remoteFilters
         self.updates = updates
+        self.displayTags = displayTags
     }
     
     public init(from decoder: Decoder) throws {
@@ -896,6 +906,7 @@ struct ChatListFiltersState: Codable, Equatable {
         self.filters = try container.decode([ChatListFilter].self, forKey: "filters")
         self.remoteFilters = try container.decodeIfPresent([ChatListFilter].self, forKey: "remoteFilters")
         self.updates = try container.decodeIfPresent([ChatListFilterUpdates].self, forKey: "updates") ?? []
+        self.displayTags = try container.decodeIfPresent(Bool.self, forKey: "displayTags") ?? false
     }
     
     func encode(to encoder: Encoder) throws {
@@ -904,6 +915,7 @@ struct ChatListFiltersState: Codable, Equatable {
         try container.encode(self.filters, forKey: "filters")
         try container.encodeIfPresent(self.remoteFilters, forKey: "remoteFilters")
         try container.encode(self.updates, forKey: "updates")
+        try container.encode(self.displayTags, forKey: "displayTags")
     }
     
     mutating func normalize() {
@@ -1068,7 +1080,8 @@ public struct ChatListFeaturedFilter: Codable, Equatable {
                 peers: (try container.decode([Int64].self, forKey: ("includePeers"))).map(PeerId.init),
                 pinnedPeers: (try container.decode([Int64].self, forKey: ("pinnedPeers"))).map(PeerId.init)
             ),
-            excludePeers: (try container.decode([Int64].self, forKey: ("excludePeers"))).map(PeerId.init)
+            excludePeers: (try container.decode([Int64].self, forKey: ("excludePeers"))).map(PeerId.init),
+            color: nil
         )
     }
     

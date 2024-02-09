@@ -50,7 +50,12 @@ public final class Image: Component {
 
             transition.setTintColor(view: self, color: component.tintColor ?? .white)
             
-            return component.size ?? availableSize
+            switch component.contentMode {
+            case .center:
+                return component.image?.size ?? availableSize
+            default:
+                return component.size ?? availableSize
+            }
         }
     }
 
