@@ -959,6 +959,7 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
     func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource) -> ViewController
     func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController
+    func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     

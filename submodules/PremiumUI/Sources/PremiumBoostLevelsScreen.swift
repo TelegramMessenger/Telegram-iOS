@@ -606,11 +606,11 @@ private final class SheetContent: CombinedComponent {
                         switch subject {
                         case .stories:
                             if level == 0 {
-                                textString = strings.ChannelBoost_EnableStoriesText(valueString).string
+                                textString = isGroup ? strings.GroupBoost_EnableStoriesText(valueString).string : strings.ChannelBoost_EnableStoriesText(valueString).string
                             } else {
-                                textString = strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
+                                textString = isGroup ? strings.GroupBoost_IncreaseLimitText(valueString, storiesString).string : strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
                             }
-                            needsSecondParagraph = false
+                            needsSecondParagraph = isGroup
                         case let .channelReactions(reactionCount):
                             textString = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
                             needsSecondParagraph = false
@@ -1584,7 +1584,7 @@ public class PremiumBoostLevelsScreen: ViewController {
         init(context: AccountContext, controller: PremiumBoostLevelsScreen) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             if controller.forceDark {
-                self.presentationData = self.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
+                self.presentationData = self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
             }
             self.presentationData = self.presentationData.withUpdated(theme: self.presentationData.theme.withModalBlocksBackground())
             

@@ -2203,6 +2203,42 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool) -> ViewController {
+        var pushImpl: ((ViewController) -> Void)?
+        var dismissImpl: (() -> Void)?
+        let controller = PremiumBoostLevelsScreen(
+            context: context,
+            peerId: peerId,
+            mode: .owner(subject: .stories),
+            status: boostStatus,
+            myBoostStatus: myBoostStatus,
+            openStats: nil,
+            openGift: {
+                var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
+                if forceDark {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    updatedPresentationData = (presentationData, .single(presentationData))
+                }
+                let controller = createGiveawayController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, subject: .generic)
+                pushImpl?(controller)
+                
+                Queue.mainQueue().after(0.4) {
+                    dismissImpl?()
+                }
+            },
+            forceDark: forceDark
+        )
+        pushImpl = { [weak controller] c in
+            controller?.push(c)
+        }
+        dismissImpl = { [weak controller] in
+            if let controller, let navigationController = controller.navigationController as? NavigationController {
+                navigationController.setViewControllers(navigationController.viewControllers.filter { !($0 is PremiumBoostLevelsScreen) }, animated: false)
+            }
+        }
+        return controller
+    }
+    
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
         return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     }

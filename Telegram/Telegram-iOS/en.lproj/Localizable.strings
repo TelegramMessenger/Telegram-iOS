@@ -11010,8 +11010,8 @@ Sorry for the inconvenience.";
 "GroupBoost.Title.Other" = "Help Upgrade This Group";
 "GroupBoost.Title.Current" = "Boost Group";
 
-"GroupBoost.EnableStoriesText" = "Your group needs %1$@ to enable posting stories.\n\nAsk your **Premium** members to boost your group with this link:";
-"GroupBoost.IncreaseLimitText" = "Your group needs %1$@ to post %2$@.\n\nAsk your **Premium** members to boost your group with this link:";
+"GroupBoost.EnableStoriesText" = "Your group needs %1$@ to enable posting stories.";
+"GroupBoost.IncreaseLimitText" = "Your group needs %1$@ to post %2$@.";
 
 "BoostGift.Group.Description" = "Get more boosts for your group by gifting\nPremium to your subscribers.";
 

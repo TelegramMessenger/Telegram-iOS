@@ -1706,20 +1706,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }))
                 }
                 
-//                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendSomething)) {
-//                    let messagesShouldHaveSignatures: Bool
-//                    switch channel.info {
-//                    case let .broadcast(info):
-//                        messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
-//                    default:
-//                        messagesShouldHaveSignatures = false
-//                    }
-//                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
-//                        interaction.editingToggleMessageSignatures(value)
-//                    }))
-//                    items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
-//                }
-                
                 var canEditMembers = false
                 if channel.hasPermission(.banMembers) && (channel.adminRights != nil || channel.flags.contains(.isCreator)) {
                     canEditMembers = true
