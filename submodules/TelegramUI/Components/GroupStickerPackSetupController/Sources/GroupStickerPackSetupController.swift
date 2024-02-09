@@ -282,11 +282,14 @@ private func groupStickerPackSetupControllerEntries(context: AccountContext, pre
             entries.append(.currentPack(0, presentationData.theme, presentationData.strings, .found(packInfo: data.info, topItem: data.item, subtitle: isEmoji ? presentationData.strings.StickerPack_EmojiCount(data.info.count) : presentationData.strings.StickerPack_StickerCount(data.info.count))))
     }
     entries.append(.searchInfo(presentationData.theme, isEmoji ? presentationData.strings.Group_Emoji_Info : presentationData.strings.Channel_Stickers_CreateYourOwn))
-    entries.append(.packsTitle(presentationData.theme, isEmoji ? presentationData.strings.Group_Emoji_YourEmoji : presentationData.strings.Channel_Stickers_YourStickers))
     
     let namespace = isEmoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespace])] as? ItemCollectionInfosView {
         if let packsEntries = stickerPacksView.entriesByNamespace[namespace] {
+            if !packsEntries.isEmpty {
+                entries.append(.packsTitle(presentationData.theme, isEmoji ? presentationData.strings.Group_Emoji_YourEmoji : presentationData.strings.Channel_Stickers_YourStickers))
+            }
+            
             var index: Int32 = 0
             for entry in packsEntries {
                 if let info = entry.info as? StickerPackCollectionInfo {

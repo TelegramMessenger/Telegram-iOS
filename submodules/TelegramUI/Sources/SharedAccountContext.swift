@@ -2203,7 +2203,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool) -> ViewController {
+    public func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController {
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        
         var pushImpl: ((ViewController) -> Void)?
         var dismissImpl: (() -> Void)?
         let controller = PremiumBoostLevelsScreen(
@@ -2212,8 +2214,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode: .owner(subject: .stories),
             status: boostStatus,
             myBoostStatus: myBoostStatus,
-            openStats: nil,
-            openGift: {
+            openStats: openStats,
+            openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? {
                 var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
                 if forceDark {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
@@ -2225,7 +2227,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 Queue.mainQueue().after(0.4) {
                     dismissImpl?()
                 }
-            },
+            } : nil,
             forceDark: forceDark
         )
         pushImpl = { [weak controller] c in

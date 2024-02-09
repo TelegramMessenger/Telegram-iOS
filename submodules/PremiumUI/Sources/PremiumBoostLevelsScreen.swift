@@ -1961,9 +1961,14 @@ public class PremiumBoostLevelsScreen: ViewController {
         }
         
         private var footerHeight: CGFloat {
+            if let mode = self.controller?.mode, case .owner = mode {
+                return 0.0
+            }
+            
             guard let layout = self.currentLayout else {
                 return 58.0
             }
+                        
             var footerHeight: CGFloat = 8.0 + 50.0
             footerHeight += layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : 8.0
             return footerHeight

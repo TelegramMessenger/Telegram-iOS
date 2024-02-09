@@ -1130,25 +1130,9 @@ final class ShareWithPeersScreenComponent: Component {
                                                             if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                                                                 previousController.dismiss()
                                                             }
-//                                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-//                                                            let controller = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak navigationController] in
-//                                                                UIPasteboard.general.string = link
-//                                                                
-//                                                                if let previousController = navigationController?.viewControllers.reversed().first(where: { $0 is ShareWithPeersScreen}) as? ShareWithPeersScreen {
-//                                                                    previousController.dismiss(completion: { [weak navigationController] in
-//                                                                        Queue.mainQueue().justDispatch {
-//                                                                            if let controller = navigationController?.viewControllers.last as? ViewController {
-//                                                                                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-//                                                                            }
-//                                                                        }
-//                                                                    })
-//                                                                }
-//                                                                return true
-//                                                            })
-                                                            let controller = component.context.sharedContext.makePremiumBoostLevelsController(context: component.context, peerId: peer.id, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: true)
+                                                            let controller = component.context.sharedContext.makePremiumBoostLevelsController(context: component.context, peerId: peer.id, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: true, openStats: nil)
                                                             navigationController.pushViewController(controller)
                                                         }
-                                                        
                                                         self.hapticFeedback.impact(.light)
                                                     })
                                                 default:

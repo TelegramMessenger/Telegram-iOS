@@ -8645,39 +8645,25 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .channelBoostRequired:
                 self.postingAvailabilityDisposable?.dispose()
                 
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-                
                 self.postingAvailabilityDisposable = combineLatest(
                     queue: Queue.mainQueue(),
                     self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
-                    self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId)
-                ).startStrict(next: { [weak self] peer, status in
-                    guard let self, let peer, let status else {
+                    self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
+                    self.context.engine.peers.getMyBoostStatus()
+                ).startStrict(next: { [weak self] peer, boostStatus, myBoostStatus in
+                    guard let self, let peer, let boostStatus, let myBoostStatus else {
                         return
                     }
                     
-                    let link = status.url
                     if let navigationController = self.controller?.navigationController as? NavigationController {
                         if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                             previousController.dismiss()
                         }
-                        let controller = PremiumLimitScreen(context: self.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
-                            UIPasteboard.general.string = link
-                            
+                        let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
                             if let self {
-                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                self.openStats(boosts: true, boostStatus: boostStatus)
                             }
-                            return true
-                        }, openStats: { [weak self] in
-                            if let self {
-                                self.openStats(boosts: true, boostStatus: status)
-                            }
-                        }, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? { [weak self] in
-                            if let self {
-                                let controller = createGiveawayController(context: self.context, peerId: self.peerId, subject: .generic)
-                                self.controller?.push(controller)
-                            }
-                        } : nil)
+                        })
                         navigationController.pushViewController(controller)
                     }
                     
