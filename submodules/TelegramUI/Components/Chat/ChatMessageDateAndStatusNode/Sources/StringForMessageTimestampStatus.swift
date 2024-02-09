@@ -88,7 +88,6 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     
     if let sourceAuthorInfo = message.sourceAuthorInfo, let orignalDate = sourceAuthorInfo.orignalDate {
         timestamp = orignalDate
-        isLocalTimestamp = false
     }
     
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
