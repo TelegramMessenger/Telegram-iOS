@@ -677,6 +677,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                         .direct(.canBanUsers),
                         .direct(.canInviteUsers),
                         .direct(.canPinMessages),
+                        .sub(.stories, storiesRelatedFlags),
                         .direct(.canManageCalls),
                         .direct(.canBeAnonymous),
                         .direct(.canAddAdmins)

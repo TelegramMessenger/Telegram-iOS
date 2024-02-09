@@ -43,7 +43,10 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
         .canPinMessages,
         .canManageCalls,
         .canBeAnonymous,
-        .canAddAdmins
+        .canAddAdmins,
+        .canPostStories,
+        .canEditStories,
+        .canDeleteStories
     ]
     
     public static let internal_broadcastSpecific: TelegramChatAdminRightsFlags = [
