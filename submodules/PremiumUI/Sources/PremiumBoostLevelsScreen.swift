@@ -601,6 +601,8 @@ private final class SheetContent: CombinedComponent {
                     var needsSecondParagraph = true
                     
                     if let subject {
+                        let requiredLevel = subject.requiredLevel(group: isGroup, context: context.component.context, configuration: premiumConfiguration)
+                        
                         let storiesString = strings.ChannelBoost_StoriesPerDay(Int32(level) + 1)
                         let valueString = strings.ChannelBoost_MoreBoosts(Int32(remaining))
                         switch subject {
@@ -615,24 +617,23 @@ private final class SheetContent: CombinedComponent {
                             textString = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
                             needsSecondParagraph = false
                         case .nameColors:
-                            let colorLevel = subject.requiredLevel(group: isGroup, context: context.component.context, configuration: premiumConfiguration)
-                            textString = strings.ChannelBoost_EnableNameColorLevelText("\(colorLevel)").string
+                            textString = strings.ChannelBoost_EnableNameColorLevelText("\(requiredLevel)").string
                         case .nameIcon:
-                            textString = strings.ChannelBoost_EnableNameIconLevelText("\(premiumConfiguration.minChannelNameIconLevel)").string
+                            textString = strings.ChannelBoost_EnableNameIconLevelText("\(requiredLevel)").string
                         case .profileColors:
-                            textString = isGroup ? strings.GroupBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string : strings.ChannelBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableProfileColorLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableProfileColorLevelText("\(requiredLevel)").string
                         case .profileIcon:
-                            textString = isGroup ? strings.GroupBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string : strings.ChannelBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableProfileIconLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string
                         case .emojiStatus:
-                            textString = isGroup ? strings.GroupBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string : strings.ChannelBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableEmojiStatusLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableEmojiStatusLevelText("\(requiredLevel)").string
                         case .wallpaper:
-                            textString = isGroup ? strings.GroupBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string : strings.ChannelBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableWallpaperLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableWallpaperLevelText("\(requiredLevel)").string
                         case .customWallpaper:
-                            textString = isGroup ? strings.GroupBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string : strings.ChannelBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableCustomWallpaperLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableCustomWallpaperLevelText("\(requiredLevel)").string
                         case .audioTranscription:
                             textString = ""
                         case .emojiPack:
-                            textString = strings.GroupBoost_EnableEmojiPackLevelText("\(premiumConfiguration.minGroupEmojiPackLevel)").string
+                            textString = strings.GroupBoost_EnableEmojiPackLevelText("\(requiredLevel)").string
                         }
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
@@ -2296,7 +2297,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                                 sharedContext: context.sharedContext,
                                 updatedPresentationData: nil,
                                 title: presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle,
-                                text: presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string,
+                                text: self.containerExternalState.isGroup ? presentationData.strings.GroupBoost_Error_BoostTooOftenText(valueText).string : presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string,
                                 actions: [
                                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
                                 ],
@@ -2375,7 +2376,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                             sharedContext: context.sharedContext,
                             updatedPresentationData: nil,
                             title: presentationData.strings.ChannelBoost_Error_PremiumNeededTitle,
-                            text: presentationData.strings.ChannelBoost_Error_PremiumNeededText,
+                            text: self.containerExternalState.isGroup ? presentationData.strings.GroupBoost_Error_PremiumNeededText :  presentationData.strings.ChannelBoost_Error_PremiumNeededText,
                             actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: { [weak controller] in

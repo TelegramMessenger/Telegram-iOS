@@ -941,8 +941,12 @@ final class ChannelAppearanceScreenComponent: Component {
                 return availableSize
             }
             
-            var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
-
+            let isGroup = self.isGroup
+            
+            var requiredBoostSubjects: [BoostSubject] = []
+            if !isGroup {
+                requiredBoostSubjects.append(.nameColors(colors: resolvedState.nameColor))
+            }
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
                 requiredBoostSubjects.append(.nameIcon)
@@ -1025,7 +1029,6 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
-            var isGroup = false
             if case let .user(user) = peer {
                 peer = .user(user
                     .withUpdatedNameColor(resolvedState.nameColor)
@@ -1042,9 +1045,6 @@ final class ChannelAppearanceScreenComponent: Component {
                     .withUpdatedBackgroundEmojiId(replyFileId)
                     .withUpdatedProfileBackgroundEmojiId(backgroundFileId)
                 )
-                if case .group = channel.info {
-                    isGroup = true
-                }
             }
             
             let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))

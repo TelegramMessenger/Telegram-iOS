@@ -9598,7 +9598,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0, bannedPermission == nil {
+            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0, let bannedPermission, !bannedPermission.1 {
                 strongSelf.interfaceInteraction?.openBoostToUnrestrict()
                 return
             }
