@@ -1594,18 +1594,16 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             case .broadcast:
                 let ItemUsername = 1
                 let ItemPeerColor = 2
-                let ItemInviteLinks = 4
-                let ItemDiscussionGroup = 5
-                let ItemSignMessages = 6
-                let ItemSignMessagesHelp = 7
-                let ItemDeleteChannel = 8
-                let ItemReactions = 9
-                let ItemAdmins = 10
-                let ItemMembers = 11
-                let ItemMemberRequests = 12
-                let ItemStats = 13
-                let ItemBanned = 14
-                let ItemRecentActions = 15
+                let ItemInviteLinks = 3
+                let ItemDiscussionGroup = 4
+                let ItemDeleteChannel = 5
+                let ItemReactions = 6
+                let ItemAdmins = 7
+                let ItemMembers = 8
+                let ItemMemberRequests = 9
+                let ItemStats = 10
+                let ItemBanned = 11
+                let ItemRecentActions = 12
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1712,20 +1710,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPeerColor, label: .image(colorImage, colorImage.size), additionalBadgeIcon: boostIcon, text: presentationData.strings.Channel_Info_AppearanceItem, icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
                         interaction.editingOpenNameColorSetup()
                     }))
-                }
-                
-                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendSomething)) {
-                    let messagesShouldHaveSignatures: Bool
-                    switch channel.info {
-                    case let .broadcast(info):
-                        messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
-                    default:
-                        messagesShouldHaveSignatures = false
-                    }
-                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
-                        interaction.editingToggleMessageSignatures(value)
-                    }))
-                    items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
                 }
                 
                 var canEditMembers = false
@@ -8667,39 +8651,25 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .channelBoostRequired:
                 self.postingAvailabilityDisposable?.dispose()
                 
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-                
                 self.postingAvailabilityDisposable = combineLatest(
                     queue: Queue.mainQueue(),
                     self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
-                    self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId)
-                ).startStrict(next: { [weak self] peer, status in
-                    guard let self, let peer, let status else {
+                    self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId),
+                    self.context.engine.peers.getMyBoostStatus()
+                ).startStrict(next: { [weak self] peer, boostStatus, myBoostStatus in
+                    guard let self, let peer, let boostStatus, let myBoostStatus else {
                         return
                     }
                     
-                    let link = status.url
                     if let navigationController = self.controller?.navigationController as? NavigationController {
                         if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                             previousController.dismiss()
                         }
-                        let controller = PremiumLimitScreen(context: self.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
-                            UIPasteboard.general.string = link
-                            
+                        let controller = self.context.sharedContext.makePremiumBoostLevelsController(context: self.context, peerId: peer.id, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: { [weak self] in
                             if let self {
-                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                self.openStats(boosts: true, boostStatus: boostStatus)
                             }
-                            return true
-                        }, openStats: { [weak self] in
-                            if let self {
-                                self.openStats(boosts: true, boostStatus: status)
-                            }
-                        }, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? { [weak self] in
-                            if let self {
-                                let controller = createGiveawayController(context: self.context, peerId: self.peerId, subject: .generic)
-                                self.controller?.push(controller)
-                            }
-                        } : nil)
+                        })
                         navigationController.pushViewController(controller)
                     }
                     
@@ -10383,7 +10353,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
-                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, case .broadcast = channel.info, channel.hasPermission(.postStories) {
+                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, channel.hasPermission(.postStories) {
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 

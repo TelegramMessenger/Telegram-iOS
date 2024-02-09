@@ -120,6 +120,7 @@ import VideoMessageCameraScreen
 import TopMessageReactions
 import PeerInfoScreen
 import AudioWaveform
+import PeerNameColorScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -961,11 +962,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentThemeSelection()
                             return true
                         case let .setChatWallpaper(wallpaper, _):
-                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                                strongSelf.presentThemeSelection()
+                            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 return true
                             }
-                            if peer is TelegramChannel {
+                            if let peer = peer as? TelegramChannel, peer.hasPermission(.changeInfo) {
+                                let _ = (context.engine.peers.getChannelBoostStatus(peerId: peer.id)
+                                |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peerId: peer.id, boostStatus: boostStatus))
+                                })
+                                return true
+                            }
+                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                                strongSelf.presentThemeSelection()
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()
@@ -1692,6 +1703,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendStickers) != nil {
+                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                    return false
+                }
+            }
+            
             var attributes: [MessageAttribute] = []
             if let query = query {
                 attributes.append(EmojiSearchQueryMessageAttribute(query: query))
@@ -1837,6 +1855,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return false
                 }
                 
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
+                    if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                        strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                        return false
+                    }
+                }
+                
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.collapseInput()
@@ -1879,6 +1904,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceView, sourceRect)
                 return false
+            }
+            
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
+                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                    return false
+                }
             }
             
             strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting, resetTextInputState: resetTextInputState)
@@ -9538,10 +9570,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0 {
-                strongSelf.interfaceInteraction?.openBoostToUnrestrict()
-                return
-            }
+
+            let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState)
             
             let subjectFlags: [TelegramChatBannedRightsFlags]
             switch subject {
@@ -9554,7 +9584,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var bannedPermission: (Int32, Bool)? = nil
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                 for subjectFlag in subjectFlags {
-                    if let value = channel.hasBannedPermission(subjectFlag) {
+                    if let value = channel.hasBannedPermission(subjectFlag, ignoreDefault: canBypassRestrictions) {
                         bannedPermission = value
                         break
                     }
@@ -9566,6 +9596,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
+            }
+            
+            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0, let bannedPermission, !bannedPermission.1 {
+                strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                return
             }
             
             var displayToast = false
@@ -10765,8 +10800,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             items.append(.custom(ChatSendAsPeerTitleContextItem(text: strongSelf.presentationInterfaceState.strings.Conversation_SendMesageAs.uppercased()), false))
             items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId, isPremium: isPremium, presentToast: { [weak self] peer in
                 if let strongSelf = self {
-                    let hapticFeedback = HapticFeedback()
-                    hapticFeedback.impact()
+                    HapticFeedback().impact()
                     
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action, duration: 3), elevatedLayout: false, action: { [weak self] action in
                         guard let strongSelf = self else {
@@ -11040,6 +11074,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return
             }
+            
+            HapticFeedback().impact()
+            
             let _ = combineLatest(queue: Queue.mainQueue(),
                 context.engine.peers.getChannelBoostStatus(peerId: peerId),
                 context.engine.peers.getMyBoostStatus()

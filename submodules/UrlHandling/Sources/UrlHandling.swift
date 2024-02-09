@@ -787,7 +787,11 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                     }
                 } else {
-                    return .single(.result(.peer(nil, .info(nil))))
+                    if case .boost = parameter {
+                        return .single(.result(.boost(peerId: nil, status: nil, myBoostStatus: nil)))
+                    } else {
+                        return .single(.result(.peer(nil, .info(nil))))
+                    }
                 }
             }
         case let .peerId(peerId):

@@ -134,6 +134,7 @@ final class BadgeLabelView: UIView {
             } else {
                 itemTransition = transition.withAnimation(.none)
                 itemView = StackView()
+                itemView.color = self.color
                 self.itemViews[i] = itemView
                 self.addSubview(itemView)
             }

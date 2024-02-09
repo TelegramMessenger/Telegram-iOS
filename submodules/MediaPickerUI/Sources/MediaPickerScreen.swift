@@ -1308,6 +1308,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 
                 if let (untilDate, personal) = bannedSendMedia {
                     self.gridNode.isHidden = true
+                    self.controller?.titleView.isEnabled = false
                     
                     let banDescription: String
                     if untilDate != 0 && untilDate != Int32.max {
@@ -1323,7 +1324,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     if let current = self.placeholderNode {
                         placeholderNode = current
                     } else {
-                        placeholderNode = MediaPickerPlaceholderNode(content: .bannedSendMedia(banDescription))
+                        placeholderNode = MediaPickerPlaceholderNode(content: .bannedSendMedia(text: banDescription, canBoost: false))
                         self.containerNode.insertSubnode(placeholderNode, aboveSubnode: self.gridNode)
                         self.placeholderNode = placeholderNode
                         

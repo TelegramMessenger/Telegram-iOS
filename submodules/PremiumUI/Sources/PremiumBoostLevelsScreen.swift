@@ -564,8 +564,8 @@ private final class SheetContent: CombinedComponent {
                 level = Int(boostState.level)
                 boosts = Int(boostState.boosts)
                 if let nextLevelBoosts = boostState.nextLevelBoosts {
-                    remaining = Int(nextLevelBoosts - boostState.boosts)
-                    progress = CGFloat(boostState.boosts - boostState.currentLevelBoosts) / CGFloat(nextLevelBoosts - boostState.currentLevelBoosts)
+                    remaining = max(0, Int(nextLevelBoosts - boostState.boosts))
+                    progress = max(0.0, min(1.0, CGFloat(boostState.boosts - boostState.currentLevelBoosts) / CGFloat(nextLevelBoosts - boostState.currentLevelBoosts)))
                 } else {
                     remaining = nil
                     progress = 1.0
@@ -575,8 +575,8 @@ private final class SheetContent: CombinedComponent {
                 level = status.level
                 boosts = status.boosts
                 if let nextLevelBoosts = status.nextLevelBoosts {
-                    remaining = nextLevelBoosts - status.boosts
-                    progress = CGFloat(status.boosts - status.currentLevelBoosts) / CGFloat(nextLevelBoosts - status.currentLevelBoosts)
+                    remaining = max(0, nextLevelBoosts - status.boosts)
+                    progress = max(0.0, min(1.0, CGFloat(status.boosts - status.currentLevelBoosts) / CGFloat(nextLevelBoosts - status.currentLevelBoosts)))
                 } else {
                     remaining = nil
                     progress = 1.0
@@ -589,9 +589,7 @@ private final class SheetContent: CombinedComponent {
                 progress = 0.0
                 myBoostCount = 0
             }
-            
-            let badgeText = "\(boosts)"
-                
+                            
             var textString = ""
 
             var isCurrent = false
@@ -601,38 +599,39 @@ private final class SheetContent: CombinedComponent {
                     var needsSecondParagraph = true
                     
                     if let subject {
+                        let requiredLevel = subject.requiredLevel(group: isGroup, context: context.component.context, configuration: premiumConfiguration)
+                        
                         let storiesString = strings.ChannelBoost_StoriesPerDay(Int32(level) + 1)
                         let valueString = strings.ChannelBoost_MoreBoosts(Int32(remaining))
                         switch subject {
                         case .stories:
                             if level == 0 {
-                                textString = strings.ChannelBoost_EnableStoriesText(valueString).string
+                                textString = isGroup ? strings.GroupBoost_EnableStoriesText(valueString).string : strings.ChannelBoost_EnableStoriesText(valueString).string
                             } else {
-                                textString = strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
+                                textString = isGroup ? strings.GroupBoost_IncreaseLimitText(valueString, storiesString).string : strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
                             }
-                            needsSecondParagraph = false
+                            needsSecondParagraph = isGroup
                         case let .channelReactions(reactionCount):
                             textString = strings.ChannelBoost_CustomReactionsText("\(reactionCount)", "\(reactionCount)").string
                             needsSecondParagraph = false
                         case .nameColors:
-                            let colorLevel = subject.requiredLevel(group: isGroup, context: context.component.context, configuration: premiumConfiguration)
-                            textString = strings.ChannelBoost_EnableNameColorLevelText("\(colorLevel)").string
+                            textString = strings.ChannelBoost_EnableNameColorLevelText("\(requiredLevel)").string
                         case .nameIcon:
-                            textString = strings.ChannelBoost_EnableNameIconLevelText("\(premiumConfiguration.minChannelNameIconLevel)").string
+                            textString = strings.ChannelBoost_EnableNameIconLevelText("\(requiredLevel)").string
                         case .profileColors:
-                            textString = isGroup ? strings.GroupBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string : strings.ChannelBoost_EnableProfileColorLevelText("\(premiumConfiguration.minChannelProfileColorLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableProfileColorLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableProfileColorLevelText("\(requiredLevel)").string
                         case .profileIcon:
-                            textString = isGroup ? strings.GroupBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string : strings.ChannelBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableProfileIconLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableProfileIconLevelText("\(premiumConfiguration.minChannelProfileIconLevel)").string
                         case .emojiStatus:
-                            textString = isGroup ? strings.GroupBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string : strings.ChannelBoost_EnableEmojiStatusLevelText("\(premiumConfiguration.minChannelEmojiStatusLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableEmojiStatusLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableEmojiStatusLevelText("\(requiredLevel)").string
                         case .wallpaper:
-                            textString = isGroup ? strings.GroupBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string : strings.ChannelBoost_EnableWallpaperLevelText("\(premiumConfiguration.minChannelWallpaperLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableWallpaperLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableWallpaperLevelText("\(requiredLevel)").string
                         case .customWallpaper:
-                            textString = isGroup ? strings.GroupBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string : strings.ChannelBoost_EnableCustomWallpaperLevelText("\(premiumConfiguration.minChannelCustomWallpaperLevel)").string
+                            textString = isGroup ? strings.GroupBoost_EnableCustomWallpaperLevelText("\(requiredLevel)").string : strings.ChannelBoost_EnableCustomWallpaperLevelText("\(requiredLevel)").string
                         case .audioTranscription:
                             textString = ""
                         case .emojiPack:
-                            textString = strings.GroupBoost_EnableEmojiPackLevelText("\(premiumConfiguration.minGroupEmojiPackLevel)").string
+                            textString = strings.GroupBoost_EnableEmojiPackLevelText("\(requiredLevel)").string
                         }
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
@@ -797,7 +796,7 @@ private final class SheetContent: CombinedComponent {
                         activeValue: premiumValue,
                         activeTitleColor: .white,
                         badgeIconName: iconName,
-                        badgeText: badgeText,
+                        badgeText: "\(boosts)",
                         badgePosition: progress,
                         badgeGraphPosition: progress,
                         invertProgress: true,
@@ -918,10 +917,9 @@ private final class SheetContent: CombinedComponent {
                 )
                 contentSize.height += linkButton.size.height + 16.0
                 
-                //TODO:localize
                 let boostButton = boostButton.update(
                     component: SolidRoundedButtonComponent(
-                        title: "Boost",
+                        title: strings.ChannelBoost_Boost,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: .black,
                             backgroundColors: buttonGradientColors,
@@ -945,7 +943,7 @@ private final class SheetContent: CombinedComponent {
                 
                 let copyButton = copyButton.update(
                     component: SolidRoundedButtonComponent(
-                        title: "Copy",
+                        title: strings.ChannelBoost_Copy,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: .black,
                             backgroundColors: buttonGradientColors,
@@ -1183,10 +1181,15 @@ private final class SheetContent: CombinedComponent {
 }
 
 private final class BoostLevelsContainerComponent: CombinedComponent {
+    class ExternalState {
+        var isGroup: Bool = false
+        var contentHeight: CGFloat = 0.0
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    
+    let externalState: ExternalState
     let peerId: EnginePeer.Id
     let mode: PremiumBoostLevelsScreen.Mode
     let status: ChannelBoostStatus?
@@ -1197,11 +1200,13 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
     let openStats: (() -> Void)?
     let openGift: (() -> Void)?
     let openPeer: ((EnginePeer) -> Void)?
+    let updated: () -> Void
 
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        externalState: ExternalState,
         peerId: EnginePeer.Id,
         mode: PremiumBoostLevelsScreen.Mode,
         status: ChannelBoostStatus?,
@@ -1211,11 +1216,13 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         dismiss: @escaping () -> Void,
         openStats: (() -> Void)?,
         openGift: (() -> Void)?,
-        openPeer: ((EnginePeer) -> Void)?
+        openPeer: ((EnginePeer) -> Void)?,
+        updated: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.externalState = externalState
         self.peerId = peerId
         self.mode = mode
         self.status = status
@@ -1226,6 +1233,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         self.openStats = openStats
         self.openGift = openGift
         self.openPeer = openPeer
+        self.updated = updated
     }
     
     static func ==(lhs: BoostLevelsContainerComponent, rhs: BoostLevelsContainerComponent) -> Bool {
@@ -1258,7 +1266,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         private var disposable: Disposable?
         private(set) var peer: EnginePeer?
         
-        init(context: AccountContext, peerId: EnginePeer.Id) {
+        init(context: AccountContext, peerId: EnginePeer.Id, updated: @escaping () -> Void) {
             super.init()
             
             self.disposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
@@ -1268,6 +1276,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                 }
                 self.peer = peer
                 self.updated()
+                updated()
             })
         }
         
@@ -1277,7 +1286,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, peerId: self.peerId)
+        return State(context: self.context, peerId: self.peerId, updated: self.updated)
     }
         
     static var body: Body {
@@ -1288,6 +1297,8 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         let title = Child(MultilineTextComponent.self)
         let statsButton = Child(Button.self)
         let closeButton = Child(Button.self)
+        
+        let externalScrollState = ScrollComponent<Empty>.ExternalState()
         
         return { context in
             let state = context.state
@@ -1309,6 +1320,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
             }
             
             if let isGroup {
+                component.externalState.isGroup = isGroup
                 let scroll = scroll.update(
                     component: ScrollComponent<Empty>(
                         content: AnyComponent(
@@ -1330,6 +1342,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                                 openPeer: component.openPeer
                             )
                         ),
+                        externalState: externalScrollState,
                         contentInsets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0),
                         contentOffsetUpdated: { [weak state] topContentOffset, _ in
                             state?.topContentOffset = topContentOffset
@@ -1342,6 +1355,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
+                component.externalState.contentHeight = externalScrollState.contentHeight
                 
                 let background = background.update(
                     component: Rectangle(color: theme.overallDarkAppearance ? theme.list.blocksBackgroundColor : theme.list.plainBackgroundColor),
@@ -1556,9 +1570,11 @@ public class PremiumBoostLevelsScreen: ViewController {
         let footerContainerView: UIView
         let footerView: ComponentHostView<Empty>
                 
+        private let containerExternalState = BoostLevelsContainerComponent.ExternalState()
+        
         private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
-        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
+        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?)?
         
         private let hapticFeedback = HapticFeedback()
         
@@ -1568,7 +1584,7 @@ public class PremiumBoostLevelsScreen: ViewController {
         init(context: AccountContext, controller: PremiumBoostLevelsScreen) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             if controller.forceDark {
-                self.presentationData = self.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
+                self.presentationData = self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
             }
             self.presentationData = self.presentationData.withUpdated(theme: self.presentationData.theme.withModalBlocksBackground())
             
@@ -1624,7 +1640,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                 
                 self.updatedState.set(.single(InternalBoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: boosts + 1)))
                 
-                if let (replacedBoosts, inChannels) = controller.replacedBoosts {
+                if let (replacedBoosts, sourcePeers) = controller.replacedBoosts {
                     currentMyBoostCount += 1
                     
                     self.boostState = initialState.displayData(myBoostCount: myBoostCount, currentMyBoostCount: 1)
@@ -1634,7 +1650,29 @@ public class PremiumBoostLevelsScreen: ViewController {
                                         
                     Queue.mainQueue().after(0.3) {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostReplaceIcon"), color: .white)!, title: nil, text: presentationData.strings.ReassignBoost_Success(presentationData.strings.ReassignBoost_Boosts(replacedBoosts), presentationData.strings.ReassignBoost_OtherChannels(inChannels)).string, round: false, undoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
+                        
+                        var groupCount: Int32 = 0
+                        var channelCount: Int32 = 0
+                        for peer in sourcePeers {
+                            if case let .channel(channel) = peer {
+                                switch channel.info {
+                                case .broadcast:
+                                    channelCount += 1
+                                case .group:
+                                    groupCount += 1
+                                }
+                            }
+                        }
+                        let otherText: String
+                        if channelCount > 0 && groupCount == 0 {
+                            otherText = presentationData.strings.ReassignBoost_OtherChannels(channelCount)
+                        } else if groupCount > 0 && channelCount == 0 {
+                            otherText = presentationData.strings.ReassignBoost_OtherGroups(groupCount)
+                        } else {
+                            otherText = presentationData.strings.ReassignBoost_OtherGroupsAndChannels(Int32(sourcePeers.count))
+                        }
+                        let text = presentationData.strings.ReassignBoost_Success(presentationData.strings.ReassignBoost_Boosts(replacedBoosts), otherText).string
+                        let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostReplaceIcon"), color: .white)!, title: nil, text: text, round: false, undoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
                         controller.present(undoController, in: .current)
                     }
                 }
@@ -1723,31 +1761,10 @@ public class PremiumBoostLevelsScreen: ViewController {
             self.currentLayout = layout
             
             self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
-                        
-            var effectiveExpanded = self.isExpanded
-            if case .regular = layout.metrics.widthClass {
-                effectiveExpanded = true
-            }
-            
+                                  
             let isLandscape = layout.orientation == .landscape
-            let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
-            let topInset: CGFloat
-            if let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
-                if effectiveExpanded {
-                    topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
-                } else {
-                    topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
-                }
-            } else if let dismissOffset = self.dismissOffset, !dismissOffset.isZero {
-                topInset = edgeTopInset * dismissOffset
-            } else {
-                topInset = effectiveExpanded ? 0.0 : edgeTopInset
-            }
-            transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: nil)
             
-            let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
-            self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
-            
+            var containerTopInset: CGFloat = 0.0
             let clipFrame: CGRect
             if layout.metrics.widthClass == .compact {
                 self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.25)
@@ -1769,7 +1786,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                     clipFrame = CGRect(origin: CGPoint(), size: layout.size)
                 } else {
                     let coveredByModalTransition: CGFloat = 0.0
-                    var containerTopInset: CGFloat = 10.0
+                    containerTopInset = 10.0
                     if let statusBarHeight = layout.statusBarHeight {
                         containerTopInset += statusBarHeight
                     }
@@ -1797,19 +1814,45 @@ public class PremiumBoostLevelsScreen: ViewController {
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
             
+            var effectiveExpanded = self.isExpanded
+            if case .regular = layout.metrics.widthClass {
+                effectiveExpanded = true
+            }
+        
+            self.updated(transition: transition)
+                        
+            let contentHeight = self.containerExternalState.contentHeight
+            if contentHeight > 0.0 && contentHeight < 400.0, let view = self.footerView.componentView as? FooterComponent.View {
+                view.backgroundView.alpha = 0.0
+                view.separator.opacity = 0.0
+            }
+            let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
+
+            let topInset: CGFloat
+            if let (panInitialTopInset, panOffset, _) = self.panGestureArguments {
+                if effectiveExpanded {
+                    topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
+                } else {
+                    topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
+                }
+            } else if let dismissOffset = self.dismissOffset, !dismissOffset.isZero {
+                topInset = edgeTopInset * dismissOffset
+            } else {
+                topInset = effectiveExpanded ? 0.0 : edgeTopInset
+            }
+            transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: nil)
             
-            var footerHeight: CGFloat = 8.0 + 50.0
-            footerHeight += layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : 8.0
+            let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
+            self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
             
+            let footerHeight = self.footerHeight
             let convertedFooterFrame = self.view.convert(CGRect(origin: CGPoint(x: clipFrame.minX, y: clipFrame.maxY - footerHeight), size: CGSize(width: clipFrame.width, height: footerHeight)), to: self.containerView)
             transition.setFrame(view: self.footerContainerView, frame: convertedFooterFrame)
-                        
-            self.updated(transition: transition)
         }
         
         private var boostState: InternalBoostState.DisplayData?
         func updated(transition: Transition) {
-            guard let controller = self.controller, let layout = self.currentLayout else {
+            guard let controller = self.controller else {
                 return
             }
             let contentSize = self.contentView.update(
@@ -1819,6 +1862,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                         context: controller.context,
                         theme: self.presentationData.theme,
                         strings: self.presentationData.strings,
+                        externalState: self.containerExternalState,
                         peerId: controller.peerId,
                         mode: controller.mode,
                         status: controller.status,
@@ -1857,7 +1901,10 @@ public class PremiumBoostLevelsScreen: ViewController {
                         },
                         openStats: controller.openStats,
                         openGift: controller.openGift,
-                        openPeer: controller.openPeer
+                        openPeer: controller.openPeer,
+                        updated: { [weak self] in
+                            self?.controller?.requestLayout(transition: .immediate)
+                        }
                     )
                 ),
                 environment: {},
@@ -1865,8 +1912,14 @@ public class PremiumBoostLevelsScreen: ViewController {
             )
             self.contentView.frame = CGRect(origin: .zero, size: contentSize)
             
-            var footerHeight: CGFloat = 8.0 + 50.0
-            footerHeight += layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : 8.0
+            let footerHeight = self.footerHeight
+            
+            let actionTitle: String
+            if self.currentMyBoostCount > 0 {
+                actionTitle = self.presentationData.strings.ChannelBoost_BoostAgain
+            } else {
+                actionTitle = self.containerExternalState.isGroup ? self.presentationData.strings.GroupBoost_BoostGroup : self.presentationData.strings.ChannelBoost_BoostChannel
+            }
             
             let footerSize = self.footerView.update(
                 transition: .immediate,
@@ -1874,7 +1927,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                     FooterComponent(
                         context: controller.context,
                         theme: self.presentationData.theme,
-                        title: self.currentMyBoostCount > 0 ? "Boost Again" : "Boost Group",
+                        title: actionTitle,
                         action: { [weak self] in
                             guard let self else {
                                 return
@@ -1907,6 +1960,20 @@ public class PremiumBoostLevelsScreen: ViewController {
             }
         }
         
+        private var footerHeight: CGFloat {
+            if let mode = self.controller?.mode, case .owner = mode {
+                return 0.0
+            }
+            
+            guard let layout = self.currentLayout else {
+                return 58.0
+            }
+                        
+            var footerHeight: CGFloat = 8.0 + 50.0
+            footerHeight += layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : 8.0
+            return footerHeight
+        }
+        
         private var defaultTopInset: CGFloat {
             guard let layout = self.currentLayout else {
                 return 210.0
@@ -1916,16 +1983,27 @@ public class PremiumBoostLevelsScreen: ViewController {
                 let bottomInset: CGFloat = layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : bottomPanelPadding
                 let panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 28.0
                 
-                return layout.size.height - layout.size.width - 128.0 - panelHeight
+                var defaultTopInset = layout.size.height - layout.size.width - 128.0 - panelHeight
+                
+                let containerTopInset = 10.0 + (layout.statusBarHeight ?? 0.0)
+                let contentHeight = self.containerExternalState.contentHeight
+                let footerHeight = self.footerHeight
+                if contentHeight > 0.0 {
+                    let delta = (layout.size.height - defaultTopInset - containerTopInset) - contentHeight - footerHeight - 16.0
+                    if delta > 0.0 {
+                        defaultTopInset += delta
+                    }
+                }
+                return defaultTopInset
             } else {
                 return 210.0
             }
         }
         
-        private func findVerticalScrollView(view: UIView?) -> (UIScrollView, ListView?)? {
+        private func findVerticalScrollView(view: UIView?) -> UIScrollView? {
             if let view = view {
                 if let view = view as? UIScrollView, view.contentSize.height > view.contentSize.width {
-                    return (view, nil)
+                    return view
                 }
                 return findVerticalScrollView(view: view.superview)
             } else {
@@ -1946,12 +2024,13 @@ public class PremiumBoostLevelsScreen: ViewController {
                     let point = recognizer.location(in: self.view)
                     let currentHitView = self.hitTest(point, with: nil)
                     
-                    var scrollViewAndListNode = self.findVerticalScrollView(view: currentHitView)
-                    if scrollViewAndListNode?.0.frame.height == self.frame.width {
-                        scrollViewAndListNode = nil
+                    var scrollView = self.findVerticalScrollView(view: currentHitView)
+                    if scrollView?.frame.height == self.frame.width {
+                        scrollView = nil
                     }
-                    let scrollView = scrollViewAndListNode?.0
-                    let listNode = scrollViewAndListNode?.1
+                    if scrollView?.isDescendant(of: self.view) == false {
+                        scrollView = nil
+                    }
                                 
                     let topInset: CGFloat
                     if self.isExpanded {
@@ -1960,25 +2039,19 @@ public class PremiumBoostLevelsScreen: ViewController {
                         topInset = edgeTopInset
                     }
                 
-                    self.panGestureArguments = (topInset, 0.0, scrollView, listNode)
+                    self.panGestureArguments = (topInset, 0.0, scrollView)
                 case .changed:
-                    guard let (topInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
+                    guard let (topInset, panOffset, scrollView) = self.panGestureArguments else {
                         return
                     }
-                    let visibleContentOffset = listNode?.visibleContentOffset()
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
-                
+                    
                     var translation = recognizer.translation(in: self.view).y
 
                     var currentOffset = topInset + translation
                 
                     let epsilon = 1.0
-                    if case let .known(value) = visibleContentOffset, value <= epsilon {
-                        if let scrollView = scrollView {
-                            scrollView.bounces = false
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: false)
-                        }
-                    } else if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
+                    if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
                         scrollView.bounces = false
                         scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                     } else if let scrollView = scrollView {
@@ -1995,7 +2068,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                         translation = max(0.0, translation)
                     }
                     
-                    self.panGestureArguments = (topInset, translation, scrollView, listNode)
+                    self.panGestureArguments = (topInset, translation, scrollView)
                     
                     if !self.isExpanded {
                         if currentOffset > 0.0, let scrollView = scrollView {
@@ -2014,23 +2087,18 @@ public class PremiumBoostLevelsScreen: ViewController {
                 
                     self.containerLayoutUpdated(layout: layout, transition: .immediate)
                 case .ended:
-                    guard let (currentTopInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
+                    guard let (currentTopInset, panOffset, scrollView) = self.panGestureArguments else {
                         return
                     }
                     self.panGestureArguments = nil
                 
-                    let visibleContentOffset = listNode?.visibleContentOffset()
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                 
                     let translation = recognizer.translation(in: self.view).y
                     var velocity = recognizer.velocity(in: self.view)
                     
                     if self.isExpanded {
-                        if case let .known(value) = visibleContentOffset, value > 0.1 {
-                            velocity = CGPoint()
-                        } else if case .unknown = visibleContentOffset {
-                            velocity = CGPoint()
-                        } else if contentOffset > 0.1 {
+                        if contentOffset > 0.1 {
                             velocity = CGPoint()
                         }
                     }
@@ -2055,9 +2123,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                     } else if self.isExpanded {
                         if velocity.y > 300.0 || offset > topInset / 2.0 {
                             self.isExpanded = false
-                            if let listNode = listNode {
-                                listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                            } else if let scrollView = scrollView {
+                            if let scrollView = scrollView {
                                 scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                             }
                             
@@ -2072,21 +2138,13 @@ public class PremiumBoostLevelsScreen: ViewController {
                             self.containerLayoutUpdated(layout: layout, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
                         }
                     } else if scrollView != nil, (velocity.y < -300.0 || offset < topInset / 2.0) {
-                        if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
-                            DispatchQueue.main.async {
-                                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                            }
-                        }
-                                                    
                         let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                         self.isExpanded = true
                        
                         self.containerLayoutUpdated(layout: layout, transition: Transition(transition))
                     } else {
-                        if let listNode = listNode {
-                            listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                        } else if let scrollView = scrollView {
+                        if let scrollView = scrollView {
                             scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                         }
                         
@@ -2188,11 +2246,15 @@ public class PremiumBoostLevelsScreen: ViewController {
                         
                         var dismissReplaceImpl: (() -> Void)?
                         let replaceController = ReplaceBoostScreen(context: context, peerId: peerId, myBoostStatus: myBoostStatus, replaceBoosts: { slots in
-                            var channelIds = Set<EnginePeer.Id>()
+                            var sourcePeerIds = Set<EnginePeer.Id>()
+                            var sourcePeers: [EnginePeer] = []
                             for boost in myBoostStatus.boosts {
                                 if slots.contains(boost.slot) {
                                     if let peer = boost.peer {
-                                        channelIds.insert(peer.id)
+                                        if !sourcePeerIds.contains(peer.id) {
+                                            sourcePeerIds.insert(peer.id)
+                                            sourcePeers.append(peer)
+                                        }
                                     }
                                 }
                             }
@@ -2211,7 +2273,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                                         mode: mode,
                                         status: status,
                                         myBoostStatus: myBoostStatus,
-                                        replacedBoosts: (Int32(slots.count), Int32(channelIds.count)),
+                                        replacedBoosts: (Int32(slots.count), sourcePeers),
                                         openStats: nil, openGift: nil, openPeer: openPeer, forceDark: forceDark
                                     )
                                     if let navigationController {
@@ -2238,7 +2300,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                                 sharedContext: context.sharedContext,
                                 updatedPresentationData: nil,
                                 title: presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle,
-                                text: presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string,
+                                text: self.containerExternalState.isGroup ? presentationData.strings.GroupBoost_Error_BoostTooOftenText(valueText).string : presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string,
                                 actions: [
                                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
                                 ],
@@ -2317,7 +2379,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                             sharedContext: context.sharedContext,
                             updatedPresentationData: nil,
                             title: presentationData.strings.ChannelBoost_Error_PremiumNeededTitle,
-                            text: presentationData.strings.ChannelBoost_Error_PremiumNeededText,
+                            text: self.containerExternalState.isGroup ? presentationData.strings.GroupBoost_Error_PremiumNeededText :  presentationData.strings.ChannelBoost_Error_PremiumNeededText,
                             actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: { [weak controller] in
@@ -2362,7 +2424,7 @@ public class PremiumBoostLevelsScreen: ViewController {
     private let mode: Mode
     private let status: ChannelBoostStatus?
     private let myBoostStatus: MyBoostStatus?
-    private let replacedBoosts: (Int32, Int32)?
+    private let replacedBoosts: (Int32, [EnginePeer])?
     private let openStats: (() -> Void)?
     private let openGift: (() -> Void)?
     private let openPeer: ((EnginePeer) -> Void)?
@@ -2378,7 +2440,7 @@ public class PremiumBoostLevelsScreen: ViewController {
         mode: Mode,
         status: ChannelBoostStatus?,
         myBoostStatus: MyBoostStatus? = nil,
-        replacedBoosts: (Int32, Int32)? = nil,
+        replacedBoosts: (Int32, [EnginePeer])? = nil,
         openStats: (() -> Void)? = nil,
         openGift: (() -> Void)? = nil,
         openPeer: ((EnginePeer) -> Void)? = nil,
@@ -2478,8 +2540,8 @@ private final class FooterComponent: Component {
     }
 
     final class View: UIView {
-        private let backgroundView: BlurredBackgroundView
-        private let separator = SimpleLayer()
+        let backgroundView: BlurredBackgroundView
+        let separator = SimpleLayer()
         
         private let button = ComponentView<Empty>()
         

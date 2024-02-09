@@ -318,7 +318,7 @@ func makeAttachmentFileControllerImpl(context: AccountContext, updatedPresentati
             } else {
                 banDescription = presentationData.strings.Conversation_DefaultRestrictedMedia
             }
-            emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings, content: .bannedSendMedia(banDescription))
+            emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings, content: .bannedSendMedia(text: banDescription, canBoost: false))
         } else if let recentDocuments = recentDocuments, recentDocuments.isEmpty {
             emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings, content: .intro)
         }

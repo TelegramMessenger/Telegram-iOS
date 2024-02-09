@@ -371,13 +371,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             if let giveaway {
                 if giveaway.flags.contains(.onlyNewSubscribers) {
                     if giveaway.channelPeerIds.count > 1 {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNewMany
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_ParticipantsNewMany : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNewMany
                     } else {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNew
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_ParticipantsNew : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNew
                     }
                 } else {
                     if giveaway.channelPeerIds.count > 1 {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsMany
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_ParticipantsMany : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsMany
                     } else {
                         participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_Participants : item.presentationData.strings.Chat_Giveaway_Message_Participants
                     }

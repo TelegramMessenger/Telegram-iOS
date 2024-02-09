@@ -10222,6 +10222,10 @@ Sorry for the inconvenience.";
 "ReassignBoost.Boosts_any" = "%@ boosts are reassigned";
 "ReassignBoost.OtherChannels_1" = "%@ other channel";
 "ReassignBoost.OtherChannels_any" = "%@ other channels";
+"ReassignBoost.OtherGroups_1" = "%@ other group";
+"ReassignBoost.OtherGroups_any" = "%@ other groups";
+"ReassignBoost.OtherGroupsAndChannels_1" = "%@ other group and channel";
+"ReassignBoost.OtherGroupsAndChannels_any" = "%@ other groups and channels";
 
 "ChannelBoost.MoreBoosts.Title" = "More Boosts Needed";
 "ChannelBoost.MoreBoosts.Text" = "To boost **%1$@** again, gift **Telegram Premium** to a friend and get **%2$@** additional boosts.";
@@ -11006,8 +11010,8 @@ Sorry for the inconvenience.";
 "GroupBoost.Title.Other" = "Help Upgrade This Group";
 "GroupBoost.Title.Current" = "Boost Group";
 
-"GroupBoost.EnableStoriesText" = "Your group needs %1$@ to enable posting stories.\n\nAsk your **Premium** members to boost your group with this link:";
-"GroupBoost.IncreaseLimitText" = "Your group needs %1$@ to post %2$@.\n\nAsk your **Premium** members to boost your group with this link:";
+"GroupBoost.EnableStoriesText" = "Your group needs %1$@ to enable posting stories.";
+"GroupBoost.IncreaseLimitText" = "Your group needs %1$@ to post %2$@.";
 
 "BoostGift.Group.Description" = "Get more boosts for your group by gifting\nPremium to your subscribers.";
 
@@ -11100,8 +11104,6 @@ Sorry for the inconvenience.";
 "Conversation.SendMessageErrorNonPremiumForbidden" = "Only Premium users can message %@";
 
 "Notification.GiveawayStartedGroup" = "%1$@ just started a giveaway of Telegram Premium subscriptions for its members.";
-
-"Chat.Giveaway.Message.Group.Participants" = "All subscribers of this group:";
 
 "Chat.Giveaway.Info.Group.RandomMembers_1" = "**%@** random member";
 "Chat.Giveaway.Info.Group.RandomMembers_any" = "**%@** random members";
@@ -11238,3 +11240,39 @@ Sorry for the inconvenience.";
 "GroupBoost.Error.PremiumNeededText" = "Only **Telegram Premium** subscribers can boost groups. Do you want to subscribe to **Telegram Premium**?";
 
 "Notification.GroupChangedWallpaper" = "Group set a new wallpaper";
+"Notification.YouChangedGroupWallpaper" = "You set a new wallpaper for this group";
+
+"WallpaperPreview.GroupHeader" = "All members will see this wallpaper";
+
+"GroupBoost.BoostGroup" = "Boost Group";
+
+"Chat.Giveaway.Info.NotAllowedAdminGroup" = "You are not eligible to participate in this giveaway, because you are an admin of participating group (**%@**).";
+
+"Chat.Giveaway.Message.Group.Participants" = "All members of this group:";
+"Chat.Giveaway.Message.Group.ParticipantsNew" = "All users who join this group after this date:";
+
+"Chat.Giveaway.Message.Group.ParticipantsMany" = "All members of the groups below:";
+"Chat.Giveaway.Message.Group.ParticipantsNewMany" = "All users who join the groups below after this date:";
+
+"Story.Privacy.KeepOnGroupPage" = "Post to Group Page";
+"Story.Privacy.KeepOnGroupPageInfo" = "Keep this story on group page even after it expires in %@.";
+"Story.Privacy.TooltipStoryArchivedGroup" = "Users will see this story on the group page even after it expires.";
+
+"BoostGift.Members.Subtitle" = "select up to %@ members";
+"BoostGift.Members.SectionTitle" = "MEMBERS";
+"BoostGift.Members.Search" = "Search Members";
+"BoostGift.Members.MaximumReached" = "You can select maximum %@ members.";
+
+"Chat.ErrorCantBoost" = "Sorry, you can't boost this group or channel.";
+
+"ChannelBoost.Boost" = "Boost";
+"ChannelBoost.Copy" = "Copy";
+
+"Chat.Giveaway.Info.OtherGroups_1" = "**%@** other listed group";
+"Chat.Giveaway.Info.OtherGroups_any" = "**%@** other listed groups";
+
+"Chat.Giveaway.Info.OtherGroupsAndChannels_1" = "**%@** other listed group and channel";
+"Chat.Giveaway.Info.OtherGroupsAndChannels_any" = "**%@** other listed groups and channels";
+
+"Chat.Giveaway.Info.OtherChannelsAndGroups_1" = "**%@** other listed channel and group";
+"Chat.Giveaway.Info.OtherChannelsAndGroups_any" = "**%@** other listed channels and groups";
