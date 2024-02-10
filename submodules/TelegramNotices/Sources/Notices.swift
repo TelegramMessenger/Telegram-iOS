@@ -232,6 +232,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let botGameNoticeNamespace: Int32 = 7
     private static let peerInviteRequestsNamespace: Int32 = 8
     private static let dismissedPremiumGiftNamespace: Int32 = 9
+    private static let groupEmojiPackNamespace: Int32 = 9
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -251,6 +252,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedPremiumGiftNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedPremiumGiftNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func groupEmojiPackNotice(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: groupEmojiPackNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
     
     static func forcedPasswordSetup() -> NoticeEntryKey {
@@ -1577,6 +1582,33 @@ public struct ApplicationSpecificNotice {
             
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPremiumGiftNotice(peerId: peerId), entry)
+            }
+            return previousValue
+        }
+    }
+    
+    public static func groupEmojiPackSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int32, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.groupEmojiPackNotice(peerId: peerId))
+        |> map { view -> Int32 in
+            if let value = view.value?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementGroupEmojiPackSuggestion(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, count: Int32 = 1) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.groupEmojiPackNotice(peerId: peerId))?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += count
+            
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.groupEmojiPackNotice(peerId: peerId), entry)
             }
             return previousValue
         }

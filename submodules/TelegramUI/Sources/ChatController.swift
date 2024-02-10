@@ -15714,42 +15714,52 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let rect = self.chatDisplayNode.frameForEmojiButton(), self.effectiveNavigationController?.topViewController === self else {
             return
         }
-        guard let emojiPack = (self.peerView?.cachedData as? CachedChannelData)?.emojiPack, let thumbnailFileId = emojiPack.thumbnailFileId else {
+        guard let peerId = self.chatLocation.peerId, let emojiPack = (self.peerView?.cachedData as? CachedChannelData)?.emojiPack, let thumbnailFileId = emojiPack.thumbnailFileId else {
             return
         }
-        let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [thumbnailFileId])
-        |> deliverOnMainQueue).start(next: { [weak self] files in
-            guard let self, let emojiFile = files.values.first else {
+        
+        let _ = (ApplicationSpecificNotice.groupEmojiPackSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId)
+        |> deliverOnMainQueue).start(next: { [weak self] counter in
+            guard let self, counter == 0 else {
                 return
             }
             
-            let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
-            let boldTextFont = Font.bold(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
-            let textColor = UIColor.white
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
-                return nil
-            })
-            
-            let text = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(self.presentationData.strings.Chat_GroupEmojiTooltip(emojiPack.title).string, attributes: markdownAttributes))
-            
-            let range = (text.string as NSString).range(of: "#")
-            if range.location != NSNotFound {
-                text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
-            }
-            
-            let tooltipScreen = TooltipScreen(
-                context: self.context,
-                account: self.context.account,
-                sharedContext: self.context.sharedContext,
-                text: .attributedString(text: text),
-                location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
-                displayDuration: .default,
-                cornerRadius: 10.0,
-                shouldDismissOnTouch: { _, _ in
-                    return .ignore
+            let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [thumbnailFileId])
+            |> deliverOnMainQueue).start(next: { [weak self] files in
+                guard let self, let emojiFile = files.values.first else {
+                    return
                 }
-            )
-            self.present(tooltipScreen, in: .current)
+                
+                let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
+                let boldTextFont = Font.bold(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
+                let textColor = UIColor.white
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
+                    return nil
+                })
+                
+                let text = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(self.presentationData.strings.Chat_GroupEmojiTooltip(emojiPack.title).string, attributes: markdownAttributes))
+                
+                let range = (text.string as NSString).range(of: "#")
+                if range.location != NSNotFound {
+                    text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
+                }
+                
+                let tooltipScreen = TooltipScreen(
+                    context: self.context,
+                    account: self.context.account,
+                    sharedContext: self.context.sharedContext,
+                    text: .attributedString(text: text),
+                    location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
+                    displayDuration: .default,
+                    cornerRadius: 10.0,
+                    shouldDismissOnTouch: { _, _ in
+                        return .ignore
+                    }
+                )
+                self.present(tooltipScreen, in: .current)
+                
+                let _ = ApplicationSpecificNotice.incrementGroupEmojiPackSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId).startStandalone()
+            })
         })
     }
     
