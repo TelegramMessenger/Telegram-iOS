@@ -11013,7 +11013,7 @@ Sorry for the inconvenience.";
 "GroupBoost.EnableStoriesText" = "Your group needs %1$@ to enable posting stories.";
 "GroupBoost.IncreaseLimitText" = "Your group needs %1$@ to post %2$@.";
 
-"BoostGift.Group.Description" = "Get more boosts for your group by gifting\nPremium to your subscribers.";
+"BoostGift.Group.Description" = "Get more boosts for your group by gifting\nPremium to your members.";
 
 "BoostGift.Group.AllMembers" = "All members";
 "BoostGift.Group.OnlyNewMembers" = "Only new members";

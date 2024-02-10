@@ -208,6 +208,7 @@ final class PeerInfoScreenData {
     let isPowerSavingEnabled: Bool?
     let accountIsPremium: Bool
     let hasSavedMessageTags: Bool
+    let isPremiumRequiredForStoryPosting: Bool
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -244,7 +245,8 @@ final class PeerInfoScreenData {
         appConfiguration: AppConfiguration?,
         isPowerSavingEnabled: Bool?,
         accountIsPremium: Bool,
-        hasSavedMessageTags: Bool
+        hasSavedMessageTags: Bool,
+        isPremiumRequiredForStoryPosting: Bool
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -270,6 +272,7 @@ final class PeerInfoScreenData {
         self.isPowerSavingEnabled = isPowerSavingEnabled
         self.accountIsPremium = accountIsPremium
         self.hasSavedMessageTags = hasSavedMessageTags
+        self.isPremiumRequiredForStoryPosting = isPremiumRequiredForStoryPosting
     }
 }
 
@@ -666,7 +669,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             appConfiguration: appConfiguration,
             isPowerSavingEnabled: isPowerSavingEnabled,
             accountIsPremium: peer?.isPremium ?? false,
-            hasSavedMessageTags: false
+            hasSavedMessageTags: false,
+            isPremiumRequiredForStoryPosting: true
         )
     }
 }
@@ -702,7 +706,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 appConfiguration: nil,
                 isPowerSavingEnabled: nil,
                 accountIsPremium: false,
-                hasSavedMessageTags: false
+                hasSavedMessageTags: false,
+                isPremiumRequiredForStoryPosting: true
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -973,7 +978,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     appConfiguration: nil,
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
-                    hasSavedMessageTags: hasSavedMessageTags
+                    hasSavedMessageTags: hasSavedMessageTags,
+                    isPremiumRequiredForStoryPosting: false
                 )
             }
         case .channel:
@@ -1047,6 +1053,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags = .single(false)
             }
             
+            let isPremiumRequiredForStoryPosting: Signal<Bool, NoError> = isPremiumRequiredForStoryPosting(context: context)
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
@@ -1061,9 +1069,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 context.engine.peers.recommendedChannels(peerId: peerId),
                 hasSavedMessages,
                 hasSavedMessagesChats,
-                hasSavedMessageTags
+                hasSavedMessageTags,
+                isPremiumRequiredForStoryPosting
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags, isPremiumRequiredForStoryPosting -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if let hasStories {
                     if hasStories {
@@ -1138,7 +1147,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     appConfiguration: nil,
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
-                    hasSavedMessageTags: hasSavedMessageTags
+                    hasSavedMessageTags: hasSavedMessageTags,
+                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting
                 )
             }
         case let .group(groupId):
@@ -1315,6 +1325,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags = .single(false)
             }
             
+            let isPremiumRequiredForStoryPosting: Signal<Bool, NoError> = isPremiumRequiredForStoryPosting(context: context)
+            
             return combineLatest(queue: .mainQueue(),
                 context.account.viewTracker.peerView(groupId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: groupId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
@@ -1331,9 +1343,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 accountIsPremium,
                 hasSavedMessages,
                 hasSavedMessagesChats,
-                hasSavedMessageTags
+                hasSavedMessageTags,
+                isPremiumRequiredForStoryPosting
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, threadData, preferencesView, accountIsPremium, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, threadData, preferencesView, accountIsPremium, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags, isPremiumRequiredForStoryPosting -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -1426,7 +1439,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     appConfiguration: appConfiguration,
                     isPowerSavingEnabled: nil,
                     accountIsPremium: accountIsPremium,
-                    hasSavedMessageTags: hasSavedMessageTags
+                    hasSavedMessageTags: hasSavedMessageTags,
+                    isPremiumRequiredForStoryPosting: isPremiumRequiredForStoryPosting
                 ))
             }
         }
@@ -1811,4 +1825,26 @@ func peerInfoIsChatMuted(peer: Peer?, peerNotificationSettings: TelegramPeerNoti
         chatIsMuted = isPeerMuted(peer: peer, peerNotificationSettings: peerNotificationSettings, globalNotificationSettings: globalNotificationSettings)
     }
     return chatIsMuted
+}
+
+private var isPremiumRequired: Bool?
+private func isPremiumRequiredForStoryPosting(context: AccountContext) -> Signal<Bool, NoError> {
+    if let isPremiumRequired {
+        return .single(isPremiumRequired)
+    }
+    
+    return .single(true)
+    |> then(
+        context.engine.messages.checkStoriesUploadAvailability(target: .myStories)
+        |> deliverOnMainQueue
+        |> map { status -> Bool in
+            if case .premiumRequired = status {
+                return true
+            } else {
+                return false
+            }
+        } |> afterNext { value in
+            isPremiumRequired = value
+        }
+    )
 }

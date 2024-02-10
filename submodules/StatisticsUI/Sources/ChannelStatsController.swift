@@ -1307,9 +1307,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         var headerItem: BoostHeaderItem?
         var leftNavigationButton: ItemListNavigationButton?
         var boostsOnly = false
-        if isGroup, section == .boosts, let boostStatus {
+        if isGroup, section == .boosts {
             title = .text("")
-            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostStatus, title: presentationData.strings.GroupBoost_Title, text: presentationData.strings.GroupBoost_Info, openBoost: {
+            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostData, title: presentationData.strings.GroupBoost_Title, text: presentationData.strings.GroupBoost_Info, openBoost: {
                 openBoostImpl?(false)
             }, createGiveaway: {
                 arguments.openGifts()
