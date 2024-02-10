@@ -129,26 +129,20 @@ func _internal_applyChannelBoost(account: Account, peerId: PeerId, slots: [Int32
         |> mapToSignal { result -> Signal<MyBoostStatus?, NoError> in
             if let result = result {
                 return account.postbox.transaction { transaction -> MyBoostStatus? in
-                    let myBoostStatus = MyBoostStatus(apiMyBoostStatus: result, accountPeerId: account.peerId, transaction: transaction)
-                    
-                    var appliedBoosts: Int32 = 0
-                    for boost in myBoostStatus.boosts {
-                        if boost.peer?.id == peerId {
-                            appliedBoosts += 1
+                    let myStatus = MyBoostStatus(apiMyBoostStatus: result, accountPeerId: account.peerId, transaction: transaction)
+                    let peerIds = myStatus.boosts.reduce(Set<PeerId>(), { current, value in
+                        var current = current
+                        if let peerId = value.peer?.id, !current.contains(peerId) {
+                            current.insert(peerId)
                         }
-                    }
-                    
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        var cachedData: CachedChannelData
-                        if let current = current as? CachedChannelData {
-                            cachedData = current
-                        } else {
-                            cachedData = CachedChannelData()
-                        }
-                        return cachedData.withUpdatedAppliedBoosts(appliedBoosts)
+                        return current
                     })
-                    
-                    return myBoostStatus
+                    transaction.updatePeerCachedData(peerIds: peerIds, update: { peerId, cachedData in
+                        let cachedData = cachedData as? CachedChannelData ?? CachedChannelData()
+                        let count = myStatus.boosts.filter { $0.peer?.id == peerId }.count
+                        return cachedData.withUpdatedAppliedBoosts(count != 0 ? Int32(count) : nil)
+                    })
+                    return myStatus
                 }
             } else {
                 return .single(nil)
