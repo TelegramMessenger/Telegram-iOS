@@ -880,7 +880,7 @@ public class ReplaceBoostScreen: ViewController {
             }
             let navigationController = self.navigationController
             self.dismiss(animated: true, completion: {
-                let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost)
+                let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, completion: nil)
                 navigationController?.pushViewController(giftController, animated: true)
             })
         }

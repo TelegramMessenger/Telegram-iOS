@@ -2209,6 +2209,13 @@ public class PremiumBoostLevelsScreen: ViewController {
                     let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot])
                     |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                         self?.updatedState.set(context.engine.peers.getChannelBoostStatus(peerId: peerId)
+                        |> beforeNext { [weak self] status in
+                            if let self, let status {
+                                Queue.mainQueue().async {
+                                    self.controller?.boostStatusUpdated(status)
+                                }
+                            }
+                        }
                         |> map { status in
                             if let status {
                                 return InternalBoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: Int32(status.boosts + 1))
@@ -2353,7 +2360,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                                                 controller?.dismiss(animated: true, completion: nil)
                                                 
                                                 Queue.mainQueue().after(0.4) {
-                                                    let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost)
+                                                    let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, completion: nil)
                                                     navigationController.pushViewController(giftController, animated: true)
                                                 }
                                             }
@@ -2424,6 +2431,7 @@ public class PremiumBoostLevelsScreen: ViewController {
     
     private var currentLayout: ContainerViewLayout?
         
+    public var boostStatusUpdated: (ChannelBoostStatus) -> Void = { _ in }
     public var disposed: () -> Void = {}
     
     public init(
@@ -2493,7 +2501,7 @@ public class PremiumBoostLevelsScreen: ViewController {
     
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        
+                
         self.node.updateIsVisible(isVisible: false)
     }
         

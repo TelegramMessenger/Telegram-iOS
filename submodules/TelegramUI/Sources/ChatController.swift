@@ -450,6 +450,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var mediaRestrictedTooltipControllerMode = true
     weak var checksTooltipController: TooltipController?
     weak var copyProtectionTooltipController: TooltipController?
+    weak var emojiPackTooltipController: TooltipScreen?
     
     var currentMessageTooltipScreens: [(TooltipScreen, ListViewItemNode)] = []
     
@@ -15757,6 +15758,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 )
                 self.present(tooltipScreen, in: .current)
+                self.emojiPackTooltipController = tooltipScreen
                 
                 let _ = ApplicationSpecificNotice.incrementGroupEmojiPackSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId).startStandalone()
             })

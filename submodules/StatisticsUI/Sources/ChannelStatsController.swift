@@ -1046,7 +1046,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
     return entries
 }
 
-public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil) -> ViewController {
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, boostStatusUpdated: ((ChannelBoostStatus) -> Void)? = nil) -> ViewController {
     let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
@@ -1087,12 +1087,16 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     })
     dataPromise.set(.single(nil) |> then(dataSignal))
     
-    let boostData: Signal<ChannelBoostStatus?, NoError>
-    if let boostStatus {
-        boostData = .single(boostStatus)
-    } else {
-        boostData = .single(nil) |> then(context.engine.peers.getChannelBoostStatus(peerId: peerId))
-    }
+    let boostDataPromise = Promise<ChannelBoostStatus?>()
+    boostDataPromise.set(.single(boostStatus) |> then(context.engine.peers.getChannelBoostStatus(peerId: peerId)))
+    
+    actionsDisposable.add((boostDataPromise.get()
+    |> deliverOnMainQueue).start(next: { boostStatus in
+        if let boostStatus, let boostStatusUpdated {
+            boostStatusUpdated(boostStatus)
+        }
+    }))
+
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
     
@@ -1253,7 +1257,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         dataPromise.get(),
         messagesPromise.get(),
         storiesPromise.get(),
-        boostData,
+        boostDataPromise.get(),
         boostsContext.state,
         giftsContext.state,
         longLoadingSignal
@@ -1508,6 +1512,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 guard let boostStatus, let myBoostStatus else {
                     return
                 }
+                boostDataPromise.set(.single(boostStatus))
+                
                 let boostController = PremiumBoostLevelsScreen(
                     context: context,
                     peerId: peerId,
@@ -1515,6 +1521,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                     status: boostStatus,
                     myBoostStatus: myBoostStatus
                 )
+                boostController.boostStatusUpdated = { boostStatus in
+                    boostDataPromise.set(.single(boostStatus))
+                }
                 controller?.push(boostController)
             })
         }

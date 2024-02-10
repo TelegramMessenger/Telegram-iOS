@@ -11289,3 +11289,5 @@ Sorry for the inconvenience.";
 "GroupBoost.BoostToUnrestrict.Times_any" = "**%@** times";
 
 "GroupBoost.BoostToUnrestrict" = "Boost the group %1$@ to remove messaging restrictions. Your boosts will help **%2$@** to unlock new features.";
+
+"Story.InputPlaceholderReplyInGroup" = "Comment Story...";

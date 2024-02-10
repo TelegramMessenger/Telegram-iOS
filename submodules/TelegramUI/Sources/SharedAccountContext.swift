@@ -2049,7 +2049,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }
     
-    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource) -> ViewController {
+    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (() -> Void)?) -> ViewController {
         let options = Promise<[PremiumGiftCodeOption]>()
         options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
                 
@@ -2101,6 +2101,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 pushImpl?(c)
             }, completion: {
                 filterImpl?()
+                completion?()
             })
             pushImpl = { [weak giftController] c in
                 giftController?.push(c)
@@ -2108,7 +2109,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             filterImpl = { [weak giftController] in
                 if let navigationController = giftController?.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers
-                    controllers = controllers.filter { !($0 is ContactMultiselectionController) }
+                    controllers = controllers.filter { !($0 is ContactMultiselectionController) && !($0 is PremiumGiftScreen) }
                     navigationController.setViewControllers(controllers, animated: true)
                 }
             }
