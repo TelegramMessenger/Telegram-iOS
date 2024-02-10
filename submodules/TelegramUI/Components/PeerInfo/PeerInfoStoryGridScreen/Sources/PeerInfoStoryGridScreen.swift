@@ -348,50 +348,61 @@ final class PeerInfoStoryGridScreenComponent: Component {
                                 return
                             }
                             
-                            switch component.scope {
-                            case .saved:
-                                let selectedCount = paneNode.selectedItems.count
-                                let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: false).start()
-                                
-                                paneNode.setIsSelectionModeActive(false)
-                                (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
-                                
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                                
-                                let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(selectedCount))
-                                environment.controller()?.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .info(title: nil, text: title, timeout: nil, customUndoText: nil),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
-                            case .archive:
-                                let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: true).start()
-                                
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                                
-                                let title: String
-                                let text: String
-                                
-                                if component.peerId == component.context.account.peerId {
-                                    title = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
-                                    text = presentationData.strings.StoryList_TooltipStoriesSavedToProfileText
-                                } else {
-                                    title = presentationData.strings.StoryList_TooltipStoriesSavedToChannel(Int32(paneNode.selectedIds.count))
-                                    text = presentationData.strings.Story_ToastSavedToChannelText
+                            let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId))
+                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                guard let self, let peer else {
+                                    return
+                                }
+                                var isGroup = false
+                                if case let .channel(channel) = peer, case .group = channel.info {
+                                    isGroup = true
                                 }
                                 
-                                environment.controller()?.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
-                                
-                                paneNode.clearSelection()
-                            }
+                                switch component.scope {
+                                case .saved:
+                                    let selectedCount = paneNode.selectedItems.count
+                                    let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: false).start()
+                                    
+                                    paneNode.setIsSelectionModeActive(false)
+                                    (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
+                                    
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                                    
+                                    let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(selectedCount))
+                                    environment.controller()?.present(UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .info(title: nil, text: title, timeout: nil, customUndoText: nil),
+                                        elevatedLayout: false,
+                                        animateInAsReplacement: false,
+                                        action: { _ in return false }
+                                    ), in: .current)
+                                case .archive:
+                                    let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: true).start()
+                                    
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                                    
+                                    let title: String
+                                    let text: String
+                                    
+                                    if component.peerId == component.context.account.peerId {
+                                        title = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
+                                        text = presentationData.strings.StoryList_TooltipStoriesSavedToProfileText
+                                    } else {
+                                        title = isGroup ? presentationData.strings.StoryList_TooltipStoriesSavedToGroup(Int32(paneNode.selectedIds.count)) : presentationData.strings.StoryList_TooltipStoriesSavedToChannel(Int32(paneNode.selectedIds.count))
+                                        text = isGroup ? presentationData.strings.Story_ToastSavedToGroupText : presentationData.strings.Story_ToastSavedToChannelText
+                                    }
+                                    
+                                    environment.controller()?.present(UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
+                                        elevatedLayout: false,
+                                        animateInAsReplacement: false,
+                                        action: { _ in return false }
+                                    ), in: .current)
+                                    
+                                    paneNode.clearSelection()
+                                }
+                            })
                         }
                     )),
                     environment: {},

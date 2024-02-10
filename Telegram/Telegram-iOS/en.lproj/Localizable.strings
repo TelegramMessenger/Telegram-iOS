@@ -11291,3 +11291,11 @@ Sorry for the inconvenience.";
 "GroupBoost.BoostToUnrestrict" = "Boost the group %1$@ to remove messaging restrictions. Your boosts will help **%2$@** to unlock new features.";
 
 "Story.InputPlaceholderReplyInGroup" = "Comment Story...";
+
+"Story.SendReactionAsGroupMessage" = "Send reaction as a message";
+
+"StoryList.TooltipStoriesSavedToGroup_1" = "Story saved to groups's profile";
+"StoryList.TooltipStoriesSavedToGroup_any" = "%d stories saved to groups's profile.";
+"Story.ToastRemovedFromGroupText" = "Story removed from the group page";
+"Story.ToastSavedToGroupTitle" = "Story saved to the group page";
+"Story.ToastSavedToGroupText" = "Posted stories can be viewed by others on the group page until an admin removes them.";
