@@ -10988,6 +10988,8 @@ Sorry for the inconvenience.";
 "ChannelBoost.MaxLevelReached.Text" = "**%1$@** reached **Level %2$@**.";
 
 "ChannelBoost.MoreBoostsNeeded.Boosted.Text" = "%@ needed to unlock new features.";
+"ChannelBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This channel reached **%@** and unlocked new features.";
+"GroupBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This group reached **%@** and unlocked new features.";
 
 "ContactList.Context.Delete" = "Delete Contact";
 "ContactList.Context.Select" = "Select";
@@ -11276,3 +11278,14 @@ Sorry for the inconvenience.";
 
 "Chat.Giveaway.Info.OtherChannelsAndGroups_1" = "**%@** other listed channel and group";
 "Chat.Giveaway.Info.OtherChannelsAndGroups_any" = "**%@** other listed channels and groups";
+
+"GroupBoost.MemberBoosted.Times_1" = "**%@** time";
+"GroupBoost.MemberBoosted.Times_any" = "**%@** times";
+
+"GroupBoost.MemberBoosted" = "**%1$@** boosted the group %2$@.";
+"GroupBoost.MemberBoosted.BoostForBadge" = "Boost **%1$@** to help it unlock new features and get a booster **badge** for your messages.";
+
+"GroupBoost.BoostToUnrestrict.Times_1" = "**%@** time";
+"GroupBoost.BoostToUnrestrict.Times_any" = "**%@** times";
+
+"GroupBoost.BoostToUnrestrict" = "Boost the group %1$@ to remove messaging restrictions. Your boosts will help **%2$@** to unlock new features.";
