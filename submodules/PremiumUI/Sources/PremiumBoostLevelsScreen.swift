@@ -662,7 +662,7 @@ private final class SheetContent: CombinedComponent {
                             textString = memberString
                         }
                     } else {
-                        textString = "\(memberString) \(strings.GroupBoost_MemberBoosted_BoostForBadge(peerName))"
+                        textString = "\(memberString) \(strings.GroupBoost_MemberBoosted_BoostForBadge(peerName).string)"
                     }
                     isCurrent = true
                 case let .unrestrict(unrestrictCount):
