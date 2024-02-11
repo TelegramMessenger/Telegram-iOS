@@ -349,7 +349,8 @@ private final class StoryStatsPublicForwardsContextImpl {
                                             isEdited: item.isEdited,
                                             isMy: item.isMy,
                                             myReaction: item.myReaction,
-                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                            author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                                         )
                                         resultForwards.append(.story(EnginePeer(peer), mappedItem))
                                     }

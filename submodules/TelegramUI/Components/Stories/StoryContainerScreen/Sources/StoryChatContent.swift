@@ -114,6 +114,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                                         forwardInfoStories.updateValue(nil, forKey: storyId)
                                     }
                                 }
+                                if let peerId = itemValue.authorId {
+                                    if let peer = transaction.getPeer(peerId) {
+                                        peers[peer.id] = peer
+                                    }
+                                }
                                 for entity in itemValue.entities {
                                     if case let .CustomEmoji(_, fileId) = entity.type {
                                         let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
@@ -296,7 +301,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isEdited: item.isEdited,
                         isMy: item.isMy,
                         myReaction: item.myReaction,
-                        forwardInfo: forwardInfo
+                        forwardInfo: forwardInfo,
+                        author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) }
                     )
                 }
                 var totalCount = peerStoryItemsView.items.count
@@ -332,7 +338,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 isEdited: false,
                                 isMy: true,
                                 myReaction: nil,
-                                forwardInfo: pendingForwardsInfo[item.randomId]
+                                forwardInfo: pendingForwardsInfo[item.randomId],
+                                author: nil
                             ))
                             totalCount += 1
                         }
@@ -1187,6 +1194,11 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                                 stories.updateValue(nil, forKey: storyId)
                             }
                         }
+                        if let peerId = item.authorId {
+                            if let peer = transaction.getPeer(peerId) {
+                                peers[peer.id] = peer
+                            }
+                        }
                         for entity in item.entities {
                             if case let .CustomEmoji(_, fileId) = entity.type {
                                 let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
@@ -1312,7 +1324,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isEdited: itemValue.isEdited,
                     isMy: itemValue.isMy,
                     myReaction: itemValue.myReaction,
-                    forwardInfo: forwardInfo
+                    forwardInfo: forwardInfo,
+                    author: itemValue.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) }
                 )
                 
                 let mainItem = StoryContentItem(
@@ -2191,7 +2204,8 @@ private func getCachedStory(storyId: StoryId, transaction: Transaction) -> Engin
             isEdited: item.isEdited,
             isMy: item.isMy,
             myReaction: item.myReaction,
-            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+            author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
         )
     } else {
         return nil

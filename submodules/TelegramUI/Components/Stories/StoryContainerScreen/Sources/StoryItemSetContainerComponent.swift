@@ -4018,6 +4018,7 @@ public final class StoryItemSetContainerComponent: Component {
                     strings: component.strings,
                     peer: component.slice.peer,
                     forwardInfo: component.slice.item.storyItem.forwardInfo,
+                    author: component.slice.item.storyItem.author,
                     timestamp: component.slice.item.storyItem.timestamp,
                     counters: counters,
                     isEdited: component.slice.item.storyItem.isEdited
@@ -4050,6 +4051,12 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.navigateToMyStories()
                             } else {
                                 self.navigateToPeer(peer: peer, chat: false)
+                            }
+                        } else if let author = component.slice.item.storyItem.author {
+                            if author.id == component.context.account.peerId {
+                                self.navigateToMyStories()
+                            } else {
+                                self.navigateToPeer(peer: author, chat: false)
                             }
                         } else {
                             if component.slice.peer.id == component.context.account.peerId {

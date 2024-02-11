@@ -261,6 +261,7 @@ public enum Stories {
             case isMy
             case myReaction
             case forwardInfo
+            case authorId
         }
         
         public let id: Int32
@@ -284,6 +285,7 @@ public enum Stories {
         public let isMy: Bool
         public let myReaction: MessageReaction.Reaction?
         public let forwardInfo: ForwardInfo?
+        public let authorId: PeerId?
         
         public init(
             id: Int32,
@@ -306,7 +308,8 @@ public enum Stories {
             isEdited: Bool,
             isMy: Bool,
             myReaction: MessageReaction.Reaction?,
-            forwardInfo: ForwardInfo?
+            forwardInfo: ForwardInfo?,
+            authorId: PeerId?
         ) {
             self.id = id
             self.timestamp = timestamp
@@ -329,6 +332,7 @@ public enum Stories {
             self.isMy = isMy
             self.myReaction = myReaction
             self.forwardInfo = forwardInfo
+            self.authorId = authorId
         }
         
         public init(from decoder: Decoder) throws {
@@ -367,6 +371,7 @@ public enum Stories {
             self.isMy = try container.decodeIfPresent(Bool.self, forKey: .isMy) ?? false
             self.myReaction = try container.decodeIfPresent(MessageReaction.Reaction.self, forKey: .myReaction)
             self.forwardInfo = try container.decodeIfPresent(ForwardInfo.self, forKey: .forwardInfo)
+            self.authorId = try container.decodeIfPresent(Int64.self, forKey: .authorId).flatMap { PeerId($0) }
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -407,6 +412,7 @@ public enum Stories {
             try container.encode(self.isMy, forKey: .isMy)
             try container.encodeIfPresent(self.myReaction, forKey: .myReaction)
             try container.encodeIfPresent(self.forwardInfo, forKey: .forwardInfo)
+            try container.encodeIfPresent(self.authorId?.toInt64(), forKey: .authorId)
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -483,6 +489,9 @@ public enum Stories {
                 return false
             }
             if lhs.forwardInfo != rhs.forwardInfo {
+                return false
+            }
+            if lhs.authorId != rhs.authorId {
                 return false
             }
             return true
@@ -1173,7 +1182,7 @@ func _internal_uploadStoryImpl(
                                     for update in updates.allUpdates {
                                         if case let .updateStory(_, story) = update {
                                             switch story {
-                                            case let .storyItem(_, idValue, _, _, _, _, _, media, _, _, _, _):
+                                            case let .storyItem(_, idValue, _, fromId, _, _, _, _, media, _, _, _, _):
                                                 if let parsedStory = Stories.StoredItem(apiStoryItem: story, peerId: toPeerId, transaction: transaction) {
                                                     var items = transaction.getStoryItems(peerId: toPeerId)
                                                     var updatedItems: [Stories.Item] = []
@@ -1199,7 +1208,8 @@ func _internal_uploadStoryImpl(
                                                             isEdited: item.isEdited,
                                                             isMy: item.isMy,
                                                             myReaction: item.myReaction,
-                                                            forwardInfo: item.forwardInfo
+                                                            forwardInfo: item.forwardInfo,
+                                                            authorId: fromId?.peerId
                                                         )
                                                         if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                                                             items.append(StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends))
@@ -1336,7 +1346,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                     for update in updates.allUpdates {
                         if case let .updateStory(_, story) = update {
                             switch story {
-                            case let .storyItem(_, _, _, _, _, _, _, media, _, _, _, _):
+                            case let .storyItem(_, _, _, _, _, _, _, _, media, _, _, _, _):
                                 let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
                                     applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
@@ -1381,7 +1391,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isEdited: item.isEdited,
                 isMy: item.isMy,
                 myReaction: item.myReaction,
-                forwardInfo: item.forwardInfo
+                forwardInfo: item.forwardInfo,
+                authorId: item.authorId
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 transaction.setStory(id: storyId, value: entry)
@@ -1412,7 +1423,8 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isEdited: item.isEdited,
                 isMy: item.isMy,
                 myReaction: item.myReaction,
-                forwardInfo: item.forwardInfo
+                forwardInfo: item.forwardInfo,
+                authorId: item.authorId
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                 items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1606,7 +1618,8 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                     isEdited: item.isEdited,
                     isMy: item.isMy,
                     myReaction: item.myReaction,
-                    forwardInfo: item.forwardInfo
+                    forwardInfo: item.forwardInfo,
+                    authorId: item.authorId
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
                     items[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -1636,7 +1649,8 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                     isEdited: item.isEdited,
                     isMy: item.isMy,
                     myReaction: item.myReaction,
-                    forwardInfo: item.forwardInfo
+                    forwardInfo: item.forwardInfo,
+                    authorId: item.authorId
                 )
                 updatedItems.append(updatedItem)
             }
@@ -1668,7 +1682,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
 extension Api.StoryItem {
     var id: Int32 {
         switch self {
-        case let .storyItem(_, id, _, _, _, _, _, _, _, _, _, _):
+        case let .storyItem(_, id, _, _, _, _, _, _, _, _, _, _, _):
             return id
         case let .storyItemDeleted(id):
             return id
@@ -1731,7 +1745,7 @@ extension Stories.Item.ForwardInfo {
 extension Stories.StoredItem {
     init?(apiStoryItem: Api.StoryItem, existingItem: Stories.Item? = nil, peerId: PeerId, transaction: Transaction) {
         switch apiStoryItem {
-        case let .storyItem(flags, id, date, forwardFrom, expireDate, caption, entities, media, mediaAreas, privacy, views, sentReaction):
+        case let .storyItem(flags, id, date, fromId, forwardFrom, expireDate, caption, entities, media, mediaAreas, privacy, views, sentReaction):
             let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
             if let parsedMedia = parsedMedia {
                 var parsedPrivacy: Stories.Item.Privacy?
@@ -1840,7 +1854,8 @@ extension Stories.StoredItem {
                     isEdited: isEdited,
                     isMy: mergedIsMy,
                     myReaction: mergedMyReaction,
-                    forwardInfo: mergedForwardInfo
+                    forwardInfo: mergedForwardInfo,
+                    authorId: fromId?.peerId
                 )
                 self = .item(item)
             } else {
@@ -1916,7 +1931,8 @@ func _internal_getStoryById(accountPeerId: PeerId, postbox: Postbox, network: Ne
                                 isEdited: item.isEdited,
                                 isMy: item.isMy,
                                 myReaction: item.myReaction,
-                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                             )
                         }
                     }
@@ -2386,7 +2402,8 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                         isEdited: item.isEdited,
                         isMy: item.isMy,
                         myReaction: reaction,
-                        forwardInfo: item.forwardInfo
+                        forwardInfo: item.forwardInfo,
+                        authorId: item.authorId
                     ))
                     updatedItemValue = updatedItem
                     if let entry = CodableEntry(updatedItem) {
@@ -2419,7 +2436,8 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 isEdited: item.isEdited,
                 isMy: item.isMy,
                 myReaction: reaction,
-                forwardInfo: item.forwardInfo
+                forwardInfo: item.forwardInfo,
+                authorId: item.authorId
             ))
             updatedItemValue = updatedItem
             if let entry = CodableEntry(updatedItem) {
