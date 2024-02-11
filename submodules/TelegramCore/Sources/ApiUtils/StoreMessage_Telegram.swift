@@ -200,8 +200,8 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
         
             if let replyTo = replyTo {
                 switch replyTo {
-                case let .messageReplyStoryHeader(userId, _):
-                    let storyPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                case let .messageReplyStoryHeader(peer, _):
+                    let storyPeerId = peer.peerId
                     if !result.contains(storyPeerId) {
                         result.append(storyPeerId)
                     }
@@ -668,8 +668,8 @@ extension StoreMessage {
                         if let replyHeader = replyHeader {
                             attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
                         }
-                    case let .messageReplyStoryHeader(userId, storyId):
-                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
+                    case let .messageReplyStoryHeader(peer, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: peer.peerId, id: storyId)))
                     }
                 }
             
@@ -952,8 +952,8 @@ extension StoreMessage {
                         } else if let replyHeader = replyHeader {
                             attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
                         }
-                    case let .messageReplyStoryHeader(userId, storyId):
-                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
+                    case let .messageReplyStoryHeader(peer, storyId):
+                        attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: peer.peerId, id: storyId)))
                     }
                 } else {
                     switch action {

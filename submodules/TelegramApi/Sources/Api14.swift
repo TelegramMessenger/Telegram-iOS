@@ -323,7 +323,7 @@ public extension Api {
 public extension Api {
     indirect enum MessageReplyHeader: TypeConstructorDescription {
         case messageReplyHeader(flags: Int32, replyToMsgId: Int32?, replyToPeerId: Api.Peer?, replyFrom: Api.MessageFwdHeader?, replyMedia: Api.MessageMedia?, replyToTopId: Int32?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?)
-        case messageReplyStoryHeader(userId: Int64, storyId: Int32)
+        case messageReplyStoryHeader(peer: Api.Peer, storyId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -345,11 +345,11 @@ public extension Api {
                     }}
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(quoteOffset!, buffer: buffer, boxed: false)}
                     break
-                case .messageReplyStoryHeader(let userId, let storyId):
+                case .messageReplyStoryHeader(let peer, let storyId):
                     if boxed {
-                        buffer.appendInt32(-1667711039)
+                        buffer.appendInt32(240843065)
                     }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
                     serializeInt32(storyId, buffer: buffer, boxed: false)
                     break
     }
@@ -359,8 +359,8 @@ public extension Api {
         switch self {
                 case .messageReplyHeader(let flags, let replyToMsgId, let replyToPeerId, let replyFrom, let replyMedia, let replyToTopId, let quoteText, let quoteEntities, let quoteOffset):
                 return ("messageReplyHeader", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("replyToPeerId", replyToPeerId as Any), ("replyFrom", replyFrom as Any), ("replyMedia", replyMedia as Any), ("replyToTopId", replyToTopId as Any), ("quoteText", quoteText as Any), ("quoteEntities", quoteEntities as Any), ("quoteOffset", quoteOffset as Any)])
-                case .messageReplyStoryHeader(let userId, let storyId):
-                return ("messageReplyStoryHeader", [("userId", userId as Any), ("storyId", storyId as Any)])
+                case .messageReplyStoryHeader(let peer, let storyId):
+                return ("messageReplyStoryHeader", [("peer", peer as Any), ("storyId", storyId as Any)])
     }
     }
     
@@ -408,14 +408,16 @@ public extension Api {
             }
         }
         public static func parse_messageReplyStoryHeader(_ reader: BufferReader) -> MessageReplyHeader? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
             var _2: Int32?
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.MessageReplyHeader.messageReplyStoryHeader(userId: _1!, storyId: _2!)
+                return Api.MessageReplyHeader.messageReplyStoryHeader(peer: _1!, storyId: _2!)
             }
             else {
                 return nil
