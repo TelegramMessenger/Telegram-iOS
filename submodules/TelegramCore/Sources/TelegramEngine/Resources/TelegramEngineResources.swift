@@ -412,5 +412,9 @@ public extension TelegramEngine {
         public func pushPriorityDownload(resourceId: String, priority: Int = 1) -> Disposable {
             return self.account.network.multiplexedRequestManager.pushPriority(resourceId: resourceId, priority: priority)
         }
+        
+        public func applicationIcons() -> Signal<TelegramApplicationIcons, NoError> {
+            return _internal_applicationIcons(account: account)
+        }
     }
 }

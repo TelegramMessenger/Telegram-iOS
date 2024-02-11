@@ -649,6 +649,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     items: reactionItems.reactionItems,
                     selectedItems: reactionItems.selectedReactionItems,
                     title: reactionItems.reactionsTitle,
+                    reactionsLocked: reactionItems.reactionsLocked,
                     alwaysAllowPremiumReactions: reactionItems.alwaysAllowPremiumReactions,
                     allPresetReactionsAreAvailable: reactionItems.allPresetReactionsAreAvailable,
                     getEmojiContent: reactionItems.getEmojiContent,
@@ -691,6 +692,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                         return
                     }
                     
+                    if let reactionItems = strongSelf.actionsStackNode.topReactionItems, !reactionItems.reactionItems.isEmpty {
+                        if reactionItems.allPresetReactionsAreAvailable {
+                            controller.premiumReactionsSelected?()
+                            return
+                        }
+                    }
+                    
                     if let file = file, let reactionContextNode = strongSelf.reactionContextNode {
                         let position: UndoOverlayController.Position
                         let insets = validLayout.insets(options: .statusBar)
@@ -716,6 +724,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                         controller.premiumReactionsSelected?()
                     }
                 }
+                
+                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: 1.0, height: 1.0)), isCoveredByInput: false, isAnimatingOut: false, transition: .immediate)
             }
             contentTopInset += reactionContextNode.contentHeight + 18.0
         } else if let reactionContextNode = self.reactionContextNode {
@@ -743,7 +753,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         case let .location(location):
             if let transitionInfo = location.transitionInfo() {
                 contentRect = CGRect(origin: transitionInfo.location, size: CGSize(width: 1.0, height: 1.0))
-                contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.minX), size: CGSize(width: layout.size.width, height: contentRect.height))
+                contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.minY), size: CGSize(width: layout.size.width, height: contentRect.height))
             } else {
                 return
             }
@@ -751,7 +761,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let transitionInfo = reference.transitionInfo() {
                 contentRect = convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view).insetBy(dx: -2.0, dy: 0.0)
                 contentRect.size.width += 5.0
-                contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.minX), size: CGSize(width: layout.size.width, height: contentRect.height))
+                contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.minY), size: CGSize(width: layout.size.width, height: contentRect.height))
             } else {
                 return
             }
@@ -1586,6 +1596,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         if self.reactionContextNodeIsAnimatingOut, let reactionContextNode = self.reactionContextNode {
             reactionContextNode.bounds = reactionContextNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
             transition.animateOffsetAdditive(node: reactionContextNode, offset: -offset.y)
+            
+            if let itemContentNode = self.itemContentNode {
+                itemContentNode.bounds = itemContentNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
+                transition.animateOffsetAdditive(node: itemContentNode, offset: -offset.y)
+            }
         }
     }
 }

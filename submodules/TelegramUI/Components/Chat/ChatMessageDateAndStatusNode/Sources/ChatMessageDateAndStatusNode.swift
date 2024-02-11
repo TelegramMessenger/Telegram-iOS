@@ -225,6 +225,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var layoutInput: LayoutInput
         var constrainedSize: CGSize
         var availableReactions: AvailableReactions?
+        var savedMessageTags: SavedMessageTags?
         var reactions: [MessageReaction]
         var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
         var displayAllReactionPeers: Bool
@@ -246,6 +247,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             layoutInput: LayoutInput,
             constrainedSize: CGSize,
             availableReactions: AvailableReactions?,
+            savedMessageTags: SavedMessageTags?,
             reactions: [MessageReaction],
             reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
             displayAllReactionPeers: Bool,
@@ -265,6 +267,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.type = type
             self.layoutInput = layoutInput
             self.availableReactions = availableReactions
+            self.savedMessageTags = savedMessageTags
             self.constrainedSize = constrainedSize
             self.reactions = reactions
             self.reactionPeers = reactionPeers
@@ -316,7 +319,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
         }
     }
-    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void)?
     public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
     override public init() {
@@ -391,6 +394,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     selectedForeground: themeColors.reactionActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
                     extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    extractedSelectedForeground: arguments.presentationData.theme.theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : arguments.presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
                     deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                     selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )
@@ -403,7 +407,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     deselectedForeground: themeColors.reactionInactiveForeground.argb,
                     selectedForeground: themeColors.reactionActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    extractedSelectedForeground: arguments.presentationData.theme.theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : arguments.presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
                     deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                     selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )
@@ -739,11 +744,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 resultingHeight = layoutSize.height
                 reactionButtonsResult = reactionButtonsContainer.update(
                     context: arguments.context,
-                    action: { value in
+                    action: { itemNode, value in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.reactionSelected?(value)
+                        strongSelf.reactionSelected?(itemNode, value)
                     },
                     reactions: [],
                     colors: reactionColors,
@@ -759,11 +764,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
-                        action: { value in
+                        action: { itemNode, value in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.reactionSelected?(value)
+                            strongSelf.reactionSelected?(itemNode, value)
                         },
                         reactions: arguments.reactions.map { reaction in
                             var centerAnimation: TelegramMediaFile?
@@ -797,11 +802,21 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 }
                             }
                             
+                            var title: String?
+                            if arguments.areReactionsTags, let savedMessageTags = arguments.savedMessageTags {
+                                for tag in savedMessageTags.tags {
+                                    if tag.reaction == reaction.value {
+                                        title = tag.title
+                                    }
+                                }
+                            }
+                            
                             return ReactionButtonsAsyncLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
                                     centerAnimation: centerAnimation,
-                                    animationFileId: animationFileId
+                                    animationFileId: animationFileId,
+                                    title: title
                                 ),
                                 count: Int(reaction.count),
                                 peers: arguments.areReactionsTags ? [] : peers,
@@ -815,11 +830,11 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 } else {
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
-                        action: { value in
+                        action: { itemNode, value in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.reactionSelected?(value)
+                            strongSelf.reactionSelected?(itemNode, value)
                         },
                         reactions: [],
                         colors: reactionColors,

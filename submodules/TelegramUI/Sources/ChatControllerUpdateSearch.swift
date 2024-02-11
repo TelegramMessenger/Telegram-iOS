@@ -38,15 +38,17 @@ extension ChatControllerImpl {
             }
             
             var reactions: [MessageReaction.Reaction]?
-            if !search.query.isEmpty, let historyFilter = interfaceState.historyFilter, !historyFilter.customTags.isEmpty {
-                reactions = historyFilter.customTags.compactMap {
-                    ReactionsMessageAttribute.reactionFromMessageTag(tag: $0)
+            if !search.query.isEmpty, let historyFilter = interfaceState.historyFilter {
+                reactions = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag).flatMap {
+                    [$0]
                 }
             }
             
             switch search.domain {
             case .everything:
                 derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: reactions, threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
+            case let .tag(reaction):
+                derivedSearchState = ChatSearchState(query: search.query, location: .peer(peerId: peerId, fromId: nil, tags: nil, reactions: reactions ?? [reaction], threadId: threadId, minDate: nil, maxDate: nil), loadMoreState: loadMoreStateFromResultsState(search.resultsState))
             case .members:
                 derivedSearchState = nil
             case let .member(peer):

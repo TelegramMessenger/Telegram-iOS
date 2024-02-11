@@ -22,6 +22,7 @@ public final class OpenChatMessageParams {
     public let context: AccountContext
     public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let chatLocation: ChatLocation?
+    public let chatFilterTag: MemoryBuffer?
     public let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?
     public let message: Message
     public let standalone: Bool
@@ -51,6 +52,7 @@ public final class OpenChatMessageParams {
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
         chatLocation: ChatLocation?,
+        chatFilterTag: MemoryBuffer?,
         chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?,
         message: Message,
         standalone: Bool,
@@ -79,6 +81,7 @@ public final class OpenChatMessageParams {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
+        self.chatFilterTag = chatFilterTag
         self.chatLocationContextHolder = chatLocationContextHolder
         self.message = message
         self.standalone = standalone

@@ -41,6 +41,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let currentlyPlayingMessageId: EngineMessage.Index?
     public let isCopyProtectionEnabled: Bool
     public let availableReactions: AvailableReactions?
+    public let savedMessageTags: SavedMessageTags?
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
     public let forceInlineReactions: Bool
@@ -55,6 +56,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let chatThemes: [TelegramTheme]
     public let deviceContactsNumbers: Set<String>
     public let isStandalone: Bool
+    public let isInline: Bool
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -70,6 +72,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         currentlyPlayingMessageId: EngineMessage.Index? = nil,
         isCopyProtectionEnabled: Bool = false,
         availableReactions: AvailableReactions?,
+        savedMessageTags: SavedMessageTags?,
         defaultReaction: MessageReaction.Reaction?,
         isPremium: Bool,
         accountPeer: EnginePeer?,
@@ -83,7 +86,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         audioTranscriptionTrial: AudioTranscription.TrialState = .defaultValue,
         chatThemes: [TelegramTheme] = [],
         deviceContactsNumbers: Set<String> = Set(),
-        isStandalone: Bool = false
+        isStandalone: Bool = false,
+        isInline: Bool = false
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -98,6 +102,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
         self.isCopyProtectionEnabled = isCopyProtectionEnabled
         self.availableReactions = availableReactions
+        self.savedMessageTags = savedMessageTags
         self.defaultReaction = defaultReaction
         self.isPremium = isPremium
         self.accountPeer = accountPeer
@@ -112,6 +117,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.chatThemes = chatThemes
         self.deviceContactsNumbers = deviceContactsNumbers
         self.isStandalone = isStandalone
+        self.isInline = isInline
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -154,6 +160,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.availableReactions != rhs.availableReactions {
             return false
         }
+        if lhs.savedMessageTags != rhs.savedMessageTags {
+            return false
+        }
         if lhs.isPremium != rhs.isPremium {
             return false
         }
@@ -191,6 +200,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.isStandalone != rhs.isStandalone {
+            return false
+        }
+        if lhs.isInline != rhs.isInline {
             return false
         }
         return true
@@ -900,6 +912,24 @@ public extension Peer {
     }
 }
 
+public struct ChatControllerCustomNavigationPanelNodeLayoutResult {
+    public var backgroundHeight: CGFloat
+    public var insetHeight: CGFloat
+    public var hitTestSlop: CGFloat
+    
+    public init(backgroundHeight: CGFloat, insetHeight: CGFloat, hitTestSlop: CGFloat) {
+        self.backgroundHeight = backgroundHeight
+        self.insetHeight = insetHeight
+        self.hitTestSlop = hitTestSlop
+    }
+}
+
+public protocol ChatControllerCustomNavigationPanelNode: ASDisplayNode {
+    typealias LayoutResult = ChatControllerCustomNavigationPanelNodeLayoutResult
+    
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, chatController: ChatController) -> LayoutResult
+}
+
 public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
@@ -907,8 +937,17 @@ public protocol ChatController: ViewController {
     
     var purposefulAction: (() -> Void)? { get set }
     
+    var stateUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
+    
     var selectedMessageIds: Set<EngineMessage.Id>? { get }
     var presentationInterfaceStateSignal: Signal<Any, NoError> { get }
+    
+    var customNavigationBarContentNode: NavigationBarContentNode? { get }
+    var customNavigationPanelNode: ChatControllerCustomNavigationPanelNode? { get }
+    
+    var visibleContextController: ViewController? { get }
+    
+    var alwaysShowSearchResultsAsList: Bool { get set }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)

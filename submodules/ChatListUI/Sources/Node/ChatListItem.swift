@@ -97,6 +97,7 @@ public enum ChatListItemContent {
         public var autoremoveTimeout: Int32?
         public var storyState: StoryState?
         public var requiresPremiumForMessaging: Bool
+        public var displayAsTopicList: Bool
         
         public init(
             messages: [EngineMessage],
@@ -117,7 +118,8 @@ public enum ChatListItemContent {
             topForumTopicItems: [EngineChatList.ForumTopicData],
             autoremoveTimeout: Int32?,
             storyState: StoryState?,
-            requiresPremiumForMessaging: Bool
+            requiresPremiumForMessaging: Bool,
+            displayAsTopicList: Bool
         ) {
             self.messages = messages
             self.peer = peer
@@ -138,6 +140,7 @@ public enum ChatListItemContent {
             self.autoremoveTimeout = autoremoveTimeout
             self.storyState = storyState
             self.requiresPremiumForMessaging = requiresPremiumForMessaging
+            self.displayAsTopicList = displayAsTopicList
         }
     }
     
@@ -1417,11 +1420,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            var isForum = false
+            var isForumAvatar = false
             if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                isForum = true
+                isForumAvatar = true
             }
-            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            if case let .peer(data) = item.content {
+                if data.displayAsTopicList {
+                    isForumAvatar = true
+                }
+            }
+                
+            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForumAvatar ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
             
             if peer.isPremium && peer.id != item.context.account.peerId {
                 let context = item.context
@@ -1917,6 +1926,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var displayForwardedIcon = false
             var displayStoryReplyIcon = false
+            var ignoreForwardedIcon = false
             
             switch contentData {
                 case let .chat(itemPeer, _, _, _, text, spoilers, customEmojiRanges):
@@ -1945,6 +1955,29 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                                 authorIsCurrentChat = author.id == peer.id
                             }
+                        }
+                    }
+                
+                    if case .chatList = item.chatListLocation, itemPeer.peerId == item.context.account.peerId, let message = messages.first {
+                        var effectiveAuthor: Peer? = message.author?._asPeer()
+                        if let forwardInfo = message.forwardInfo {
+                            effectiveAuthor = forwardInfo.author
+                            if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                            }
+                        }
+                        if let sourceAuthorInfo = message._asMessage().sourceAuthorInfo {
+                            if let originalAuthor = sourceAuthorInfo.originalAuthor, let peer = message.peers[originalAuthor] {
+                                effectiveAuthor = peer
+                            } else if let authorSignature = sourceAuthorInfo.originalAuthorName {
+                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
+                            }
+                        }
+                        
+                        if let effectiveAuthor, effectiveAuthor.id != itemPeer.chatMainPeer?.id {
+                            authorIsCurrentChat = false
+                            peerText = EnginePeer(effectiveAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            ignoreForwardedIcon = true
                         }
                     }
                 
@@ -2157,12 +2190,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         attributedText = composedString
                         
-                        if case .savedMessagesChats = item.chatListLocation {
-                            displayForwardedIcon = false
-                        } else if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
-                            displayForwardedIcon = true
-                        } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
-                            displayStoryReplyIcon = true
+                        if !ignoreForwardedIcon {
+                            if case .savedMessagesChats = item.chatListLocation {
+                                displayForwardedIcon = false
+                            } else if let forwardInfo = message.forwardInfo, !forwardInfo.flags.contains(.isImported) {
+                                displayForwardedIcon = true
+                            } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
+                                displayStoryReplyIcon = true
+                            }
                         }
                 
                         var displayMediaPreviews = true
@@ -2508,7 +2543,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     switch item.content {
                     case let .peer(peerData):
                         if let peer = peerData.messages.last?.author {
-                            if peer.isScam {
+                            if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
+                                currentCredibilityIconContent = nil
+                            } else if peer.isScam {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                             } else if peer.isFake {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
@@ -2528,7 +2565,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         break
                     }
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                    if peer.isScam {
+                    if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
+                        currentCredibilityIconContent = nil
+                    } else if peer.isScam {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                     } else if peer.isFake {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())

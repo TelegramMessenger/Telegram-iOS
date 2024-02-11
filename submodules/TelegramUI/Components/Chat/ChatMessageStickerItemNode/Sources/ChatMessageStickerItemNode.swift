@@ -625,6 +625,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
+                savedMessageTags: item.associatedData.savedMessageTags,
                 reactions: dateReactionsAndPeers.reactions,
                 reactionPeers: dateReactionsAndPeers.peers,
                 displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
@@ -632,7 +633,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message),
+                canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                 animationCache: item.controllerInteraction.presentationContext.animationCache,
                 animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
             ))
@@ -838,8 +839,10 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
                     availableReactions: item.associatedData.availableReactions,
+                    savedMessageTags: item.associatedData.savedMessageTags,
                     reactions: reactions,
                     message: item.message,
+                    associatedData: item.associatedData,
                     accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
@@ -1231,7 +1234,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
-                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
@@ -1330,7 +1333,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         f()
                     case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: item.message) {
-                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default)
+                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default, false)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }

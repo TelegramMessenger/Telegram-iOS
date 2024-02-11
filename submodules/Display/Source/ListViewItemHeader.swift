@@ -45,6 +45,10 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     open func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
     }
     
+    open func getEffectiveAlpha() -> CGFloat {
+        return self.alpha
+    }
+    
     public init(layerBacked: Bool = false, dynamicBounce: Bool = false, isRotated: Bool = false, seeThrough: Bool = false) {
         self.wantsScrollDynamics = dynamicBounce
         self.isRotated = isRotated

@@ -425,6 +425,12 @@ swift_library(
         "//submodules/Components/BalancedTextComponent",
         "//submodules/TelegramUI/Components/VideoMessageCameraScreen",
         "//submodules/TelegramUI/Components/MediaScrubberComponent",
+        "//submodules/TelegramUI/Components/Chat/ChatShareMessageTagView",
+        "//submodules/PromptUI",
+        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/Chat/TopMessageReactions",
+        "//submodules/TelegramUI/Components/Chat/SavedTagNameAlertController",
+        "//submodules/TelegramUI/Components/Chat/ChatInlineSearchResultsListComponent",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

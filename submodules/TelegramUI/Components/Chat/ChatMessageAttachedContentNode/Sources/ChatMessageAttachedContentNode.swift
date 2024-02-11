@@ -31,6 +31,7 @@ import ChatMessageAttachedContentButtonNode
 import MessageInlineBlockBackgroundView
 import ComponentFlow
 import PlainButtonComponent
+import AvatarNode
 
 public enum ChatMessageAttachedContentActionIcon {
     case instant
@@ -55,6 +56,28 @@ public struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
 }
 
 public final class ChatMessageAttachedContentNode: ASDisplayNode {
+    private enum InlineMedia: Equatable {
+        case media(Media)
+        case peerAvatar(EnginePeer)
+        
+        static func ==(lhs: InlineMedia, rhs: InlineMedia) -> Bool {
+            switch lhs {
+            case let .media(lhsMedia):
+                if case let .media(rhsMedia) = rhs {
+                    return lhsMedia.isSemanticallyEqual(to: rhsMedia)
+                } else {
+                    return false
+                }
+            case let .peerAvatar(lhsPeer):
+                if case let .peerAvatar(rhsPeer) = rhs {
+                    return lhsPeer.largeProfileImage == rhsPeer.largeProfileImage
+                } else {
+                    return false
+                }
+            }
+        }
+    }
+    
     private var backgroundView: MessageInlineBlockBackgroundView?
     
     private let transformContainer: ASDisplayNode
@@ -72,7 +95,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var closeButton: ComponentView<Empty>?
     private var closeButtonImage: UIImage?
     
-    private var inlineMediaValue: Media?
+    private var inlineMediaValue: InlineMedia?
     
     //private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -281,6 +304,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var contentMediaInline = false
             
+            var contentMediaImagePeer: EnginePeer?
+            
             if let (media, flags) = mediaAndFlags {
                 contentMediaInline = flags.contains(.preferMediaInline)
                 
@@ -326,21 +351,25 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else if let _ = media as? TelegramMediaStory {
                     contentMediaValue = media
                 }
+            } else if let adAttribute = message.adAttribute, case let .join(_, _, peer) = adAttribute.target, let peer, peer.largeProfileImage != nil {
+                contentMediaInline = true
+                contentMediaImagePeer = peer
             }
             
             var maxWidth: CGFloat = .greatestFiniteMagnitude
             
             let contentMediaContinueLayout: ((CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode)))?
-            let inlineMediaAndSize: (Media, CGSize)?
+            
+            let inlineMediaAndSize: (InlineMedia, CGSize)?
             
             if let contentMediaValue {
                 if contentMediaInline {
                     contentMediaContinueLayout = nil
                     
                     if let image = contentMediaValue as? TelegramMediaImage {
-                        inlineMediaAndSize = (image, CGSize(width: 54.0, height: 54.0))
+                        inlineMediaAndSize = (.media(image), CGSize(width: 54.0, height: 54.0))
                     } else if let file = contentMediaValue as? TelegramMediaFile, !file.previewRepresentations.isEmpty {
-                        inlineMediaAndSize = (file, CGSize(width: 54.0, height: 54.0))
+                        inlineMediaAndSize = (.media(file), CGSize(width: 54.0, height: 54.0))
                     } else {
                         inlineMediaAndSize = nil
                     }
@@ -368,6 +397,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     
                     inlineMediaAndSize = nil
                 }
+            } else if let contentMediaImagePeer {
+                contentMediaContinueLayout = nil
+                inlineMediaAndSize = (.peerAvatar(contentMediaImagePeer), CGSize(width: 54.0, height: 54.0))
             } else {
                 contentMediaContinueLayout = nil
                 inlineMediaAndSize = nil
@@ -555,6 +587,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                                 
                     let (buttonWidth, continueLayout) = makeActionButtonLayout(
                         maxContentsWidth,
+                        nil,
                         buttonIconImage,
                         cornerIcon,
                         actionTitle,
@@ -654,6 +687,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 ),
                                 constrainedSize: CGSize(width: maxStatusContentWidth, height: CGFloat.greatestFiniteMagnitude),
                                 availableReactions: associatedData.availableReactions,
+                                savedMessageTags: associatedData.savedMessageTags,
                                 reactions: dateReactionsAndPeers.reactions,
                                 reactionPeers: dateReactionsAndPeers.peers,
                                 displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
@@ -661,7 +695,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 replyCount: dateReplies,
                                 isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                                 hasAutoremove: message.isSelfExpiring,
-                                canViewReactionList: canViewMessageReactionList(message: message),
+                                canViewReactionList: canViewMessageReactionList(message: message, isInline: associatedData.isInline),
                                 animationCache: controllerInteraction.presentationContext.animationCache,
                                 animationRenderer: controllerInteraction.presentationContext.animationRenderer
                             ))
@@ -905,7 +939,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 inlineMedia = current
                                 
                                 if let curentInlineMediaValue = self.inlineMediaValue {
-                                    updateMedia = !curentInlineMediaValue.isSemanticallyEqual(to: inlineMediaValue)
+                                    updateMedia = curentInlineMediaValue != inlineMediaValue
                                 } else {
                                     updateMedia = true
                                 }
@@ -928,25 +962,58 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             self.inlineMediaValue = inlineMediaValue
                             
                             var fittedImageSize = inlineMediaSize
-                            if let image = inlineMediaValue as? TelegramMediaImage {
-                                if let dimensions = image.representations.last?.dimensions.cgSize {
-                                    fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
+                            switch inlineMediaValue {
+                            case let .media(inlineMediaValue):
+                                if let image = inlineMediaValue as? TelegramMediaImage {
+                                    if let dimensions = image.representations.last?.dimensions.cgSize {
+                                        fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
+                                    }
+                                } else if let file = inlineMediaValue as? TelegramMediaFile {
+                                    if let dimensions = file.dimensions?.cgSize {
+                                        fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
+                                    }
                                 }
-                            } else if let file = inlineMediaValue as? TelegramMediaFile {
-                                if let dimensions = file.dimensions?.cgSize {
-                                    fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
-                                }
+                            case .peerAvatar:
+                                fittedImageSize = inlineMediaSize
                             }
                             
                             if updateMedia {
                                 let resolvedInlineMediaValue = inlineMediaValue
                                 
-                                if let image = resolvedInlineMediaValue as? TelegramMediaImage {
-                                    let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), placeholderColor: mainColor.withMultipliedAlpha(0.1))
-                                    inlineMedia.setSignal(updateInlineImageSignal)
-                                } else if let file = resolvedInlineMediaValue as? TelegramMediaFile, let representation = file.previewRepresentations.last {
-                                    let updateInlineImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file), representation: representation)
-                                    inlineMedia.setSignal(updateInlineImageSignal)
+                                switch resolvedInlineMediaValue {
+                                case let .media(resolvedInlineMediaValue):
+                                    if let image = resolvedInlineMediaValue as? TelegramMediaImage {
+                                        let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), placeholderColor: mainColor.withMultipliedAlpha(0.1))
+                                        inlineMedia.setSignal(updateInlineImageSignal)
+                                    } else if let file = resolvedInlineMediaValue as? TelegramMediaFile, let representation = file.previewRepresentations.last {
+                                        let updateInlineImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file), representation: representation)
+                                        inlineMedia.setSignal(updateInlineImageSignal)
+                                    }
+                                case let .peerAvatar(peer):
+                                    if let peerReference = PeerReference(peer._asPeer()) {
+                                        if let signal = peerAvatarImage(account: context.account, peerReference: peerReference, authorOfMessage: nil, representation: peer.largeProfileImage, displayDimensions: inlineMediaSize, clipStyle: .none, blurred: false, inset: 0.0, emptyColor: mainColor.withMultipliedAlpha(0.1), synchronousLoad: synchronousLoads, provideUnrounded: false) {
+                                            let updateInlineImageSignal = signal |> map { images -> (TransformImageArguments) -> DrawingContext? in
+                                                let image = images?.0
+                                                
+                                                return { arguments in
+                                                    guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true) else {
+                                                        return nil
+                                                    }
+                                                    
+                                                    context.withFlippedContext { c in
+                                                        if let cgImage = image?.cgImage {
+                                                            c.draw(cgImage, in: CGRect(origin: CGPoint(), size: arguments.drawingSize))
+                                                        }
+                                                    }
+                                                    
+                                                    addCorners(context, arguments: arguments)
+                                                    
+                                                    return context
+                                                }
+                                            }
+                                            inlineMedia.setSignal(updateInlineImageSignal)
+                                        }
+                                    }
                                 }
                             }
                             
@@ -1151,17 +1218,23 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.contentMedia?.removeFromSupernode()
                                 self.contentMedia = contentMedia
                                 
+                                contentMedia.activatePinch = { [weak controllerInteraction] sourceNode in
+                                    guard let controllerInteraction else {
+                                        return
+                                    }
+                                    controllerInteraction.activateMessagePinch(sourceNode)
+                                }
                                 contentMedia.activateLocalContent = { [weak self] mode in
                                     guard let self else {
                                         return
                                     }
                                     self.openMedia?(mode)
                                 }
-                                contentMedia.updateMessageReaction = { [weak controllerInteraction] message, value in
+                                contentMedia.updateMessageReaction = { [weak controllerInteraction] message, value, force in
                                     guard let controllerInteraction else {
                                         return
                                     }
-                                    controllerInteraction.updateMessageReaction(message, value)
+                                    controllerInteraction.updateMessageReaction(message, value, force)
                                 }
                                 contentMedia.visibility = self.visibility != .none
                                 
@@ -1279,11 +1352,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.statusNode = statusNode
                                 self.addSubnode(statusNode)
                                 
-                                statusNode.reactionSelected = { [weak self] value in
+                                statusNode.reactionSelected = { [weak self] _, value in
                                     guard let self, let message = self.message else {
                                         return
                                     }
-                                    controllerInteraction.updateMessageReaction(message, .reaction(value))
+                                    controllerInteraction.updateMessageReaction(message, .reaction(value), false)
                                 }
                                 
                                 statusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in

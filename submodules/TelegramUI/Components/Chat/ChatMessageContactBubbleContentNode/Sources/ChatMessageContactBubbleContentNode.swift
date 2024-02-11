@@ -55,11 +55,11 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.addButtonNode.addTarget(self, action: #selector(self.addButtonPressed), forControlEvents: .touchUpInside)
         self.messageButtonNode.addTarget(self, action: #selector(self.messageButtonPressed), forControlEvents: .touchUpInside)
         
-        self.dateAndStatusNode.reactionSelected = { [weak self] value in
+        self.dateAndStatusNode.reactionSelected = { [weak self] _, value in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
         }
         
         self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceView, value in
@@ -286,6 +286,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: CGSize(width: constrainedSize.width - sideInsets, height: .greatestFiniteMagnitude),
                         availableReactions: item.associatedData.availableReactions,
+                        savedMessageTags: item.associatedData.savedMessageTags,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
@@ -293,7 +294,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
@@ -306,7 +307,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                 }
                 
-                let (messageButtonWidth, messageContinueLayout) = makeMessageButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Conversation_ContactMessage.uppercased(), mainColor, false, false)
+                let (messageButtonWidth, messageContinueLayout) = makeMessageButtonLayout(constrainedSize.width, 10.0, nil, false, item.presentationData.strings.Conversation_ContactMessage.uppercased(), mainColor, false, false)
                 
                 let addTitle: String
                 if !canMessage && !canAdd  {
@@ -318,7 +319,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         addTitle = item.presentationData.strings.Conversation_ContactAddContactLong
                     }
                 }
-                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, nil, false, addTitle.uppercased(), mainColor, false, false)
+                let (addButtonWidth, addContinueLayout) = makeAddButtonLayout(constrainedSize.width, 10.0, nil, false, addTitle.uppercased(), mainColor, false, false)
                 
                 let maxButtonWidth = max(messageButtonWidth, addButtonWidth)
                 var maxContentWidth: CGFloat = avatarSize.width + 7.0

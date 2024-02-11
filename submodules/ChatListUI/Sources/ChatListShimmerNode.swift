@@ -208,7 +208,8 @@ public final class ChatListShimmerNode: ASDisplayNode {
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
                     storyState: nil,
-                    requiresPremiumForMessaging: false
+                    requiresPremiumForMessaging: false,
+                    displayAsTopicList: false
                 )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             

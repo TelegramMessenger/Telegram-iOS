@@ -79,6 +79,11 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
     public func item(context: AccountContext, interaction: ChatListNodeInteraction, location: ChatListControllerLocation) -> ListViewItem {
         switch self {
             case let .message(message, peer, readState, presentationData):
+                var displayAsMessage = true
+                if case .savedMessagesChats = location {
+                    displayAsMessage = false
+                }
+            
                 return ChatListItem(
                     presentationData: presentationData,
                     context: context,
@@ -98,13 +103,14 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         inputActivities: nil,
                         promoInfo: nil,
                         ignoreUnreadBadge: true,
-                        displayAsMessage: true,
+                        displayAsMessage: displayAsMessage,
                         hasFailedMessages: false,
                         forumTopicData: nil,
                         topForumTopicItems: [],
                         autoremoveTimeout: nil,
                         storyState: nil,
-                        requiresPremiumForMessaging: false
+                        requiresPremiumForMessaging: false,
+                        displayAsTopicList: false
                     )),
                     editing: false,
                     hasActiveRevealControls: false,

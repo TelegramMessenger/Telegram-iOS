@@ -132,72 +132,26 @@ func _internal_setSavedMessageTags(transaction: Transaction, savedMessageTags: S
     }
 }
 
-func managedSynchronizeSavedMessageTags(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
-    let poll = Signal<Never, NoError> { subscriber in
-        let signal: Signal<Never, NoError> = _internal_savedMessageTags(postbox: postbox)
-        |> mapToSignal { current in
-            return (network.request(Api.functions.messages.getSavedReactionTags(hash: current?.hash ?? 0))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.messages.SavedReactionTags?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<Never, NoError> in
-                guard let result = result else {
-                    return .complete()
-                }
-                
-                switch result {
-                case .savedReactionTagsNotModified:
-                    return .complete()
-                case let .savedReactionTags(tags, hash):
-                    var customFileIds: [Int64] = []
-                    
-                    var parsedTags: [SavedMessageTags.Tag] = []
-                    for tag in tags {
-                        switch tag {
-                        case let .savedReactionTag(_, reaction, title, count):
-                            guard let reaction = MessageReaction.Reaction(apiReaction: reaction) else {
-                                continue
-                            }
-                            parsedTags.append(SavedMessageTags.Tag(
-                                reaction: reaction,
-                                title: title,
-                                count: Int(count)
-                            ))
-                            
-                            if case let .custom(fileId) = reaction {
-                                customFileIds.append(fileId)
-                            }
-                        }
-                    }
-                    
-                    let savedMessageTags = SavedMessageTags(
-                        hash: hash,
-                        tags: parsedTags
-                    )
-                    
-                    return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: customFileIds)
-                    |> mapToSignal { _ -> Signal<Never, NoError> in
-                        return postbox.transaction { transaction in
-                            _internal_setSavedMessageTags(transaction: transaction, savedMessageTags: savedMessageTags)
-                        }
-                        |> ignoreValues
-                    }
-                }
-            })
+func _internal_setSavedMessageTagTitle(account: Account, reaction: MessageReaction.Reaction, title: String?) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        let value = _internal_savedMessageTags(transaction: transaction) ?? SavedMessageTags(hash: 0, tags: [])
+        var updatedTags = value.tags
+        if let index = updatedTags.firstIndex(where: { $0.reaction == reaction }) {
+            updatedTags[index] = SavedMessageTags.Tag(reaction: updatedTags[index].reaction, title: title, count: updatedTags[index].count)
+        } else {
+            updatedTags.append(SavedMessageTags.Tag(reaction: reaction, title: title, count: 0))
         }
-                
-        return signal.start(completed: {
-            subscriber.putCompletion()
-        })
+        _internal_setSavedMessageTags(transaction: transaction, savedMessageTags: SavedMessageTags(hash: 0, tags: updatedTags))
     }
-    
-    return (
-    	poll
-    	|> then(
-    		.complete()
-    		|> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue())
-    	)
-    )
-    |> restart
+    |> mapToSignal { _ -> Signal<Never, NoError> in
+        var flags: Int32 = 0
+        if title != nil {
+            flags |= 1 << 0
+        }
+        return account.network.request(Api.functions.messages.updateSavedReactionTag(flags: flags, reaction: reaction.apiReaction, title: title))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
+    }
 }

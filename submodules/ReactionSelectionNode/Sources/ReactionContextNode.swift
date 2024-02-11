@@ -21,6 +21,8 @@ import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextFormat
 import GZip
+import BalancedTextComponent
+import Markdown
 
 public final class ReactionItem {
     public struct Reaction: Equatable {
@@ -124,6 +126,8 @@ private final class TitleLabelView: UIView {
     let contentView = ComponentView<Empty>()
     let tintContentView = ComponentView<Empty>()
     
+    var action: (() -> Void)?
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
     }
@@ -132,18 +136,64 @@ private final class TitleLabelView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, text: String, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
+    func update(width: CGFloat, text: String, theme: PresentationTheme, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let foregroundColor: UIColor
+        if theme.overallDarkAppearance {
+            foregroundColor = UIColor(white: 1.0, alpha: 0.5)
+        } else {
+            foregroundColor = UIColor(white: 0.5, alpha: 0.9)
+        }
+        
+        let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: foregroundColor)
+        let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: foregroundColor)
+        let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.list.itemAccentColor, additionalAttributes: ["URL": true as NSNumber])
+        let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in
+            return nil
+        })
+        
+        let tintBody = MarkdownAttributeSet(font: Font.regular(13.0), textColor: .white)
+        let tintBold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: .white)
+        let tintLink = MarkdownAttributeSet(font: Font.regular(13.0), textColor: .white, additionalAttributes: [TelegramTextAttributes.URL: true as NSNumber])
+        let tintAttributes = MarkdownAttributes(body: tintBody, bold: tintBold, link: tintLink, linkAttribute: { _ in
+            return (TelegramTextAttributes.URL, "")
+        })
+        
         let contentSize = self.contentView.update(
             transition: .immediate,
-            component: AnyComponent(Text(text: text, font: Font.regular(13.0), color: UIColor(white: 1.0, alpha: 0.2))),
+            component: AnyComponent(BalancedTextComponent(
+                text: .markdown(text: text, attributes: attributes),
+                balanced: true,
+                horizontalAlignment: .center,
+                maximumNumberOfLines: 0,
+                highlightColor: theme.list.itemAccentColor.withMultipliedAlpha(0.1),
+                highlightAction: { attributes in
+                    if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                        return NSAttributedString.Key(rawValue: "URL")
+                    } else {
+                        return nil
+                    }
+                }, tapAction: { [weak self] attributes, _ in
+                    guard let self else {
+                        return
+                    }
+                    if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                        self.action?()
+                    }
+                }
+            )),
             environment: {},
-            containerSize: size
+            containerSize: CGSize(width: width - 8.0 * 2.0, height: 10000.0)
         )
         let _ = self.tintContentView.update(
             transition: .immediate,
-            component: AnyComponent(Text(text: text, font: Font.regular(13.0), color: .white)),
+            component: AnyComponent(BalancedTextComponent(
+                text: .markdown(text: text, attributes: tintAttributes),
+                balanced: true,
+                horizontalAlignment: .center,
+                maximumNumberOfLines: 0
+            )),
             environment: {},
-            containerSize: size
+            containerSize: CGSize(width: width - 8.0 * 2.0, height: 10000.0)
         )
         
         if let contentView = self.contentView.view {
@@ -151,8 +201,10 @@ private final class TitleLabelView: UIView {
                 contentView.layer.rasterizationScale = UIScreenScale
                 self.addSubview(contentView)
             }
-            transition.updateFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: 6.0), size: contentSize))
+            transition.updateFrame(view: contentView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - contentSize.width) / 2.0), y: 6.0), size: contentSize))
         }
+        
+        return 6.0 + contentSize.height
     }
 }
 
@@ -245,7 +297,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let expandItemView: ExpandItemView?
     
     private let title: String?
+    private let reactionsLocked: Bool
     private var titleLabelView: TitleLabelView?
+    private var titleLabelHeight: CGFloat?
     
     private var reactionSelectionComponentHost: ComponentView<Empty>?
     
@@ -373,7 +427,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
+    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, title: String? = nil, reactionsLocked: Bool, alwaysAllowPremiumReactions: Bool, allPresetReactionsAreAvailable: Bool, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.items = items
@@ -382,6 +436,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.isExpandedUpdated = isExpandedUpdated
         self.requestLayout = requestLayout
         self.requestUpdateOverlayWantsToBeBelowKeyboard = requestUpdateOverlayWantsToBeBelowKeyboard
+        self.reactionsLocked = reactionsLocked
         
         self.animationCache = animationCache
         self.animationRenderer = MultiAnimationRendererImpl()
@@ -451,11 +506,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             context.setFillColor(shadowColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: gradientWidth - 1.0, dy: gradientWidth - 1.0))
         })?.stretchableImage(withLeftCapWidth: Int(46.0 / 2.0), topCapHeight: Int(46.0 / 2.0))
-        if self.getEmojiContent == nil {
+        if self.getEmojiContent == nil || self.reactionsLocked {
             self.contentContainer.view.mask = self.contentContainerMask
         }
         
-        if getEmojiContent != nil {
+        if getEmojiContent != nil && !self.reactionsLocked {
             let expandItemView = ExpandItemView()
             self.expandItemView = expandItemView
             
@@ -470,7 +525,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             let titleLabelView = TitleLabelView(frame: CGRect())
             self.titleLabelView = titleLabelView
             self.contentContainer.view.addSubview(titleLabelView)
-            self.contentTopInset = 24.0
         }
         
         self.alwaysAllowPremiumReactions = alwaysAllowPremiumReactions
@@ -484,6 +538,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.addSubnode(self.contentContainer)
         self.addSubnode(self.previewingItemContainer)
+        
+        if let titleLabelView = self.titleLabelView {
+            titleLabelView.action = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.premiumReactionsSelected?(nil)
+            }
+        }
         
         self.availableReactionsDisposable = (context.engine.stickers.availableReactions()
         |> take(1)
@@ -506,7 +569,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             })
         }
         
-        if let getEmojiContent = getEmojiContent {
+        if let getEmojiContent = getEmojiContent, !self.reactionsLocked {
             let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
             self.stableEmptyResultEmojiDisposable.set((self.context.account.postbox.combinedView(keys: [viewKey])
             |> take(1)
@@ -636,6 +699,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         longPressRecognizer.minimumPressDuration = 0.2
         self.longPressRecognizer = longPressRecognizer
         self.view.addGestureRecognizer(longPressRecognizer)
+        
+        if self.allPresetReactionsAreAvailable {
+            longPressRecognizer.isEnabled = false
+        }
     }
     
     @objc private func horizontalExpandGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -812,7 +879,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let effectiveItemSpacing: CGFloat = minItemSpacing + (1.0 - compressionFactor) * (itemSpacing - minItemSpacing)
         
         var topVisibleItems: Int
-        if self.getEmojiContent != nil {
+        if !self.reactionsLocked && self.getEmojiContent != nil {
             topVisibleItems = min(self.items.count, itemLayout.visibleItemCount)
         } else {
             topVisibleItems = self.items.count
@@ -912,7 +979,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     itemTransition = .immediate
                     
                     if case let .reaction(item) = self.items[i] {
-                        itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: loopIdle)
+                        itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: loopIdle, isLocked: self.reactionsLocked)
                         maskNode = nil
                     } else {
                         itemNode = PremiumReactionsNode(theme: self.presentationData.theme)
@@ -956,7 +1023,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                     
-                    if self.getEmojiContent != nil && i == itemLayout.visibleItemCount - 1 {
+                    if !self.reactionsLocked && self.getEmojiContent != nil && i == itemLayout.visibleItemCount - 1 {
                         itemFrame.origin.x -= (1.0 - compressionFactor) * selectionItemFrame.width * 0.5
                         selectionItemFrame.origin.x -= (1.0 - compressionFactor) * selectionItemFrame.width * 0.5
                         itemNode.isUserInteractionEnabled = false
@@ -997,7 +1064,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion && !self.reduceMotion)
                     }
                     
-                    if self.getEmojiContent != nil, i == itemLayout.visibleItemCount - 1, let itemNode = itemNode as? ReactionNode {
+                    if !self.reactionsLocked, self.getEmojiContent != nil, i == itemLayout.visibleItemCount - 1, let itemNode = itemNode as? ReactionNode {
                         let itemScale: CGFloat = 0.001 * (1.0 - compressionFactor) + normalItemScale * compressionFactor
                         transition.updateSublayerTransformScale(node: itemNode, scale: itemScale)
                         transition.updateTransformScale(layer: itemNode.selectionView.layer, scale: CGPoint(x: itemScale, y: itemScale))
@@ -1015,22 +1082,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                 }
-            }
-        }
-        
-        if let title = self.title, let titleLabelView = self.titleLabelView {
-            let baseTitleFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.scrollNode.view.bounds.width, height: 20.0))
-            
-            transition.updateFrame(view: titleLabelView, frame: baseTitleFrame)
-            titleLabelView.update(size: baseTitleFrame.size, text: title, theme: self.presentationData.theme, transition: transition)
-            transition.updateAlpha(layer: titleLabelView.layer, alpha: self.isExpanded ? 0.0 : 1.0)
-            if let titleView = titleLabelView.contentView.view, let tintContentView = titleLabelView.tintContentView.view {
-                if tintContentView.superview == nil {
-                    tintContentView.layer.rasterizationScale = UIScreenScale
-                    self.contentTintContainer.view.addSubview(tintContentView)
-                }
-                transition.updateFrame(view: tintContentView, frame: titleView.frame.offsetBy(dx: baseTitleFrame.minX, dy: baseTitleFrame.minY))
-                transition.updateAlpha(layer: tintContentView.layer, alpha: self.isExpanded ? 0.0 : 1.0)
             }
         }
         
@@ -1103,7 +1154,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         var visibleContentWidth: CGFloat
         var completeContentWidth: CGFloat
         
-        if self.getEmojiContent != nil {
+        if !self.reactionsLocked && self.getEmojiContent != nil {
             let totalItemSlotCount = self.items.count + 1
             
             var maxRowItemCount = Int(floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing) / (itemSize + itemSpacing)))
@@ -1134,6 +1185,28 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             visibleContentWidth = floor(minVisibleItemCount * itemSize + (minVisibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
             if visibleContentWidth > size.width - sideInset * 2.0 {
                 visibleContentWidth = size.width - sideInset * 2.0
+            }
+        }
+        
+        if let title = self.title, let titleLabelView = self.titleLabelView {
+            let titleLabelHeight = titleLabelView.update(width: visibleContentWidth, text: title, theme: self.presentationData.theme, transition: transition)
+            self.titleLabelHeight = titleLabelHeight
+            
+            let baseTitleFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: visibleContentWidth, height: titleLabelHeight))
+            transition.updateFrame(view: titleLabelView, frame: baseTitleFrame)
+            
+            transition.updateAlpha(layer: titleLabelView.layer, alpha: self.isExpanded ? 0.0 : 1.0)
+            if let titleView = titleLabelView.contentView.view, let tintContentView = titleLabelView.tintContentView.view {
+                if tintContentView.superview == nil {
+                    tintContentView.layer.rasterizationScale = UIScreenScale
+                    self.contentTintContainer.view.addSubview(tintContentView)
+                }
+                transition.updateFrame(view: tintContentView, frame: titleView.frame.offsetBy(dx: baseTitleFrame.minX, dy: baseTitleFrame.minY))
+                transition.updateAlpha(layer: tintContentView.layer, alpha: self.isExpanded ? 0.0 : 1.0)
+            }
+            
+            if !self.isExpanded {
+                self.contentTopInset = titleLabelHeight
             }
         }
         
@@ -1185,7 +1258,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             itemSpacing: itemSpacing
         )
         
-        if (self.isExpanded || self.reactionSelectionComponentHost != nil), let _ = self.getEmojiContent {
+        if (self.isExpanded || self.reactionSelectionComponentHost != nil), let _ = self.getEmojiContent, !self.reactionsLocked {
             let reactionSelectionComponentHost: ComponentView<Empty>
             var componentTransition = Transition(transition)
             if let current = self.reactionSelectionComponentHost {
@@ -1427,6 +1500,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         
                         if case .locked = item.icon {
                             strongSelf.premiumReactionsSelected?(reactionItem.stillAnimation)
+                        } else if strongSelf.reactionsLocked {
+                            strongSelf.premiumReactionsSelected?(reactionItem.stillAnimation)
                         } else {
                             strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
                             strongSelf.reactionSelected?(updateReaction, isLongPress)
@@ -1448,6 +1523,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     )
                     strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
                     if case .locked = item.icon {
+                        strongSelf.premiumReactionsSelected?(reactionItem.stillAnimation)
+                    } else if strongSelf.reactionsLocked {
                         strongSelf.premiumReactionsSelected?(reactionItem.stillAnimation)
                     } else {
                         strongSelf.reactionSelected?(reactionItem.updateMessageReaction, isLongPress)
@@ -1840,7 +1917,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 guard let itemNode = self.visibleItemNodes[i] else {
                     continue
                 }
-                if let itemLayout = self.itemLayout, self.getEmojiContent != nil, i == itemLayout.visibleItemCount - 1 {
+                if let itemLayout = self.itemLayout, !self.reactionsLocked, self.getEmojiContent != nil, i == itemLayout.visibleItemCount - 1 {
                     itemNode.appear(animated: false)
                     continue
                 }
@@ -1897,6 +1974,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 continue
             }
             itemNode.layer.animateAlpha(from: itemNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+        
+        if let titleLabelView = self.titleLabelView {
+            titleLabelView.layer.animateAlpha(from: titleLabelView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
         if let reactionComponentView = self.reactionSelectionComponentHost?.view {
@@ -2007,7 +2088,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let customReactionSource = self.customReactionSource {
-            let itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: customReactionSource.item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: false, useDirectRendering: false)
+            let itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: customReactionSource.item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: false, isLocked: false, useDirectRendering: false)
             if let contents = customReactionSource.layer.contents {
                 itemNode.setCustomContents(contents: contents)
             }
@@ -2335,6 +2416,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.isExpanded, let titleLabelView = self.titleLabelView {
+            if let result = titleLabelView.hitTest(self.view.convert(point, to: titleLabelView), with: event) {
+                return result
+            }
+        }
+        
         let contentPoint = self.contentContainer.view.convert(point, from: self.view)
         if self.contentContainer.bounds.contains(contentPoint) {
             return self.contentContainer.hitTest(contentPoint, with: event)
@@ -2416,6 +2503,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         case .ended:
             let point = recognizer.location(in: self.view)
             
+            if self.isExpanded {
+                return
+            }
             if let expandItemView = self.expandItemView, expandItemView.bounds.contains(self.view.convert(point, to: self.expandItemView)) {
                 self.animateFromExtensionDistance = self.contentTopInset * 2.0 + self.extensionDistance
                 self.contentTopInset = 0.0
@@ -2427,6 +2517,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 switch reaction {
                 case let .reaction(reactionItem):
                     if case .custom = reactionItem.updateMessageReaction, let hasPremium = self.hasPremium, !hasPremium, !self.allPresetReactionsAreAvailable {
+                        self.premiumReactionsSelected?(reactionItem.stillAnimation)
+                    } else if self.reactionsLocked {
                         self.premiumReactionsSelected?(reactionItem.stillAnimation)
                     } else {
                         self.reactionSelected?(reactionItem.updateMessageReaction, false)
@@ -2466,6 +2558,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func highlightGestureMoved(location: CGPoint, hover: Bool) {
+        if self.allPresetReactionsAreAvailable {
+            return
+        }
+        
         let highlightedReaction = self.previewReaction(at: location)?.reaction
         if self.highlightedReaction != highlightedReaction {
             self.highlightedReaction = highlightedReaction
@@ -2485,10 +2581,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func highlightGestureFinished(performAction: Bool) {
+        if self.allPresetReactionsAreAvailable {
+            return
+        }
+        
         self.highlightGestureFinished(performAction: performAction, isLarge: false)
     }
     
     private func highlightGestureFinished(performAction: Bool, isLarge: Bool) {
+        if self.allPresetReactionsAreAvailable {
+            return
+        }
+        
         if let highlightedReaction = self.highlightedReaction {
             self.highlightedReaction = nil
             if performAction {
@@ -2573,6 +2677,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction == reaction {
                 if case .custom = itemNode.item.updateMessageReaction, let hasPremium = self.hasPremium, !hasPremium {
                     self.premiumReactionsSelected?(itemNode.item.stillAnimation)
+                } else if self.reactionsLocked {
+                    self.premiumReactionsSelected?(itemNode.item.stillAnimation)
                 } else {
                     self.reactionSelected?(itemNode.item.updateMessageReaction, isLarge)
                 }
@@ -2640,7 +2746,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             itemNode = currentItemNode
         } else {
             let animationRenderer = MultiAnimationRendererImpl()
-            itemNode = ReactionNode(context: context, theme: theme, item: reaction, animationCache: animationCache, animationRenderer: animationRenderer, loopIdle: false)
+            itemNode = ReactionNode(context: context, theme: theme, item: reaction, animationCache: animationCache, animationRenderer: animationRenderer, loopIdle: false, isLocked: false)
         }
         self.itemNode = itemNode
         

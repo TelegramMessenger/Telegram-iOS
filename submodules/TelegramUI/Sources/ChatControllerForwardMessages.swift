@@ -11,6 +11,8 @@ import TextFormat
 import UndoUI
 import ChatInterfaceState
 import PremiumUI
+import ReactionSelectionNode
+import TopMessageReactions
 
 extension ChatControllerImpl {    
     func forwardMessages(messageIds: [MessageId], options: ChatInterfaceForwardOptionsState? = nil, resetCurrent: Bool = false) {
@@ -110,7 +112,16 @@ extension ChatControllerImpl {
                 })
                 
                 let commit: ([EnqueueMessage]) -> Void = { result in
+                    var result = result
+                    
                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }).updatedSearch(nil) })
+                    
+                    var correlationIds: [Int64] = []
+                    for i in 0 ..< result.count {
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        correlationIds.append(correlationId)
+                        result[i] = result[i].withUpdatedCorrelationId(correlationId)
+                    }
                     
                     var displayPeers: [EnginePeer] = []
                     for peer in peers {
@@ -174,39 +185,53 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { action in
-                        if savedMessages, let self, action == .info {
-                            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
-                            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                                guard let self, let peer else {
-                                    return
-                                }
-                                guard let navigationController = self.navigationController as? NavigationController else {
-                                    return
-                                }
-                                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
-                            })
+                    let reactionItems: Signal<[ReactionItem], NoError>
+                    if savedMessages && messages.count > 0 {
+                        reactionItems = tagMessageReactions(context: strongSelf.context)
+                    } else {
+                        reactionItems = .single([])
+                    }
+                    
+                    let _ = (reactionItems
+                    |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] reactionItems in
+                        guard let strongSelf else {
+                            return
                         }
-                        return false
-                    }), in: .current)
+                        
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, position: savedMessages && messages.count > 0 ? .top : .bottom, animateInAsReplacement: true, action: { action in
+                            if savedMessages, let self, action == .info {
+                                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+                                         |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                    guard let self, let peer else {
+                                        return
+                                    }
+                                    guard let navigationController = self.navigationController as? NavigationController else {
+                                        return
+                                    }
+                                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
+                                })
+                            }
+                            return false
+                        }, additionalView: (savedMessages && messages.count > 0) ? chatShareToSavedMessagesAdditionalView(strongSelf, reactionItems: reactionItems, correlationIds: correlationIds) : nil), in: .current)
+                    })
                 }
                 
                 switch mode {
-                    case .generic:
-                        commit(result)
-                    case .silent:
-                        let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: true)
-                        commit(transformedMessages)
-                    case .schedule:
-                        strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
-                            if let strongSelf = self {
-                                let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: false, scheduleTime: scheduleTime)
-                                commit(transformedMessages)
-                            }
-                        })
-                    case .whenOnline:
-                        let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: false, scheduleTime: scheduleWhenOnlineTimestamp)
-                        commit(transformedMessages)
+                case .generic:
+                    commit(result)
+                case .silent:
+                    let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: true)
+                    commit(transformedMessages)
+                case .schedule:
+                    strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
+                        if let strongSelf = self {
+                            let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: false, scheduleTime: scheduleTime)
+                            commit(transformedMessages)
+                        }
+                    })
+                case .whenOnline:
+                    let transformedMessages = strongSelf.transformEnqueueMessages(result, silentPosting: false, scheduleTime: scheduleWhenOnlineTimestamp)
+                    commit(transformedMessages)
                 }
             }
             controller.peerSelected = { [weak self, weak controller] peer, threadId in
@@ -243,25 +268,44 @@ extension ChatControllerImpl {
                         strongSelf.chatDisplayNode.hapticFeedback.success()
                     }
                     
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
-                        if case .info = value, let strongSelf = self {
-                            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
-                            |> deliverOnMainQueue).startStandalone(next: { peer in
-                                guard let strongSelf = self, let peer = peer, let navigationController = strongSelf.effectiveNavigationController else {
-                                    return
-                                }
-                                
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil))
-                            })
-                            return true
-                        }
-                        return false
-                    }), in: .current)
+                    let reactionItems: Signal<[ReactionItem], NoError>
+                    if messages.count > 0 {
+                        reactionItems = tagMessageReactions(context: strongSelf.context)
+                    } else {
+                        reactionItems = .single([])
+                    }
                     
-                    let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
-                        return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: [], correlationId: nil)
+                    var correlationIds: [Int64] = []
+                    let mappedMessages = messages.map { message -> EnqueueMessage in
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        correlationIds.append(correlationId)
+                        return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: [], correlationId: correlationId)
+                    }
+                    
+                    let _ = (reactionItems
+                    |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] reactionItems in
+                        guard let strongSelf else {
+                            return
+                        }
+                        
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messages.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, position: .top, animateInAsReplacement: true, action: { [weak self] value in
+                            if case .info = value, let strongSelf = self {
+                                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
+                                |> deliverOnMainQueue).startStandalone(next: { peer in
+                                    guard let strongSelf = self, let peer = peer, let navigationController = strongSelf.effectiveNavigationController else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil, forceOpenChat: true))
+                                })
+                                return true
+                            }
+                            return false
+                        }, additionalView: messages.count > 0 ? chatShareToSavedMessagesAdditionalView(strongSelf, reactionItems: reactionItems, correlationIds: correlationIds) : nil), in: .current)
                     })
+                    
+                    let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: mappedMessages)
                     |> deliverOnMainQueue).startStandalone(next: { messageIds in
                         if let strongSelf = self {
                             let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in

@@ -950,7 +950,15 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             case let .aroundId(aroundId):
                                 filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
                                 strictFilledIndices = IndexSet(integersIn: Int(min(aroundId.id, messageRange.lowerBound)) ... Int(max(aroundId.id, messageRange.upperBound)))
+                                var shouldFillAround = false
                                 if peerInput.requestThreadId(accountPeerId: accountPeerId) != nil {
+                                    shouldFillAround = true
+                                }
+                                if case .customTag = space {
+                                    shouldFillAround = true
+                                }
+                                
+                                if shouldFillAround {
                                     if ids.count <= count / 2 - 1 {
                                         filledRange = minMaxRange
                                     }

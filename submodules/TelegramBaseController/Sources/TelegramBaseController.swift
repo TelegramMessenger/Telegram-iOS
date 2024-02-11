@@ -29,7 +29,7 @@ public enum LocationBroadcastPanelSource {
 private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
     let presentImpl: (EngineMessage?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
-            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
+            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatFilterTag: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -65,6 +65,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     public private(set) var accessoryPanelContainerHeight: CGFloat = 0.0
     
     public let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
+    public var tempHideAccessoryPanels: Bool = false
+    
     public let locationBroadcastPanelSource: LocationBroadcastPanelSource
     public let groupCallPanelSource: GroupCallPanelSource
     
@@ -408,13 +410,17 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         let navigationHeight = super.navigationLayout(layout: layout).navigationFrame.height - self.additionalNavigationBarHeight
         
         let mediaAccessoryPanelHidden: Bool
-        switch self.mediaAccessoryPanelVisibility {
-        case .always:
-            mediaAccessoryPanelHidden = false
-        case .none:
+        if self.tempHideAccessoryPanels {
             mediaAccessoryPanelHidden = true
-        case let .specific(size):
-            mediaAccessoryPanelHidden = size != layout.metrics.widthClass
+        } else {
+            switch self.mediaAccessoryPanelVisibility {
+            case .always:
+                mediaAccessoryPanelHidden = false
+            case .none:
+                mediaAccessoryPanelHidden = true
+            case let .specific(size):
+                mediaAccessoryPanelHidden = size != layout.metrics.widthClass
+            }
         }
         
         var additionalHeight: CGFloat = 0.0

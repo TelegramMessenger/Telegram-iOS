@@ -10860,6 +10860,7 @@ Sorry for the inconvenience.";
 "Chat.PanelStatusAuthorHidden" = "Senders of these messages restricted to link\ntheir name when forwarding.";
 "Chat.SavedMessagesChatsTooltip" = "Tap to view your Saved Messages organized by type or source";
 
+"Chat.ConfirmationDeleteFromSavedMessages" = "Delete from Saved Messages";
 "Chat.ConfirmationRemoveFromSavedMessages" = "Remove from Saved Messages";
 
 "Premium.MaxSavedPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some that are currently pinned or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
@@ -10934,7 +10935,7 @@ Sorry for the inconvenience.";
 
 "Chat.ContextMenuTagsTitle" = "Tag the message with an emoji for quick access later";
 
-"Chat.ReactionContextMenu.FilterByTag" = "Fiter by Tag";
+"Chat.ReactionContextMenu.FilterByTag" = "Filter by Tag";
 "Chat.ReactionContextMenu.RemoveTag" = "Remove Tag";
 
 "Chat.EmptyStateMessagingRestrictedToPremium.Text" = "Subscribe to **Premium**\nto message **%@**.";
@@ -10948,9 +10949,6 @@ Sorry for the inconvenience.";
 "Chat.MessagingRestrictedPlaceholderAction" = "Learn more...";
 
 "Chat.SearchTagsPlaceholder" = "Search messages or tags";
-
-"Chat.TagSearchShowMessages" = "Show Other Messages";
-"Chat.TagSearchHideMessages" = "Hide Other Messages";
 
 "PrivacyInfo.UpgradeToPremium.Title" = "Upgrade to Premium";
 "PrivacyInfo.UpgradeToPremium.ButtonTitle" = "Subscribe to Telegram Premium";
@@ -10966,9 +10964,80 @@ Sorry for the inconvenience.";
 "PrivacyInfo.ShowReadTime.PremiumInfo" = "Subscription will let you see **%@'s** read time without showing yours.";
 "PrivacyInfo.ShowReadTime.AlwaysToast.Text" = "Set **Last Seen** privacy to 'Nobody' or 'My Contacts.'";
 
+"Chat.ToastMessageTagged.Text" = "Message tagged with %@";
+"Chat.ToastMessagesTagged.Text" = "Messages tagged with %@";
+"Chat.ToastMessageTagged.Action" = "View";
+
 "Chat.PrivateMessageSeenTimestamp.Date" = "read %@";
 "Chat.PrivateMessageSeenTimestamp.TodayAt" = "read today at %@";
 "Chat.PrivateMessageSeenTimestamp.YesterdayAt" = "read yesterday at %@";
 
 "Settings.Privacy.ReadTimePremiumActive" = "Subcribed to Telegram Premium";
 "Settings.Privacy.ReadTimePremiumActiveFooter" = "Because you are a Telegram Premium subscriber, you will see the last seen and read time of all users who are sharing it with you – even if you are hiding yours.";
+
+"Privacy.VoiceMessages.NonPremiumHelp" = "Subscribe to Telegram Premium to restrict who can send you voice or video messages.\n\n[What is Telegram Premium?]()";
+
+"ChatList.DeleteSavedPeerMyNotesConfirmation" = "Are you sure you want to delete all messages from %@?";
+"ChatList.DeleteSavedPeerMyNotesConfirmationTitle" = "My Notes";
+
+"Conversation.ForwardOptions.SenderNamesRemoved" = "Sender names removed";
+
+"Login.Announce.Info" = "Notify people on Telegram who know my phone number that I signed up.";
+"Login.Announce.Notify" = "Notify";
+"Login.Announce.DontNotify" = "Do Not Notify";
+
+"Premium.Stories.Quality.Title" = "Higher Quality";
+"Premium.Stories.Quality.Text" = "View video stories in double the resolution.";
+
+"Premium.MessageTags" = "Tags for Messages";
+"Premium.MessageTagsInfo" = "Organize your Saved Messages with tags for quicker access.";
+"Premium.MessageTags.Proceed" = "About Telegram Premium";
+
+"Chat.SavedMessagesTabInfoText" = "Messages you send to **Saved Messages**";
+
+"VoiceOver.MessageSelectionButtonTag" = "Tag";
+
+"Chat.ReactionSelectionTitleAddTag" = "Tag a message with emojis for quick search";
+"Chat.ReactionSelectionTitleEditTag" = "Edit tags of selected messages";
+"Chat.ForwardToSavedMessageTagSelectionTitle" = "You can add a tag to the message";
+"Chat.ForwardToSavedMessagesTagSelectionTitle" = "You can add a tag to messages";
+
+"Chat.EditTagTitle.Placeholder" = "Name";
+"Chat.EditTagTitle.TitleSet" = "Set Name";
+"Chat.EditTagTitle.TitleEdit" = "Edit Name";
+"Chat.EditTagTitle.Text" = "You can label your emoji tag with a text name.";
+
+"Chat.SavedMessagesModeMenu.ViewAsChats" = "View as Chats";
+"Chat.SavedMessagesModeMenu.ViewAsMessages" = "View as Messages";
+
+"Story.ContextMenuHD" = "Increase Quality";
+"Story.ContextMenuSD" = "Decrease Quality";
+"Story.ToastQualitySD.Title" = "Quality Lowered";
+"Story.ToastQualitySD.Text" = "Stories will now download faster.";
+"Story.ToastQualityHD.Title" = "Quality Increased";
+"Story.ToastQualityHD.Text" = "You can lower the quality later for faster downloads.";
+
+"Story.UpgradeQuality.Title" = "High-Quality Stories";
+"Story.UpgradeQuality.Text" = "Subscribe to premium to view stories in higher resolution.";
+"Story.UpgradeQuality.Action" = "Increase Quality";
+"Story.UpgradeQuality.ActionSubtitle" = "Premium Required";
+
+"Chat.MessageContextMenu.NonPremiumTagsTitle" = "Organize your Saved Messages with tags for quicker access. [Learn more...]()";
+
+"Chat.TooltipAddTagLabel" = "Tap and hold to add a name to your tag";
+
+"Chat.MessageContextMenu.Remove" = "Remove";
+
+"Chat.TagsHeaderPanel.Unlock" = "Unlock";
+"Chat.TagsHeaderPanel.AddTags" = "Add tags";
+"Chat.TagsHeaderPanel.AddTagsSuffix" = "to your Saved Messages";
+"Chat.ReactionContextMenu.SetTagLabel" = "Set Name";
+"Chat.ReactionContextMenu.EditTagLabel" = "Edit Name";
+
+"Chat.BottomSearchPanel.MessageCountFormat" = "%1$@ %2$@";
+"Chat.BottomSearchPanel.MessageCount_1" = "message";
+"Chat.BottomSearchPanel.MessageCount_any" = "messages";
+
+"Chat.BottomSearchPanel.DisplayModeFormat" = "Show as %@";
+"Chat.BottomSearchPanel.DisplayModeChat" = "Chat";
+"Chat.BottomSearchPanel.DisplayModeList" = "List";

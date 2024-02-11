@@ -469,6 +469,13 @@ public final class ShareController: ViewController {
             }
         }
     }
+    public var enqueued: (([PeerId], [Int64]) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.enqueued = enqueued
+            }
+        }
+    }
     
     public var openShareAsImage: (([Message]) -> Void)?
     
@@ -713,6 +720,7 @@ public final class ShareController: ViewController {
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues, shareStory: self.shareStory)
         self.controllerNode.completed = self.completed
+        self.controllerNode.enqueued = self.enqueued
         self.controllerNode.present = { [weak self] c in
             self?.presentInGlobalOverlay(c)
         }
@@ -1841,7 +1849,7 @@ public final class ShareController: ViewController {
                     case let .progress(value):
                         return .progress(value)
                     case .done:
-                        return .done
+                        return .done([])
                     }
                 }
             }
@@ -1876,21 +1884,21 @@ public final class ShareController: ViewController {
             }
             |> mapToSignal { progressSets -> Signal<ShareState, ShareControllerError> in
                 if progressSets.isEmpty {
-                    return .single(.done)
+                    return .single(.done([]))
                 }
                 for item in progressSets {
                     if case .progress = item {
                         return .complete()
                     }
                 }
-                return .single(.done)
+                return .single(.done([]))
             }
         }
     }
     
     private func shareLegacy(text: String, peerIds: [EnginePeer.Id], topicIds: [EnginePeer.Id: Int64], showNames: Bool, silently: Bool) -> Signal<ShareState, ShareControllerError> {
         guard let currentContext = self.currentContext as? ShareControllerAppAccountContext else {
-            return .single(.done)
+            return .single(.done([]))
         }
         return currentContext.context.engine.data.get(EngineDataMap(
             peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))
@@ -1923,6 +1931,8 @@ public final class ShareController: ViewController {
                     })
                 }
             }
+            
+            var correlationIds: [Int64] = []
             
             switch subject {
             case let .url(url):
@@ -2205,7 +2215,9 @@ public final class ShareController: ViewController {
                             return .fail(.generic)
                         }
                         
-                        messagesToEnqueue.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId.flatMap { EngineMessageReplySubject(messageId: $0, quote: nil) }, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        correlationIds.append(correlationId)
+                        messagesToEnqueue.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId.flatMap { EngineMessageReplySubject(messageId: $0, quote: nil) }, replyToStoryId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: []))
                     }
                     for message in messages {
                         for media in message.media {
@@ -2263,7 +2275,9 @@ public final class ShareController: ViewController {
                             }
                         }
                         
-                        messagesToEnqueue.append(.forward(source: message.id, threadId: threadId, grouping: .auto, attributes: [], correlationId: nil))
+                        let correlationId = Int64.random(in: Int64.min ... Int64.max)
+                        correlationIds.append(correlationId)
+                        messagesToEnqueue.append(.forward(source: message.id, threadId: threadId, grouping: .auto, attributes: [], correlationId: correlationId))
                     }
                     messagesToEnqueue = transformMessages(messagesToEnqueue, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: currentContext.context.account, peerId: peerId, messages: messagesToEnqueue))
@@ -2277,7 +2291,7 @@ public final class ShareController: ViewController {
                     case let .progress(value):
                         return .progress(value)
                     case .done:
-                        return .done
+                        return .done([])
                     }
                 }
             }
@@ -2326,7 +2340,7 @@ public final class ShareController: ViewController {
                         }
                     }
                     if !hasStatuses {
-                        return .single(.done)
+                        return .single(.done(correlationIds))
                     }
                     return .complete()
                 }

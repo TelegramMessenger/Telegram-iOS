@@ -5,19 +5,39 @@ import AccountContext
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
 
-func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
+func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, force: Bool) -> ChatTitleAccessoryPanelNode? {
+    if !force, case .standard(.embedded) = chatPresentationInterfaceState.mode {
+        return nil
+    }
+    
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
     if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
         return nil
     }
-    if let search = chatPresentationInterfaceState.search, chatPresentationInterfaceState.hasSearchTags {
-        if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId, case .everything = search.domain {
+    if let search = chatPresentationInterfaceState.search {
+        var matches = false
+        if chatPresentationInterfaceState.chatLocation.peerId == context.account.peerId {
+            if chatPresentationInterfaceState.hasSearchTags || !chatPresentationInterfaceState.isPremium {
+                if case .everything = search.domain {
+                    matches = true
+                } else if case .tag = search.domain, search.query.isEmpty {
+                    matches = true
+                }
+            }
+        }
+        if case .standard(.embedded) = chatPresentationInterfaceState.mode {
+            if !chatPresentationInterfaceState.isPremium {
+                matches = false
+            }
+        }
+        
+        if matches {
             if let currentPanel = currentPanel as? ChatSearchTitleAccessoryPanelNode {
                 return currentPanel
             } else {
-                let panel = ChatSearchTitleAccessoryPanelNode(context: context)
+                let panel = ChatSearchTitleAccessoryPanelNode(context: context, chatLocation: chatPresentationInterfaceState.chatLocation)
                 panel.interfaceInteraction = interfaceInteraction
                 return panel
             }

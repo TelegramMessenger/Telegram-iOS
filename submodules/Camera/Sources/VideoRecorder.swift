@@ -40,11 +40,12 @@ private final class VideoRecorderImpl {
     
     private var pendingAudioSampleBuffers: [CMSampleBuffer] = []
     
-    private var _duration: CMTime = .zero
+    private var _duration = Atomic<CMTime>(value: .zero)
     public var duration: CMTime {
-        self.queue.sync { _duration }
+        return self._duration.with { $0 }
     }
         
+    private var startedSession = false
     private var lastVideoSampleTime: CMTime = .invalid
     private var recordingStartSampleTime: CMTime = .invalid
     private var recordingStopSampleTime: CMTime = .invalid
@@ -59,7 +60,11 @@ private final class VideoRecorderImpl {
     
     private let error = Atomic<Error?>(value: nil)
     
-    private var stopped = false
+    private var _stopped = Atomic<Bool>(value: false)
+    private var stopped: Bool {
+        return self._stopped.with { $0 }
+    }
+    
     private var hasAllVideoBuffers = false
     private var hasAllAudioBuffers = false
     
@@ -113,20 +118,21 @@ private final class VideoRecorderImpl {
         }
     }
     
+    
+    private var previousPresentationTime: Double?
+    private var previousAppendTime: Double?
+    
     public func appendVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        if let _ = self.hasError() {
-            return
-        }
-        
-        guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer), CMFormatDescriptionGetMediaType(formatDescription) == kCMMediaType_Video else {
-            return
-        }
-
-        let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         self.queue.async {
-            guard !self.stopped && self.error.with({ $0 }) == nil else {
+            guard self.hasError() == nil && !self.stopped else {
                 return
             }
+            
+            guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer), CMFormatDescriptionGetMediaType(formatDescription) == kCMMediaType_Video else {
+                return
+            }
+            let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            
             var failed = false
             if self.videoInput == nil {
                 Logger.shared.log("VideoRecorder", "Try adding video input")
@@ -159,36 +165,56 @@ private final class VideoRecorderImpl {
                     return
                 }
                 if self.videoInput != nil && (self.audioInput != nil || !self.configuration.hasAudio) {
+                    print("startWriting")
+                    let start = CACurrentMediaTime()
                     if !self.assetWriter.startWriting() {
                         if let error = self.assetWriter.error {
                             self.transitionToFailedStatus(error: .avError(error))
-                            return
                         }
                     }
-                    
-                    self.assetWriter.startSession(atSourceTime: presentationTime)
-                    self.recordingStartSampleTime = presentationTime
-                    self.lastVideoSampleTime = presentationTime
+                    print("started In \(CACurrentMediaTime() - start)")
+                    return
                 }
+            } else if self.assetWriter.status == .writing && !self.startedSession {
+                print("Started session at \(presentationTime)")
+                self.assetWriter.startSession(atSourceTime: presentationTime)
+                self.recordingStartSampleTime = presentationTime
+                self.lastVideoSampleTime = presentationTime
+                self.startedSession = true
             }
             
             if self.recordingStartSampleTime == .invalid || sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
                 return
             }
            
-            if self.assetWriter.status == .writing {
+            if self.assetWriter.status == .writing && self.startedSession {
                 if self.recordingStopSampleTime != .invalid && sampleBuffer.presentationTimestamp > self.recordingStopSampleTime {
                     self.hasAllVideoBuffers = true
                     self.maybeFinish()
                     return
                 }
-                
-                if let videoInput = self.videoInput, videoInput.isReadyForMoreMediaData {
+
+                if let videoInput = self.videoInput {
+                    while (!videoInput.isReadyForMoreMediaData)
+                    {
+                        let maxDate = Date(timeIntervalSinceNow: 0.05)
+                        RunLoop.current.run(until: maxDate)
+                    }
+                }
+
+                if let videoInput = self.videoInput {
+                    let time = CACurrentMediaTime()
+                    if let previousPresentationTime = self.previousPresentationTime, let previousAppendTime = self.previousAppendTime {
+                        print("appending \(presentationTime.seconds) (\(presentationTime.seconds - previousPresentationTime) ) on \(time) (\(time - previousAppendTime)")
+                    }
+                    self.previousPresentationTime = presentationTime.seconds
+                    self.previousAppendTime = time
+                    
                     if videoInput.append(sampleBuffer) {
                         self.lastVideoSampleTime = presentationTime
                         let startTime = self.recordingStartSampleTime
                         let duration = presentationTime - startTime
-                        self._duration = duration
+                        let _ = self._duration.modify { _ in return duration }
                     }
                     
                     if !self.savedTransitionImage, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
@@ -220,16 +246,12 @@ private final class VideoRecorderImpl {
     }
     
     public func appendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-        if let _ = self.hasError() {
-            return
-        }
-        
-        guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer), CMFormatDescriptionGetMediaType(formatDescription) == kCMMediaType_Audio else {
-            return
-        }
-        
         self.queue.async {
-            guard !self.stopped && self.error.with({ $0 }) == nil else {
+            guard self.hasError() == nil && !self.stopped else {
+                return
+            }
+            
+            guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer), CMFormatDescriptionGetMediaType(formatDescription) == kCMMediaType_Audio else {
                 return
             }
             
@@ -274,7 +296,7 @@ private final class VideoRecorderImpl {
                 return
             }
                                     
-            if self.recordingStartSampleTime != .invalid { //self.assetWriter.status == .writing {
+            if self.recordingStartSampleTime != .invalid {
                 if sampleBuffer.presentationTimestamp < self.recordingStartSampleTime {
                     return
                 }
@@ -304,7 +326,7 @@ private final class VideoRecorderImpl {
                 }
                 return
             }
-            self.stopped = true
+            let _ = self._stopped.modify { _ in return true }
             self.pendingAudioSampleBuffers = []
             if self.assetWriter.status == .writing {
                 self.assetWriter.cancelWriting()
@@ -318,7 +340,7 @@ private final class VideoRecorderImpl {
     }
     
     public var isRecording: Bool {
-        self.queue.sync { !(self.hasAllVideoBuffers && self.hasAllAudioBuffers) }
+        return !self.stopped
     }
     
     public func stopRecording() {
@@ -334,60 +356,58 @@ private final class VideoRecorderImpl {
         }
     }
     
-    public func maybeFinish() {
-        self.queue.async {
-            guard self.hasAllVideoBuffers && self.hasAllVideoBuffers else {
-                return
-            }
-            self.stopped = true
-            self.finish()
+    private func maybeFinish() {
+        dispatchPrecondition(condition: .onQueue(self.queue))
+        guard self.hasAllVideoBuffers && self.hasAllVideoBuffers && !self.stopped else {
+            return
         }
+        let _ = self._stopped.modify { _ in return true }
+        self.finish()
     }
     
-    public func finish() {
-        self.queue.async {
-            let completion = self.completion
-            if self.recordingStopSampleTime == .invalid {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-                return
+    private func finish() {
+        dispatchPrecondition(condition: .onQueue(self.queue))
+        let completion = self.completion
+        if self.recordingStopSampleTime == .invalid {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
-                        
-            if let _ = self.error.with({ $0 }) {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-                return
+            return
+        }
+        
+        if let _ = self.error.with({ $0 }) {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
-            
-            if !self.tryAppendingPendingAudioBuffers() {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-                return
+            return
+        }
+        
+        if !self.tryAppendingPendingAudioBuffers() {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
-            
-            if self.assetWriter.status == .writing {
-                self.assetWriter.finishWriting {
-                    if let _ = self.assetWriter.error {
-                        DispatchQueue.main.async {
-                            completion(false, nil, nil)
-                        }
-                    } else {
-                        DispatchQueue.main.async {
-                            completion(true, self.transitionImage, self.positionChangeTimestamps)
-                        }
+            return
+        }
+        
+        if self.assetWriter.status == .writing {
+            self.assetWriter.finishWriting {
+                if let _ = self.assetWriter.error {
+                    DispatchQueue.main.async {
+                        completion(false, nil, nil)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(true, self.transitionImage, self.positionChangeTimestamps)
                     }
                 }
-            } else if let _ = self.assetWriter.error {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
-            } else {
-                DispatchQueue.main.async {
-                    completion(false, nil, nil)
-                }
+            }
+        } else if let _ = self.assetWriter.error {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
+            }
+        } else {
+            DispatchQueue.main.async {
+                completion(false, nil, nil)
             }
         }
     }
@@ -423,7 +443,13 @@ private final class VideoRecorderImpl {
     }
     
     private func internalAppendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> Bool {
-        if let audioInput = self.audioInput, audioInput.isReadyForMoreMediaData {
+        if self.startedSession, let audioInput = self.audioInput {
+            while (!audioInput.isReadyForMoreMediaData)
+            {
+                let maxDate = Date(timeIntervalSinceNow: 0.05)
+                RunLoop.current.run(until: maxDate)
+            }
+            
             if !audioInput.append(sampleBuffer) {
                 if let _ = self.assetWriter.error {
                     return false

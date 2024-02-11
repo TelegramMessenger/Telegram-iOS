@@ -570,6 +570,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         layoutInput: dateLayoutInput,
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
+                        savedMessageTags: item.associatedData.savedMessageTags,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
@@ -577,7 +578,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && (!item.associatedData.isInPinnedListMode || isReplyThread),
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
@@ -714,11 +715,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     
                                     strongSelf.addSubnode(statusNode)
                                     
-                                    statusNode.reactionSelected = { [weak strongSelf] value in
+                                    statusNode.reactionSelected = { [weak strongSelf] _, value in
                                         guard let strongSelf, let item = strongSelf.item else {
                                             return
                                         }
-                                        item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                                        item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
                                     }
                                     statusNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
                                         guard let strongSelf, let item = strongSelf.item else {

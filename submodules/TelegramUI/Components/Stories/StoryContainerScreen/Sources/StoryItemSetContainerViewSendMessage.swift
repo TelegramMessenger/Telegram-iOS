@@ -49,6 +49,7 @@ import TelegramNotices
 import ObjectiveC
 import LocationUI
 import ReactionSelectionNode
+import StoryQualityUpgradeSheetScreen
 
 private var ObjCKey_DeinitWatcher: Int?
 
@@ -1107,7 +1108,7 @@ final class StoryItemSetContainerSendMessage {
                                         guard let navigationController = controller.navigationController as? NavigationController else {
                                             return
                                         }
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), forceOpenChat: true))
                                     })
                                 }
                                 return false
@@ -3276,6 +3277,29 @@ final class StoryItemSetContainerSendMessage {
             view.updateIsProgressPaused()
             controller.push(sheet)
         })
+    }
+    
+    func presentQualityUpgrade(view: StoryItemSetContainerComponent.View, action: @escaping () -> Void) {
+        guard let component = view.component, let controller = component.controller() else {
+            return
+        }
+        
+        let sheet = StoryQualityUpgradeSheetScreen(
+            context: component.context,
+            buttonAction: {
+                action()
+            }
+        )
+        sheet.wasDismissed = { [weak self, weak view] in
+            guard let self, let view else {
+                return
+            }
+            self.actionSheet = nil
+            view.updateIsProgressPaused()
+        }
+        self.actionSheet = sheet
+        view.updateIsProgressPaused()
+        controller.push(sheet)
     }
         
     private var selectedMediaArea: MediaArea?

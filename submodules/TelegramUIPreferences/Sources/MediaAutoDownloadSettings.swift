@@ -369,8 +369,8 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
     public var wifi: MediaAutoDownloadConnection
     
     public var downloadInBackground: Bool
-    
     public var energyUsageSettings: EnergyUsageSettings
+    public var highQualityStories: Bool
     
     public static var defaultSettings: MediaAutoDownloadSettings {
         let mb: Int64 = 1024 * 1024
@@ -397,15 +397,16 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
                 stories: MediaAutoDownloadCategory(contacts: true, otherPrivate: true, groups: true, channels: true, sizeLimit: 20 * mb, predownload: false)
             )
         )
-        return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), downloadInBackground: true, energyUsageSettings: EnergyUsageSettings.default)
+        return MediaAutoDownloadSettings(presets: presets, cellular: MediaAutoDownloadConnection(enabled: true, preset: .medium, custom: nil), wifi: MediaAutoDownloadConnection(enabled: true, preset: .high, custom: nil), downloadInBackground: true, energyUsageSettings: EnergyUsageSettings.default, highQualityStories: false)
     }
     
-    public init(presets: MediaAutoDownloadPresets, cellular: MediaAutoDownloadConnection, wifi: MediaAutoDownloadConnection, downloadInBackground: Bool, energyUsageSettings: EnergyUsageSettings) {
+    public init(presets: MediaAutoDownloadPresets, cellular: MediaAutoDownloadConnection, wifi: MediaAutoDownloadConnection, downloadInBackground: Bool, energyUsageSettings: EnergyUsageSettings, highQualityStories: Bool) {
         self.presets = presets
         self.cellular = cellular
         self.wifi = wifi
         self.downloadInBackground = downloadInBackground
         self.energyUsageSettings = energyUsageSettings
+        self.highQualityStories = highQualityStories
     }
     
     public init(from decoder: Decoder) throws {
@@ -419,8 +420,8 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
         self.wifi = (try? container.decodeIfPresent(MediaAutoDownloadConnection.self, forKey: "wifi")) ?? defaultSettings.wifi
 
         self.downloadInBackground = try container.decode(Int32.self, forKey: "downloadInBackground") != 0
-        
         self.energyUsageSettings = (try container.decodeIfPresent(EnergyUsageSettings.self, forKey: "energyUsageSettings")) ?? EnergyUsageSettings.default
+        self.highQualityStories = try container.decodeIfPresent(Bool.self, forKey: "highQualityStories") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -430,14 +431,15 @@ public struct MediaAutoDownloadSettings: Codable, Equatable {
         try container.encode(self.wifi, forKey: "wifi")
         try container.encode((self.downloadInBackground ? 1 : 0) as Int32, forKey: "downloadInBackground")
         try container.encode(self.energyUsageSettings, forKey: "energyUsageSettings")
+        try container.encode(self.highQualityStories, forKey: "highQualityStories")
     }
     
     public func connectionSettings(for networkType: MediaAutoDownloadNetworkType) -> MediaAutoDownloadConnection {
         switch networkType {
-            case .cellular:
-                return self.cellular
-            case .wifi:
-                return self.wifi
+        case .cellular:
+            return self.cellular
+        case .wifi:
+            return self.wifi
         }
     }
     

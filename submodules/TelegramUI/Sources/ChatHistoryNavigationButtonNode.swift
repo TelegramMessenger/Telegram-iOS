@@ -17,10 +17,11 @@ enum ChatHistoryNavigationButtonType {
 
 class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
     let containerNode: ContextExtractedContentContainingNode
-    private let buttonNode: HighlightTrackingButtonNode
+    let buttonNode: HighlightTrackingButtonNode
     private let backgroundNode: NavigationBackgroundNode
     private var backgroundContent: WallpaperBubbleBackgroundNode?
-    private let imageNode: ASImageNode
+    let backgroundImageNode: ASImageNode
+    let imageNode: ASImageNode
     private let badgeBackgroundNode: ASImageNode
     private let badgeTextNode: ImmediateAnimatedCountLabelNode
     
@@ -56,6 +57,11 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
 
         self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
+        self.backgroundImageNode = ASImageNode()
+        self.backgroundImageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBackground(theme)
+        self.backgroundImageNode.isLayerBacked = true
+        
+        self.backgroundImageNode.displayWithoutProcessing = true
         self.imageNode = ASImageNode()
         self.imageNode.displayWithoutProcessing = true
         switch type {
@@ -99,7 +105,9 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: size.width / 2.0, transition: .immediate)
 
+        self.buttonNode.addSubnode(self.backgroundImageNode)
         self.buttonNode.addSubnode(self.imageNode)
+        self.backgroundImageNode.frame = CGRect(origin: CGPoint(), size: size)
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
         
         self.buttonNode.addSubnode(self.badgeBackgroundNode)
@@ -123,6 +131,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
                 case .reactions:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryReactionsButtonImage(theme)
             }
+            self.backgroundImageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBackground(theme)
             self.badgeBackgroundNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBadgeImage(theme)
             
             var segments: [AnimatedCountLabelNode.Segment] = []

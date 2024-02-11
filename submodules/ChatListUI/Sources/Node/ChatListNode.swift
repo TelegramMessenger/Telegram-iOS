@@ -427,7 +427,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
                                 },
-                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging
+                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
+                                displayAsTopicList: peerEntry.displayAsTopicList
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -796,7 +797,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                         hasUnseenCloseFriends: storyState.hasUnseenCloseFriends
                                     )
                                 },
-                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging
+                                requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
+                                displayAsTopicList: peerEntry.displayAsTopicList
                             )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -1278,6 +1280,8 @@ public final class ChatListNode: ListView {
     public let isMainTab = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let suggestedChatListNotice = Promise<ChatListNotice?>(nil)
     
+    public var synchronousDrawingWhenNotAnimated: Bool = false
+    
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool, autoSetReady: Bool, isMainTab: Bool?) {
         self.context = context
         self.location = location
@@ -1438,10 +1442,16 @@ public final class ChatListNode: ListView {
                         }
                         switch error {
                         case let .limitReached(count):
+                            var replaceImpl: ((ViewController) -> Void)?
                             let controller = PremiumLimitScreen(context: context, subject: .pinnedSavedPeers, count: Int32(count), action: {
+                                let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                replaceImpl?(premiumScreen)
                                 return true
                             })
                             self.push?(controller)
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
                         default:
                             break
                         }
@@ -1977,39 +1987,6 @@ public final class ChatListNode: ListView {
         }
         
         let currentPeerId: EnginePeer.Id = context.account.peerId
-
-        /*let contactList: Signal<EngineContactList?, NoError>
-        if case let .chatList(appendContacts) = mode, appendContacts {
-            contactList = self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true))
-            |> map(Optional.init)
-        } else {
-            contactList = .single(nil)
-        }
-        let _ = contactList*/
-
-        
-        /*let emptyInitialView = ChatListNodeView(
-            originalList: EngineChatList(
-                items: [],
-                groupItems: [],
-                additionalItems: [],
-                hasEarlier: false,
-                hasLater: false,
-                isLoading: false
-            ),
-            filteredEntries: [ChatListNodeEntry.HeaderEntry],
-            isLoading: false,
-            filter: nil
-        )
-        let _ = previousView.swap(emptyInitialView)
-        
-        let _ = (preparedChatListNodeViewTransition(from: nil, to: emptyInitialView, reason: .initial, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: nil, searchMode: false)
-        |> map { mappedChatListNodeViewListTransition(context: context, nodeInteraction: nodeInteraction, location: location, filterData: nil, mode: mode, isPeerEnabled: nil, transition: $0) }).start(next: { [weak self] value in
-            guard let self else {
-                return
-            }
-            let _ = self.enqueueTransition(value).start()
-        })*/
         
         let contacts: Signal<[ChatListContactPeer], NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil, case .chatList = mode {
@@ -3414,7 +3391,7 @@ public final class ChatListNode: ListView {
             
             var options = transition.options
             //options.insert(.Synchronous)
-            if self.view.window != nil {
+            if self.view.window != nil || self.synchronousDrawingWhenNotAnimated {
                 if !options.contains(.AnimateInsertion) {
                     options.insert(.PreferSynchronousDrawing)
                     options.insert(.PreferSynchronousResourceLoading)

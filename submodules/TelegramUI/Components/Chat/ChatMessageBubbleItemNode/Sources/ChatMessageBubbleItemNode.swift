@@ -2120,6 +2120,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                     constrainedSize: CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: item.associatedData.availableReactions,
+                    savedMessageTags: item.associatedData.savedMessageTags,
                     reactions: dateReactionsAndPeers.reactions,
                     reactionPeers: dateReactionsAndPeers.peers,
                     displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
@@ -2127,7 +2128,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
-                    canViewReactionList: canViewMessageReactionList(message: message),
+                    canViewReactionList: canViewMessageReactionList(message: message, isInline: item.associatedData.isInline),
                     animationCache: item.controllerInteraction.presentationContext.animationCache,
                     animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                 ))
@@ -2438,8 +2439,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 presentationData: item.presentationData,
                 presentationContext: item.controllerInteraction.presentationContext,
                 availableReactions: item.associatedData.availableReactions,
+                savedMessageTags: item.associatedData.savedMessageTags,
                 reactions: bubbleReactions,
                 message: item.message,
+                associatedData: item.associatedData,
                 accountPeer: item.associatedData.accountPeer,
                 isIncoming: incoming,
                 constrainedWidth: maximumNodeWidth
@@ -3789,7 +3792,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
                         return
                     }
-                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
                 }
                 reactionButtonsNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
@@ -3873,13 +3876,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.messageAccessibilityArea.frame = backgroundFrame
             }
             if let shareButtonNode = strongSelf.shareButtonNode {
-                let currentBackgroundFrame = strongSelf.backgroundNode.frame
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: disablesComments)
                 
-                
-                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? currentBackgroundFrame.minX - buttonSize.width : currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                var buttonFrame = CGRect(origin: CGPoint(x: !incoming ? backgroundFrame.minX - buttonSize.width - 8.0 : backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 if let shareButtonOffset = shareButtonOffset {
-                    buttonFrame.origin.x = shareButtonOffset.x
+                    if incoming {
+                        buttonFrame.origin.x = shareButtonOffset.x
+                    }
                     buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
                 } else if !disablesComments {
                     buttonFrame.origin.y = buttonFrame.origin.y - (buttonSize.height - 30.0)
@@ -4044,7 +4047,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         f()
                     case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: openContextMenu.tapMessage) {
-                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default)
+                            item.controllerInteraction.updateMessageReaction(openContextMenu.tapMessage, .default, false)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }
@@ -4053,7 +4056,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     item.controllerInteraction.clickThroughMessage()
                 } else if case .doubleTap = gesture {
                     if canAddMessageReactions(message: item.message) {
-                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                        item.controllerInteraction.updateMessageReaction(item.message, .default, false)
                     }
                 }
             }
@@ -4741,6 +4744,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let selectionNode = self.selectionNode {
                 selectionNode.updateSelected(selected, animated: animated)
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentSize.width, height: self.contentSize.height))
+                
                 selectionNode.frame = selectionFrame
                 selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);

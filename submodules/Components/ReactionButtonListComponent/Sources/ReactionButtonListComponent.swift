@@ -267,6 +267,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             var foreground: UInt32
             var extractedBackground: UInt32
             var extractedForeground: UInt32
+            var extractedSelectedForeground: UInt32
             var isSelected: Bool
         }
         
@@ -381,7 +382,11 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                         let foregroundColor: UIColor
                         if isExtracted {
                             backgroundColor = UIColor(argb: colors.extractedBackground)
-                            foregroundColor = UIColor(argb: colors.extractedForeground)
+                            if layout.colors.isSelected {
+                                foregroundColor = UIColor(argb: colors.extractedSelectedForeground)
+                            } else {
+                                foregroundColor = UIColor(argb: colors.extractedForeground)
+                            }
                         } else {
                             backgroundColor = UIColor(argb: colors.background)
                             foregroundColor = UIColor(argb: colors.foreground)
@@ -416,7 +421,12 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                             let isForegroundTransparent = foregroundColor.alpha < 1.0
                             context.setBlendMode(isForegroundTransparent ? .copy : .normal)
                             
-                            let textOrigin: CGFloat = 36.0
+                            let textOrigin: CGFloat
+                            if layout.isTag {
+                                textOrigin = 32.0
+                            } else {
+                                textOrigin = 36.0
+                            }
                             
                             var rightTextOrigin = textOrigin + totalComponentWidth
                             
@@ -642,26 +652,17 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             
             let boundingImageSize = CGSize(width: 20.0, height: 20.0)
             let imageSize: CGSize = boundingImageSize
-            /*if let file = spec.component.reaction.centerAnimation {
-                let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
-                imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
-            } else {
-                imageSize = boundingImageSize
-            }*/
             
             var counterComponents: [String] = []
-            for character in countString(Int64(spec.component.count)) {
-                counterComponents.append(String(character))
-            }
-            
-            /*#if DEBUG
-            if spec.component.count % 2 == 0 {
-                counterComponents.removeAll()
-                for character in "123.5K" {
+            var hasTitle = false
+            if let title = spec.component.reaction.title, !title.isEmpty {
+                hasTitle = true
+                counterComponents.append(title)
+            } else {
+                for character in countString(Int64(spec.component.count)) {
                     counterComponents.append(String(character))
                 }
             }
-            #endif*/
             
             let backgroundColor = spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground
             
@@ -671,7 +672,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             } else {
                 imageFrame = CGRect(origin: CGPoint(x: sideInsets + floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
             }
-            
             
             var counterLayout: CounterLayout?
             
@@ -683,8 +683,8 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 } else {
                     size.width -= 2.0
                 }
-            } else if spec.component.isTag {
-                size.width += 2.0
+            } else if spec.component.isTag && !hasTitle {
+                size.width += 1.0
             } else {
                 let counterSpec = CounterLayout.Spec(
                     stringComponents: counterComponents
@@ -700,6 +700,9 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 }
                 counterLayout = counterValue
                 size.width += spacing + counterValue.size.width
+                if spec.component.isTag {
+                    size.width += 5.0
+                }
             }
             
             let backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
@@ -707,6 +710,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
                 extractedBackground: spec.component.colors.extractedBackground,
                 extractedForeground: spec.component.colors.extractedForeground,
+                extractedSelectedForeground: spec.component.colors.extractedSelectedForeground,
                 isSelected: spec.component.chosenOrder != nil
             )
             var backgroundCounter: ReactionButtonAsyncNode.ContainerButtonNode.Counter?
@@ -763,6 +767,10 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     
     override init(frame: CGRect) {
         self.containerView = ContextExtractedContentContainingView()
+        
+        self.containerView.isMultipleTouchEnabled = false
+        self.containerView.isExclusiveTouch = true
+        
         self.buttonNode = ContainerButtonNode()
         
         self.iconView = ReactionIconView()
@@ -821,7 +829,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         guard let layout = self.layout else {
             return
         }
-        layout.spec.component.action(layout.spec.component.reaction.value)
+        layout.spec.component.action(self, layout.spec.component.reaction.value)
     }
     
     fileprivate func apply(layout: Layout, animation: ListViewItemUpdateAnimation, arguments: ReactionButtonsAsyncLayoutContainer.Arguments) {
@@ -1002,11 +1010,13 @@ public final class ReactionButtonComponent: Equatable {
         public var value: MessageReaction.Reaction
         public var centerAnimation: TelegramMediaFile?
         public var animationFileId: Int64?
+        public var title: String?
         
-        public init(value: MessageReaction.Reaction, centerAnimation: TelegramMediaFile?, animationFileId: Int64?) {
+        public init(value: MessageReaction.Reaction, centerAnimation: TelegramMediaFile?, animationFileId: Int64?, title: String?) {
             self.value = value
             self.centerAnimation = centerAnimation
             self.animationFileId = animationFileId
+            self.title = title
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
@@ -1017,6 +1027,9 @@ public final class ReactionButtonComponent: Equatable {
                 return false
             }
             if lhs.animationFileId != rhs.animationFileId {
+                return false
+            }
+            if lhs.title != rhs.title {
                 return false
             }
             return true
@@ -1030,6 +1043,7 @@ public final class ReactionButtonComponent: Equatable {
         public var selectedForeground: UInt32
         public var extractedBackground: UInt32
         public var extractedForeground: UInt32
+        public var extractedSelectedForeground: UInt32
         public var deselectedMediaPlaceholder: UInt32
         public var selectedMediaPlaceholder: UInt32
         
@@ -1040,6 +1054,7 @@ public final class ReactionButtonComponent: Equatable {
             selectedForeground: UInt32,
             extractedBackground: UInt32,
             extractedForeground: UInt32,
+            extractedSelectedForeground: UInt32,
             deselectedMediaPlaceholder: UInt32,
             selectedMediaPlaceholder: UInt32
         ) {
@@ -1049,6 +1064,7 @@ public final class ReactionButtonComponent: Equatable {
             self.selectedForeground = selectedForeground
             self.extractedBackground = extractedBackground
             self.extractedForeground = extractedForeground
+            self.extractedSelectedForeground = extractedSelectedForeground
             self.deselectedMediaPlaceholder = deselectedMediaPlaceholder
             self.selectedMediaPlaceholder = selectedMediaPlaceholder
         }
@@ -1061,7 +1077,7 @@ public final class ReactionButtonComponent: Equatable {
     public let isTag: Bool
     public let count: Int
     public let chosenOrder: Int?
-    public let action: (MessageReaction.Reaction) -> Void
+    public let action: (ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void
 
     public init(
         context: AccountContext,
@@ -1071,7 +1087,7 @@ public final class ReactionButtonComponent: Equatable {
         isTag: Bool,
         count: Int,
         chosenOrder: Int?,
-        action: @escaping (MessageReaction.Reaction) -> Void
+        action: @escaping (ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void
     ) {
         self.context = context
         self.colors = colors
@@ -1218,7 +1234,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
     
     public func update(
         context: AccountContext,
-        action: @escaping (MessageReaction.Reaction) -> Void,
+        action: @escaping (ReactionButtonAsyncNode, MessageReaction.Reaction) -> Void,
         reactions: [ReactionButtonsAsyncLayoutContainer.Reaction],
         colors: ReactionButtonComponent.Colors,
         isTag: Bool,

@@ -1732,11 +1732,13 @@ public final class AccountViewTracker {
                 if context.subscribers.isEmpty {
                     if let account = self.account {
                         let queue = self.queue
+                        Logger.shared.log("AccountViewTracker", "polledChannel: \(peerId) add keep polling")
                         context.disposable.set(keepPollingChannel(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peerId: peerId, stateManager: account.stateManager).start(next: { [weak context] isValidForTimeout in
                             queue.async {
                                 guard let context = context else {
                                     return
                                 }
+                                Logger.shared.log("AccountViewTracker", "polledChannel: \(peerId) set context isUpdated true for \(isValidForTimeout) seconds")
                                 context.isUpdated.set(
                                     .single(true)
                                     |> then(
@@ -1756,6 +1758,7 @@ public final class AccountViewTracker {
                         if let context = self.channelPollingContexts[peerId] {
                             context.subscribers.remove(index)
                             if context.subscribers.isEmpty {
+                                Logger.shared.log("AccountViewTracker", "polledChannel: \(peerId) remove keep polling")
                                 context.disposable.set(nil)
                             }
                         }

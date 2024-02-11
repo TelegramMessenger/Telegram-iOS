@@ -355,7 +355,11 @@ final class MutableMessageHistoryView {
         self.combinedReadStates = combinedReadStates
         self.transientReadStates = transientReadStates
         self.tag = tag
-        self.appendMessagesFromTheSameGroup = appendMessagesFromTheSameGroup
+        if case .customTag = tag {
+            self.appendMessagesFromTheSameGroup = true
+        } else {
+            self.appendMessagesFromTheSameGroup = appendMessagesFromTheSameGroup
+        }
         self.namespaces = namespaces
         self.fillCount = count
         self.topTaggedMessages = topTaggedMessages

@@ -20,6 +20,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/AppBundle",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoPaneNode",
+        "//submodules/ContextUI",
     ],
     visibility = [
         "//visibility:public",

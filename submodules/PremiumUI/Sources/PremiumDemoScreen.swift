@@ -477,7 +477,7 @@ private final class DemoSheetContent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.source = source
-        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers]
+        self.order = order ?? [.moreUpload, .fasterDownload, .voiceToText, .noAds, .uniqueReactions, .premiumStickers, .animatedEmoji, .advancedChatManagement, .profileBadge, .animatedUserpics, .appIcons, .translation, .stories, .colors, .wallpapers, .messageTags]
         self.action = action
         self.dismiss = dismiss
     }
@@ -981,6 +981,25 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 )
+                availableItems[.messageTags] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.messageTags,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["saved_tags"],
+                                    decoration: .tag
+                                )),
+                                title: strings.Premium_MessageTags,
+                                text: strings.Premium_MessageTagsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
                 
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
@@ -1083,6 +1102,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_Wallpaper_Proceed
                         case .colors:
                             buttonText = strings.Premium_Colors_Proceed
+                        case .messageTags:
+                            buttonText = strings.Premium_MessageTags_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }
@@ -1118,9 +1139,9 @@ private final class DemoSheetContent: CombinedComponent {
                         text = strings.Premium_ColorsInfo
                     case .wallpapers:
                         text = strings.Premium_WallpapersInfo
-                    case .doubleLimits:
-                        text = ""
-                    case .stories:
+                    case .messageTags:
+                        text = strings.Premium_MessageTagsInfo
+                    case .doubleLimits, .stories:
                         text = ""
                     }
                 
@@ -1338,6 +1359,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case stories
         case colors
         case wallpapers
+        case messageTags
     }
     
     public enum Source: Equatable {

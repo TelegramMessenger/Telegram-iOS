@@ -5,7 +5,139 @@ import Postbox
 import AccountContext
 import ReactionSelectionNode
 
-func topMessageReactions(context: AccountContext, message: Message) -> Signal<[ReactionItem], NoError> {
+public enum AllowedReactions {
+    case set(Set<MessageReaction.Reaction>)
+    case all
+}
+
+public func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
+    if message.id.peerId == context.account.peerId {
+        return .single(.all)
+    }
+    
+    if message.containsSecretMedia {
+        return .single(AllowedReactions.set(Set()))
+    }
+    
+    return combineLatest(
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
+            TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: message.id.peerId)
+        ),
+        context.engine.stickers.availableReactions() |> take(1)
+    )
+    |> map { data, availableReactions -> AllowedReactions? in
+        let (peer, allowedReactions) = data
+        
+        if let effectiveReactions = message.effectiveReactions(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)), effectiveReactions.count >= 11 {
+            return .set(Set(effectiveReactions.map(\.value)))
+        }
+        
+        switch allowedReactions {
+        case .unknown:
+            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                if let availableReactions = availableReactions {
+                    return .set(Set(availableReactions.reactions.map(\.value)))
+                } else {
+                    return .set(Set())
+                }
+            }
+            return .all
+        case let .known(value):
+            switch value {
+            case .all:
+                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                    if let availableReactions = availableReactions {
+                        return .set(Set(availableReactions.reactions.map(\.value)))
+                    } else {
+                        return .set(Set())
+                    }
+                }
+                return .all
+            case let .limited(reactions):
+                return .set(Set(reactions))
+            case .empty:
+                return .set(Set())
+            }
+        }
+    }
+}
+
+public func tagMessageReactions(context: AccountContext) -> Signal<[ReactionItem], NoError> {
+    return combineLatest(
+        context.engine.stickers.availableReactions(),
+        context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudDefaultTagReactions], namespaces: [ItemCollectionId.Namespace.max - 1], aroundIndex: nil, count: 10000000)
+    )
+    |> take(1)
+    |> map { availableReactions, view -> [ReactionItem] in
+        var defaultTagReactions: OrderedItemListView?
+        for orderedView in view.orderedItemListsViews {
+            if orderedView.collectionId == Namespaces.OrderedItemList.CloudDefaultTagReactions {
+                defaultTagReactions = orderedView
+            }
+        }
+        
+        var result: [ReactionItem] = []
+        var existingIds = Set<MessageReaction.Reaction>()
+        
+        if let defaultTagReactions {
+            for item in defaultTagReactions.items {
+                guard let topReaction = item.contents.get(RecentReactionItem.self) else {
+                    continue
+                }
+                switch topReaction.content {
+                case let .builtin(value):
+                    if let reaction = availableReactions?.reactions.first(where: { $0.value == .builtin(value) }) {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
+                        }
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
+                        }
+                        
+                        if existingIds.contains(reaction.value) {
+                            continue
+                        }
+                        existingIds.insert(reaction.value)
+                        
+                        result.append(ReactionItem(
+                            reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                            appearAnimation: reaction.appearAnimation,
+                            stillAnimation: reaction.selectAnimation,
+                            listAnimation: centerAnimation,
+                            largeListAnimation: reaction.activateAnimation,
+                            applicationAnimation: aroundAnimation,
+                            largeApplicationAnimation: reaction.effectAnimation,
+                            isCustom: false
+                        ))
+                    } else {
+                        continue
+                    }
+                case let .custom(file):
+                    if existingIds.contains(.custom(file.fileId.id)) {
+                        continue
+                    }
+                    existingIds.insert(.custom(file.fileId.id))
+                    
+                    result.append(ReactionItem(
+                        reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
+                        appearAnimation: file,
+                        stillAnimation: file,
+                        listAnimation: file,
+                        largeListAnimation: file,
+                        applicationAnimation: nil,
+                        largeApplicationAnimation: nil,
+                        isCustom: true
+                    ))
+                }
+            }
+        }
+        
+        return result
+    }
+}
+
+public func topMessageReactions(context: AccountContext, message: Message) -> Signal<[ReactionItem], NoError> {
     if message.id.peerId == context.account.peerId {
         var loadTags = false
         if let effectiveReactionsAttribute = message.effectiveReactionsAttribute(isTags: message.areReactionsTags(accountPeerId: context.account.peerId)) {
@@ -19,82 +151,8 @@ func topMessageReactions(context: AccountContext, message: Message) -> Signal<[R
             loadTags = true
         }
         
-        if "".isEmpty {
-            loadTags = false
-        }
-        
         if loadTags {
-            return combineLatest(
-                context.engine.stickers.availableReactions(),
-                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudDefaultTagReactions], namespaces: [ItemCollectionId.Namespace.max - 1], aroundIndex: nil, count: 10000000)
-            )
-            |> take(1)
-            |> map { availableReactions, view -> [ReactionItem] in
-                var defaultTagReactions: OrderedItemListView?
-                for orderedView in view.orderedItemListsViews {
-                    if orderedView.collectionId == Namespaces.OrderedItemList.CloudDefaultTagReactions {
-                        defaultTagReactions = orderedView
-                    }
-                }
-                
-                var result: [ReactionItem] = []
-                var existingIds = Set<MessageReaction.Reaction>()
-                
-                if let defaultTagReactions {
-                    for item in defaultTagReactions.items {
-                        guard let topReaction = item.contents.get(RecentReactionItem.self) else {
-                            continue
-                        }
-                        switch topReaction.content {
-                        case let .builtin(value):
-                            if let reaction = availableReactions?.reactions.first(where: { $0.value == .builtin(value) }) {
-                                guard let centerAnimation = reaction.centerAnimation else {
-                                    continue
-                                }
-                                guard let aroundAnimation = reaction.aroundAnimation else {
-                                    continue
-                                }
-                                
-                                if existingIds.contains(reaction.value) {
-                                    continue
-                                }
-                                existingIds.insert(reaction.value)
-                                
-                                result.append(ReactionItem(
-                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                                    appearAnimation: reaction.appearAnimation,
-                                    stillAnimation: reaction.selectAnimation,
-                                    listAnimation: centerAnimation,
-                                    largeListAnimation: reaction.activateAnimation,
-                                    applicationAnimation: aroundAnimation,
-                                    largeApplicationAnimation: reaction.effectAnimation,
-                                    isCustom: false
-                                ))
-                            } else {
-                                continue
-                            }
-                        case let .custom(file):
-                            if existingIds.contains(.custom(file.fileId.id)) {
-                                continue
-                            }
-                            existingIds.insert(.custom(file.fileId.id))
-                            
-                            result.append(ReactionItem(
-                                reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
-                                appearAnimation: file,
-                                stillAnimation: file,
-                                listAnimation: file,
-                                largeListAnimation: file,
-                                applicationAnimation: nil,
-                                largeApplicationAnimation: nil,
-                                isCustom: true
-                            ))
-                        }
-                    }
-                }
-                
-                return result
-            }
+            return tagMessageReactions(context: context)
         }
     }
     

@@ -14,8 +14,38 @@ import ComponentFlow
 import MultilineTextComponent
 import PlainButtonComponent
 import ComponentDisplayAdapters
+import BundleIconComponent
+import AnimatedTextComponent
 
 private let labelFont = Font.regular(15.0)
+
+private func extractAnimatedTextString(string: PresentationStrings.FormattedString, id: String, mapping: [Int: AnimatedTextComponent.Item.Content]) -> [AnimatedTextComponent.Item] {
+    var textItems: [AnimatedTextComponent.Item] = []
+    
+    var previousIndex = 0
+    let nsString = string.string as NSString
+    for range in string.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+        if range.range.lowerBound > previousIndex {
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
+        }
+        if let value = mapping[range.index] {
+            let isUnbreakable: Bool
+            switch value {
+            case .text:
+                isUnbreakable = true
+            case .number:
+                isUnbreakable = false
+            }
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), isUnbreakable: isUnbreakable, content: value))
+        }
+        previousIndex = range.range.upperBound
+    }
+    if nsString.length > previousIndex {
+        textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_end"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: nsString.length - previousIndex)))))
+    }
+    
+    return textItems
+}
 
 final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     private struct Params: Equatable {
@@ -54,10 +84,16 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
     }
 
-    private let button = ComponentView<Empty>()
+    private let calendarButton = ComponentView<Empty>()
+    private var membersButton: ComponentView<Empty>?
+    private var resultsText: ComponentView<Empty>?
+    private var listModeButton: ComponentView<Empty>?
     
-    private var params: Params?
+    private var isUpdating: Bool = false
+    
     private var currentLayout: Layout?
+    
+    private var tagMessageCount: (tag: MemoryBuffer, count: Int?, disposable: Disposable?)?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -69,6 +105,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     }
     
     deinit {
+        self.tagMessageCount?.disposable?.dispose()
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
@@ -82,8 +119,121 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
 
         return height
     }
+    
+    func prepareSwitchToFilter(tag: MemoryBuffer, count: Int) {
+        self.tagMessageCount?.disposable?.dispose()
+        self.tagMessageCount = (tag, count, nil)
+    }
+    
+    private func update(transition: Transition) {
+        if self.isUpdating {
+            return
+        }
+        if let params = self.currentLayout?.params {
+            let _ = self.update(params: params, transition: transition)
+        }
+    }
 
     private func update(params: Params, transition: Transition) -> CGFloat {
+        self.isUpdating = true
+        defer {
+            self.isUpdating = false
+        }
+        
+        if let historyFilter = params.interfaceState.historyFilter, let reaction = ReactionsMessageAttribute.reactionFromMessageTag(tag: historyFilter.customTag) {
+            let tag = historyFilter.customTag
+            
+            if let current = self.tagMessageCount, current.tag == tag {
+            } else {
+                self.tagMessageCount = (tag, nil, nil)
+            }
+            
+            if self.tagMessageCount?.disposable == nil {
+                if let context = self.context {
+                    self.tagMessageCount?.disposable = (context.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.ReactionTagMessageCount(peerId: context.account.peerId, threadId: params.interfaceState.chatLocation.threadId, reaction: reaction)
+                    )
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] count in
+                        guard let self else {
+                            return
+                        }
+                        if self.tagMessageCount?.tag == tag {
+                            if self.tagMessageCount?.count != count {
+                                self.tagMessageCount?.count = count
+                                self.update(transition: .easeInOut(duration: 0.25))
+                            }
+                        }
+                    })
+                }
+            }
+        } else {
+            if let tagMessageCount = self.tagMessageCount {
+                self.tagMessageCount = nil
+                tagMessageCount.disposable?.dispose()
+            }
+        }
+        
+        
+        var canSearchMembers = false
+        if let search = params.interfaceState.search {
+            if case .everything = search.domain {
+                if let _ = params.interfaceState.renderedPeer?.peer as? TelegramGroup {
+                    canSearchMembers = true
+                } else if let peer = params.interfaceState.renderedPeer?.peer as? TelegramChannel, case .group = peer.info {
+                    canSearchMembers = true
+                }
+            } else {
+                canSearchMembers = false
+            }
+        }
+        let displaySearchMembers = (params.interfaceState.search?.query.isEmpty ?? true) && canSearchMembers
+        
+        var canChangeListMode = false
+        
+        var resultsTextString: [AnimatedTextComponent.Item] = []
+        if let results = params.interfaceState.search?.resultsState {
+            let displayTotalCount = results.completed ? results.messageIndices.count : Int(results.totalCount)
+            if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
+                canChangeListMode = true
+                
+                if params.interfaceState.displayHistoryFilterAsList {
+                    resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
+                        ".",
+                        "."
+                    ), id: "total_count", mapping: [
+                        0: .number(displayTotalCount, minDigits: 1),
+                        1: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(displayTotalCount)))
+                    ])
+                } else {
+                    let adjustedIndex = results.messageIndices.count - 1 - index
+                    
+                    resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Items_NOfM(
+                        ".",
+                        "."
+                    ), id: "position", mapping: [
+                        0: .number(adjustedIndex + 1, minDigits: 1),
+                        1: .number(displayTotalCount, minDigits: 1)
+                    ])
+                }
+            } else {
+                canChangeListMode = false
+                
+                resultsTextString.append(AnimatedTextComponent.Item(id: AnyHashable("search_no_results"), isUnbreakable: true, content: .text(params.interfaceState.strings.Conversation_SearchNoResults)))
+            }
+        } else if let count = self.tagMessageCount?.count {
+            canChangeListMode = count != 0
+            
+            resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
+                ".",
+                "."
+            ), id: "total_count", mapping: [
+                0: .number(count, minDigits: 1),
+                1: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCount(Int32(count)))
+            ])
+        } else if let context = self.context, case .peer(context.account.peerId) = params.interfaceState.chatLocation {
+            canChangeListMode = true
+        }
+        
         let height: CGFloat
         if case .regular = params.metrics.widthClass {
             height = 49.0
@@ -91,43 +241,198 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             height = 45.0
         }
         
-        let buttonTitle: String
-        if let historyFilter = params.interfaceState.historyFilter, historyFilter.isActive {
-            buttonTitle = params.interfaceState.strings.Chat_TagSearchShowMessages
-        } else {
-            buttonTitle = params.interfaceState.strings.Chat_TagSearchHideMessages
-        }
+        var modeButtonTitle: [AnimatedTextComponent.Item] = []
+        modeButtonTitle = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeFormat("."), id: "mode", mapping: [
+            0: params.interfaceState.displayHistoryFilterAsList ? .text(params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeChat) : .text(params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeList)
+        ])
 
         let size = CGSize(width: params.width - params.additionalSideInsets.left * 2.0 - params.leftInset * 2.0, height: height)
-        let buttonSize = self.button.update(
+        
+        if canChangeListMode {
+            var listModeButtonTransition = transition
+            let listModeButton: ComponentView<Empty>
+            if let current = self.listModeButton {
+                listModeButton = current
+            } else {
+                listModeButtonTransition = listModeButtonTransition.withAnimation(.none)
+                listModeButton = ComponentView()
+                self.listModeButton = listModeButton
+            }
+            
+            let buttonSize = listModeButton.update(
+                transition: listModeButtonTransition,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(AnimatedTextComponent(
+                        font: Font.regular(15.0),
+                        color: params.interfaceState.theme.rootController.navigationBar.accentTextColor,
+                        items: modeButtonTitle
+                    )),
+                    effectAlignment: .right,
+                    minSize: CGSize(width: 1.0, height: size.height),
+                    contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                    action: { [weak self] in
+                        guard let self, let params = self.currentLayout?.params else {
+                            return
+                        }
+                        self.interfaceInteraction?.updateDisplayHistoryFilterAsList(!params.interfaceState.displayHistoryFilterAsList)
+                    },
+                    animateScale: false,
+                    animateContents: true
+                )),
+                environment: {},
+                containerSize: size
+            )
+            if let buttonView = listModeButton.view {
+                if buttonView.superview == nil {
+                    buttonView.layer.anchorPoint = CGPoint(x: 1.0, y: 0.5)
+                    buttonView.alpha = 0.0
+                    self.view.addSubview(buttonView)
+                }
+                let listModeFrame = CGRect(origin: CGPoint(x: size.width - params.rightInset - 11.0 - buttonSize.width, y: floor((size.height - buttonSize.height) * 0.5)), size: buttonSize)
+                listModeButtonTransition.setPosition(view: buttonView, position: CGPoint(x: listModeFrame.minX + listModeFrame.width * buttonView.layer.anchorPoint.x, y: listModeFrame.minY + listModeFrame.height * buttonView.layer.anchorPoint.y))
+                listModeButtonTransition.setBounds(view: buttonView, bounds: CGRect(origin: CGPoint(), size: listModeFrame.size))
+                transition.setAlpha(view: buttonView, alpha: 1.0)
+            }
+        } else {
+            if let listModeButton = self.listModeButton {
+                self.listModeButton = nil
+                if let listModeButtonView = listModeButton.view {
+                    transition.setAlpha(view: listModeButtonView, alpha: 0.0, completion: { [weak listModeButtonView] _ in
+                        listModeButtonView?.removeFromSuperview()
+                    })
+                }
+            }
+        }
+        
+        var nextLeftX: CGFloat = 12.0
+        
+        let calendarButtonSize = self.calendarButton.update(
             transition: .immediate,
             component: AnyComponent(PlainButtonComponent(
-                content: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: buttonTitle, font: Font.regular(17.0), textColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor))
+                content: AnyComponent(BundleIconComponent(
+                    name: "Chat/Input/Search/Calendar",
+                    tintColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor
                 )),
                 effectAlignment: .center,
-                minSize: size,
+                minSize: CGSize(width: 1.0, height: size.height),
+                contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                 action: { [weak self] in
                     guard let self else {
                         return
                     }
-                    self.interfaceInteraction?.updateHistoryFilter { filter in
-                        guard var filter else {
-                            return nil
-                        }
-                        filter.isActive = !filter.isActive
-                        return filter
-                    }
+                    self.interfaceInteraction?.openCalendarSearch()
                 }
             )),
             environment: {},
             containerSize: size
         )
-        if let buttonView = self.button.view {
-            if buttonView.superview == nil {
-                self.view.addSubview(buttonView)
+        let calendarButtonFrame = CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - calendarButtonSize.height) * 0.5)), size: calendarButtonSize)
+        if let calendarButtonView = self.calendarButton.view {
+            if calendarButtonView.superview == nil {
+                self.view.addSubview(calendarButtonView)
             }
-            transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(), size: buttonSize))
+            transition.setFrame(view: calendarButtonView, frame: calendarButtonFrame)
+        }
+        nextLeftX += calendarButtonSize.width + 8.0
+        
+        if displaySearchMembers {
+            let membersButton: ComponentView<Empty>
+            if let current = self.membersButton {
+                membersButton = current
+            } else {
+                membersButton = ComponentView()
+                self.membersButton = membersButton
+            }
+            
+            let buttonSize = membersButton.update(
+                transition: .immediate,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Search/Members",
+                        tintColor: params.interfaceState.theme.rootController.navigationBar.accentTextColor
+                    )),
+                    effectAlignment: .center,
+                    minSize: CGSize(width: 1.0, height: size.height),
+                    contentInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.interfaceInteraction?.toggleMembersSearch(true)
+                    }
+                )),
+                environment: {},
+                containerSize: size
+            )
+            if let buttonView = membersButton.view {
+                var membersButtonTransition = transition
+                var animateIn = false
+                if buttonView.superview == nil {
+                    membersButtonTransition = membersButtonTransition.withAnimation(.none)
+                    buttonView.alpha = 0.0
+                    animateIn = true
+                    self.view.addSubview(buttonView)
+                }
+                membersButtonTransition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: nextLeftX, y: floor((size.height - buttonSize.height) * 0.5)), size: buttonSize))
+                
+                transition.setAlpha(view: buttonView, alpha: 1.0)
+                if animateIn {
+                    transition.animateScale(view: buttonView, from: 0.001, to: 1.0)
+                }
+            }
+            nextLeftX += buttonSize.width + 8.0
+        } else {
+            if let membersButton = self.membersButton {
+                self.membersButton = nil
+                if let membersButtonView = membersButton.view {
+                    transition.setAlpha(view: membersButtonView, alpha: 0.0, completion: { [weak membersButtonView] _ in
+                        membersButtonView?.removeFromSuperview()
+                    })
+                    transition.setScale(view: membersButtonView, scale: 0.001)
+                }
+            }
+        }
+        
+        if !resultsTextString.isEmpty {
+            var resultsTextTransition = transition
+            let resultsText: ComponentView<Empty>
+            if let current = self.resultsText {
+                resultsText = current
+            } else {
+                resultsTextTransition = resultsTextTransition.withAnimation(.none)
+                resultsText = ComponentView()
+                self.resultsText = resultsText
+            }
+            
+            let resultsTextSize = resultsText.update(
+                transition: resultsTextTransition,
+                component: AnyComponent(AnimatedTextComponent(
+                    font: Font.regular(15.0),
+                    color: params.interfaceState.theme.rootController.navigationBar.secondaryTextColor,
+                    items: resultsTextString
+                )),
+                environment: {},
+                containerSize: size
+            )
+            let resultsTextFrame = CGRect(origin: CGPoint(x: nextLeftX - 3.0, y: floor((size.height - resultsTextSize.height) * 0.5)), size: resultsTextSize)
+            if let resultsTextView = resultsText.view {
+                if resultsTextView.superview == nil {
+                    resultsTextView.alpha = 0.0
+                    self.view.addSubview(resultsTextView)
+                }
+                resultsTextTransition.setFrame(view: resultsTextView, frame: resultsTextFrame)
+                transition.setAlpha(view: resultsTextView, alpha: 1.0)
+            }
+            nextLeftX += -3.0 + resultsTextSize.width
+        } else {
+            if let resultsText = self.resultsText {
+                self.resultsText = nil
+                if let resultsTextView = resultsText.view {
+                    transition.setAlpha(view: resultsTextView, alpha: 0.0, completion: { [weak resultsTextView] _ in
+                        resultsTextView?.removeFromSuperview()
+                    })
+                }
+            }
         }
 
         return height

@@ -333,24 +333,27 @@ public extension TelegramEngine.EngineData.Item {
         public struct ReactionTagMessageCount: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public struct ItemKey: Hashable {
                 public var peerId: EnginePeer.Id
+                public var threadId: Int64?
                 public var reaction: MessageReaction.Reaction
             }
             
             public typealias Result = Int?
             
             fileprivate var peerId: EnginePeer.Id
+            fileprivate var threadId: Int64?
             fileprivate var reaction: MessageReaction.Reaction
             public var mapKey: ItemKey {
-                return ItemKey(peerId: self.peerId, reaction: self.reaction)
+                return ItemKey(peerId: self.peerId, threadId: self.threadId, reaction: self.reaction)
             }
             
-            public init(peerId: EnginePeer.Id, reaction: MessageReaction.Reaction) {
+            public init(peerId: EnginePeer.Id, threadId: Int64?, reaction: MessageReaction.Reaction) {
                 self.peerId = peerId
+                self.threadId = threadId
                 self.reaction = reaction
             }
 
             var key: PostboxViewKey {
-                return .historyTagSummaryView(tag: [], peerId: self.peerId, threadId: nil, namespace: Namespaces.Message.Cloud, customTag: ReactionsMessageAttribute.messageTag(reaction: self.reaction))
+                return .historyTagSummaryView(tag: [], peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud, customTag: ReactionsMessageAttribute.messageTag(reaction: self.reaction))
             }
 
             func extract(view: PostboxView) -> Result {
@@ -392,13 +395,15 @@ public extension TelegramEngine.EngineData.Item {
             public typealias Result = [MessageReaction.Reaction: Int]
             
             fileprivate var peerId: EnginePeer.Id
+            fileprivate var threadId: Int64?
             
-            public init(peerId: EnginePeer.Id) {
+            public init(peerId: EnginePeer.Id, threadId: Int64?) {
                 self.peerId = peerId
+                self.threadId = threadId
             }
 
             var key: PostboxViewKey {
-                return .historyCustomTagSummariesView(peerId: self.peerId, namespace: Namespaces.Message.Cloud)
+                return .historyCustomTagSummariesView(peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud)
             }
 
             func extract(view: PostboxView) -> Result {

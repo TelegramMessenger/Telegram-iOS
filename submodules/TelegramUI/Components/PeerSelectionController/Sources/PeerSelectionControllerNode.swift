@@ -337,6 +337,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
+        }, cancelMessageSelection: { _ in
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
         }, reportMessages: { _, _ in
@@ -729,6 +730,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
         }, updateHistoryFilter: { _ in
+        }, updateDisplayHistoryFilterAsList: { _ in
         }, requestLayout: { _ in
         }, chatController: {
             return nil

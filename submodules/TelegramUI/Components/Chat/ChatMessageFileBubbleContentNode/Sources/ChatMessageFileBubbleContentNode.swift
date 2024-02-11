@@ -64,11 +64,11 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        self.interactiveFileNode.dateAndStatusNode.reactionSelected = { [weak self] value in
+        self.interactiveFileNode.dateAndStatusNode.reactionSelected = { [weak self] _, value in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
         }
         
         self.interactiveFileNode.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in

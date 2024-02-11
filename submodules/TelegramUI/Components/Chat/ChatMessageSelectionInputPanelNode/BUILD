@@ -19,6 +19,9 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
+        "//submodules/TelegramUI/Components/Chat/TopMessageReactions",
+        "//submodules/ReactionSelectionNode",
     ],
     visibility = [
         "//visibility:public",

@@ -282,6 +282,30 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func premiumIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListPremiumIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 16.0, height: 16.0), contextGenerator: { size, context in
+                let bounds = CGRect(origin: .zero, size: size)
+                context.clear(bounds)
+                
+                let image = UIImage(bundleImageName: "Item List/PremiumIcon")!
+                context.clip(to: bounds, mask: image.cgImage!)
+                
+                let colorsArray: [CGColor] = [
+                    UIColor(rgb: 0x6b93ff).cgColor,
+                    UIColor(rgb: 0x6b93ff).cgColor,
+                    UIColor(rgb: 0x8d77ff).cgColor,
+                    UIColor(rgb: 0xb56eec).cgColor,
+                    UIColor(rgb: 0xb56eec).cgColor
+                ]
+                var locations: [CGFloat] = [0.0, 0.3, 0.5, 0.7, 1.0]
+                let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+            })
+        })
+    }
+    
     public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
         if !top && !bottom {
             return nil

@@ -35,6 +35,8 @@ swift_library(
         "//submodules/GZip:GZip",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
+        "//submodules/Components/BalancedTextComponent",
+        "//submodules/Markdown",
     ],
     visibility = [
         "//visibility:public",

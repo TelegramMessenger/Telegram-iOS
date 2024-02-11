@@ -194,7 +194,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                         guard let navigationController = self.getNavigationController() else {
                                             return
                                         }
-                                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
                                     })
                                 }
                                 return false

@@ -120,6 +120,7 @@ public struct Namespaces {
         public static let recommendedChannels: Int8 = 33
         public static let peerColorOptions: Int8 = 34
         public static let savedMessageTags: Int8 = 35
+        public static let applicationIcons: Int8 = 36
     }
     
     public struct UnorderedItemList {
@@ -277,6 +278,8 @@ private enum PreferencesKeyValues: Int32 {
     case globalPrivacySettings = 31
     case storiesConfiguration = 32
     case audioTranscriptionTrialState = 33
+    case didCacheSavedMessageTagsPrefix = 34
+    case displaySavedChatsAsTopics = 35
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -447,6 +450,19 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.audioTranscriptionTrialState.rawValue)
         return key
     }()
+    
+    public static func didCacheSavedMessageTags(threadId: Int64?) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4 + 8)
+        key.setInt32(0, value: PreferencesKeyValues.didCacheSavedMessageTagsPrefix.rawValue)
+        key.setInt64(4, value: threadId ?? 0)
+        return key
+    }
+    
+    public static func displaySavedChatsAsTopics() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.displaySavedChatsAsTopics.rawValue)
+        return key
+    }
 }
 
 private enum SharedDataKeyValues: Int32 {

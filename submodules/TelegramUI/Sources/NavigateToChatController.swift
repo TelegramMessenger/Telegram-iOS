@@ -41,6 +41,13 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 return false
             }
         }
+    } else if case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {
+        viewForumAsMessages = params.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.DisplaySavedChatsAsTopics()
+        )
+        |> map { value in
+            return !value
+        }
     }
     
     let _ = (viewForumAsMessages
@@ -91,6 +98,14 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             })
             
             return
+        }
+        
+        if !params.forceOpenChat, !viewForumAsMessages, params.subject == nil, case let .peer(peer) = params.chatLocation, peer.id == params.context.account.peerId {
+            if let controller = params.context.sharedContext.makePeerInfoController(context: params.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                params.navigationController.pushViewController(controller, animated: params.animated, completion: {
+                })
+                return
+            }
         }
         
         var found = false

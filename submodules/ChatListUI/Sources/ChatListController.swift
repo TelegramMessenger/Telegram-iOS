@@ -1866,8 +1866,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             |> distinctUntilChanged
             
+            let preferHighQualityStories: Signal<Bool, NoError> = combineLatest(
+                context.sharedContext.automaticMediaDownloadSettings
+                |> map { settings in
+                    return settings.highQualityStories
+                }
+                |> distinctUntilChanged,
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+                )
+            )
+            |> map { setting, peer -> Bool in
+                let isPremium = peer?.isPremium ?? false
+                return setting && isPremium
+            }
+            |> distinctUntilChanged
+            
             self.preloadStorySubscriptionsDisposable = (combineLatest(queue: .mainQueue(),
-                self.context.engine.messages.preloadStorySubscriptions(isHidden: self.location == .chatList(groupId: .archive)),
+                self.context.engine.messages.preloadStorySubscriptions(isHidden: self.location == .chatList(groupId: .archive), preferHighQuality: preferHighQualityStories),
                 self.context.sharedContext.automaticMediaDownloadSettings,
                 automaticDownloadNetworkType
             )

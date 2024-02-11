@@ -566,6 +566,9 @@ final class MutableChatListView {
     
     private var currentHiddenPeerIds = Set<PeerId>()
     
+    private let displaySavedMessagesAsTopicListPreferencesKey: ValueBoxKey
+    private(set) var displaySavedMessagesAsTopicList: PreferencesEntry?
+    
     init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
@@ -573,6 +576,8 @@ final class MutableChatListView {
         self.summaryComponents = summaryComponents
         
         self.currentHiddenPeerIds = postbox.hiddenChatIds
+        
+        self.displaySavedMessagesAsTopicListPreferencesKey = postbox.seedConfiguration.displaySavedMessagesAsTopicListPreferencesKey
         
         var spaces: [ChatListViewSpace] = [
             .group(groupId: self.groupId, pinned: .notPinned, predicate: filterPredicate)
@@ -612,6 +617,8 @@ final class MutableChatListView {
         } else {
             self.groupEntries = []
         }
+        
+        self.displaySavedMessagesAsTopicList = postbox.preferencesTable.get(key: self.displaySavedMessagesAsTopicListPreferencesKey)
     }
     
     private func reloadGroups(postbox: PostboxImpl) {
@@ -689,6 +696,8 @@ final class MutableChatListView {
                 }
             }
         }
+        
+        self.displaySavedMessagesAsTopicList = postbox.preferencesTable.get(key: self.displaySavedMessagesAsTopicListPreferencesKey)
     }
     
     func refreshDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction) -> Bool {
@@ -699,10 +708,14 @@ final class MutableChatListView {
         updated = true
         
         let currentGroupEntries = self.groupEntries
+        let currentDisplaySavedMessagesAsTopicList = self.displaySavedMessagesAsTopicList
         
         self.reloadGroups(postbox: postbox)
         
         if self.groupEntries != currentGroupEntries {
+            updated = true
+        }
+        if self.displaySavedMessagesAsTopicList != currentDisplaySavedMessagesAsTopicList {
             updated = true
         }
         
@@ -731,6 +744,20 @@ final class MutableChatListView {
             if self.state.replay(postbox: postbox, currentTransaction: currentTransaction, transaction: transaction) {
                 self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
                 hasChanges = true
+            }
+        }
+        
+        if !transaction.currentPreferencesOperations.isEmpty {
+            for operation in transaction.currentPreferencesOperations {
+                switch operation {
+                case let .update(key, value):
+                    if key == self.displaySavedMessagesAsTopicListPreferencesKey {
+                        if self.displaySavedMessagesAsTopicList != value {
+                            self.displaySavedMessagesAsTopicList = value
+                            hasChanges = true
+                        }
+                    }
+                }
             }
         }
         
@@ -938,6 +965,7 @@ public final class ChatListView {
     public let groupEntries: [ChatListGroupReferenceEntry]
     public let earlierIndex: ChatListIndex?
     public let laterIndex: ChatListIndex?
+    public let displaySavedMessagesAsTopicList: PreferencesEntry?
     
     init(_ mutableView: MutableChatListView) {
         self.groupId = mutableView.groupId
@@ -1006,5 +1034,6 @@ public final class ChatListView {
         }
         
         self.additionalItemEntries = additionalItemEntries
+        self.displaySavedMessagesAsTopicList = mutableView.displaySavedMessagesAsTopicList
     }
 }

@@ -40,6 +40,8 @@ swift_library(
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/AlertUI:AlertUI",
         "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
+        "//submodules/MoreButtonNode:MoreButtonNode",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

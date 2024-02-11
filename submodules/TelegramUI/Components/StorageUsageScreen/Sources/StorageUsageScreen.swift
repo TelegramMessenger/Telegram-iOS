@@ -2508,6 +2508,7 @@ final class StorageUsageScreenComponent: Component {
             let _ = (chatMediaListPreviewControllerData(
                 context: component.context,
                 chatLocation: .peer(id: message.id.peerId),
+                chatFilterTag: nil,
                 chatLocationContextHolder: nil,
                 message: message,
                 standalone: true,
@@ -2724,6 +2725,7 @@ final class StorageUsageScreenComponent: Component {
             let _ = component.context.sharedContext.openChatMessage(OpenChatMessageParams(
                 context: component.context,
                 chatLocation: .peer(id: message.id.peerId),
+                chatFilterTag: nil,
                 chatLocationContextHolder: nil,
                 message: galleryMessage,
                 standalone: true,

@@ -85,7 +85,7 @@ final class CameraDeviceContext {
     }
     
     private func maxDimensions(additional: Bool, preferWide: Bool) -> CMVideoDimensions {
-        if self.isRoundVideo && !Camera.isDualCameraSupported {
+        if self.isRoundVideo && self.exclusive {
             return CMVideoDimensions(width: 640, height: 480)
         } else {
             if additional || preferWide {

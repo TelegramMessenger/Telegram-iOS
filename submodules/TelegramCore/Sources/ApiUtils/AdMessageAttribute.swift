@@ -9,7 +9,7 @@ public final class AdMessageAttribute: MessageAttribute {
     
     public enum MessageTarget {
         case peer(id: EnginePeer.Id, message: EngineMessage.Id?, startParam: String?)
-        case join(title: String, joinHash: String)
+        case join(title: String, joinHash: String, peer: EnginePeer?)
         case webPage(title: String, url: String)
         case botApp(peerId: EnginePeer.Id, app: BotApp, startParam: String?)
     }

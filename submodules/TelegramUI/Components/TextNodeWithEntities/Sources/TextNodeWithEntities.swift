@@ -357,19 +357,69 @@ public class ImmediateTextNodeWithEntities: TextNode {
     public var tapAttributeAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     public var longTapAttributeAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     
+    public var customItemLayout: ((CGSize, TelegramMediaFile) -> CGSize)?
+    
     private func processedAttributedText() -> NSAttributedString? {
         var updatedString: NSAttributedString?
         if let sourceString = self.attributedText {
             let string = NSMutableAttributedString(attributedString: sourceString)
             
-            let fullRange = NSRange(location: 0, length: string.length)
-            string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, _ in
-                if let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                    if let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
-                        string.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: range)
+            var fullRange = NSRange(location: 0, length: string.length)
+            var originalTextId = 0
+            while true {
+                var found = false
+                string.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: fullRange, options: [], using: { value, range, stop in
+                    if let value = value as? ChatTextInputTextCustomEmojiAttribute, let font = string.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont {
+                        let updatedSubstring = NSMutableAttributedString(string: "&")
+                        
+                        let replacementRange = NSRange(location: 0, length: updatedSubstring.length)
+                        updatedSubstring.addAttributes(string.attributes(at: range.location, effectiveRange: nil), range: replacementRange)
+                        updatedSubstring.addAttribute(NSAttributedString.Key("Attribute__EmbeddedItem"), value: InlineStickerItem(emoji: value, file: value.file, fontSize: font.pointSize), range: replacementRange)
+                        updatedSubstring.addAttribute(originalTextAttributeKey, value: OriginalTextAttribute(id: originalTextId, string: string.attributedSubstring(from: range).string), range: replacementRange)
+                        originalTextId += 1
+                        
+                        let itemSize = (font.pointSize * 24.0 / 17.0)
+                        
+                        let runDelegateData = RunDelegateData(
+                            ascent: font.ascender,
+                            descent: font.descender,
+                            width: itemSize
+                        )
+                        var callbacks = CTRunDelegateCallbacks(
+                            version: kCTRunDelegateCurrentVersion,
+                            dealloc: { dataRef in
+                                Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                            },
+                            getAscent: { dataRef in
+                                let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                                return data.takeUnretainedValue().ascent
+                            },
+                            getDescent: { dataRef in
+                                let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                                return data.takeUnretainedValue().descent
+                            },
+                            getWidth: { dataRef in
+                                let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                                return data.takeUnretainedValue().width
+                            }
+                        )
+                        
+                        if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                            updatedSubstring.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: replacementRange)
+                        }
+                        
+                        string.replaceCharacters(in: range, with: updatedSubstring)
+                        let updatedRange = NSRange(location: range.location, length: updatedSubstring.length)
+                        
+                        found = true
+                        stop.pointee = ObjCBool(true)
+                        fullRange = NSRange(location: updatedRange.upperBound, length: fullRange.upperBound - range.upperBound)
                     }
+                })
+                if !found {
+                    break
                 }
-            })
+            }
             
             updatedString = string
         }
@@ -418,16 +468,20 @@ public class ImmediateTextNodeWithEntities: TextNode {
                     let id = InlineStickerItemLayer.Key(id: stickerItem.emoji.fileId, index: index)
                     validIds.append(id)
                     
-                    let itemSize = floor(stickerItem.fontSize * 24.0 / 17.0)
+                    let itemSide = floor(stickerItem.fontSize * 24.0 / 17.0)
+                    var itemSize = CGSize(width: itemSide, height: itemSide)
+                    if let file = stickerItem.file, let customItemLayout = self.customItemLayout {
+                        itemSize = customItemLayout(itemSize, file)
+                    }
                     
-                    let itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 0.0).center, size: CGSize()).insetBy(dx: -itemSize / 2.0, dy: -itemSize / 2.0)
+                    let itemFrame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 0.0).center, size: CGSize()).insetBy(dx: -itemSize.width / 2.0, dy: -itemSize.height / 2.0)
                     
                     let itemLayer: InlineStickerItemLayer
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                         itemLayer.dynamicColor = item.textColor
                     } else {
-                        let pointSize = floor(itemSize * 1.3)
+                        let pointSize = floor(itemSize.width * 1.3)
                         itemLayer = InlineStickerItemLayer(context: context, userLocation: .other, attemptSynchronousLoad: false, emoji: stickerItem.emoji, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: CGSize(width: pointSize, height: pointSize), dynamicColor: item.textColor)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.layer.addSublayer(itemLayer)

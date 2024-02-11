@@ -60,7 +60,7 @@ private extension MessageHistoryInput {
                 case let .tag(value):
                     shouldAddFromSameGroup = value.appendMessagesFromTheSameGroup
                 case .customTag:
-                    shouldAddFromSameGroup = false
+                    shouldAddFromSameGroup = true
                 }
             }
             if shouldAddFromSameGroup {
@@ -75,20 +75,48 @@ private extension MessageHistoryInput {
                     if var group = postbox.messageHistoryTable.getMessageGroup(at: items[index].index, limit: 20), group.count > 1 {
                         switch direction {
                         case .lowToHigh:
-                            group.sort(by: { lhs, rhs in
-                                return lhs.index < rhs.index
-                            })
+                            group = group.filter { item in
+                                if includeFrom {
+                                    return item.index >= fromIndex && item.index < toIndex
+                                } else {
+                                    return item.index > fromIndex && item.index < toIndex
+                                }
+                            }
                         case .highToLow:
-                            group.sort(by: { lhs, rhs in
-                                return lhs.index > rhs.index
-                            })
+                            group = group.filter { item in
+                                if includeFrom {
+                                    return item.index >= toIndex && item.index < fromIndex
+                                } else {
+                                    return item.index > toIndex && item.index < fromIndex
+                                }
+                            }
                         }
-                        items.replaceSubrange(index ..< index + 1, with: group)
+                        
+                        items.remove(at: index)
+                        var insertIndex = index
+                        for item in group {
+                            if !items.contains(where: { $0.id == item.id }) {
+                                items.insert(item, at: insertIndex)
+                                insertIndex += 1
+                            }
+                        }
+                        
                         switch direction {
                         case .lowToHigh:
-                            items.removeFirst(group.count - 1)
+                            items.sort(by: { $0.index < $1.index })
                         case .highToLow:
-                            items.removeLast(group.count - 1)
+                            items.sort(by: { $0.index > $1.index })
+                        }
+                        assert(Set(items.map({ $0.stableId })).count == items.count)
+                        
+                        if items.count > limit {
+                            let overLimit = items.count - limit
+                            switch direction {
+                            case .lowToHigh:
+                                items.removeFirst(overLimit)
+                            case .highToLow:
+                                items.removeLast(overLimit)
+                            }
                         }
                     }
                 }
@@ -2054,7 +2082,7 @@ enum HistoryViewState {
     init(postbox: PostboxImpl, inputAnchor: HistoryViewInputAnchor, tag: HistoryViewInputTag?, appendMessagesFromTheSameGroup: Bool, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, halfLimit: Int, locations: MessageHistoryViewInput) {
         switch inputAnchor {
             case let .index(index):
-            self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
+                self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
             case .lowerBound:
                 self = .loaded(HistoryViewLoadedState(anchor: .lowerBound, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: statistics, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))
             case .upperBound:

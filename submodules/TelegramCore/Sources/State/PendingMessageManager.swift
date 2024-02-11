@@ -149,6 +149,10 @@ final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
     }
 }
 
+private final class CorrelationIdToSentMessageId {
+    var mapping: [Int64: MessageId] = [:]
+}
+
 public final class PendingMessageManager {
     private let network: Network
     private let postbox: Postbox
@@ -173,6 +177,8 @@ public final class PendingMessageManager {
     private var peerSummaryContexts: [PeerId: PeerPendingMessagesSummaryContext] = [:]
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
+    
+    private let correlationIdToSentMessageId: Atomic<CorrelationIdToSentMessageId> = Atomic(value: CorrelationIdToSentMessageId())
     
     init(network: Network, postbox: Postbox, accountPeerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, stateManager: AccountStateManager, localInputActivityManager: PeerInputActivityManager, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext) {
         Logger.shared.log("PendingMessageManager", "create instance")
@@ -1560,6 +1566,12 @@ public final class PendingMessageManager {
         var namespace = Namespaces.Message.Cloud
         if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
             namespace = id.namespace
+            
+            if let attribute = message.attributes.first(where: { $0 is OutgoingMessageInfoAttribute }) as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
+                self.correlationIdToSentMessageId.with { value in
+                    value.mapping[correlationId] = id
+                }
+            }
         }
         
         return applyUpdateMessage(postbox: postbox, stateManager: stateManager, message: message, cacheReferenceKey: content.cacheReferenceKey, result: result, accountPeerId: self.accountPeerId)
@@ -1583,6 +1595,20 @@ public final class PendingMessageManager {
             namespace = Namespaces.Message.ScheduledCloud
             if message.muted {
                 silent = true
+            }
+        }
+        
+        if messages.count == result.messages.count {
+            for i in 0 ..< messages.count {
+                let message = messages[i]
+                let apiMessage = result.messages[i]
+                if let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+                    if let attribute = message.attributes.first(where: { $0 is OutgoingMessageInfoAttribute }) as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
+                        self.correlationIdToSentMessageId.with { value in
+                            value.mapping[correlationId] = id
+                        }
+                    }
+                }
             }
         }
         
@@ -1664,5 +1690,9 @@ public final class PendingMessageManager {
             
             return disposable
         }
+    }
+    
+    public func synchronouslyLookupCorrelationId(correlationId: Int64) -> MessageId? {
+        return self.correlationIdToSentMessageId.with { $0.mapping[correlationId] }
     }
 }

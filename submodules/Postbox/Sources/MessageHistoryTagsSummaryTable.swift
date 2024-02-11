@@ -173,7 +173,9 @@ class MessageHistoryTagsSummaryTable: Table {
     }
     
     func getCustomTags(tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace) -> [MemoryBuffer] {
-        let peerKey = self.keyInternal(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: threadId, namespace: namespace, customTag: nil), allowShared: false)
+        let key = MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: threadId, namespace: namespace, customTag: nil)
+        
+        let peerKey = self.keyInternal(key: key, allowShared: false)
         let prefixLength = 4 + 8 + 4 + 8
         var result: [MemoryBuffer] = []
         self.valueBox.range(self.table, start: peerKey.predecessor, end: peerKey.successor, keys: { key in
@@ -187,6 +189,17 @@ class MessageHistoryTagsSummaryTable: Table {
             }
             return true
         }, limit: 0)
+        
+        for updatedKey in self.updatedKeys {
+            if updatedKey.peerId == peerId && updatedKey.tag == tag && updatedKey.threadId == threadId && updatedKey.namespace == namespace {
+                if let customTag = updatedKey.customTag {
+                    if !result.contains(customTag) {
+                        result.append(customTag)
+                    }
+                }
+            }
+        }
+        
         return result
     }
     
@@ -218,7 +231,6 @@ class MessageHistoryTagsSummaryTable: Table {
     func removeMessage(key: MessageHistoryTagsSummaryKey, id: MessageId.Id, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         if let current = self.get(key) {
             if current.count == 0 {
-                //self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag), operations: &invalidateSummaries)
             } else {
                 self.set(key, summary: current.withAddedCount(-1), updatedSummaries: &updatedSummaries)
             }

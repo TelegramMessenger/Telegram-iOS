@@ -1127,7 +1127,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private func mediaMessageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?) {
         let gesture: ContextGesture? = anyRecognizer as? ContextGesture
-        let _ = (chatMediaListPreviewControllerData(context: self.context, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), message: message._asMessage(), standalone: true, reverseMessageGalleryOrder: false, navigationController: self.navigationController)
+        let _ = (chatMediaListPreviewControllerData(context: self.context, chatLocation: .peer(id: message.id.peerId), chatFilterTag: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), message: message._asMessage(), standalone: true, reverseMessageGalleryOrder: false, navigationController: self.navigationController)
             |> deliverOnMainQueue).startStandalone(next: { [weak self] previewData in
                 guard let strongSelf = self else {
                     gesture?.cancel()
@@ -1431,7 +1431,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             guard let navigationController = self.navigationController else {
                                 return
                             }
-                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer)))
+                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), forceOpenChat: true))
                         })
                     }
                     return false

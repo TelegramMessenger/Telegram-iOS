@@ -586,15 +586,24 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatHistoryNavigationButtonBackground(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatHistoryNavigationButtonBackground.rawValue, { theme in
+            return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.setLineWidth(0.5)
+                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
+                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
+            })
+        })
+    }
     
     public static func chatHistoryNavigationButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatHistoryNavigationButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setLineWidth(0.5)
-                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
-                context.setStrokeColor(theme.chat.historyNavigation.foregroundColor.cgColor)
+                
+                context.setStrokeColor(theme.rootController.navigationBar.accentTextColor.cgColor)
                 context.setLineWidth(1.5)
                 
                 let position = CGPoint(x: 9.0 - 0.5, y: 23.0)
@@ -610,10 +619,8 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatHistoryNavigationUpButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setLineWidth(0.5)
-                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
-                context.setStrokeColor(theme.chat.historyNavigation.foregroundColor.cgColor)
+                
+                context.setStrokeColor(theme.rootController.navigationBar.accentTextColor.cgColor)
                 context.setLineWidth(1.5)
                 
                 context.translateBy(x: size.width * 0.5, y: size.height * 0.5)
@@ -632,11 +639,6 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatHistoryMentionsButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.historyNavigation.fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: size.width - 1.0, height: size.height - 1.0)))
-                context.setLineWidth(0.5)
-                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
                 
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/NavigateToMentions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
@@ -649,11 +651,6 @@ public struct PresentationResourcesChat {
         return theme.image(PresentationResourceKey.chatHistoryReactionsButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.chat.historyNavigation.fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: size.width - 1.0, height: size.height - 1.0)))
-                context.setLineWidth(0.5)
-                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
-                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
                 
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))

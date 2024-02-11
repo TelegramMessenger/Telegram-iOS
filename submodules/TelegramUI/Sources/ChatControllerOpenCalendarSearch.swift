@@ -24,11 +24,13 @@ extension ChatControllerImpl {
         var openClearHistory: ((Int32) -> Void)?
 
         let enableMessageRangeDeletion: Bool = peerId.namespace == Namespaces.Peer.CloudUser
+        
+        let displayMedia = self.presentationInterfaceState.historyFilter == nil
 
         let calendarScreen = CalendarMessageScreen(
             context: self.context,
             peerId: peerId,
-            calendarSource: self.context.engine.messages.sparseMessageCalendar(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photoOrVideo),
+            calendarSource: self.context.engine.messages.sparseMessageCalendar(peerId: peerId, threadId: self.chatLocation.threadId, tag: .photoOrVideo, displayMedia: displayMedia),
             initialTimestamp: initialTimestamp,
             enableMessageRangeDeletion: enableMessageRangeDeletion,
             canNavigateToEmptyDays: true,
@@ -37,6 +39,10 @@ extension ChatControllerImpl {
                     c.dismiss()
                     return
                 }
+                
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                    return state.updatedDisplayHistoryFilterAsList(false)
+                })
 
                 c.dismiss()
 

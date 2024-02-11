@@ -1042,6 +1042,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
+                savedMessageTags: item.associatedData.savedMessageTags,
                 reactions: dateReactionsAndPeers.reactions,
                 reactionPeers: dateReactionsAndPeers.peers,
                 displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
@@ -1049,7 +1050,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message),
+                canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
                 animationCache: item.controllerInteraction.presentationContext.animationCache,
                 animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
             ))
@@ -1255,8 +1256,10 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
                     availableReactions: item.associatedData.availableReactions,
+                    savedMessageTags: item.associatedData.savedMessageTags,
                     reactions: reactions,
                     message: item.message,
+                    associatedData: item.associatedData,
                     accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
@@ -1684,7 +1687,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
-                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false)
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceView, value in
                                 guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
@@ -1777,7 +1780,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         f()
                     case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: item.message) {
-                            item.controllerInteraction.updateMessageReaction(item.message, .default)
+                            item.controllerInteraction.updateMessageReaction(item.message, .default, false)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }
@@ -1786,7 +1789,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     item.controllerInteraction.clickThroughMessage()
                 } else if case .doubleTap = gesture {
                     if canAddMessageReactions(message: item.message) {
-                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                        item.controllerInteraction.updateMessageReaction(item.message, .default, false)
                     }
                 }
             }

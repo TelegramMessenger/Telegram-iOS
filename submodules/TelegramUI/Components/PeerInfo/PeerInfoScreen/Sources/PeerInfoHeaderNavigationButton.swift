@@ -178,7 +178,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         
         transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
-        transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
+        transition.updateTintColor(view: self.iconNode.view, color: self.contentsColor)
         transition.updateStrokeColor(layer: self.backIconLayer, strokeColor: self.contentsColor)
         
         switch self.key {
@@ -247,9 +247,17 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             case .search:
                 text = ""
                 accessibilityText = presentationData.strings.Common_Search
-                icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                icon = nil
                 isAnimation = true
                 animationState = .search
+            case .standaloneSearch:
+                text = ""
+                accessibilityText = presentationData.strings.Common_Search
+                icon = PresentationResourcesRootController.navigationCompactSearchWhiteIcon(presentationData.theme)
+            case .searchWithTags:
+                text = ""
+                accessibilityText = presentationData.strings.Common_Search
+                icon = PresentationResourcesRootController.navigationCompactTagsSearchWhiteIcon(presentationData.theme)
             case .editPhoto:
                 text = presentationData.strings.Settings_EditPhoto
                 accessibilityText = text
@@ -283,7 +291,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.textNode.attributedText = NSAttributedString(string: text, font: font, textColor: .white)
             transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
             self.iconNode.image = icon
-            transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
+            transition.updateTintColor(view: self.iconNode.view, color: self.contentsColor)
             
             if isAnimation {
                 self.iconNode.isHidden = true
