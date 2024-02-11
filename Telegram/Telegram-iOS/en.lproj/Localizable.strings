@@ -11299,3 +11299,6 @@ Sorry for the inconvenience.";
 "Story.ToastRemovedFromGroupText" = "Story removed from the group page";
 "Story.ToastSavedToGroupTitle" = "Story saved to the group page";
 "Story.ToastSavedToGroupText" = "Posted stories can be viewed by others on the group page until an admin removes them.";
+
+"Channel.AdminLog.MessageChangedGroupEmojiPack" = "%@ changed group emoji pack";
+"Channel.AdminLog.MessageRemovedGroupEmojiPack" = "%@ removed group emoji pack";
