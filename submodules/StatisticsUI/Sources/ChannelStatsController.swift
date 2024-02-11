@@ -1517,7 +1517,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 let boostController = PremiumBoostLevelsScreen(
                     context: context,
                     peerId: peerId,
-                    mode: .user(mode: .current),
+                    mode: .owner(subject: nil),
                     status: boostStatus,
                     myBoostStatus: myBoostStatus
                 )
