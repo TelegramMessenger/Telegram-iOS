@@ -1010,6 +1010,7 @@
         if (request.requestContext != nil && request.requestContext.messageId == messageId)
         {
             if (request.requestContext.transactionId == nil || [request.requestContext.transactionId isEqual:currentTransactionId]) {
+                MTLog(@"[MTRequestMessageService#%" PRIxPTR " will request message %" PRId64 "]", (intptr_t)self, messageId);
                 request.requestContext.responseMessageId = responseMessageId;
                 return true;
             } else {
@@ -1019,6 +1020,8 @@
             }
         }
     }
+    
+    MTLog(@"[MTRequestMessageService#%" PRIxPTR " will not request message %" PRId64 " (request not found)]", (intptr_t)self, messageId);
     
     return false;
 }

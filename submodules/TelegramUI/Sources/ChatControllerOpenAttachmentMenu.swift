@@ -44,11 +44,12 @@ extension ChatControllerImpl {
         }
                 
         let context = self.context
-        
         let inputIsActive = self.presentationInterfaceState.inputMode == .text
         
         self.chatDisplayNode.dismissInput()
-                
+        
+        let canByPassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: self.presentationInterfaceState)
+        
         var banSendText: (Int32, Bool)?
         var bannedSendPhotos: (Int32, Bool)?
         var bannedSendVideos: (Int32, Bool)?
@@ -60,19 +61,19 @@ extension ChatControllerImpl {
         } else if peer is TelegramSecretChat {
             canSendPolls = false
         } else if let channel = peer as? TelegramChannel {
-            if let value = channel.hasBannedPermission(.banSendPhotos) {
+            if let value = channel.hasBannedPermission(.banSendPhotos, ignoreDefault: canByPassRestrictions) {
                 bannedSendPhotos = value
             }
-            if let value = channel.hasBannedPermission(.banSendVideos) {
+            if let value = channel.hasBannedPermission(.banSendVideos, ignoreDefault: canByPassRestrictions) {
                 bannedSendVideos = value
             }
-            if let value = channel.hasBannedPermission(.banSendFiles) {
+            if let value = channel.hasBannedPermission(.banSendFiles, ignoreDefault: canByPassRestrictions) {
                 bannedSendFiles = value
             }
-            if let value = channel.hasBannedPermission(.banSendText) {
+            if let value = channel.hasBannedPermission(.banSendText, ignoreDefault: canByPassRestrictions) {
                 banSendText = value
             }
-            if channel.hasBannedPermission(.banSendPolls) != nil {
+            if channel.hasBannedPermission(.banSendPolls, ignoreDefault: canByPassRestrictions) != nil {
                 canSendPolls = false
             }
         } else if let group = peer as? TelegramGroup {
@@ -1069,7 +1070,25 @@ extension ChatControllerImpl {
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
         }
-        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), threadTitle: self.threadInfo?.title, chatLocation: self.chatLocation, isScheduledMessages: isScheduledMessages, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
+        let controller = MediaPickerScreen(
+            context: self.context,
+            updatedPresentationData: self.updatedPresentationData,
+            peer: EnginePeer(peer),
+            threadTitle: self.threadInfo?.title,
+            chatLocation: self.chatLocation,
+            isScheduledMessages: isScheduledMessages, 
+            bannedSendPhotos: bannedSendPhotos,
+            bannedSendVideos: bannedSendVideos,
+            canBoostToUnrestrict: (self.presentationInterfaceState.boostsToUnrestrict ?? 0) > 0 && bannedSendPhotos?.1 != true && bannedSendVideos?.1 != true,
+            subject: subject,
+            saveEditedPhotos: saveEditedPhotos
+        )
+        controller.openBoost = { [weak self, weak controller] in
+            if let self {
+                controller?.dismiss()
+                self.interfaceInteraction?.openBoostToUnrestrict()
+            }
+        }
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self] cameraView in
             self?.openCamera(cameraView: cameraView)

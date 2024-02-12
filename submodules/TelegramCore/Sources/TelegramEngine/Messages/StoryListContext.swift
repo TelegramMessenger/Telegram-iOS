@@ -78,8 +78,9 @@ public final class EngineStoryItem: Equatable {
     public let isMy: Bool
     public let myReaction: MessageReaction.Reaction?
     public let forwardInfo: ForwardInfo?
+    public let author: EnginePeer?
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, alternativeMedia: EngineMedia?, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?, forwardInfo: ForwardInfo?) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, alternativeMedia: EngineMedia?, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?, forwardInfo: ForwardInfo?, author: EnginePeer?) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -102,6 +103,7 @@ public final class EngineStoryItem: Equatable {
         self.isMy = isMy
         self.myReaction = myReaction
         self.forwardInfo = forwardInfo
+        self.author = author
     }
     
     public static func ==(lhs: EngineStoryItem, rhs: EngineStoryItem) -> Bool {
@@ -171,6 +173,9 @@ public final class EngineStoryItem: Equatable {
         if lhs.forwardInfo != rhs.forwardInfo {
             return false
         }
+        if lhs.author != rhs.author {
+            return false
+        }
         return true
     }
 }
@@ -223,7 +228,8 @@ public extension EngineStoryItem {
             isEdited: self.isEdited,
             isMy: self.isMy,
             myReaction: self.myReaction,
-            forwardInfo: self.forwardInfo?.storedForwardInfo
+            forwardInfo: self.forwardInfo?.storedForwardInfo,
+            authorId: self.author?.id
         )
     }
 }
@@ -600,7 +606,8 @@ public final class PeerStoryListContext {
                             isEdited: item.isEdited,
                             isMy: item.isMy,
                             myReaction: item.myReaction,
-                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                            author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                         )
                         items.append(mappedItem)
                         
@@ -745,7 +752,8 @@ public final class PeerStoryListContext {
                                             isEdited: item.isEdited,
                                             isMy: item.isMy,
                                             myReaction: item.myReaction,
-                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                            author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                                         )
                                         storyItems.append(mappedItem)
                                     }
@@ -839,6 +847,11 @@ public final class PeerStoryListContext {
                                                     peers[peer.id] = peer
                                                 }
                                             }
+                                            if let peerId = item.authorId {
+                                                if let peer = transaction.getPeer(peerId) {
+                                                    peers[peer.id] = peer
+                                                }
+                                            }
                                         }
                                     }
                                 default:
@@ -907,7 +920,8 @@ public final class PeerStoryListContext {
                                                                 isEdited: item.isEdited,
                                                                 isMy: item.isMy,
                                                                 myReaction: item.myReaction,
-                                                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                                                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                                author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) }
                                                             )
                                                             finalUpdatedState = updatedState
                                                         }
@@ -955,7 +969,8 @@ public final class PeerStoryListContext {
                                                             isEdited: item.isEdited,
                                                             isMy: item.isMy,
                                                             myReaction: item.myReaction,
-                                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                            author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) }
                                                         )
                                                         finalUpdatedState = updatedState
                                                     } else {
@@ -1005,7 +1020,8 @@ public final class PeerStoryListContext {
                                                                 isEdited: item.isEdited,
                                                                 isMy: item.isMy,
                                                                 myReaction: item.myReaction,
-                                                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                                                                forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                                author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) }
                                                             ))
                                                             updatedState.items.sort(by: { lhs, rhs in
                                                                 return lhs.timestamp > rhs.timestamp
@@ -1051,7 +1067,8 @@ public final class PeerStoryListContext {
                                                             isEdited: item.isEdited,
                                                             isMy: item.isMy,
                                                             myReaction: item.myReaction,
-                                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
+                                                            forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) },
+                                                            author: item.authorId.flatMap { peers[$0].flatMap(EnginePeer.init) }
                                                         ))
                                                         updatedState.items.sort(by: { lhs, rhs in
                                                             return lhs.timestamp > rhs.timestamp
@@ -1221,7 +1238,8 @@ public final class PeerExpiringStoryListContext {
                                         isEdited: item.isEdited,
                                         isMy: item.isMy,
                                         myReaction: item.myReaction,
-                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                        author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                                     )
                                     items.append(.item(mappedItem))
                                 }

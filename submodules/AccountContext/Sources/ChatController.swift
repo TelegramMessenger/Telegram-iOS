@@ -18,13 +18,16 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public struct DisplayTranscribeButton: Equatable {
         public let canBeDisplayed: Bool
         public let displayForNotConsumed: Bool
+        public let providedByGroupBoost: Bool
         
         public init(
             canBeDisplayed: Bool,
-            displayForNotConsumed: Bool
+            displayForNotConsumed: Bool,
+            providedByGroupBoost: Bool
         ) {
             self.canBeDisplayed = canBeDisplayed
             self.displayForNotConsumed = displayForNotConsumed
+            self.providedByGroupBoost = providedByGroupBoost
         }
     }
     
@@ -77,7 +80,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         isPremium: Bool,
         accountPeer: EnginePeer?,
         forceInlineReactions: Bool = false,
-        alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false),
+        alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false, providedByGroupBoost: false),
         topicAuthorId: EnginePeer.Id? = nil,
         hasBots: Bool = false,
         translateToLanguage: String? = nil,

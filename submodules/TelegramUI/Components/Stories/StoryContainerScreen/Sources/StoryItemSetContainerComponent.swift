@@ -1660,10 +1660,15 @@ public final class StoryItemSetContainerComponent: Component {
                         var canShare = true
                         var displayFooter = false
                         if case let .channel(channel) = component.slice.peer {
-                            displayFooter = true
                             isChannel = true
                             if channel.addressName == nil {
                                 canShare = false
+                            }
+                            switch channel.info {
+                            case .broadcast:
+                                displayFooter = true
+                            case .group:
+                                displayFooter = false
                             }
                         } else if component.slice.peer.id == component.context.account.peerId {
                             displayFooter = true
@@ -2752,6 +2757,21 @@ public final class StoryItemSetContainerComponent: Component {
                 disabledPlaceholder = .text(component.strings.Story_FooterReplyUnavailable)
             }
             
+            var isChannel = false
+            var isGroup = false
+            var showMessageInputPanel = true
+            if case let .channel(channel) = component.slice.peer {
+                switch channel.info {
+                case .broadcast:
+                    isChannel = true
+                    showMessageInputPanel = false
+                case .group:
+                    isGroup = true
+                }
+            } else {
+                showMessageInputPanel = component.slice.peer.id != component.context.account.peerId
+            }
+            
             let inputPlaceholder: MessageInputPanelComponent.Placeholder
             if let stealthModeTimeout = component.stealthModeTimeout {
                 let minutes = Int(stealthModeTimeout / 60)
@@ -2787,7 +2807,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 inputPlaceholder = .counter(items)
             } else {
-                inputPlaceholder = .plain(component.strings.Story_InputPlaceholderReplyPrivately)
+                inputPlaceholder = .plain(isGroup ? component.strings.Story_InputPlaceholderReplyInGroup : component.strings.Story_InputPlaceholderReplyPrivately)
             }
             
             let startTime22 = CFAbsoluteTimeGetCurrent()
@@ -2811,13 +2831,8 @@ public final class StoryItemSetContainerComponent: Component {
             var inputPanelSize: CGSize?
             
             let startTime23 = CFAbsoluteTimeGetCurrent()
-            
-            var isChannel = false
-            if case .channel = component.slice.peer {
-                isChannel = true
-            }
-            
-            if component.slice.peer.id != component.context.account.peerId && !isChannel {
+                        
+            if showMessageInputPanel {
                 var haveLikeOptions = false
                 if case .user = component.slice.peer {
                     haveLikeOptions = true
@@ -3141,6 +3156,7 @@ public final class StoryItemSetContainerComponent: Component {
                 displayViewLists = true
             }
             
+            var viewListHeightMidFraction: CGFloat = 0.0
             if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                 var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
                 if self.viewListDisplayState != .hidden, let viewListPanState = self.viewListPanState {
@@ -3226,11 +3242,15 @@ public final class StoryItemSetContainerComponent: Component {
                 self.targetViewListDisplayStateIsFull = viewListHeight > midViewListHeight
                 self.viewListMetrics = (midViewListHeight, maxViewListHeight, viewListHeight)
                 
-                let viewListHeightMidFraction: CGFloat = max(0.0, min(1.0, viewListHeight / midViewListHeight))
+                viewListHeightMidFraction = max(0.0, min(1.0, viewListHeight / midViewListHeight))
                 viewListInset = defaultHeight * (1.0 - viewListHeightMidFraction) + viewListHeightMidFraction * midViewListHeight
                 viewListInset += max(0.0, viewListHeight - midViewListHeight)
                 
-                inputPanelBottomInset = viewListInset
+                if showMessageInputPanel {
+                    inputPanelBottomInset += (viewListInset - defaultHeight) * 1.04
+                } else {
+                    inputPanelBottomInset = viewListInset
+                }
                 minimizedBottomContentHeight = minimizedHeight
                 maximizedBottomContentHeight = defaultHeight
                 
@@ -3998,6 +4018,7 @@ public final class StoryItemSetContainerComponent: Component {
                     strings: component.strings,
                     peer: component.slice.peer,
                     forwardInfo: component.slice.item.storyItem.forwardInfo,
+                    author: component.slice.item.storyItem.author,
                     timestamp: component.slice.item.storyItem.timestamp,
                     counters: counters,
                     isEdited: component.slice.item.storyItem.isEdited
@@ -4030,6 +4051,12 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.navigateToMyStories()
                             } else {
                                 self.navigateToPeer(peer: peer, chat: false)
+                            }
+                        } else if let author = component.slice.item.storyItem.author {
+                            if author.id == component.context.account.peerId {
+                                self.navigateToMyStories()
+                            } else {
+                                self.navigateToPeer(peer: author, chat: false)
                             }
                         } else {
                             if component.slice.peer.id == component.context.account.peerId {
@@ -4108,6 +4135,8 @@ public final class StoryItemSetContainerComponent: Component {
                 if case .regular = component.metrics.widthClass {
                     inputPanelAlpha *= component.visibilityFraction
                 }
+                inputPanelAlpha *= (1.0 - min(1.0, viewListHeightMidFraction * 1.3))
+                let inputPanelScale = (1.0 - viewListHeightMidFraction * 0.45)
                 if let inputPanelView = self.inputPanel.view {
                     if inputPanelView.superview == nil {
                         self.componentContainerView.addSubview(inputPanelView)
@@ -4119,7 +4148,10 @@ public final class StoryItemSetContainerComponent: Component {
                         inputPanelOffset = -max(0.0, min(10.0, bandingOffset))
                     }
                     
-                    inputPanelTransition.setFrame(view: inputPanelView, frame: inputPanelFrame.offsetBy(dx: 0.0, dy: inputPanelOffset))
+                    let finalInputPanelFrame = inputPanelFrame.offsetBy(dx: 0.0, dy: inputPanelOffset)
+                    inputPanelTransition.setPosition(view: inputPanelView, position: finalInputPanelFrame.center)
+                    inputPanelTransition.setBounds(view: inputPanelView, bounds: CGRect(origin: .zero, size: finalInputPanelFrame.size))
+                    inputPanelTransition.setScale(view: inputPanelView, scale: inputPanelScale)
                     transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
                 }
             }
@@ -4381,7 +4413,7 @@ public final class StoryItemSetContainerComponent: Component {
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         items: reactionItems.map(ReactionContextItem.reaction),
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
-                        title: self.displayLikeReactions ? nil : component.strings.Story_SendReactionAsMessage,
+                        title: self.displayLikeReactions ? nil : (isGroup ? component.strings.Story_SendReactionAsGroupMessage : component.strings.Story_SendReactionAsMessage),
                         reactionsLocked: false,
                         alwaysAllowPremiumReactions: false,
                         allPresetReactionsAreAvailable: false,
@@ -5356,6 +5388,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let externalState = MediaEditorTransitionOutExternalState(
                 storyTarget: nil,
+                isForcedTarget: false,
                 isPeerArchived: false,
                 transitionOut: nil
             )
@@ -6394,11 +6427,16 @@ public final class StoryItemSetContainerComponent: Component {
                         
                         let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).startStandalone()
                         
+                        var isGroup = false
+                        if case let .channel(channel) = component.slice.peer, case .group = channel.info {
+                            isGroup = true
+                        }
+                        
                         let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                         if component.slice.item.storyItem.isPinned {
                             self.scheduledStoryUnpinnedUndoOverlay = UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .info(title: nil, text: presentationData.strings.Story_ToastRemovedFromChannelText, timeout: nil, customUndoText: nil),
+                                content: .info(title: nil, text: isGroup ? presentationData.strings.Story_ToastRemovedFromGroupText : presentationData.strings.Story_ToastRemovedFromChannelText, timeout: nil, customUndoText: nil),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
                                 blurred: true,
@@ -6407,7 +6445,7 @@ public final class StoryItemSetContainerComponent: Component {
                         } else {
                             self.component?.presentController(UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .info(title: presentationData.strings.Story_ToastSavedToChannelTitle, text: presentationData.strings.Story_ToastSavedToChannelText, timeout: nil, customUndoText: nil),
+                                content: .info(title: isGroup ? presentationData.strings.Story_ToastSavedToGroupTitle : presentationData.strings.Story_ToastSavedToChannelTitle, text: isGroup ? presentationData.strings.Story_ToastSavedToGroupText : presentationData.strings.Story_ToastSavedToChannelText, timeout: nil, customUndoText: nil),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
                                 blurred: true,

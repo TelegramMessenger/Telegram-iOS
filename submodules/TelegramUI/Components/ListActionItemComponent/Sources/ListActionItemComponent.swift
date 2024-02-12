@@ -4,25 +4,34 @@ import Display
 import ComponentFlow
 import TelegramPresentationData
 import ListSectionComponent
+import SwitchNode
 
 public final class ListActionItemComponent: Component {
+    public enum Accessory: Equatable {
+        case arrow
+        case toggle(Bool)
+    }
+    
     public let theme: PresentationTheme
     public let title: AnyComponent<Empty>
+    public let leftIcon: AnyComponentWithIdentity<Empty>?
     public let icon: AnyComponentWithIdentity<Empty>?
-    public let hasArrow: Bool
+    public let accessory: Accessory?
     public let action: ((UIView) -> Void)?
     
     public init(
         theme: PresentationTheme,
         title: AnyComponent<Empty>,
-        icon: AnyComponentWithIdentity<Empty>?,
-        hasArrow: Bool = true,
+        leftIcon: AnyComponentWithIdentity<Empty>? = nil,
+        icon: AnyComponentWithIdentity<Empty>? = nil,
+        accessory: Accessory? = .arrow,
         action: ((UIView) -> Void)?
     ) {
         self.theme = theme
         self.title = title
+        self.leftIcon = leftIcon
         self.icon = icon
-        self.hasArrow = hasArrow
+        self.accessory = accessory
         self.action = action
     }
     
@@ -33,10 +42,13 @@ public final class ListActionItemComponent: Component {
         if lhs.title != rhs.title {
             return false
         }
+        if lhs.leftIcon != rhs.leftIcon {
+            return false
+        }
         if lhs.icon != rhs.icon {
             return false
         }
-        if lhs.hasArrow != rhs.hasArrow {
+        if lhs.accessory != rhs.accessory {
             return false
         }
         if (lhs.action == nil) != (rhs.action == nil) {
@@ -47,9 +59,11 @@ public final class ListActionItemComponent: Component {
     
     public final class View: HighlightTrackingButton, ListSectionComponent.ChildView {
         private let title = ComponentView<Empty>()
+        private var leftIcon: ComponentView<Empty>?
         private var icon: ComponentView<Empty>?
         
-        private let arrowView: UIImageView
+        private var arrowView: UIImageView?
+        private var switchNode: IconSwitchNode?
         
         private var component: ListActionItemComponent?
         
@@ -57,14 +71,15 @@ public final class ListActionItemComponent: Component {
             return self.icon?.view
         }
         
+        public var leftIconView: UIView? {
+            return self.leftIcon?.view
+        }
+        
         public var customUpdateIsHighlighted: ((Bool) -> Void)?
+        public var separatorInset: CGFloat = 0.0
         
         public override init(frame: CGRect) {
-            self.arrowView = UIImageView()
-            
             super.init(frame: CGRect())
-            
-            self.addSubview(self.arrowView)
             
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             self.internalHighligthedChanged = { [weak self] isHighlighted in
@@ -91,13 +106,27 @@ public final class ListActionItemComponent: Component {
             
             self.isEnabled = component.action != nil
             
-            let verticalInset: CGFloat = 11.0
+            let themeUpdated = component.theme !== previousComponent?.theme
             
-            let contentLeftInset: CGFloat = 16.0
-            let contentRightInset: CGFloat = component.hasArrow ? 30.0 : 16.0
+            let verticalInset: CGFloat = 12.0
+            
+            var contentLeftInset: CGFloat = 16.0
+            let contentRightInset: CGFloat
+            switch component.accessory {
+            case .none:
+                contentRightInset = 16.0
+            case .arrow:
+                contentRightInset = 30.0
+            case .toggle:
+                contentRightInset = 42.0
+            }
             
             var contentHeight: CGFloat = 0.0
             contentHeight += verticalInset
+            
+            if component.leftIcon != nil {
+                contentLeftInset += 46.0
+            }
 
             let titleSize = self.title.update(
                 transition: transition,
@@ -163,15 +192,111 @@ public final class ListActionItemComponent: Component {
                 }
             }
             
-            if self.arrowView.image == nil {
-                self.arrowView.image = PresentationResourcesItemList.disclosureArrowImage(component.theme)?.withRenderingMode(.alwaysTemplate)
+            if let leftIconValue = component.leftIcon {
+                if previousComponent?.leftIcon?.id != leftIconValue.id, let leftIcon = self.leftIcon {
+                    self.leftIcon = nil
+                    if let iconView = leftIcon.view {
+                        transition.setAlpha(view: iconView, alpha: 0.0, completion: { [weak iconView] _ in
+                            iconView?.removeFromSuperview()
+                        })
+                    }
+                }
+                
+                var leftIconTransition = transition
+                let leftIcon: ComponentView<Empty>
+                if let current = self.leftIcon {
+                    leftIcon = current
+                } else {
+                    leftIconTransition = leftIconTransition.withAnimation(.none)
+                    leftIcon = ComponentView()
+                    self.leftIcon = leftIcon
+                }
+                
+                let leftIconSize = leftIcon.update(
+                    transition: leftIconTransition,
+                    component: leftIconValue.component,
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width, height: availableSize.height)
+                )
+                let leftIconFrame = CGRect(origin: CGPoint(x: floor((contentLeftInset - leftIconSize.width) * 0.5), y: floor((min(60.0, contentHeight) - leftIconSize.height) * 0.5)), size: leftIconSize)
+                if let leftIconView = leftIcon.view {
+                    if leftIconView.superview == nil {
+                        leftIconView.isUserInteractionEnabled = false
+                        self.addSubview(leftIconView)
+                        transition.animateAlpha(view: leftIconView, from: 0.0, to: 1.0)
+                    }
+                    leftIconTransition.setFrame(view: leftIconView, frame: leftIconFrame)
+                }
+            } else {
+                if let leftIcon = self.leftIcon {
+                    self.leftIcon = nil
+                    if let leftIconView = leftIcon.view {
+                        transition.setAlpha(view: leftIconView, alpha: 0.0, completion: { [weak leftIconView] _ in
+                            leftIconView?.removeFromSuperview()
+                        })
+                    }
+                }
             }
-            self.arrowView.tintColor = component.theme.list.disclosureArrowColor
-            if let image = self.arrowView.image {
-                let arrowFrame = CGRect(origin: CGPoint(x: availableSize.width - 7.0 - image.size.width, y: floor((contentHeight - image.size.height) * 0.5)), size: image.size)
-                transition.setFrame(view: self.arrowView, frame: arrowFrame)
+            
+            if case .arrow = component.accessory {
+                let arrowView: UIImageView
+                var arrowTransition = transition
+                if let current = self.arrowView {
+                    arrowView = current
+                } else {
+                    arrowTransition = arrowTransition.withAnimation(.none)
+                    arrowView = UIImageView(image: PresentationResourcesItemList.disclosureArrowImage(component.theme)?.withRenderingMode(.alwaysTemplate))
+                    self.arrowView = arrowView
+                    self.addSubview(arrowView)
+                }
+                
+                arrowView.tintColor = component.theme.list.disclosureArrowColor
+                
+                if let image = arrowView.image {
+                    let arrowFrame = CGRect(origin: CGPoint(x: availableSize.width - 7.0 - image.size.width, y: floor((contentHeight - image.size.height) * 0.5)), size: image.size)
+                    arrowTransition.setFrame(view: arrowView, frame: arrowFrame)
+                }
+            } else {
+                if let arrowView = self.arrowView {
+                    self.arrowView = nil
+                    arrowView.removeFromSuperview()
+                }
             }
-            transition.setAlpha(view: self.arrowView, alpha: component.hasArrow ? 1.0 : 0.0)
+            
+            if case let .toggle(isOn) = component.accessory {
+                let switchNode: IconSwitchNode
+                var switchTransition = transition
+                var updateSwitchTheme = themeUpdated
+                if let current = self.switchNode {
+                    switchNode = current
+                    switchNode.setOn(isOn, animated: !transition.animation.isImmediate)
+                } else {
+                    switchTransition = switchTransition.withAnimation(.none)
+                    updateSwitchTheme = true
+                    switchNode = IconSwitchNode()
+                    switchNode.setOn(isOn, animated: false)
+                    self.addSubview(switchNode.view)
+                }
+                
+                if updateSwitchTheme {
+                    switchNode.frameColor = component.theme.list.itemSwitchColors.frameColor
+                    switchNode.contentColor = component.theme.list.itemSwitchColors.contentColor
+                    switchNode.handleColor = component.theme.list.itemSwitchColors.handleColor
+                    switchNode.positiveContentColor = component.theme.list.itemSwitchColors.positiveColor
+                    switchNode.negativeContentColor = component.theme.list.itemSwitchColors.negativeColor
+                }
+                
+                let switchSize = CGSize(width: 51.0, height: 31.0)
+                let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: floor((min(60.0, contentHeight) - switchSize.height) * 0.5)), size: switchSize)
+                switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
+            } else {
+                if let switchNode = self.switchNode {
+                    self.switchNode = nil
+                    switchNode.view.removeFromSuperview()
+                }
+            }
+            
+            self.separatorInset = contentLeftInset
             
             return CGSize(width: availableSize.width, height: contentHeight)
         }

@@ -174,6 +174,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let chatLocation: ChatLocation?
     private let bannedSendPhotos: (Int32, Bool)?
     private let bannedSendVideos: (Int32, Bool)?
+    private let canBoostToUnrestrict: Bool
     private let subject: Subject
     private let saveEditedPhotos: Bool
     
@@ -187,6 +188,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var presentTimerPicker: (@escaping (Int32) -> Void) -> Void = { _ in }
     public var presentWebSearch: (MediaGroupsScreen, Bool) -> Void = { _, _ in }
     public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
+    public var openBoost: () -> Void = { }
     
     public var customSelection: ((MediaPickerScreen, Any) -> Void)? = nil
     
@@ -1308,6 +1310,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 
                 if let (untilDate, personal) = bannedSendMedia {
                     self.gridNode.isHidden = true
+                    self.controller?.titleView.isEnabled = false
                     
                     let banDescription: String
                     if untilDate != 0 && untilDate != Int32.max {
@@ -1323,7 +1326,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     if let current = self.placeholderNode {
                         placeholderNode = current
                     } else {
-                        placeholderNode = MediaPickerPlaceholderNode(content: .bannedSendMedia(banDescription))
+                        placeholderNode = MediaPickerPlaceholderNode(content: .bannedSendMedia(text: banDescription, canBoost: controller.canBoostToUnrestrict))
+                        placeholderNode.boostPressed = { [weak controller] in
+                            controller?.openBoost()
+                        }
                         self.containerNode.insertSubnode(placeholderNode, aboveSubnode: self.gridNode)
                         self.placeholderNode = placeholderNode
                         
@@ -1524,8 +1530,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         threadTitle: String?,
         chatLocation: ChatLocation?,
         isScheduledMessages: Bool = false,
-        bannedSendPhotos: (Int32, Bool)?,
-        bannedSendVideos: (Int32, Bool)?,
+        bannedSendPhotos: (Int32, Bool)? = nil,
+        bannedSendVideos: (Int32, Bool)? = nil,
+        canBoostToUnrestrict: Bool = false,
         subject: Subject,
         editingContext: TGMediaEditingContext? = nil,
         selectionContext: TGMediaSelectionContext? = nil,
@@ -1544,6 +1551,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.isScheduledMessages = isScheduledMessages
         self.bannedSendPhotos = bannedSendPhotos
         self.bannedSendVideos = bannedSendVideos
+        self.canBoostToUnrestrict = canBoostToUnrestrict
         self.subject = subject
         self.saveEditedPhotos = saveEditedPhotos
         self.mainButtonState = mainButtonState

@@ -134,7 +134,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value), false, sourceView)
+            item.controllerInteraction.updateMessageReaction(item.topMessage, .reaction(value), false, sourceView)
         }
         
         self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceView, value in
@@ -371,13 +371,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             if let giveaway {
                 if giveaway.flags.contains(.onlyNewSubscribers) {
                     if giveaway.channelPeerIds.count > 1 {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNewMany
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_ParticipantsNewMany : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNewMany
                     } else {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNew
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_ParticipantsNew : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNew
                     }
                 } else {
                     if giveaway.channelPeerIds.count > 1 {
-                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsMany
+                        participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_ParticipantsMany : item.presentationData.strings.Chat_Giveaway_Message_ParticipantsMany
                     } else {
                         participantsText = isGroup ? item.presentationData.strings.Chat_Giveaway_Message_Group_Participants : item.presentationData.strings.Chat_Giveaway_Message_Participants
                     }
@@ -526,11 +526,11 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
                         displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
-                        areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
+                        areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message, isInline: item.associatedData.isInline),
+                        canViewReactionList: canViewMessageReactionList(message: item.topMessage, isInline: item.associatedData.isInline),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,
                         animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))

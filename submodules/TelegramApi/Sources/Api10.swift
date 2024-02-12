@@ -1,7 +1,7 @@
 public extension Api {
     indirect enum InputReplyTo: TypeConstructorDescription {
         case inputReplyToMessage(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?)
-        case inputReplyToStory(userId: Api.InputUser, storyId: Int32)
+        case inputReplyToStory(peer: Api.InputPeer, storyId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21,11 +21,11 @@ public extension Api {
                     }}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(quoteOffset!, buffer: buffer, boxed: false)}
                     break
-                case .inputReplyToStory(let userId, let storyId):
+                case .inputReplyToStory(let peer, let storyId):
                     if boxed {
-                        buffer.appendInt32(363917955)
+                        buffer.appendInt32(1484862010)
                     }
-                    userId.serialize(buffer, true)
+                    peer.serialize(buffer, true)
                     serializeInt32(storyId, buffer: buffer, boxed: false)
                     break
     }
@@ -35,8 +35,8 @@ public extension Api {
         switch self {
                 case .inputReplyToMessage(let flags, let replyToMsgId, let topMsgId, let replyToPeerId, let quoteText, let quoteEntities, let quoteOffset):
                 return ("inputReplyToMessage", [("flags", flags as Any), ("replyToMsgId", replyToMsgId as Any), ("topMsgId", topMsgId as Any), ("replyToPeerId", replyToPeerId as Any), ("quoteText", quoteText as Any), ("quoteEntities", quoteEntities as Any), ("quoteOffset", quoteOffset as Any)])
-                case .inputReplyToStory(let userId, let storyId):
-                return ("inputReplyToStory", [("userId", userId as Any), ("storyId", storyId as Any)])
+                case .inputReplyToStory(let peer, let storyId):
+                return ("inputReplyToStory", [("peer", peer as Any), ("storyId", storyId as Any)])
     }
     }
     
@@ -74,16 +74,16 @@ public extension Api {
             }
         }
         public static func parse_inputReplyToStory(_ reader: BufferReader) -> InputReplyTo? {
-            var _1: Api.InputUser?
+            var _1: Api.InputPeer?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
             }
             var _2: Int32?
             _2 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.InputReplyTo.inputReplyToStory(userId: _1!, storyId: _2!)
+                return Api.InputReplyTo.inputReplyToStory(peer: _1!, storyId: _2!)
             }
             else {
                 return nil

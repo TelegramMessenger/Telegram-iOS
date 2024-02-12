@@ -963,10 +963,10 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             if let boostersState, boostersState.count > 0 {
                 boostersTitle = presentationData.strings.Stats_Boosts_Boosts(boostersState.count)
                 boostersPlaceholder = nil
-                boostersFooter = isGroup ? "Your group is currently boosted by these members." : presentationData.strings.Stats_Boosts_BoostersInfo
+                boostersFooter = isGroup ? presentationData.strings.Stats_Boosts_Group_BoostersInfo : presentationData.strings.Stats_Boosts_BoostersInfo
             } else {
                 boostersTitle = presentationData.strings.Stats_Boosts_BoostsNone
-                boostersPlaceholder = presentationData.strings.Stats_Boosts_NoBoostersYet
+                boostersPlaceholder = isGroup ? presentationData.strings.Stats_Boosts_Group_NoBoostersYet : presentationData.strings.Stats_Boosts_NoBoostersYet
                 boostersFooter = nil
             }
             entries.append(.boostersTitle(presentationData.theme, boostersTitle))
@@ -1034,11 +1034,11 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             
             entries.append(.boostLinkTitle(presentationData.theme, presentationData.strings.Stats_Boosts_LinkHeader))
             entries.append(.boostLink(presentationData.theme, boostData.url))
-            entries.append(.boostLinkInfo(presentationData.theme, isGroup ? "Share this link with your members to get more boosts." : presentationData.strings.Stats_Boosts_LinkInfo))
+            entries.append(.boostLinkInfo(presentationData.theme, isGroup ? presentationData.strings.Stats_Boosts_Group_LinkInfo : presentationData.strings.Stats_Boosts_LinkInfo))
             
             if giveawayAvailable {
                 entries.append(.gifts(presentationData.theme, presentationData.strings.Stats_Boosts_GetBoosts))
-                entries.append(.giftsInfo(presentationData.theme, isGroup ? "Get more boosts for your group by gifting Premium to your subscribers." : presentationData.strings.Stats_Boosts_GetBoostsInfo))
+                entries.append(.giftsInfo(presentationData.theme, isGroup ? presentationData.strings.Stats_Boosts_Group_GetBoostsInfo : presentationData.strings.Stats_Boosts_GetBoostsInfo))
             }
         }
     }
@@ -1046,7 +1046,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
     return entries
 }
 
-public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil) -> ViewController {
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, boostStatusUpdated: ((ChannelBoostStatus) -> Void)? = nil) -> ViewController {
     let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
@@ -1087,12 +1087,16 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     })
     dataPromise.set(.single(nil) |> then(dataSignal))
     
-    let boostData: Signal<ChannelBoostStatus?, NoError>
-    if let boostStatus {
-        boostData = .single(boostStatus)
-    } else {
-        boostData = .single(nil) |> then(context.engine.peers.getChannelBoostStatus(peerId: peerId))
-    }
+    let boostDataPromise = Promise<ChannelBoostStatus?>()
+    boostDataPromise.set(.single(boostStatus) |> then(context.engine.peers.getChannelBoostStatus(peerId: peerId)))
+    
+    actionsDisposable.add((boostDataPromise.get()
+    |> deliverOnMainQueue).start(next: { boostStatus in
+        if let boostStatus, let boostStatusUpdated {
+            boostStatusUpdated(boostStatus)
+        }
+    }))
+
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
     
@@ -1253,7 +1257,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         dataPromise.get(),
         messagesPromise.get(),
         storiesPromise.get(),
-        boostData,
+        boostDataPromise.get(),
         boostsContext.state,
         giftsContext.state,
         longLoadingSignal
@@ -1303,14 +1307,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             return map
         }
                 
-        //TODO:localize
         var title: ItemListControllerTitle
         var headerItem: BoostHeaderItem?
         var leftNavigationButton: ItemListNavigationButton?
         var boostsOnly = false
-        if isGroup, section == .boosts, let boostStatus {
+        if isGroup, section == .boosts {
             title = .text("")
-            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostStatus, title: "Boost Group", text: "Members of your group can **boost** it so that it **levels up** and gets **exclusive features**.", openBoost: {
+            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostData, title: presentationData.strings.GroupBoost_Title, text: presentationData.strings.GroupBoost_Info, openBoost: {
                 openBoostImpl?(false)
             }, createGiveaway: {
                 arguments.openGifts()
@@ -1509,13 +1512,18 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 guard let boostStatus, let myBoostStatus else {
                     return
                 }
+                boostDataPromise.set(.single(boostStatus))
+                
                 let boostController = PremiumBoostLevelsScreen(
                     context: context,
                     peerId: peerId,
-                    mode: .user(mode: .current),
+                    mode: .owner(subject: nil),
                     status: boostStatus,
                     myBoostStatus: myBoostStatus
                 )
+                boostController.boostStatusUpdated = { boostStatus in
+                    boostDataPromise.set(.single(boostStatus))
+                }
                 controller?.push(boostController)
             })
         }

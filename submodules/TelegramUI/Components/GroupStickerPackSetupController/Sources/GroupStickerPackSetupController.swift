@@ -11,6 +11,7 @@ import PresentationDataUtils
 import AccountContext
 import StickerPackPreviewUI
 import ItemListStickerPackItem
+import UndoUI
 
 private final class GroupStickerPackSetupControllerArguments {
     let context: AccountContext
@@ -282,11 +283,14 @@ private func groupStickerPackSetupControllerEntries(context: AccountContext, pre
             entries.append(.currentPack(0, presentationData.theme, presentationData.strings, .found(packInfo: data.info, topItem: data.item, subtitle: isEmoji ? presentationData.strings.StickerPack_EmojiCount(data.info.count) : presentationData.strings.StickerPack_StickerCount(data.info.count))))
     }
     entries.append(.searchInfo(presentationData.theme, isEmoji ? presentationData.strings.Group_Emoji_Info : presentationData.strings.Channel_Stickers_CreateYourOwn))
-    entries.append(.packsTitle(presentationData.theme, isEmoji ? presentationData.strings.Group_Emoji_YourEmoji : presentationData.strings.Channel_Stickers_YourStickers))
     
     let namespace = isEmoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks
     if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [namespace])] as? ItemCollectionInfosView {
         if let packsEntries = stickerPacksView.entriesByNamespace[namespace] {
+            if !packsEntries.isEmpty {
+                entries.append(.packsTitle(presentationData.theme, isEmoji ? presentationData.strings.Group_Emoji_YourEmoji : presentationData.strings.Channel_Stickers_YourStickers))
+            }
+            
             var index: Int32 = 0
             for entry in packsEntries {
                 if let info = entry.info as? StickerPackCollectionInfo {
@@ -340,6 +344,20 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
         initialData.set(.single(.noData))
     }
     
+    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    
+    var completionImpl: ((StickerPackCollectionInfo?) -> Void)?
+    if let completion {
+        completionImpl = { value in
+            completion(value)
+            if let _ = value {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Group_Appearance_EmojiPackUpdated, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in return true })
+                presentControllerImpl?(controller, nil)
+            }
+        }
+    }
+    
     let stickerPacks = Promise<CombinedView>()
     stickerPacks.set(context.account.postbox.combinedView(keys: [.itemCollectionInfos(namespaces: [isEmoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks])]))
     
@@ -350,6 +368,9 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
             if searchText.isEmpty {
                 return .single((searchText, .none))
             } else if case let .data(data) = initialData, searchText.lowercased() == data.info.shortName {
+                Queue.mainQueue().async {
+                    completionImpl?(data.info)
+                }
                 return .single((searchText, .found(StickerPackData(info: data.info, item: data.item))))
             } else {
                 let namespace = isEmoji ? Namespaces.ItemCollection.CloudEmojiPacks : Namespaces.ItemCollection.CloudStickerPacks
@@ -375,6 +396,13 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                         case let .result(info, items, _):
                             return .single((searchText, .found(StickerPackData(info: info, item: items.first))))
                     }
+                }
+                |> afterNext { value in
+                    if case let .found(data) = value.1 {
+                        Queue.mainQueue().async {
+                            completionImpl?(data.info)
+                        }
+                    }
                 })
             }
         } else {
@@ -382,7 +410,6 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
         }
     })
     
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var navigateToChatControllerImpl: ((PeerId) -> Void)?
     var dismissInputImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
@@ -399,15 +426,13 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     
     let arguments = GroupStickerPackSetupControllerArguments(context: context, selectStickerPack: { info in
         searchText.set(info.shortName)
-        if let completion {
-            completion(info)
-        }
+        completionImpl?(info)
     }, openStickerPack: { info in
         presentStickerPackController?(info)
     }, updateSearchText: { text in
         searchText.set(text)
-        if text == "", let completion {
-            completion(nil)
+        if text == "" {
+            completionImpl?(nil)
         }
     }, openStickersBot: {
         resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers")
@@ -470,29 +495,24 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                         info = data.info
                     }
                     rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: enabled, action: {
-                        if let completion {
-                            completion(info)
+                        if info?.id == currentPackInfo?.id {
                             dismissImpl?()
                         } else {
-                            if info?.id == currentPackInfo?.id {
-                                dismissImpl?()
-                            } else {
+                            updateState { state in
+                                var state = state
+                                state.isSaving = true
+                                return state
+                            }
+                            saveDisposable.set((context.engine.peers.updateGroupSpecificStickerset(peerId: peerId, info: info)
+                            |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     var state = state
-                                    state.isSaving = true
+                                    state.isSaving = false
                                     return state
                                 }
-                                saveDisposable.set((context.engine.peers.updateGroupSpecificStickerset(peerId: peerId, info: info)
-                                |> deliverOnMainQueue).start(error: { _ in
-                                    updateState { state in
-                                        var state = state
-                                        state.isSaving = false
-                                        return state
-                                    }
-                                }, completed: {
-                                    dismissImpl?()
-                                }))
-                            }
+                            }, completed: {
+                                dismissImpl?()
+                            }))
                         }
                     })
                 }
@@ -534,6 +554,14 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
+            if c is UndoOverlayController {
+                controller.window?.forEachController { c in
+                    if let controller = c as? UndoOverlayController {
+                        controller.dismiss()
+                    }
+                }
+            }
+            
             controller.present(c, in: .window(.root), with: p)
         }
     }

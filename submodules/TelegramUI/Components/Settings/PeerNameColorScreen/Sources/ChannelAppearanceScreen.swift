@@ -37,6 +37,7 @@ import BoostLevelIconComponent
 import BundleIconComponent
 import Markdown
 import GroupStickerPackSetupController
+import PeerNameColorItem
 
 private final class EmojiActionIconComponent: Component {
     let context: AccountContext
@@ -540,6 +541,10 @@ final class ChannelAppearanceScreenComponent: Component {
             if self.isApplyingSettings {
                 return
             }
+            if resolvedState.changes.isEmpty {
+                self.environment?.controller()?.dismiss()
+                return
+            }
             
             let requiredLevel = requiredBoostSubject.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration)
             if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
@@ -937,16 +942,20 @@ final class ChannelAppearanceScreenComponent: Component {
                 return availableSize
             }
             
-            var requiredBoostSubjects: [BoostSubject] = [.nameColors(colors: resolvedState.nameColor)]
-
+            let isGroup = self.isGroup
+            
+            var requiredBoostSubjects: [BoostSubject] = []
+            if !isGroup {
+                requiredBoostSubjects.append(.nameColors(colors: resolvedState.nameColor))
+            }
             let replyFileId = resolvedState.replyFileId
             if replyFileId != nil {
                 requiredBoostSubjects.append(.nameIcon)
             }
             
             let profileColor = resolvedState.profileColor
-            if profileColor != nil {
-                requiredBoostSubjects.append(.profileColors)
+            if let profileColor {
+                requiredBoostSubjects.append(.profileColors(colors: profileColor))
             }
             
             let backgroundFileId = resolvedState.backgroundFileId
@@ -1021,7 +1030,6 @@ final class ChannelAppearanceScreenComponent: Component {
                 }
             }
             
-            var isGroup = false
             if case let .user(user) = peer {
                 peer = .user(user
                     .withUpdatedNameColor(resolvedState.nameColor)
@@ -1038,9 +1046,6 @@ final class ChannelAppearanceScreenComponent: Component {
                     .withUpdatedBackgroundEmojiId(replyFileId)
                     .withUpdatedProfileBackgroundEmojiId(backgroundFileId)
                 )
-                if case .group = channel.info {
-                    isGroup = true
-                }
             }
             
             let replyIconLevel = Int(BoostSubject.nameIcon.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration))
@@ -1078,7 +1083,7 @@ final class ChannelAppearanceScreenComponent: Component {
             }
 
             self.backButton.updateContentsColor(backgroundColor: scrolledUp ? UIColor(white: 0.0, alpha: 0.1) : .clear, contentsColor: scrolledUp ? .white : environment.theme.rootController.navigationBar.accentTextColor, canBeExpanded: !scrolledUp, transition: .animated(duration: 0.2, curve: .easeInOut))
-            self.backButton.frame = CGRect(origin: CGPoint(x: 16.0, y: 54.0), size: backSize)
+            self.backButton.frame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.navigationHeight - 44.0), size: backSize)
             if self.backButton.view.superview == nil {
                 if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
                     navigationBar.view.addSubview(self.backButton.view)
@@ -1140,7 +1145,9 @@ final class ChannelAppearanceScreenComponent: Component {
                             ),
                             params: ListViewItemLayoutParams(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                         ))),
-                    ]
+                    ],
+                    displaySeparators: false,
+                    extendsItemHighlightToSection: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
@@ -1190,7 +1197,9 @@ final class ChannelAppearanceScreenComponent: Component {
                                 self?.displayBoostLevels(subject: nil)
                             }
                         )))
-                    ]
+                    ],
+                    displaySeparators: false,
+                    extendsItemHighlightToSection: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1273,7 +1282,9 @@ final class ChannelAppearanceScreenComponent: Component {
                                 } ?? environment.theme.list.itemAccentColor, subject: .profile)
                             }
                         )))
-                    ]
+                    ],
+                    displaySeparators: false,
+                    extendsItemHighlightToSection: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1306,7 +1317,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                 maximumNumberOfLines: 0
                             )),
                             icon: nil,
-                            hasArrow: false,
+                            accessory: nil,
                             action: { [weak self] view in
                                 guard let self else {
                                     return
@@ -1317,7 +1328,9 @@ final class ChannelAppearanceScreenComponent: Component {
                                 self.state?.updated(transition: .spring(duration: 0.4))
                             }
                         )))
-                    ]
+                    ],
+                    displaySeparators: false,
+                    extendsItemHighlightToSection: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1394,7 +1407,9 @@ final class ChannelAppearanceScreenComponent: Component {
                                     self.openEmojiPackSetup()
                                 }
                             )))
-                        ]
+                        ],
+                        displaySeparators: false,
+                        extendsItemHighlightToSection: true
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1456,7 +1471,9 @@ final class ChannelAppearanceScreenComponent: Component {
                                 self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.emojiStatus?.fileId, color: nil, subject: .status)
                             }
                         )))
-                    ]
+                    ],
+                    displaySeparators: false,
+                    extendsItemHighlightToSection: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1493,7 +1510,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     photo: peer.profileImageRepresentations,
                     nameColor: resolvedState.nameColor,
                     backgroundEmojiId: replyFileId,
-                    reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText),
+                    reply: (peer.compactDisplayTitle, environment.strings.Channel_Appearance_ExampleReplyText, resolvedState.nameColor),
                     linkPreview: (environment.strings.Channel_Appearance_ExampleLinkWebsite, environment.strings.Channel_Appearance_ExampleLinkTitle, environment.strings.Channel_Appearance_ExampleLinkText),
                     text: environment.strings.Channel_Appearance_ExampleText
                 )
@@ -1578,7 +1595,9 @@ final class ChannelAppearanceScreenComponent: Component {
                                     self.openEmojiSetup(sourceView: iconView, currentFileId: resolvedState.replyFileId, color: component.context.peerNameColors.get(resolvedState.nameColor, dark: environment.theme.overallDarkAppearance).main, subject: .reply)
                                 }
                             )))
-                        ]
+                        ],
+                        displaySeparators: false,
+                        extendsItemHighlightToSection: true
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1624,11 +1643,11 @@ final class ChannelAppearanceScreenComponent: Component {
                     let incomingMessageItem = PeerNameColorChatPreviewItem.MessageItem(
                         outgoing: false,
                         peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)),
-                        author: peer.compactDisplayTitle,
-                        photo: peer.profileImageRepresentations,
+                        author: environment.strings.Group_Appearance_PreviewAuthor,
+                        photo: [],
                         nameColor: .red,
-                        backgroundEmojiId: nil,
-                        reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText),
+                        backgroundEmojiId: 5301072507598550489,
+                        reply: (environment.strings.Appearance_PreviewReplyAuthor, environment.strings.Appearance_PreviewReplyText, .violet),
                         linkPreview: nil,
                         text: environment.strings.Appearance_PreviewIncomingText
                     )
@@ -1726,7 +1745,9 @@ final class ChannelAppearanceScreenComponent: Component {
                             )),
                             maximumNumberOfLines: 0
                         )),
-                        items: wallpaperItems
+                        items: wallpaperItems,
+                        displaySeparators: false,
+                        extendsItemHighlightToSection: true
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -1750,7 +1771,7 @@ final class ChannelAppearanceScreenComponent: Component {
             )))
             
             let requiredLevel = requiredBoostSubject.requiredLevel(group: isGroup, context: component.context, configuration: premiumConfiguration)
-            if let boostLevel = self.boostLevel, requiredLevel > boostLevel {
+            if let boostLevel = self.boostLevel, requiredLevel > boostLevel && !resolvedState.changes.isEmpty {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(PremiumLockButtonSubtitleComponent(
                     count: Int(requiredLevel),
                     theme: environment.theme,

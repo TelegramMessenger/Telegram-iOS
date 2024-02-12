@@ -1601,10 +1601,15 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         }
         
         if let mode = self.mode, case let .peer(peer, existing) = mode {
-            if case .channel = peer {
+            if case let .channel(channel) = peer {
                 topMessageText = presentationData.strings.WallpaperPreview_ChannelTopText
                 bottomMessageText = ""
-                serviceMessageText = presentationData.strings.WallpaperPreview_ChannelHeader
+                switch channel.info {
+                case .group:
+                    serviceMessageText = presentationData.strings.WallpaperPreview_GroupHeader
+                case .broadcast:
+                    serviceMessageText = presentationData.strings.WallpaperPreview_ChannelHeader
+                }
             } else {
                 topMessageText = presentationData.strings.WallpaperPreview_ChatTopText
                 bottomMessageText = presentationData.strings.WallpaperPreview_ChatBottomText

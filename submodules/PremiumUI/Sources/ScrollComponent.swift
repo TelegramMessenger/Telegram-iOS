@@ -22,7 +22,12 @@ final class ScrollChildEnvironment: Equatable {
 final class ScrollComponent<ChildEnvironment: Equatable>: Component {
     typealias EnvironmentType = ChildEnvironment
     
+    class ExternalState {
+        var contentHeight: CGFloat = 0.0
+    }
+    
     let content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>
+    let externalState: ExternalState?
     let contentInsets: UIEdgeInsets
     let contentOffsetUpdated: (_ top: CGFloat, _ bottom: CGFloat) -> Void
     let contentOffsetWillCommit: (UnsafeMutablePointer<CGPoint>) -> Void
@@ -30,12 +35,14 @@ final class ScrollComponent<ChildEnvironment: Equatable>: Component {
     
     public init(
         content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>,
+        externalState: ExternalState? = nil,
         contentInsets: UIEdgeInsets,
         contentOffsetUpdated: @escaping (_ top: CGFloat, _ bottom: CGFloat) -> Void,
         contentOffsetWillCommit:  @escaping (UnsafeMutablePointer<CGPoint>) -> Void,
         resetScroll: ActionSlot<Void> = ActionSlot()
     ) {
         self.content = content
+        self.externalState = externalState
         self.contentInsets = contentInsets
         self.contentOffsetUpdated = contentOffsetUpdated
         self.contentOffsetWillCommit = contentOffsetWillCommit
@@ -121,6 +128,7 @@ final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             if self.scrollIndicatorInsets != component.contentInsets {
                 self.scrollIndicatorInsets = component.contentInsets
             }
+            component.externalState?.contentHeight = contentSize.height
             
             self.component = component
             

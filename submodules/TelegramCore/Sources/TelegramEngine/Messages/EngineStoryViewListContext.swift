@@ -556,7 +556,8 @@ public final class EngineStoryViewListContext {
                                                         isEdited: item.isEdited,
                                                         isMy: item.isMy,
                                                         myReaction: item.myReaction,
-                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                                        author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                                                     ),
                                                     storyStats: transaction.getPeerStoryStats(peerId: peer.id)
                                                 )))
@@ -595,7 +596,8 @@ public final class EngineStoryViewListContext {
                                             isEdited: item.isEdited,
                                             isMy: item.isMy,
                                             myReaction: item.myReaction,
-                                            forwardInfo: item.forwardInfo
+                                            forwardInfo: item.forwardInfo,
+                                            authorId: item.authorId
                                         ))
                                         if let entry = CodableEntry(updatedItem) {
                                             transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
@@ -634,7 +636,8 @@ public final class EngineStoryViewListContext {
                                                     isEdited: item.isEdited,
                                                     isMy: item.isMy,
                                                     myReaction: item.myReaction,
-                                                    forwardInfo: item.forwardInfo
+                                                    forwardInfo: item.forwardInfo,
+                                                    authorId: item.authorId
                                                 ))
                                                 if let entry = CodableEntry(updatedItem) {
                                                     currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)
@@ -748,7 +751,8 @@ public final class EngineStoryViewListContext {
                                                         isEdited: item.isEdited,
                                                         isMy: item.isMy,
                                                         myReaction: item.myReaction,
-                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) }
+                                                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, transaction: transaction) },
+                                                        author: item.authorId.flatMap { transaction.getPeer($0).flatMap(EnginePeer.init) }
                                                     ),
                                                     storyStats: transaction.getPeerStoryStats(peerId: peer.id)
                                                 )))

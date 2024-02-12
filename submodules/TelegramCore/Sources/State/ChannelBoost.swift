@@ -132,7 +132,7 @@ func _internal_applyChannelBoost(account: Account, peerId: PeerId, slots: [Int32
                     let myStatus = MyBoostStatus(apiMyBoostStatus: result, accountPeerId: account.peerId, transaction: transaction)
                     let peerIds = myStatus.boosts.reduce(Set<PeerId>(), { current, value in
                         var current = current
-                        if let peerId = value.peer?.id, !current.contains(peerId) {
+                        if let peerId = value.peer?.id {
                             current.insert(peerId)
                         }
                         return current

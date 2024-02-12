@@ -1472,6 +1472,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         let deviceContactsNumbers = self.context.sharedContext.deviceContactPhoneNumbers.get()
         |> distinctUntilChanged
         
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+        
         let messageViewQueue = Queue.mainQueue()
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
@@ -1676,21 +1678,28 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     reverseGroups = reverseGroupsValue
                 }
                 
-                var isCopyProtectionEnabled: Bool = data.initialData?.peer?.isCopyProtectionEnabled ?? false
-                for entry in view.additionalData {
-                    if case let .peer(_, maybePeer) = entry, let peer = maybePeer {
-                        isCopyProtectionEnabled = peer.isCopyProtectionEnabled
-                    }
-                }
                 
                 var isPremium = false
                 if case let .user(user) = accountPeer, user.isPremium {
                     isPremium = true
                 }
                 
+                var audioTranscriptionProvidedByBoost = false
+                var isCopyProtectionEnabled: Bool = data.initialData?.peer?.isCopyProtectionEnabled ?? false
+                for entry in view.additionalData {
+                    if case let .peer(_, maybePeer) = entry, let peer = maybePeer {
+                        isCopyProtectionEnabled = peer.isCopyProtectionEnabled
+                        if let channel = peer as? TelegramChannel, let boostLevel = channel.approximateBoostLevel {
+                            if boostLevel >= premiumConfiguration.minGroupAudioTranscriptionLevel {
+                                audioTranscriptionProvidedByBoost = true
+                            }
+                        }
+                    }
+                }
                 let alwaysDisplayTranscribeButton = ChatMessageItemAssociatedData.DisplayTranscribeButton(
                     canBeDisplayed: suggestAudioTranscription.0 < 2,
-                    displayForNotConsumed: suggestAudioTranscription.1
+                    displayForNotConsumed: suggestAudioTranscription.1,
+                    providedByGroupBoost: audioTranscriptionProvidedByBoost
                 )
                 
                 var translateToLanguage: String?

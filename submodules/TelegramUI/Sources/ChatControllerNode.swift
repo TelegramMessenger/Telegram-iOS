@@ -3705,6 +3705,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                     return (.media(mode: .other, expanded: nil, focused: false), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
                 })
+                
+                if let emojiPackTooltipController = strongSelf.controller?.emojiPackTooltipController {
+                    strongSelf.controller?.emojiPackTooltipController = nil
+                    emojiPackTooltipController.dismiss()
+                    
+                    Queue.mainQueue().after(0.1) {
+                        if let inputNode = strongSelf.inputNode as? ChatEntityKeyboardInputNode {
+                            inputNode.scrollToGroupEmoji()
+                        }
+                    }
+                }
             })
         }
     }

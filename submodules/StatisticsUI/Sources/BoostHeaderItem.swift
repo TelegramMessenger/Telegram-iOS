@@ -19,7 +19,7 @@ final class BoostHeaderItem: ItemListControllerHeaderItem {
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let status: ChannelBoostStatus
+    let status: ChannelBoostStatus?
     let title: String
     let text: String
     let openBoost: () -> Void
@@ -28,7 +28,7 @@ final class BoostHeaderItem: ItemListControllerHeaderItem {
     let back: () -> Void
     let updateStatusBar: (StatusBarStyle) -> Void
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, status: ChannelBoostStatus, title: String, text: String, openBoost: @escaping () -> Void, createGiveaway: @escaping () -> Void, openFeatures: @escaping () -> Void, back: @escaping () -> Void, updateStatusBar: @escaping (StatusBarStyle) -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, status: ChannelBoostStatus?, title: String, text: String, openBoost: @escaping () -> Void, createGiveaway: @escaping () -> Void, openFeatures: @escaping () -> Void, back: @escaping () -> Void, updateStatusBar: @escaping (StatusBarStyle) -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -44,7 +44,7 @@ final class BoostHeaderItem: ItemListControllerHeaderItem {
     
     func isEqual(to: ItemListControllerHeaderItem) -> Bool {
         if let item = to as? BoostHeaderItem {
-            return self.theme === item.theme && self.title == item.title && self.text == item.text
+            return self.theme === item.theme && self.title == item.title && self.text == item.text && self.status == item.status
         } else {
             return false
         }
@@ -78,7 +78,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         didSet {
             self.updateItem()
             if let layout = self.validLayout {
-                let _ = self.updateLayout(layout: layout, transition: .immediate)
+                let _ = self.updateLayout(layout: layout, transition: .animated(duration: 0.2, curve: .easeInOut))
             }
         }
     }
@@ -197,6 +197,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
             strings: self.item.strings, 
             text: self.item.text,
             status: self.item.status,
+            insets: layout.safeInsets,
             openBoost: self.item.openBoost,
             createGiveaway: self.item.createGiveaway,
             openFeatures: self.item.openFeatures
@@ -205,7 +206,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         
         if let hostView = self.hostView {
             let size = hostView.update(
-                transition: .immediate,
+                transition: Transition(transition),
                 component: component,
                 environment: {},
                 containerSize: containerSize
@@ -220,7 +221,7 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
         self.whiteTitleNode.position = self.titleNode.position
                 
         let backSize = self.backButton.update(key: .back, presentationData: self.item.context.sharedContext.currentPresentationData.with { $0 }, height: 44.0)
-        self.backButton.frame = CGRect(origin: CGPoint(x: 16.0, y: 54.0), size: backSize)
+        self.backButton.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: statusBarHeight), size: backSize)
         
         self.component = component
         self.validLayout = layout
@@ -244,7 +245,8 @@ final class BoostHeaderItemNode: ItemListControllerHeaderItemNode {
 private final class BoostHeaderComponent: CombinedComponent {
     let strings: PresentationStrings
     let text: String
-    let status: ChannelBoostStatus
+    let status: ChannelBoostStatus?
+    let insets: UIEdgeInsets
     let openBoost: () -> Void
     let createGiveaway: () -> Void
     let openFeatures: () -> Void
@@ -252,7 +254,8 @@ private final class BoostHeaderComponent: CombinedComponent {
     public init(
         strings: PresentationStrings,
         text: String,
-        status: ChannelBoostStatus,
+        status: ChannelBoostStatus?,
+        insets: UIEdgeInsets,
         openBoost: @escaping () -> Void,
         createGiveaway: @escaping () -> Void,
         openFeatures: @escaping () -> Void
@@ -260,6 +263,7 @@ private final class BoostHeaderComponent: CombinedComponent {
         self.strings = strings
         self.text = text
         self.status = status
+        self.insets = insets
         self.openBoost = openBoost
         self.createGiveaway = createGiveaway
         self.openFeatures = openFeatures
@@ -273,6 +277,9 @@ private final class BoostHeaderComponent: CombinedComponent {
             return false
         }
         if lhs.status != rhs.status {
+            return false
+        }
+        if lhs.insets != rhs.insets {
             return false
         }
         return true
@@ -290,8 +297,9 @@ private final class BoostHeaderComponent: CombinedComponent {
 
         return { context in
             let size = context.availableSize
-            let sideInset: CGFloat = 16.0
+            
             let component = context.component
+            let sideInset: CGFloat = 16.0 + component.insets.left
             
             let background = background.update(
                 component: PremiumGradientBackgroundComponent(
@@ -318,15 +326,22 @@ private final class BoostHeaderComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(stars
-                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0 + 20.0))
+                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0 + 10.0))
             )
             
-            let level = component.status.level
+            let boosts: Int
+            let level = component.status?.level ?? 0
             let position: CGFloat
-            if let nextLevelBoosts = component.status.nextLevelBoosts {
-                position = CGFloat(component.status.boosts - component.status.currentLevelBoosts) / CGFloat(nextLevelBoosts - component.status.currentLevelBoosts)
+            if let status = component.status {
+                if let nextLevelBoosts = status.nextLevelBoosts {
+                    position = CGFloat(status.boosts - status.currentLevelBoosts) / CGFloat(nextLevelBoosts - status.currentLevelBoosts)
+                } else {
+                    position = 1.0
+                }
+                boosts = status.boosts
             } else {
-                position = 1.0
+                boosts = 0
+                position = 0.0
             }
             
             let inactiveText = component.strings.ChannelBoost_Level("\(level)").string
@@ -343,7 +358,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                     activeValue: activeText,
                     activeTitleColor: UIColor(rgb: 0x6f8fff),
                     badgeIconName: "Premium/Boost",
-                    badgeText: "\(component.status.boosts)",
+                    badgeText: "\(boosts)",
                     badgePosition: position,
                     badgeGraphPosition: position,
                     invertProgress: true,

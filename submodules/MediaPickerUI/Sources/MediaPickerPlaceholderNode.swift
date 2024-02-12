@@ -11,7 +11,7 @@ import PresentationDataUtils
 final class MediaPickerPlaceholderNode: ASDisplayNode {
     enum Content {
         case intro(story: Bool)
-        case bannedSendMedia(String)
+        case bannedSendMedia(text: String, canBoost: Bool)
     }
     
     private let content: Content
@@ -26,6 +26,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
     private var cameraTextNode: ImmediateTextNode
     private var cameraIconNode: ASImageNode
     
+    var boostPressed: () -> Void = {}
     var settingsPressed: () -> Void = {}
     var cameraPressed: () -> Void = {}
     
@@ -76,7 +77,13 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
         self.addSubnode(self.animationNode)
         self.addSubnode(self.textNode)
         
-        if case .intro = self.content {
+        switch self.content {
+        case .bannedSendMedia(_, true):
+            self.addSubnode(self.buttonNode)
+            self.buttonNode.pressed = { [weak self] in
+                self?.boostPressed()
+            }
+        case .intro:
             self.addSubnode(self.titleNode)
             self.addSubnode(self.buttonNode)
             
@@ -104,6 +111,8 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
             self.buttonNode.pressed = { [weak self] in
                 self?.settingsPressed()
             }
+        default:
+            break
         }
     }
     
@@ -128,7 +137,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
         
         let imageSpacing: CGFloat = 12.0
         let textSpacing: CGFloat = 12.0
-        let buttonSpacing: CGFloat = 15.0
+        let buttonSpacing: CGFloat = 20.0
         let cameraSpacing: CGFloat = 13.0
         
         let imageHeight = layout.size.width < layout.size.height ? imageSize.height + imageSpacing : 0.0
@@ -137,7 +146,13 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
             self.buttonNode.updateTheme(SolidRoundedButtonTheme(theme: theme))
             self.cameraIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/OpenCamera"), color: theme.list.itemAccentColor)
         }
-        self.buttonNode.title = strings.Attachment_OpenSettings
+        switch self.content {
+        case .intro:
+            self.buttonNode.title = strings.Attachment_OpenSettings
+        case .bannedSendMedia:
+            self.buttonNode.title = strings.Attachment_BoostToUnlock
+        }
+        
         let buttonWidth: CGFloat = 248.0
         let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
         
@@ -147,7 +162,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
             case let .intro(story):
                 title = strings.Attachment_MediaAccessTitle
                 text = story ? strings.Attachment_MediaAccessStoryText : strings.Attachment_MediaAccessText
-            case let .bannedSendMedia(banDescription):
+            case let .bannedSendMedia(banDescription, _):
                 title = ""
                 text = banDescription
         }

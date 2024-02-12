@@ -21,14 +21,16 @@ private final class ChatListFilterPresetListControllerArguments {
     let addNew: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
     let removePreset: (Int32) -> Void
+    let updateDisplayTags: (Bool) -> Void
     
-    init(context: AccountContext, addSuggestedPressed: @escaping (String, ChatListFilterData) -> Void, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void) {
+    init(context: AccountContext, addSuggestedPressed: @escaping (String, ChatListFilterData) -> Void, openPreset: @escaping (ChatListFilter) -> Void, addNew: @escaping () -> Void, setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void, removePreset: @escaping (Int32) -> Void, updateDisplayTags: @escaping (Bool) -> Void) {
         self.context = context
         self.addSuggestedPressed = addSuggestedPressed
         self.openPreset = openPreset
         self.addNew = addNew
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
         self.removePreset = removePreset
+        self.updateDisplayTags = updateDisplayTags
     }
 }
 
@@ -36,6 +38,7 @@ private enum ChatListFilterPresetListSection: Int32 {
     case screenHeader
     case suggested
     case list
+    case tags
 }
 
 private func stringForUserCount(_ peers: [EnginePeer.Id: SelectivePrivacyPeer], strings: PresentationStrings) -> String {
@@ -59,6 +62,8 @@ private enum ChatListFilterPresetListEntryStableId: Hashable {
     case addItem
     case preset(Int32)
     case listFooter
+    case displayTags
+    case displayTagsFooter
 }
 
 private struct PresetIndex: Equatable {
@@ -78,6 +83,8 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
     case preset(index: PresetIndex, title: String, label: String, preset: ChatListFilter, canBeReordered: Bool, canBeDeleted: Bool, isEditing: Bool, isAllChats: Bool, isDisabled: Bool)
     case addItem(text: String, isEditing: Bool)
     case listFooter(String)
+    case displayTags(Bool)
+    case displayTagsFooter
     
     var section: ItemListSectionId {
         switch self {
@@ -87,6 +94,8 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return ChatListFilterPresetListSection.suggested.rawValue
         case .listHeader, .preset, .addItem, .listFooter:
             return ChatListFilterPresetListSection.list.rawValue
+        case .displayTags, .displayTagsFooter:
+            return ChatListFilterPresetListSection.tags.rawValue
         }
     }
     
@@ -108,6 +117,10 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return 1003 + index.value
         case .suggestedAddCustom:
             return 2000
+        case .displayTags:
+            return 3000
+        case .displayTagsFooter:
+            return 3001
         }
     }
     
@@ -129,6 +142,10 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             return .addItem
         case .listFooter:
             return .listFooter
+        case .displayTags:
+            return .displayTags
+        case .displayTagsFooter:
+            return .displayTagsFooter
         }
     }
     
@@ -171,6 +188,14 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             })
         case let .listFooter(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .displayTags(value):
+            //TODO:localize
+            return ItemListSwitchItem(presentationData: presentationData, title: "Show Folder Tags", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.updateDisplayTags(value)
+            })
+        case .displayTagsFooter:
+            //TODO:localize
+            return ItemListTextItem(presentationData: presentationData, text: .plain("Display folder names for each chat in the chat list."), sectionId: self.section)
         }
     }
 }
@@ -196,7 +221,7 @@ private func filtersWithAppliedOrder(filters: [(ChatListFilter, Int)], order: [I
     return sortedFilters
 }
 
-private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], isPremium: Bool, limits: EngineConfiguration.UserLimits, premiumLimits: EngineConfiguration.UserLimits) -> [ChatListFilterPresetListEntry] {
+private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], displayTags: Bool, isPremium: Bool, limits: EngineConfiguration.UserLimits, premiumLimits: EngineConfiguration.UserLimits) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
     entries.append(.screenHeader(presentationData.strings.ChatListFolderSettings_Info))
@@ -248,6 +273,9 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
             entries.append(.suggestedAddCustom(presentationData.strings.ChatListFolderSettings_RecommendedNewFolder))
         }
     }
+    
+    /*entries.append(.displayTags(displayTags))
+    entries.append(.displayTagsFooter)*/
     
     return entries
 }
@@ -493,6 +521,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 presentControllerImpl?(actionSheet)
             }
         })
+    }, updateDisplayTags: { value in
+        context.engine.peers.updateChatListFiltersDisplayTags(isEnabled: value)
     })
         
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
@@ -520,9 +550,12 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         updatedFilterOrder.get(),
         featuredFilters,
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
-        limits
+        limits,
+        context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.ChatList.FiltersDisplayTags()
+        )
     )
-    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters, peer, allLimits -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters, peer, allLimits, displayTags -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let isPremium = peer?.isPremium ?? false
         let limits = allLimits.0
         let premiumLimits = allLimits.1
@@ -594,7 +627,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits), style: .blocks, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, displayTags: displayTags, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }

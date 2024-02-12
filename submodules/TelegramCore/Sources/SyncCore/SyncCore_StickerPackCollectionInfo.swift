@@ -43,6 +43,7 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     public static let isVideo = StickerPackCollectionInfoFlags(rawValue: 1 << 3)
     public static let isEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 4)
     public static let isAvailableAsChannelStatus = StickerPackCollectionInfoFlags(rawValue: 1 << 5)
+    public static let isCustomTemplateEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 6)
 }
 
 

@@ -677,6 +677,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                         .direct(.canBanUsers),
                         .direct(.canInviteUsers),
                         .direct(.canPinMessages),
+                        .sub(.stories, storiesRelatedFlags),
                         .direct(.canManageCalls),
                         .direct(.canBeAnonymous),
                         .direct(.canAddAdmins)
@@ -1230,12 +1231,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                 dismissImpl?()
             })
         }
-        
-        var focusItemTag: ItemListItemTag?
-        if let initialParticipant = initialParticipant, case .creator = initialParticipant {
-            focusItemTag = ChannelAdminEntryTag.rank
-        }
-        
+                
         let rightButtonActionImpl = {
             if invite && !state.adminRights {
                 updateState { current in
@@ -1657,7 +1653,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelPeer: channelPeer, adminPeer: adminPeer, adminPresence: adminPresence, initialParticipant: initialParticipant, invite: invite, canEdit: canEdit), style: .blocks, focusItemTag: focusItemTag, ensureVisibleItemTag: nil, emptyStateItem: nil, footerItem: footerItem, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminControllerEntries(presentationData: presentationData, state: state, accountPeerId: context.account.peerId, channelPeer: channelPeer, adminPeer: adminPeer, adminPresence: adminPresence, initialParticipant: initialParticipant, invite: invite, canEdit: canEdit), style: .blocks, focusItemTag: nil, ensureVisibleItemTag: nil, emptyStateItem: nil, footerItem: footerItem, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }

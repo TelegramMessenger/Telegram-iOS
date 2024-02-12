@@ -111,7 +111,8 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         autoremoveTimeout: nil,
                         storyState: nil,
                         requiresPremiumForMessaging: false,
-                        displayAsTopicList: false
+                        displayAsTopicList: false,
+                        tags: []
                     )),
                     editing: false,
                     hasActiveRevealControls: false,

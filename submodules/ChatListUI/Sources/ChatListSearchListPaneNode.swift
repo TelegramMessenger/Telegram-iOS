@@ -883,7 +883,8 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                             )
                         },
                         requiresPremiumForMessaging: requiresPremiumForMessaging,
-                        displayAsTopicList: false
+                        displayAsTopicList: false,
+                        tags: []
                     )), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
                 }
             case let .addContact(phoneNumber, theme, strings):
@@ -3747,7 +3748,8 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
                             autoremoveTimeout: nil,
                             storyState: nil,
                             requiresPremiumForMessaging: false,
-                            displayAsTopicList: false
+                            displayAsTopicList: false,
+                            tags: []
                         )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
                     case .media:
                         return nil

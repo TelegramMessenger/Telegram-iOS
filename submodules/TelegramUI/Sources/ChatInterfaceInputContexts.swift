@@ -201,8 +201,12 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
                         accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
                     }
-                    if peer.hasBannedPermission(.banSendStickers) != nil {
-                        stickersEnabled = false
+                    if let boostsToUnrestrict = chatPresentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0 {
+                        
+                    } else {
+                        if peer.hasBannedPermission(.banSendStickers) != nil {
+                            stickersEnabled = false
+                        }
                     }
                 } else if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
                     if peer.hasBannedPermission(.banSendStickers) {

@@ -900,17 +900,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case let .setChatWallpaper(_, forBoth):
+                var isGroup = false
+                let messagePeer = message.peers[message.id.peerId]
+                if let channel = messagePeer as? TelegramChannel, case .group = channel.info {
+                    isGroup = true
+                }
                 if message.author?.id == accountPeerId {
                     if forBoth {
                         let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
                         let resultTitleString = strings.Notification_YouChangedWallpaperBoth(peerName)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     } else {
-                        attributedString = NSAttributedString(string: strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: isGroup ? strings.Notification_YouChangedGroupWallpaper : strings.Notification_YouChangedWallpaper, font: titleFont, textColor: primaryTextColor)
                     }
                 } else {
                     if message.id.peerId.isGroupOrChannel {
-                        attributedString = NSAttributedString(string: strings.Notification_ChannelChangedWallpaper, font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: isGroup ? strings.Notification_GroupChangedWallpaper : strings.Notification_ChannelChangedWallpaper, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let resultTitleString = strings.Notification_ChangedWallpaper(compactAuthorName)
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])

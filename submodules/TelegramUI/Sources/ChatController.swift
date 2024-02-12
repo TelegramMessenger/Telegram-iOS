@@ -120,6 +120,7 @@ import VideoMessageCameraScreen
 import TopMessageReactions
 import PeerInfoScreen
 import AudioWaveform
+import PeerNameColorScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -449,6 +450,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var mediaRestrictedTooltipControllerMode = true
     weak var checksTooltipController: TooltipController?
     weak var copyProtectionTooltipController: TooltipController?
+    weak var emojiPackTooltipController: TooltipScreen?
     
     var currentMessageTooltipScreens: [(TooltipScreen, ListViewItemNode)] = []
     
@@ -961,11 +963,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.presentThemeSelection()
                             return true
                         case let .setChatWallpaper(wallpaper, _):
-                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                                strongSelf.presentThemeSelection()
+                            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 return true
                             }
-                            if peer is TelegramChannel {
+                            if let peer = peer as? TelegramChannel {
+                                if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canChangeInfo) == true {
+                                    let _ = (context.engine.peers.getChannelBoostStatus(peerId: peer.id)
+                                    |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peerId: peer.id, boostStatus: boostStatus))
+                                    })
+                                }
+                                return true
+                            }
+                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                                strongSelf.presentThemeSelection()
                                 return true
                             }
                             strongSelf.chatDisplayNode.dismissInput()
@@ -1279,6 +1293,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
+            
             self.openMessageReactionContextMenu(message: message, sourceView: sourceView, gesture: gesture, value: value)
         }, updateMessageReaction: { [weak self] initialMessage, reaction, force, sourceView in
             guard let strongSelf = self else {
@@ -1691,6 +1706,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendStickers) != nil {
+                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                    return false
+                }
+            }
+            
             var attributes: [MessageAttribute] = []
             if let query = query {
                 attributes.append(EmojiSearchQueryMessageAttribute(query: query))
@@ -1836,6 +1858,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return false
                 }
                 
+                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
+                    if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                        strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                        return false
+                    }
+                }
+                
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.collapseInput()
@@ -1878,6 +1907,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(sourceView, sourceRect)
                 return false
+            }
+            
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
+                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                    return false
+                }
             }
             
             strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true, silentPosting: silentPosting, resetTextInputState: resetTextInputState)
@@ -9536,6 +9572,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+
+            let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState)
+            
             let subjectFlags: [TelegramChatBannedRightsFlags]
             switch subject {
             case .stickers:
@@ -9547,7 +9587,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var bannedPermission: (Int32, Bool)? = nil
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                 for subjectFlag in subjectFlags {
-                    if let value = channel.hasBannedPermission(subjectFlag) {
+                    if let value = channel.hasBannedPermission(subjectFlag, ignoreDefault: canBypassRestrictions) {
                         bannedPermission = value
                         break
                     }
@@ -9559,6 +9599,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
+            }
+            
+            if let boostsToUnrestrict = (strongSelf.peerView?.cachedData as? CachedChannelData)?.boostsToUnrestrict, boostsToUnrestrict > 0, let bannedPermission, !bannedPermission.1 {
+                strongSelf.interfaceInteraction?.openBoostToUnrestrict()
+                return
             }
             
             var displayToast = false
@@ -10758,8 +10803,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             items.append(.custom(ChatSendAsPeerTitleContextItem(text: strongSelf.presentationInterfaceState.strings.Conversation_SendMesageAs.uppercased()), false))
             items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId, isPremium: isPremium, presentToast: { [weak self] peer in
                 if let strongSelf = self {
-                    let hapticFeedback = HapticFeedback()
-                    hapticFeedback.impact()
+                    HapticFeedback().impact()
                     
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action, duration: 3), elevatedLayout: false, action: { [weak self] action in
                         guard let strongSelf = self else {
@@ -11033,6 +11077,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return
             }
+            
+            HapticFeedback().impact()
+            
             let _ = combineLatest(queue: Queue.mainQueue(),
                 context.engine.peers.getChannelBoostStatus(peerId: peerId),
                 context.engine.peers.getMyBoostStatus()
@@ -15670,44 +15717,53 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let rect = self.chatDisplayNode.frameForEmojiButton(), self.effectiveNavigationController?.topViewController === self else {
             return
         }
-        guard let emojiPack = (self.peerView?.cachedData as? CachedChannelData)?.emojiPack, let thumbnailFileId = emojiPack.thumbnailFileId else {
+        guard let peerId = self.chatLocation.peerId, let emojiPack = (self.peerView?.cachedData as? CachedChannelData)?.emojiPack, let thumbnailFileId = emojiPack.thumbnailFileId else {
             return
         }
-        //TODO:localize
-        let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [thumbnailFileId])
-        |> deliverOnMainQueue).start(next: { files in
-            guard let emojiFile = files.values.first else {
+        
+        let _ = (ApplicationSpecificNotice.groupEmojiPackSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId)
+        |> deliverOnMainQueue).start(next: { [weak self] counter in
+            guard let self, counter == 0 else {
                 return
             }
             
-            let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
-            let boldTextFont = Font.bold(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
-            let textColor = UIColor.white
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
-                return nil
-            })
-            
-            let text = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("All members of this group can\nuse the # **\(emojiPack.title)** pack", attributes: markdownAttributes))
-            
-            let range = (text.string as NSString).range(of: "#")
-            if range.location != NSNotFound {
-                text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
-            }
-            
-            let tooltipScreen = TooltipScreen(
-                context: self.context,
-                account: self.context.account,
-                sharedContext: self.context.sharedContext,
-                text: .attributedString(text: text),
-//                style: .customBlur(UIColor(rgb: 0x000000, alpha: 0.8), 2.0),
-                location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
-                displayDuration: .default,
-                cornerRadius: 10.0,
-                shouldDismissOnTouch: { _, _ in
-                    return .ignore
+            let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [thumbnailFileId])
+            |> deliverOnMainQueue).start(next: { [weak self] files in
+                guard let self, let emojiFile = files.values.first else {
+                    return
                 }
-            )
-            self.present(tooltipScreen, in: .current)
+                
+                let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
+                let boldTextFont = Font.bold(self.presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
+                let textColor = UIColor.white
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
+                    return nil
+                })
+                
+                let text = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(self.presentationData.strings.Chat_GroupEmojiTooltip(emojiPack.title).string, attributes: markdownAttributes))
+                
+                let range = (text.string as NSString).range(of: "#")
+                if range.location != NSNotFound {
+                    text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
+                }
+                
+                let tooltipScreen = TooltipScreen(
+                    context: self.context,
+                    account: self.context.account,
+                    sharedContext: self.context.sharedContext,
+                    text: .attributedString(text: text),
+                    location: .point(rect.offsetBy(dx: 0.0, dy: -3.0), .bottom),
+                    displayDuration: .default,
+                    cornerRadius: 10.0,
+                    shouldDismissOnTouch: { _, _ in
+                        return .ignore
+                    }
+                )
+                self.present(tooltipScreen, in: .current)
+                self.emojiPackTooltipController = tooltipScreen
+                
+                let _ = ApplicationSpecificNotice.incrementGroupEmojiPackSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId).startStandalone()
+            })
         })
     }
     
@@ -16652,6 +16708,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let externalState = MediaEditorTransitionOutExternalState(
             storyTarget: nil,
+            isForcedTarget: false,
             isPeerArchived: false,
             transitionOut: nil
         )

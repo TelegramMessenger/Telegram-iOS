@@ -609,12 +609,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         let previousView = Atomic<[ChatRecentActionsEntry]?>(value: nil)
         
-        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get())
-        |> mapToQueue { update, chatPresentationData -> Signal<ChatRecentActionsHistoryTransition, NoError> in
+        let chatThemes = self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager)
+        
+        let historyViewTransition = combineLatest(historyViewUpdate, self.chatPresentationDataPromise.get(), chatThemes)
+        |> mapToQueue { update, chatPresentationData, chatThemes -> Signal<ChatRecentActionsHistoryTransition, NoError> in
             let processedView = chatRecentActionsEntries(entries: update.0, presentationData: chatPresentationData)
             let previous = previousView.swap(processedView)
             
-            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: update.2, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction))
+            return .single(chatRecentActionsHistoryPreparedTransition(from: previous ?? [], to: processedView, type: update.2, canLoadEarlier: update.1, displayingResults: update.3, context: context, peer: peer, controllerInteraction: controllerInteraction, chatThemes: chatThemes))
         }
         
         let appliedTransition = historyViewTransition |> deliverOnMainQueue |> mapToQueue { [weak self] transition -> Signal<Void, NoError> in

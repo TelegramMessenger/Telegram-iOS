@@ -124,7 +124,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
 
 public enum StickerPackThumbnailItem: Equatable {
     case still(TelegramMediaImageRepresentation)
-    case animated(MediaResource, PixelDimensions, Bool)
+    case animated(MediaResource, PixelDimensions, Bool, Bool)
     
     public static func ==(lhs: StickerPackThumbnailItem, rhs: StickerPackThumbnailItem) -> Bool {
         switch lhs {
@@ -134,8 +134,8 @@ public enum StickerPackThumbnailItem: Equatable {
             } else {
                 return false
             }
-        case let .animated(lhsResource, lhsDimensions, lhsIsVideo):
-            if case let .animated(rhsResource, rhsDimensions, rhsIsVideo) = rhs, lhsResource.isEqual(to: rhsResource), lhsDimensions == rhsDimensions, lhsIsVideo == rhsIsVideo {
+        case let .animated(lhsResource, lhsDimensions, lhsIsVideo, lhsTinted):
+            if case let .animated(rhsResource, rhsDimensions, rhsIsVideo, rhsTinted) = rhs, lhsResource.isEqual(to: rhsResource), lhsDimensions == rhsDimensions, lhsIsVideo == rhsIsVideo, lhsTinted == rhsTinted {
                 return true
             } else {
                 return false
@@ -489,14 +489,14 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             var resourceReference: MediaResourceReference?
             if let thumbnail = item.packInfo.thumbnail {
                 if item.packInfo.flags.contains(.isAnimated) || item.packInfo.flags.contains(.isVideo)  {
-                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, item.packInfo.flags.contains(.isVideo))
+                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, item.packInfo.flags.contains(.isVideo), item.packInfo.flags.contains(.isCustomTemplateEmoji))
                 } else {
                     thumbnailItem = .still(thumbnail)
                 }
                 resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
             } else if let item = item.topItem {
                 if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker)
+                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker, item.file.isCustomTemplateEmoji)
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                 } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                     thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
@@ -523,7 +523,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
                             updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: representation.resource, nilIfEmpty: true)
                         }
-                    case let .animated(resource, dimensions, _):
+                    case let .animated(resource, dimensions, _, _):
                         imageSize = dimensions.cgSize.aspectFitted(imageBoundingSize)
                     
                         if fileUpdated {
@@ -806,7 +806,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         switch thumbnailItem {
                             case .still:
                                 break
-                            case let .animated(resource, _, isVideo):
+                            case let .animated(resource, _, isVideo, isTinted):
                                 let animationNode: AnimatedStickerNode
                                 if let current = strongSelf.animationNode {
                                     animationNode = current
@@ -824,6 +824,15 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers
                                 strongSelf.imageNode.isHidden = item.playAnimatedStickers
+                            
+                                if let animationNode = animationNode as? DefaultAnimatedStickerNodeImpl {
+                                    if isTinted {
+                                        animationNode.dynamicColor = item.presentationData.theme.list.itemPrimaryTextColor
+                                    } else {
+                                        animationNode.dynamicColor = nil
+                                    }
+                                }
+                            
                                 if let animationNode = strongSelf.animationNode {
                                     animationNode.updateLayout(size: imageFrame.size)
                                     transition.updateFrame(node: animationNode, frame: imageFrame)

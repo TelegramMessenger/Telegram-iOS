@@ -207,17 +207,17 @@ private final class PeerNameColorIconItemNode : ASDisplayNode {
     }
 }
 
-final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
-    var sectionId: ItemListSectionId
+public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
+    public var sectionId: ItemListSectionId
     
-    let theme: PresentationTheme
-    let colors: PeerNameColors
-    let isProfile: Bool
-    let currentColor: PeerNameColor?
-    let updated: (PeerNameColor) -> Void
-    let tag: ItemListItemTag?
+    public let theme: PresentationTheme
+    public let colors: PeerNameColors
+    public let isProfile: Bool
+    public let currentColor: PeerNameColor?
+    public let updated: (PeerNameColor) -> Void
+    public let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, colors: PeerNameColors, isProfile: Bool, currentColor: PeerNameColor?, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, colors: PeerNameColors, isProfile: Bool, currentColor: PeerNameColor?, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.colors = colors
         self.isProfile = isProfile
@@ -227,7 +227,7 @@ final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdap
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = PeerNameColorItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -243,7 +243,7 @@ final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdap
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? PeerNameColorItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -282,7 +282,7 @@ final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdap
     }
 }
 
-final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
+public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -296,11 +296,11 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
     private var item: PeerNameColorItem?
     private var layoutParams: ListViewItemLayoutParams?
         
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
         
-    init() {
+    public init() {
         self.containerNode = ASDisplayNode()
         
         self.backgroundNode = ASDisplayNode()
@@ -319,7 +319,7 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.containerNode)
     }
     
-    func asyncLayout() -> (_ item: PeerNameColorItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: PeerNameColorItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
         
         return { item, params, neighbors in
@@ -439,7 +439,7 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.items = items
                     
-                    let sideInset: CGFloat = 10.0
+                    let sideInset: CGFloat = params.leftInset + 10.0
                     let iconSize = CGSize(width: 32.0, height: 32.0)
                     
                     let spacing = (params.width - sideInset * 2.0 - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1)
@@ -474,11 +474,11 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }
