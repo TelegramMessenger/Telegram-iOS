@@ -83,6 +83,8 @@ final class CameraOutput: NSObject {
     let colorSpace: CGColorSpace
     let isVideoMessage: Bool
     
+    var hasAudio: Bool = false
+    
     let photoOutput = AVCapturePhotoOutput()
     let videoOutput = AVCaptureVideoDataOutput()
     let audioOutput = AVCaptureAudioDataOutput()
@@ -141,9 +143,15 @@ final class CameraOutput: NSObject {
         } else {
             Logger.shared.log("Camera", "Can't add video output")
         }
-        if audio, session.session.canAddOutput(self.audioOutput) {
-            session.session.addOutput(self.audioOutput)
-            self.audioOutput.setSampleBufferDelegate(self, queue: self.audioQueue)
+        if audio {
+            if session.session.canAddOutput(self.audioOutput) {
+                self.hasAudio = true
+                session.session.addOutput(self.audioOutput)
+                self.audioOutput.setSampleBufferDelegate(self, queue: self.audioQueue)
+            } else {
+                Logger.shared.log("Camera", "Can't add audio output")
+                print("error")
+            }
         }
         if photo, session.session.canAddOutput(self.photoOutput) {
             if session.hasMultiCam {
@@ -302,7 +310,7 @@ final class CameraOutput: NSObject {
     
     private var currentMode: RecorderMode = .default
     private var recordingCompletionPipe = ValuePipe<VideoCaptureResult>()
-    func startRecording(mode: RecorderMode, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation, additionalOutput: CameraOutput? = nil) -> Signal<CameraRecordingData, NoError> {
+    func startRecording(mode: RecorderMode, position: Camera.Position? = nil, orientation: AVCaptureVideoOrientation, additionalOutput: CameraOutput? = nil) -> Signal<CameraRecordingData, CameraRecordingError> {
         guard self.videoRecorder == nil else {
             return .complete()
         }
@@ -345,6 +353,10 @@ final class CameraOutput: NSObject {
         }
         
         let audioSettings = self.audioOutput.recommendedAudioSettingsForAssetWriter(writingTo: .mp4) ?? [:]
+        if self.hasAudio && audioSettings.isEmpty {
+            Logger.shared.log("Camera", "Audio settings are empty on recording start")
+            return .fail(.audioInitializationError)
+        }
         
         let outputFileName = NSUUID().uuidString
         let outputFilePath = NSTemporaryDirectory() + outputFileName + ".mp4"

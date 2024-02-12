@@ -350,11 +350,6 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     if let completion {
         completionImpl = { value in
             completion(value)
-            if let _ = value {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let controller = UndoOverlayController(presentationData: presentationData, content: .actionSucceeded(title: nil, text: presentationData.strings.Group_Appearance_EmojiPackUpdated, cancel: nil, destructive: false), elevatedLayout: false, action: { _ in return true })
-                presentControllerImpl?(controller, nil)
-            }
         }
     }
     

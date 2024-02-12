@@ -433,7 +433,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode,
             } else if let giveawayResults {
                 dateTextString = NSAttributedString(string: giveawayResults.winnersCount > 1 ? item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_Many : item.presentationData.strings.Chat_Giveaway_Message_WinnersInfo_One, font: textFont, textColor: textColor)
             }
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, hidesHeaders: true)
+            let hideHeaders = item.message.forwardInfo == nil
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: hideHeaders, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, hidesHeaders: hideHeaders)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let sideInsets = layoutConstants.text.bubbleInsets.right * 2.0

@@ -92,10 +92,12 @@ public final class MessageInputPanelComponent: Component {
         enum Kind {
             case text
             case premiumRequired
+            case boostRequired
         }
         
         case text(String)
         case premiumRequired(title: String, subtitle: String, action: () -> Void)
+        case boostRequired(title: String, subtitle: String, action: () -> Void)
         
         var kind: Kind {
             switch self {
@@ -103,6 +105,8 @@ public final class MessageInputPanelComponent: Component {
                 return .text
             case .premiumRequired:
                 return .premiumRequired
+            case .boostRequired:
+                return .boostRequired
             }
         }
         
@@ -116,6 +120,12 @@ public final class MessageInputPanelComponent: Component {
                 }
             case let .premiumRequired(title, subtitle, _):
                 if case .premiumRequired(title, subtitle, _) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .boostRequired(title, subtitle, _):
+                if case .boostRequired(title, subtitle, _) = rhs {
                     return true
                 } else {
                     return false
@@ -1093,7 +1103,7 @@ public final class MessageInputPanelComponent: Component {
                     contents = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: text, font: Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
                     ))
-                case let .premiumRequired(title, subtitle, action):
+                case let .premiumRequired(title, subtitle, action), let .boostRequired(title, subtitle, action):
                     leftAlignment = true
                     contents = AnyComponent(PlainButtonComponent(
                         content: AnyComponent(VStack([

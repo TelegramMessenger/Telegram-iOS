@@ -378,7 +378,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         }
     case .story:
         return .story
-    case .giveaway:
+    case .giveaway, .giveawayResults:
         return .giveaway
     case let .webpage(webpage):
         if let message, message.text.isEmpty, case let .Loaded(content) = webpage.content {
