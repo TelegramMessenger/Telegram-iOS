@@ -1668,9 +1668,7 @@ public final class StoryItemSetContainerComponent: Component {
                             case .broadcast:
                                 displayFooter = true
                             case .group:
-                                if channel.flags.contains(.isCreator) || channel.hasPermission(.postStories) {
-                                    displayFooter = true
-                                }
+                                displayFooter = false
                             }
                         } else if component.slice.peer.id == component.context.account.peerId {
                             displayFooter = true
@@ -2769,9 +2767,6 @@ public final class StoryItemSetContainerComponent: Component {
                     showMessageInputPanel = false
                 case .group:
                     isGroup = true
-                    if channel.flags.contains(.isCreator) || channel.hasPermission(.postStories) {
-                        showMessageInputPanel = false
-                    }
                 }
             } else {
                 showMessageInputPanel = component.slice.peer.id != component.context.account.peerId
@@ -3161,6 +3156,7 @@ public final class StoryItemSetContainerComponent: Component {
                 displayViewLists = true
             }
             
+            var viewListHeightMidFraction: CGFloat = 0.0
             if displayViewLists, let currentIndex = component.slice.allItems.firstIndex(where: { $0.storyItem.id == component.slice.item.storyItem.id }) {
                 var visibleViewListIds: [Int32] = [component.slice.item.storyItem.id]
                 if self.viewListDisplayState != .hidden, let viewListPanState = self.viewListPanState {
@@ -3246,11 +3242,15 @@ public final class StoryItemSetContainerComponent: Component {
                 self.targetViewListDisplayStateIsFull = viewListHeight > midViewListHeight
                 self.viewListMetrics = (midViewListHeight, maxViewListHeight, viewListHeight)
                 
-                let viewListHeightMidFraction: CGFloat = max(0.0, min(1.0, viewListHeight / midViewListHeight))
+                viewListHeightMidFraction = max(0.0, min(1.0, viewListHeight / midViewListHeight))
                 viewListInset = defaultHeight * (1.0 - viewListHeightMidFraction) + viewListHeightMidFraction * midViewListHeight
                 viewListInset += max(0.0, viewListHeight - midViewListHeight)
                 
-                inputPanelBottomInset = viewListInset
+                if showMessageInputPanel {
+                    inputPanelBottomInset += (viewListInset - defaultHeight) * 1.04
+                } else {
+                    inputPanelBottomInset = viewListInset
+                }
                 minimizedBottomContentHeight = minimizedHeight
                 maximizedBottomContentHeight = defaultHeight
                 
@@ -4135,6 +4135,8 @@ public final class StoryItemSetContainerComponent: Component {
                 if case .regular = component.metrics.widthClass {
                     inputPanelAlpha *= component.visibilityFraction
                 }
+                inputPanelAlpha *= (1.0 - min(1.0, viewListHeightMidFraction * 1.3))
+                let inputPanelScale = (1.0 - viewListHeightMidFraction * 0.45)
                 if let inputPanelView = self.inputPanel.view {
                     if inputPanelView.superview == nil {
                         self.componentContainerView.addSubview(inputPanelView)
@@ -4146,7 +4148,10 @@ public final class StoryItemSetContainerComponent: Component {
                         inputPanelOffset = -max(0.0, min(10.0, bandingOffset))
                     }
                     
-                    inputPanelTransition.setFrame(view: inputPanelView, frame: inputPanelFrame.offsetBy(dx: 0.0, dy: inputPanelOffset))
+                    let finalInputPanelFrame = inputPanelFrame.offsetBy(dx: 0.0, dy: inputPanelOffset)
+                    inputPanelTransition.setPosition(view: inputPanelView, position: finalInputPanelFrame.center)
+                    inputPanelTransition.setBounds(view: inputPanelView, bounds: CGRect(origin: .zero, size: finalInputPanelFrame.size))
+                    inputPanelTransition.setScale(view: inputPanelView, scale: inputPanelScale)
                     transition.setAlpha(view: inputPanelView, alpha: inputPanelAlpha)
                 }
             }
