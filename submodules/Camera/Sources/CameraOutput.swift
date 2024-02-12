@@ -144,13 +144,12 @@ final class CameraOutput: NSObject {
             Logger.shared.log("Camera", "Can't add video output")
         }
         if audio {
+            self.hasAudio = true
             if session.session.canAddOutput(self.audioOutput) {
-                self.hasAudio = true
                 session.session.addOutput(self.audioOutput)
                 self.audioOutput.setSampleBufferDelegate(self, queue: self.audioQueue)
             } else {
                 Logger.shared.log("Camera", "Can't add audio output")
-                print("error")
             }
         }
         if photo, session.session.canAddOutput(self.photoOutput) {
