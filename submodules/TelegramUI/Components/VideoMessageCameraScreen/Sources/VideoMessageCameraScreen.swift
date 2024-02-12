@@ -1443,9 +1443,6 @@ public class VideoMessageCameraScreen: ViewController {
     
     deinit {
         self.audioSessionDisposable?.dispose()
-        if #available(iOS 13.0, *) {
-            try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
-        }
     }
 
     override public func loadDisplayNode() {
@@ -1688,9 +1685,6 @@ public class VideoMessageCameraScreen: ViewController {
         }
       
         self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: audioSessionType, activate: { [weak self] _ in
-            if #available(iOS 13.0, *) {
-                try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
-            }
             if let self {
                 Queue.mainQueue().async {
                     self.node.setupCamera()

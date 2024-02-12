@@ -587,7 +587,7 @@ func openResolvedUrlImpl(
             }
         case let .premiumMultiGift(reference):
             dismissInput()
-            let controller = context.sharedContext.makePremiumGiftController(context: context, source: .deeplink(reference))
+            let controller = context.sharedContext.makePremiumGiftController(context: context, source: .deeplink(reference), completion: nil)
             if let navigationController = navigationController {
                 navigationController.pushViewController(controller, animated: true)
             }

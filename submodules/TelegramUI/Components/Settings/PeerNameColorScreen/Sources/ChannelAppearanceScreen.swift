@@ -1083,7 +1083,7 @@ final class ChannelAppearanceScreenComponent: Component {
             }
 
             self.backButton.updateContentsColor(backgroundColor: scrolledUp ? UIColor(white: 0.0, alpha: 0.1) : .clear, contentsColor: scrolledUp ? .white : environment.theme.rootController.navigationBar.accentTextColor, canBeExpanded: !scrolledUp, transition: .animated(duration: 0.2, curve: .easeInOut))
-            self.backButton.frame = CGRect(origin: CGPoint(x: 16.0, y: 54.0), size: backSize)
+            self.backButton.frame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 16.0, y: environment.navigationHeight - 44.0), size: backSize)
             if self.backButton.view.superview == nil {
                 if let controller = self.environment?.controller(), let navigationBar = controller.navigationBar {
                     navigationBar.view.addSubview(self.backButton.view)

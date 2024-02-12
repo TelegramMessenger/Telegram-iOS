@@ -2129,14 +2129,14 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
             var entities: [MessageTextEntity] = []
             
             if new != nil {
-                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedGroupStickerPack(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedGroupEmojiPack(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
                     }
                     return []
                 }, to: &text, entities: &entities)
             } else {
-                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageRemovedGroupStickerPack(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageRemovedGroupEmojiPack(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
                     if index == 0, let author = author {
                         return [.TextMention(peerId: author.id)]
                     }

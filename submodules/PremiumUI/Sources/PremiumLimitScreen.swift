@@ -252,49 +252,53 @@ public class PremiumLimitDisplayComponent: Component {
                 rotationAngle = 0.26
             }
             
+            let to: CGFloat = self.badgeView.center.x
+            
             let positionAnimation = CABasicAnimation(keyPath: "position.x")
             positionAnimation.fromValue = NSValue(cgPoint: CGPoint(x: from ?? 0.0, y: 0.0))
-            positionAnimation.toValue = NSValue(cgPoint: self.badgeView.center)
+            positionAnimation.toValue = NSValue(cgPoint: CGPoint(x: to, y: 0.0))
             positionAnimation.duration = 0.5
             positionAnimation.fillMode = .forwards
             positionAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             self.badgeView.layer.add(positionAnimation, forKey: "appearance1")
            
-            let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-            rotateAnimation.fromValue = 0.0 as NSNumber
-            rotateAnimation.toValue = -rotationAngle as NSNumber
-            rotateAnimation.duration = 0.15
-            rotateAnimation.fillMode = .forwards
-            rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            rotateAnimation.isRemovedOnCompletion = false
-            self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
-            
-            Queue.mainQueue().after(0.5, {
-                let bounceAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                bounceAnimation.fromValue = -rotationAngle as NSNumber
-                bounceAnimation.toValue = 0.04 as NSNumber
-                bounceAnimation.duration = 0.2
-                bounceAnimation.fillMode = .forwards
-                bounceAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                bounceAnimation.isRemovedOnCompletion = false
-                self.badgeView.layer.add(bounceAnimation, forKey: "appearance3")
-                self.badgeView.layer.removeAnimation(forKey: "appearance2")
+            if from != to {
+                let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                rotateAnimation.fromValue = 0.0 as NSNumber
+                rotateAnimation.toValue = -rotationAngle as NSNumber
+                rotateAnimation.duration = 0.15
+                rotateAnimation.fillMode = .forwards
+                rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                rotateAnimation.isRemovedOnCompletion = false
+                self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
                 
-                if !self.badgeView.isHidden {
-                    self.hapticFeedback.impact(.light)
-                }
-                
-                Queue.mainQueue().after(0.2) {
-                    let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                    returnAnimation.fromValue = 0.04 as NSNumber
-                    returnAnimation.toValue = 0.0 as NSNumber
-                    returnAnimation.duration = 0.15
-                    returnAnimation.fillMode = .forwards
-                    returnAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
-                    self.badgeView.layer.add(returnAnimation, forKey: "appearance4")
-                    self.badgeView.layer.removeAnimation(forKey: "appearance3")
-                }
-            })
+                Queue.mainQueue().after(0.5, {
+                    let bounceAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                    bounceAnimation.fromValue = -rotationAngle as NSNumber
+                    bounceAnimation.toValue = 0.04 as NSNumber
+                    bounceAnimation.duration = 0.2
+                    bounceAnimation.fillMode = .forwards
+                    bounceAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    bounceAnimation.isRemovedOnCompletion = false
+                    self.badgeView.layer.add(bounceAnimation, forKey: "appearance3")
+                    self.badgeView.layer.removeAnimation(forKey: "appearance2")
+                    
+                    if !self.badgeView.isHidden {
+                        self.hapticFeedback.impact(.light)
+                    }
+                    
+                    Queue.mainQueue().after(0.2) {
+                        let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+                        returnAnimation.fromValue = 0.04 as NSNumber
+                        returnAnimation.toValue = 0.0 as NSNumber
+                        returnAnimation.duration = 0.15
+                        returnAnimation.fillMode = .forwards
+                        returnAnimation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                        self.badgeView.layer.add(returnAnimation, forKey: "appearance4")
+                        self.badgeView.layer.removeAnimation(forKey: "appearance3")
+                    }
+                })
+            }
             
             if from == nil {
                 self.badgeView.alpha = 1.0

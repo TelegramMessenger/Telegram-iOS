@@ -5718,7 +5718,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             })))
                         }
                         
-                        if case .broadcast = channel.info, channel.hasPermission(.editStories) {
+                        if channel.hasPermission(.editStories) {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_Channel_ArchivedStories, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in
@@ -6943,7 +6943,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
-            let boostsController = channelStatsController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peerId: self.peerId, section: .boosts, boostStatus: self.boostStatus)
+            let boostsController = channelStatsController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peerId: self.peerId, section: .boosts, boostStatus: self.boostStatus, boostStatusUpdated: { [weak self] boostStatus in
+                if let self {
+                    self.boostStatus = boostStatus
+                }
+            })
             controller.push(boostsController)
         } else {
             let _ = combineLatest(
@@ -8800,7 +8804,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .settings, forceDark: false, dismissed: nil)
             self.controller?.push(controller)
         case .premiumGift:
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings, completion: nil)
             self.controller?.push(controller)
         case .stickers:
             if let settings = self.data?.globalSettings {
@@ -10339,7 +10343,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
-                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, channel.hasPermission(.postStories) {
+                if let data = self.data, !data.isPremiumRequiredForStoryPosting || data.accountIsPremium, let channel = data.peer as? TelegramChannel,  channel.hasPermission(.postStories) {
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 

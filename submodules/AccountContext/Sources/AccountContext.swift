@@ -821,11 +821,13 @@ public struct StoryCameraTransitionInCoordinator {
 
 public class MediaEditorTransitionOutExternalState {
     public var storyTarget: Stories.PendingTarget?
+    public var isForcedTarget: Bool
     public var isPeerArchived: Bool
     public var transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?
     
-    public init(storyTarget: Stories.PendingTarget?, isPeerArchived: Bool, transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?) {
+    public init(storyTarget: Stories.PendingTarget?, isForcedTarget: Bool,  isPeerArchived: Bool, transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?) {
         self.storyTarget = storyTarget
+        self.isForcedTarget = isForcedTarget
         self.isPeerArchived = isPeerArchived
         self.transitionOut = transitionOut
     }
@@ -959,7 +961,7 @@ public protocol SharedAccountContext: AnyObject {
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
     func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
-    func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource) -> ViewController
+    func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (() -> Void)?) -> ViewController
     func makePremiumPrivacyControllerController(context: AccountContext, subject: PremiumPrivacySubject, peerId: EnginePeer.Id) -> ViewController
     func makePremiumBoostLevelsController(context: AccountContext, peerId: EnginePeer.Id, boostStatus: ChannelBoostStatus, myBoostStatus: MyBoostStatus, forceDark: Bool, openStats: (() -> Void)?) -> ViewController
     

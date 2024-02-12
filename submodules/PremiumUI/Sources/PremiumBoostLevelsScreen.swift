@@ -647,33 +647,37 @@ private final class SheetContent: CombinedComponent {
                     }
                 } else {
                     textString = strings.ChannelBoost_MaxLevelReached_Text(peerName, "\(level)").string
-//                    let storiesString = strings.ChannelBoost_StoriesPerDay(Int32(level))
-//                    textString = strings.ChannelBoost_MaxLevelReachedTextAuthor("\(level)", storiesString).string
                 }
             case let .user(mode):
                 switch mode {
                 case let .groupPeer(_, peerBoostCount):
                     let memberName = state.memberPeer?.compactDisplayTitle ?? ""
-                    //TODO:localize
+                    let timesString = strings.GroupBoost_MemberBoosted_Times(Int32(peerBoostCount))
+                    let memberString = strings.GroupBoost_MemberBoosted(memberName, timesString).string
                     if myBoostCount > 0 {
-                        if let remaining {
+                        if let remaining, remaining != 0 {
                             let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
-                            textString = "**\(memberName)** boosted the group **\(peerBoostCount)** times. \(strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string)"
+                            textString = "\(memberString) \(strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string)"
                         } else {
-                            textString = "**\(memberName)** boosted the group **\(peerBoostCount)** times."
+                            textString = memberString
                         }
                     } else {
-                        textString = "**\(memberName)** boosted the group **\(peerBoostCount)** times. Boost **\(peerName)** to help it unlock new features and get a booster **badge** for your messages."
+                        textString = "\(memberString) \(strings.GroupBoost_MemberBoosted_BoostForBadge(peerName).string)"
                     }
                     isCurrent = true
                 case let .unrestrict(unrestrictCount):
-                    textString = "Boost the group **\(unrestrictCount)** times to remove messaging restrictions. Your boosts will help **\(peerName)** to unlock new features."
+                    let timesString = strings.GroupBoost_BoostToUnrestrict_Times(Int32(unrestrictCount))
+                    textString = strings.GroupBoost_BoostToUnrestrict(timesString, peerName).string
                     isCurrent = true
                 default:
                     if let remaining {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
                         if myBoostCount > 0 {
-                            textString = strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string
+                            if remaining == 0 {
+                                textString = isGroup ? strings.GroupBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level)").string : strings.ChannelBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level)").string
+                            } else {
+                                textString = strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string
+                            }
                         } else {
                             textString = strings.ChannelBoost_MoreBoostsNeeded_Text(peerName, boostsString).string
                         }
@@ -1612,25 +1616,26 @@ public class PremiumBoostLevelsScreen: ViewController {
             self.wrappingView.addSubview(self.containerView)
             self.containerView.addSubview(self.contentView)
             
-            if case .user = controller.mode, let status = controller.status {
+            if case .user = controller.mode {
                 self.containerView.addSubview(self.footerContainerView)
                 self.footerContainerView.addSubview(self.footerView)
+            }
             
+            if let status = controller.status, let myBoostStatus = controller.myBoostStatus {
                 var myBoostCount: Int32 = 0
                 var currentMyBoostCount: Int32 = 0
                 var availableBoosts: [MyBoostStatus.Boost] = []
                 var occupiedBoosts: [MyBoostStatus.Boost] = []
-                if let myBoostStatus = controller.myBoostStatus {
-                    for boost in myBoostStatus.boosts {
-                        if let boostPeer = boost.peer {
-                            if boostPeer.id == controller.peerId {
-                                myBoostCount += 1
-                            } else {
-                                occupiedBoosts.append(boost)
-                            }
+                
+                for boost in myBoostStatus.boosts {
+                    if let boostPeer = boost.peer {
+                        if boostPeer.id == controller.peerId {
+                            myBoostCount += 1
                         } else {
-                            availableBoosts.append(boost)
+                            occupiedBoosts.append(boost)
                         }
+                    } else {
+                        availableBoosts.append(boost)
                     }
                 }
                 
@@ -1868,23 +1873,10 @@ public class PremiumBoostLevelsScreen: ViewController {
                         status: controller.status,
                         boostState: self.boostState,
                         boost: { [weak controller] in
-                            guard let controller, let navigationController = controller.navigationController else {
+                            guard let controller else {
                                 return
                             }
-                            
-                            controller.dismiss(animated: true)
-                                
-                            Queue.mainQueue().justDispatch {
-                                let boostController = PremiumBoostLevelsScreen(
-                                    context: controller.context,
-                                    peerId: controller.peerId,
-                                    mode: .user(mode: .current),
-                                    status: controller.status,
-                                    myBoostStatus: nil,
-                                    forceDark: controller.forceDark
-                                )
-                                navigationController.pushViewController(boostController, animated: true)
-                            }
+                            controller.node.updateBoostState()
                         },
                         copyLink: { [weak self, weak controller] link in
                             guard let self else {
@@ -2217,6 +2209,13 @@ public class PremiumBoostLevelsScreen: ViewController {
                     let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot])
                     |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                         self?.updatedState.set(context.engine.peers.getChannelBoostStatus(peerId: peerId)
+                        |> beforeNext { [weak self] status in
+                            if let self, let status {
+                                Queue.mainQueue().async {
+                                    self.controller?.boostStatusUpdated(status)
+                                }
+                            }
+                        }
                         |> map { status in
                             if let status {
                                 return InternalBoostState(level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), boosts: Int32(status.boosts + 1))
@@ -2361,7 +2360,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                                                 controller?.dismiss(animated: true, completion: nil)
                                                 
                                                 Queue.mainQueue().after(0.4) {
-                                                    let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost)
+                                                    let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, completion: nil)
                                                     navigationController.pushViewController(giftController, animated: true)
                                                 }
                                             }
@@ -2432,6 +2431,7 @@ public class PremiumBoostLevelsScreen: ViewController {
     
     private var currentLayout: ContainerViewLayout?
         
+    public var boostStatusUpdated: (ChannelBoostStatus) -> Void = { _ in }
     public var disposed: () -> Void = {}
     
     public init(
@@ -2501,7 +2501,7 @@ public class PremiumBoostLevelsScreen: ViewController {
     
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        
+                
         self.node.updateIsVisible(isVisible: false)
     }
         

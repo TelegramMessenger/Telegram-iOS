@@ -1210,7 +1210,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     navigationController.setViewControllers(controllers, animated: true)
                     
                     let title = presentationData.strings.BoostGift_GiveawayCreated_Title
-                    let text = presentationData.strings.BoostGift_GiveawayCreated_Text
+                    let text = isGroup ? presentationData.strings.BoostGift_Group_GiveawayCreated_Text : presentationData.strings.BoostGift_GiveawayCreated_Text
                     
                     let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
                         let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil)

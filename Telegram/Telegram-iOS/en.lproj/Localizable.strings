@@ -10988,6 +10988,8 @@ Sorry for the inconvenience.";
 "ChannelBoost.MaxLevelReached.Text" = "**%1$@** reached **Level %2$@**.";
 
 "ChannelBoost.MoreBoostsNeeded.Boosted.Text" = "%@ needed to unlock new features.";
+"ChannelBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This channel reached **%@** and unlocked new features.";
+"GroupBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This group reached **%@** and unlocked new features.";
 
 "ContactList.Context.Delete" = "Delete Contact";
 "ContactList.Context.Select" = "Select";
@@ -11013,7 +11015,7 @@ Sorry for the inconvenience.";
 "GroupBoost.EnableStoriesText" = "Your group needs %1$@ to enable posting stories.";
 "GroupBoost.IncreaseLimitText" = "Your group needs %1$@ to post %2$@.";
 
-"BoostGift.Group.Description" = "Get more boosts for your group by gifting\nPremium to your subscribers.";
+"BoostGift.Group.Description" = "Get more boosts for your group by gifting\nPremium to your members.";
 
 "BoostGift.Group.AllMembers" = "All members";
 "BoostGift.Group.OnlyNewMembers" = "Only new members";
@@ -11276,3 +11278,31 @@ Sorry for the inconvenience.";
 
 "Chat.Giveaway.Info.OtherChannelsAndGroups_1" = "**%@** other listed channel and group";
 "Chat.Giveaway.Info.OtherChannelsAndGroups_any" = "**%@** other listed channels and groups";
+
+"GroupBoost.MemberBoosted.Times_1" = "**%@** time";
+"GroupBoost.MemberBoosted.Times_any" = "**%@** times";
+
+"GroupBoost.MemberBoosted" = "**%1$@** boosted the group %2$@.";
+"GroupBoost.MemberBoosted.BoostForBadge" = "Boost **%1$@** to help it unlock new features and get a booster **badge** for your messages.";
+
+"GroupBoost.BoostToUnrestrict.Times_1" = "**%@** time";
+"GroupBoost.BoostToUnrestrict.Times_any" = "**%@** times";
+
+"GroupBoost.BoostToUnrestrict" = "Boost the group %1$@ to remove messaging restrictions. Your boosts will help **%2$@** to unlock new features.";
+
+"Story.InputPlaceholderReplyInGroup" = "Comment Story...";
+
+"Story.SendReactionAsGroupMessage" = "Send reaction as a message";
+
+"StoryList.TooltipStoriesSavedToGroup_1" = "Story saved to groups's profile";
+"StoryList.TooltipStoriesSavedToGroup_any" = "%d stories saved to groups's profile.";
+"Story.ToastRemovedFromGroupText" = "Story removed from the group page";
+"Story.ToastSavedToGroupTitle" = "Story saved to the group page";
+"Story.ToastSavedToGroupText" = "Posted stories can be viewed by others on the group page until an admin removes them.";
+
+"Channel.AdminLog.MessageChangedGroupEmojiPack" = "%@ changed group emoji pack";
+"Channel.AdminLog.MessageRemovedGroupEmojiPack" = "%@ removed group emoji pack";
+
+"Group.Appearance.EmojiPackUpdated" = "Group emoji pack updated.";
+
+"Attachment.BoostToUnlock" = "Boost to Unlock";

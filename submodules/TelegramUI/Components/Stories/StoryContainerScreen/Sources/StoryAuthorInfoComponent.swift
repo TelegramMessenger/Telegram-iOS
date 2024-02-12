@@ -19,15 +19,17 @@ final class StoryAuthorInfoComponent: Component {
     let strings: PresentationStrings
 	let peer: EnginePeer?
     let forwardInfo: EngineStoryItem.ForwardInfo?
+    let author: EnginePeer?
     let timestamp: Int32
     let counters: Counters?
     let isEdited: Bool
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer?, forwardInfo: EngineStoryItem.ForwardInfo?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer?, forwardInfo: EngineStoryItem.ForwardInfo?, author: EnginePeer?, timestamp: Int32, counters: Counters?, isEdited: Bool) {
         self.context = context
         self.strings = strings
         self.peer = peer
         self.forwardInfo = forwardInfo
+        self.author = author
         self.timestamp = timestamp
         self.counters = counters
         self.isEdited = isEdited
@@ -44,6 +46,9 @@ final class StoryAuthorInfoComponent: Component {
 			return false
 		}
         if lhs.forwardInfo != rhs.forwardInfo {
+            return false
+        }
+        if lhs.author != rhs.author {
             return false
         }
         if lhs.timestamp != rhs.timestamp {
@@ -121,6 +126,16 @@ final class StoryAuthorInfoComponent: Component {
                 }
                 subtitle = combinedString
                 subtitleTruncationType = .middle
+            } else if let author = component.author {
+                let authorName = author.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                let timeString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp, short: true)
+                let combinedString = NSMutableAttributedString()
+                combinedString.append(NSAttributedString(string: authorName, font: Font.medium(11.0), textColor: titleColor))
+                if timeString.count < 6 {
+                    combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
+                }
+                subtitle = combinedString
+                subtitleTruncationType = .middle
             } else {
                 var subtitleString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
                 if component.isEdited {
@@ -176,7 +191,16 @@ final class StoryAuthorInfoComponent: Component {
                 self.repostIconView = nil
                 repostIconView.removeFromSuperview()
             }
+            
+            
+            var authorPeer: EnginePeer?
             if let forwardInfo = component.forwardInfo, case let .known(peer, _, _) = forwardInfo {
+                authorPeer = peer
+            } else if let author = component.author {
+                authorPeer = author
+            }
+            
+            if let peer = authorPeer {
                 let avatarNode: AvatarNode
                 if let current = self.avatarNode {
                     avatarNode = current

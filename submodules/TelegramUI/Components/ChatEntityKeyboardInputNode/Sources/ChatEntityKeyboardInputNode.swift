@@ -390,7 +390,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
         return true
     }
-    
+        
     public var useExternalSearchContainer: Bool = false
         
     private var gifContext: GifContext? {
@@ -2132,6 +2132,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             let contextController = ContextController(presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceView: sourceView, sourceRect: sourceRect)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             strongSelf.interaction?.presentGlobalOverlayController(contextController, nil)
         })
+    }
+    
+    public func scrollToGroupEmoji() {
+        if let pagerView = self.entityKeyboardView.componentView as? EntityKeyboardComponent.View {
+            pagerView.scrollToItemGroup(contentId: "emoji", groupId: "peerSpecific", subgroupId: nil)
+        }
     }
 }
 

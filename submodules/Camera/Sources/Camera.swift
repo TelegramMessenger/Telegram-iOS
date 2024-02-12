@@ -726,9 +726,9 @@ public final class Camera {
         self.metrics = Camera.Metrics(model: DeviceModel.current)
         
         let session = CameraSession()
-        session.session.usesApplicationAudioSession = true
         session.session.automaticallyConfiguresApplicationAudioSession = false
         session.session.automaticallyConfiguresCaptureDeviceForWideColor = false
+        session.session.usesApplicationAudioSession = true
         if let previewView {
             previewView.setSession(session.session, autoConnect: !session.hasMultiCam)
         }

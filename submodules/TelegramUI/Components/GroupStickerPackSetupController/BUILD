@@ -23,6 +23,7 @@ swift_library(
         "//submodules/SearchBarNode:SearchBarNode",
         "//submodules/SearchUI:SearchUI",
         "//submodules/MergeLists:MergeLists",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

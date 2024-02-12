@@ -2274,7 +2274,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 nameNodeOriginY = headerSize.height
-                headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets)
+                                
+                headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + 8.0 + adminBadgeSizeAndApply.0.size.width + credibilityIconWidth + boostBadgeWidth + closeButtonWidth + bubbleWidthInsets)
                 headerSize.height += nameNodeSizeApply.0.height
             }
 
