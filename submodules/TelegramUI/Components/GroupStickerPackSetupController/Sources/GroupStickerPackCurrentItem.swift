@@ -344,6 +344,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                     
                     if case .searching = item.content {
                         strongSelf.activityIndicator.isHidden = false
+                        strongSelf.imageNode.isHidden = true
                     } else {
                         strongSelf.activityIndicator.isHidden = true
                     }
@@ -351,6 +352,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                     if case .found = item.content {
                         strongSelf.removeButtonIcon.isHidden = false
                         strongSelf.removeButton.isHidden = false
+                        strongSelf.imageNode.isHidden = false
                     } else {
                         strongSelf.removeButtonIcon.isHidden = true
                         strongSelf.removeButton.isHidden = true

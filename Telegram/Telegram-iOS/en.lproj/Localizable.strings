@@ -11302,3 +11302,5 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageChangedGroupEmojiPack" = "%@ changed group emoji pack";
 "Channel.AdminLog.MessageRemovedGroupEmojiPack" = "%@ removed group emoji pack";
+
+"Group.Appearance.EmojiPackUpdated" = "Group emoji pack updated.";
