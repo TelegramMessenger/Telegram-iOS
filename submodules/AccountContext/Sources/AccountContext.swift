@@ -821,11 +821,13 @@ public struct StoryCameraTransitionInCoordinator {
 
 public class MediaEditorTransitionOutExternalState {
     public var storyTarget: Stories.PendingTarget?
+    public var isForcedTarget: Bool
     public var isPeerArchived: Bool
     public var transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?
     
-    public init(storyTarget: Stories.PendingTarget?, isPeerArchived: Bool, transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?) {
+    public init(storyTarget: Stories.PendingTarget?, isForcedTarget: Bool,  isPeerArchived: Bool, transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?) {
         self.storyTarget = storyTarget
+        self.isForcedTarget = isForcedTarget
         self.isPeerArchived = isPeerArchived
         self.transitionOut = transitionOut
     }

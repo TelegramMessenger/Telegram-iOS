@@ -966,14 +966,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 return true
                             }
-                            if let peer = peer as? TelegramChannel, peer.hasPermission(.changeInfo) {
-                                let _ = (context.engine.peers.getChannelBoostStatus(peerId: peer.id)
-                                |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
-                                    guard let self else {
-                                        return
-                                    }
-                                    self.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peerId: peer.id, boostStatus: boostStatus))
-                                })
+                            if let peer = peer as? TelegramChannel {
+                                if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canChangeInfo) == true {
+                                    let _ = (context.engine.peers.getChannelBoostStatus(peerId: peer.id)
+                                    |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peerId: peer.id, boostStatus: boostStatus))
+                                    })
+                                }
                                 return true
                             }
                             guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
@@ -16706,6 +16708,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let externalState = MediaEditorTransitionOutExternalState(
             storyTarget: nil,
+            isForcedTarget: false,
             isPeerArchived: false,
             transitionOut: nil
         )

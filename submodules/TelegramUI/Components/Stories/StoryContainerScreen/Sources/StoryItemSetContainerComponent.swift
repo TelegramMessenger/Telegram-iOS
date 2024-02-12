@@ -5383,6 +5383,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let externalState = MediaEditorTransitionOutExternalState(
                 storyTarget: nil,
+                isForcedTarget: false,
                 isPeerArchived: false,
                 transitionOut: nil
             )

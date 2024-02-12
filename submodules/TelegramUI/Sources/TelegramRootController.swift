@@ -277,6 +277,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         
         let externalState = MediaEditorTransitionOutExternalState(
             storyTarget: nil,
+            isForcedTarget: customTarget != nil,
             isPeerArchived: false,
             transitionOut: nil
         )
@@ -522,13 +523,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 var viewControllers = self.viewControllers
                 
                 let archiveController = ChatListControllerImpl(context: context, location: .chatList(groupId: .archive), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
-                externalState.transitionOut = archiveController.storyCameraTransitionOut()
+                if !externalState.isForcedTarget {
+                    externalState.transitionOut = archiveController.storyCameraTransitionOut()
+                }
                 chatListController = archiveController
                 viewControllers.insert(archiveController, at: 1)
                 self.setViewControllers(viewControllers, animated: false)
             } else {
                 chatListController = self.chatListController as? ChatListControllerImpl
-                externalState.transitionOut = chatListController?.storyCameraTransitionOut()
+                if !externalState.isForcedTarget {
+                    externalState.transitionOut = chatListController?.storyCameraTransitionOut()
+                }
             }
              
             if let chatListController {
