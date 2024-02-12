@@ -616,10 +616,10 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
         entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
     }
     
-    let tagColor = state.color ?? .blue
+    /*let tagColor = state.color ?? .blue
     let resolvedColor = context.peerNameColors.getProfile(tagColor, dark: presentationData.theme.overallDarkAppearance, subject: .palette)
     
-    /*entries.append(.tagColorHeader(name: state.name, color: resolvedColor))
+    entries.append(.tagColorHeader(name: state.name, color: resolvedColor))
     entries.append(.tagColor(colors: context.peerNameColors, currentColor: tagColor))
     entries.append(.tagColorFooter)*/
     
