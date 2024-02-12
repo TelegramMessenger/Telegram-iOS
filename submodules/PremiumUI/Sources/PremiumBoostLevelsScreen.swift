@@ -1695,7 +1695,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                             otherText = presentationData.strings.ReassignBoost_OtherGroupsAndChannels(Int32(sourcePeers.count))
                         }
                         let text = presentationData.strings.ReassignBoost_Success(presentationData.strings.ReassignBoost_Boosts(replacedBoosts), otherText).string
-                        let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostReplaceIcon"), color: .white)!, title: nil, text: text, round: false, undoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
+                        let undoController = UndoOverlayController(presentationData: presentationData, content:  .universal(animation: "BoostReplace", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil, timeout: 4.0), elevatedLayout: false, position: .top, action: { _ in return true })
                         controller.present(undoController, in: .current)
                     }
                 }
