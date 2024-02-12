@@ -11304,3 +11304,6 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageRemovedGroupEmojiPack" = "%@ removed group emoji pack";
 
 "Attachment.BoostToUnlock" = "Boost to Unlock";
+
+"Story.GroupCommentingRestrictedPlaceholder" = "Comments restricted";
+"Story.GroupCommentingRestrictedPlaceholderAction" = "Boost to unlock";
