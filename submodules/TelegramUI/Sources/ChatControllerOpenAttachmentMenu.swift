@@ -1070,7 +1070,25 @@ extension ChatControllerImpl {
         if case .scheduledMessages = self.presentationInterfaceState.subject {
             isScheduledMessages = true
         }
-        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), threadTitle: self.threadInfo?.title, chatLocation: self.chatLocation, isScheduledMessages: isScheduledMessages, bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
+        let controller = MediaPickerScreen(
+            context: self.context,
+            updatedPresentationData: self.updatedPresentationData,
+            peer: EnginePeer(peer),
+            threadTitle: self.threadInfo?.title,
+            chatLocation: self.chatLocation,
+            isScheduledMessages: isScheduledMessages, 
+            bannedSendPhotos: bannedSendPhotos,
+            bannedSendVideos: bannedSendVideos,
+            canBoostToUnrestrict: (self.presentationInterfaceState.boostsToUnrestrict ?? 0) > 0 && bannedSendPhotos?.1 != true && bannedSendVideos?.1 != true,
+            subject: subject,
+            saveEditedPhotos: saveEditedPhotos
+        )
+        controller.openBoost = { [weak self, weak controller] in
+            if let self {
+                controller?.dismiss()
+                self.interfaceInteraction?.openBoostToUnrestrict()
+            }
+        }
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self] cameraView in
             self?.openCamera(cameraView: cameraView)
