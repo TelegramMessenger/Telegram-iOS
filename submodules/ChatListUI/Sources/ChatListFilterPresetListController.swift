@@ -274,8 +274,8 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
         }
     }
     
-    entries.append(.displayTags(displayTags))
-    entries.append(.displayTagsFooter)
+    /*entries.append(.displayTags(displayTags))
+    entries.append(.displayTagsFooter)*/
     
     return entries
 }

@@ -927,27 +927,13 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             interaction.openSettings(.premium)
         }))
         //TODO:localize
-        /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Telegram Business", icon: PresentationResourcesSettings.chatFolders, action: {
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Telegram Business", icon: PresentationResourcesSettings.chatFolders, action: {
             interaction.openSettings(.businessSetup)
-        }))*/
+        }))
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
             interaction.openSettings(.premiumGift)
         }))
     }
-    
-    /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Payment Method", icon: PresentationResourcesSettings.language, action: {
-        interaction.openPaymentMethod()
-    }))*/
-    
-    /*let stickersLabel: String
-    if let settings = data.globalSettings {
-        stickersLabel = settings.unreadTrendingStickerPacks > 0 ? "\(settings.unreadTrendingStickerPacks)" : ""
-    } else {
-        stickersLabel = ""
-    }
-    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 5, label: .badge(stickersLabel, presentationData.theme.list.itemAccentColor), text: presentationData.strings.ChatSettings_StickersAndReactions, icon: PresentationResourcesSettings.stickers, action: {
-        interaction.openSettings(.stickers)
-    }))*/
     
     if let settings = data.globalSettings {
         if settings.hasPassport {
