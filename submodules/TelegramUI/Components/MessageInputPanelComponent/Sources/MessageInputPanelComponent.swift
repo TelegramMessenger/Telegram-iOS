@@ -1105,15 +1105,17 @@ public final class MessageInputPanelComponent: Component {
                     ))
                 case let .premiumRequired(title, subtitle, action), let .boostRequired(title, subtitle, action):
                     leftAlignment = true
+                    
+                    let text = NSMutableAttributedString(attributedString: NSAttributedString())
+                    text.append(NSAttributedString(string: "\(title) ", font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
+                    text.append(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor))
+                    
                     contents = AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(VStack([
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: title, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
-                            ))),
-                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor))
-                            )))
-                        ], alignment: .left, spacing: 1.0)),
+                        content: AnyComponent(MultilineTextComponent(
+                            text: .plain(text),
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.1
+                        )),
                         effectAlignment: .center,
                         action: {
                             action()

@@ -11305,5 +11305,5 @@ Sorry for the inconvenience.";
 
 "Attachment.BoostToUnlock" = "Boost to Unlock";
 
-"Story.GroupCommentingRestrictedPlaceholder" = "Comments restricted";
-"Story.GroupCommentingRestrictedPlaceholderAction" = "Boost to unlock";
+"Story.GroupCommentingRestrictedPlaceholder" = "Comments restricted. Boost the group to unlock.";
+"Story.GroupCommentingRestrictedPlaceholderAction" = "Learn More...";
