@@ -5,12 +5,27 @@ import ComponentFlow
 import TelegramPresentationData
 import MultilineTextComponent
 import ListSectionComponent
-import PlainButtonComponent
-import BundleIconComponent
+import TextFieldComponent
+import AccountContext
 
-public final class ListTextFieldItemComponent: Component {
+public final class ListMultilineTextFieldItemComponent: Component {
+    public final class ResetText: Equatable {
+        public let value: String
+        
+        public init(value: String) {
+            self.value = value
+        }
+        
+        public static func ==(lhs: ResetText, rhs: ResetText) -> Bool {
+            return lhs === rhs
+        }
+    }
+    
+    public let context: AccountContext
     public let theme: PresentationTheme
+    public let strings: PresentationStrings
     public let initialText: String
+    public let resetText: ResetText?
     public let placeholder: String
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
@@ -18,16 +33,22 @@ public final class ListTextFieldItemComponent: Component {
     public let tag: AnyObject?
     
     public init(
+        context: AccountContext,
         theme: PresentationTheme,
+        strings: PresentationStrings,
         initialText: String,
+        resetText: ResetText? = nil,
         placeholder: String,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
         updated: ((String) -> Void)?,
         tag: AnyObject? = nil
     ) {
+        self.context = context
         self.theme = theme
+        self.strings = strings
         self.initialText = initialText
+        self.resetText = resetText
         self.placeholder = placeholder
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
@@ -35,11 +56,20 @@ public final class ListTextFieldItemComponent: Component {
         self.tag = tag
     }
     
-    public static func ==(lhs: ListTextFieldItemComponent, rhs: ListTextFieldItemComponent) -> Bool {
+    public static func ==(lhs: ListMultilineTextFieldItemComponent, rhs: ListMultilineTextFieldItemComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.initialText != rhs.initialText {
+            return false
+        }
+        if lhs.resetText != rhs.resetText {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
@@ -70,24 +100,27 @@ public final class ListTextFieldItemComponent: Component {
     }
     
     public final class View: UIView, UITextFieldDelegate, ListSectionComponent.ChildView, ComponentTaggedView {
-        private let textField: TextField
-        private let placeholder = ComponentView<Empty>()
-        private let clearButton = ComponentView<Empty>()
+        private let textField = ComponentView<Empty>()
+        private let textFieldExternalState = TextFieldComponent.ExternalState()
         
-        private var component: ListTextFieldItemComponent?
+        private let placeholder = ComponentView<Empty>()
+        
+        private var component: ListMultilineTextFieldItemComponent?
         private weak var state: EmptyComponentState?
         private var isUpdating: Bool = false
         
         public var currentText: String {
-            return self.textField.text ?? ""
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                return textFieldView.inputState.inputText.string
+            } else {
+                return ""
+            }
         }
         
         public var customUpdateIsHighlighted: ((Bool) -> Void)?
         public private(set) var separatorInset: CGFloat = 0.0
         
         public override init(frame: CGRect) {
-            self.textField = TextField()
-
             super.init(frame: CGRect())
         }
         
@@ -107,9 +140,12 @@ public final class ListTextFieldItemComponent: Component {
         }
         
         public func setText(text: String, updateState: Bool) {
-            self.textField.text = text
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                //TODO
+                let _ = textFieldView
+            }
+            
             if updateState {
-                self.state?.updated(transition: .immediate, isLocal: true)
                 self.component?.updated?(self.currentText)
             } else {
                 self.state?.updated(transition: .immediate, isLocal: true)
@@ -126,43 +162,55 @@ public final class ListTextFieldItemComponent: Component {
             return false
         }
         
-        func update(component: ListTextFieldItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: ListMultilineTextFieldItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
             }
             
-            let previousComponent = self.component
             self.component = component
             self.state = state
-            
-            self.textField.isEnabled = component.updated != nil
-            
-            if self.textField.superview == nil {
-                self.textField.text = component.initialText
-                self.addSubview(self.textField)
-                self.textField.delegate = self
-                self.textField.addTarget(self, action: #selector(self.textDidChange), for: .editingChanged)
-            }
-            
-            if self.textField.autocapitalizationType != component.autocapitalizationType {
-                self.textField.autocapitalizationType = component.autocapitalizationType
-            }
-            if self.textField.autocorrectionType != component.autocorrectionType {
-                self.textField.autocorrectionType = component.autocorrectionType
-            }
-            
-            let themeUpdated = component.theme !== previousComponent?.theme
-            
-            if themeUpdated {
-                self.textField.font = Font.regular(17.0)
-                self.textField.textColor = component.theme.list.itemPrimaryTextColor
-            }
             
             let verticalInset: CGFloat = 12.0
             let sideInset: CGFloat = 16.0
             
-            self.textField.sideInset = sideInset
+            let textFieldSize = self.textField.update(
+                transition: transition,
+                component: AnyComponent(TextFieldComponent(
+                    context: component.context,
+                    strings: component.strings,
+                    externalState: self.textFieldExternalState,
+                    fontSize: 17.0,
+                    textColor: component.theme.list.itemPrimaryTextColor,
+                    insets: UIEdgeInsets(top: verticalInset, left: sideInset - 8.0, bottom: verticalInset, right: sideInset - 8.0),
+                    hideKeyboard: false,
+                    customInputView: nil,
+                    resetText: component.resetText.flatMap { resetText in
+                        return NSAttributedString(string: resetText.value, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)
+                    },
+                    isOneLineWhenUnfocused: false,
+                    formatMenuAvailability: .none,
+                    lockedFormatAction: {
+                    },
+                    present: { _ in
+                    },
+                    paste: { _ in
+                    }
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let size = textFieldSize
+            let textFieldFrame = CGRect(origin: CGPoint(), size: textFieldSize)
+            
+            if let textFieldView = self.textField.view {
+                if textFieldView.superview == nil {
+                    self.addSubview(textFieldView)
+                    self.textField.parentState = state
+                }
+                transition.setFrame(view: textFieldView, frame: textFieldFrame)
+            }
             
             let placeholderSize = self.placeholder.update(
                 transition: .immediate,
@@ -170,56 +218,24 @@ public final class ListTextFieldItemComponent: Component {
                     text: .plain(NSAttributedString(string: component.placeholder.isEmpty ? " " : component.placeholder, font: Font.regular(17.0), textColor: component.theme.list.itemPlaceholderTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - 30.0, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
             )
-            let contentHeight: CGFloat = placeholderSize.height + verticalInset * 2.0
-            let placeholderFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((contentHeight - placeholderSize.height) * 0.5)), size: placeholderSize)
+            let placeholderFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: placeholderSize)
             if let placeholderView = self.placeholder.view {
                 if placeholderView.superview == nil {
                     placeholderView.layer.anchorPoint = CGPoint()
                     placeholderView.isUserInteractionEnabled = false
-                    self.insertSubview(placeholderView, belowSubview: self.textField)
+                    self.insertSubview(placeholderView, at: 0)
                 }
                 transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                 
-                placeholderView.isHidden = !self.currentText.isEmpty
-            }
-            
-            transition.setFrame(view: self.textField, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: contentHeight)))
-            
-            let clearButtonSize = self.clearButton.update(
-                transition: transition,
-                component: AnyComponent(PlainButtonComponent(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Components/Search Bar/Clear",
-                        tintColor: component.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.4)
-                    )),
-                    effectAlignment: .center,
-                    minSize: CGSize(width: 44.0, height: 44.0),
-                    action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.setText(text: "", updateState: true)
-                    },
-                    animateAlpha: false,
-                    animateScale: true
-                )),
-                environment: {},
-                containerSize: CGSize(width: 44.0, height: 44.0)
-            )
-            if let clearButtonView = self.clearButton.view {
-                if clearButtonView.superview == nil {
-                    self.addSubview(clearButtonView)
-                }
-                transition.setFrame(view: clearButtonView, frame: CGRect(origin: CGPoint(x: availableSize.width - 0.0 - clearButtonSize.width, y: floor((contentHeight - clearButtonSize.height) * 0.5)), size: clearButtonSize))
-                clearButtonView.isHidden = self.currentText.isEmpty
+                placeholderView.isHidden = self.textFieldExternalState.hasText
             }
             
             self.separatorInset = 16.0
             
-            return CGSize(width: availableSize.width, height: contentHeight)
+            return size
         }
     }
     

@@ -3185,7 +3185,7 @@ public final class ChatListNode: ListView {
     }
     
     private func resetFilter() {
-        if let chatListFilter = self.chatListFilter {
+        if let chatListFilter = self.chatListFilter, chatListFilter.id != Int32.max {
             self.updatedFilterDisposable.set((self.context.engine.peers.updatedChatListFilters()
             |> map { filters -> ChatListFilter? in
                 for filter in filters {
@@ -4113,14 +4113,16 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
             if isContact {
                 return (strings.ChatList_PeerTypeContact, false, false, nil)
             } else {
-                return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+                //TODO:localize
+                return ("non-contact", false, false, nil)
             }
         }
     } else if case .secretChat = peer {
         if isContact {
             return (strings.ChatList_PeerTypeContact, false, false, nil)
         } else {
-            return (strings.ChatList_PeerTypeNonContact, false, false, nil)
+            //TODO:localize
+            return ("non-contact", false, false, nil)
         }
     } else if case .legacyGroup = peer {
         return (strings.ChatList_PeerTypeGroup, false, false, nil)

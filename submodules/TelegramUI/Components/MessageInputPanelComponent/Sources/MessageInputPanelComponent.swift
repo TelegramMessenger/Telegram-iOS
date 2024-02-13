@@ -1098,7 +1098,8 @@ public final class MessageInputPanelComponent: Component {
                     contents = AnyComponent(PlainButtonComponent(
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: title, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
+                                text: .plain(NSAttributedString(string: title, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3))),
+                                maximumNumberOfLines: 2
                             ))),
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor))

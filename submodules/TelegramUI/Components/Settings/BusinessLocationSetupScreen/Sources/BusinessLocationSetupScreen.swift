@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Photos
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
@@ -14,12 +13,15 @@ import ComponentFlow
 import ViewControllerComponent
 import MultilineTextComponent
 import BalancedTextComponent
-import BackButtonComponent
 import ListSectionComponent
 import ListActionItemComponent
+import ListMultilineTextFieldItemComponent
 import BundleIconComponent
+import LottieComponent
+import Markdown
+import LocationUI
 
-final class BusinessSetupScreenComponent: Component {
+final class BusinessLocationSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
@@ -30,7 +32,7 @@ final class BusinessSetupScreenComponent: Component {
         self.context = context
     }
 
-    static func ==(lhs: BusinessSetupScreenComponent, rhs: BusinessSetupScreenComponent) -> Bool {
+    static func ==(lhs: BusinessLocationSetupScreenComponent, rhs: BusinessLocationSetupScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -49,15 +51,21 @@ final class BusinessSetupScreenComponent: Component {
         private let scrollView: ScrollView
         
         private let navigationTitle = ComponentView<Empty>()
-        private let title = ComponentView<Empty>()
+        private let icon = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
-        private let actionsSection = ComponentView<Empty>()
+        private let addressSection = ComponentView<Empty>()
+        private let mapSection = ComponentView<Empty>()
         
         private var isUpdating: Bool = false
         
-        private var component: BusinessSetupScreenComponent?
+        private var component: BusinessLocationSetupScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
+        
+        private let textFieldTag = NSObject()
+        private var resetAddressText: String?
+        
+        private var mapCoordinates: (Double, Double)?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -101,11 +109,7 @@ final class BusinessSetupScreenComponent: Component {
         
         var scrolledUp = true
         private func updateScrolling(transition: Transition) {
-            guard let environment = self.environment else {
-                return
-            }
-            
-            let navigationRevealOffsetY: CGFloat = -(environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) * 0.5) + (self.title.view?.frame.midY ?? 0.0)
+            let navigationRevealOffsetY: CGFloat = 0.0
             
             let navigationAlphaDistance: CGFloat = 16.0
             let navigationAlpha: CGFloat = max(0.0, min(1.0, (self.scrollView.contentOffset.y - navigationRevealOffsetY) / navigationAlphaDistance))
@@ -129,11 +133,31 @@ final class BusinessSetupScreenComponent: Component {
             }
             
             if let navigationTitleView = self.navigationTitle.view {
-                transition.setAlpha(view: navigationTitleView, alpha: navigationAlpha)
+                transition.setAlpha(view: navigationTitleView, alpha: 1.0)
             }
         }
         
-        func update(component: BusinessSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        private func openLocationPicker() {
+            guard let component = self.component else {
+                return
+            }
+            
+            let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .pick, completion: { [weak self] location, _, _, address, _ in
+                guard let self else {
+                    return
+                }
+                
+                self.mapCoordinates = (location.latitude, location.longitude)
+                if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View, textView.currentText.isEmpty {
+                    self.resetAddressText = address
+                }
+                
+                self.state?.updated(transition: .immediate)
+            })
+            self.environment?.controller()?.push(controller)
+        }
+        
+        func update(component: BusinessLocationSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -156,7 +180,7 @@ final class BusinessSetupScreenComponent: Component {
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Telegram Business", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: "Location", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -182,38 +206,59 @@ final class BusinessSetupScreenComponent: Component {
             var contentHeight: CGFloat = 0.0
             
             contentHeight += environment.navigationHeight
-            contentHeight += 16.0
             
-            //TODO:localize
-            let titleSize = self.title.update(
+            let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Telegram Business", font: Font.bold(29.0), textColor: environment.theme.list.itemPrimaryTextColor)),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
+                    text: .plain(NSAttributedString(string: "🗺", font: Font.semibold(90.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    horizontalAlignment: .center
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize)
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    self.scrollView.addSubview(titleView)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 2.0), size: iconSize)
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    self.scrollView.addSubview(iconView)
                 }
-                transition.setPosition(view: titleView, position: titleFrame.center)
-                titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                transition.setPosition(view: iconView, position: iconFrame.center)
+                iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
             }
-            contentHeight += titleSize.height
-            contentHeight += 17.0
+            
+            contentHeight += 129.0
+            
+            //TODO:localize
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Display the location of your business on your account.", attributes: MarkdownAttributes(
+                body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
+                bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
+                link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
+                linkAttribute: { attributes in
+                    return ("URL", "")
+                }), textAlignment: .center
+            ))
             
             //TODO:localize
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "You have now unlocked these additional business features.", font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                    text: .plain(subtitleString),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.25
+                    lineSpacing: 0.25,
+                    highlightColor: environment.theme.list.itemAccentColor.withMultipliedAlpha(0.1),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                            return NSAttributedString.Key(rawValue: "URL")
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { [weak self] _, _ in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        let _ = component
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -227,127 +272,118 @@ final class BusinessSetupScreenComponent: Component {
                 subtitleView.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
             }
             contentHeight += subtitleSize.height
-            contentHeight += 21.0
+            contentHeight += 27.0
             
-            struct Item {
-                var icon: String
-                var title: String
-                var subtitle: String
-                var action: () -> Void
-            }
-            var items: [Item] = []
+            var addressSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            addressSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
+                context: component.context,
+                theme: environment.theme,
+                strings: environment.strings,
+                initialText: "",
+                resetText: self.resetAddressText.flatMap { resetAddressText in
+                    return ListMultilineTextFieldItemComponent.ResetText(value: resetAddressText)
+                },
+                placeholder: "Enter Address",
+                autocapitalizationType: .none,
+                autocorrectionType: .no,
+                updated: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    let _ = self
+                    let _ = value
+                },
+                tag: self.textFieldTag
+            ))))
+            self.resetAddressText = nil
+            
             //TODO:localize
-            items.append(Item(
-                icon: "Settings/Menu/AddAccount",
-                title: "Location",
-                subtitle: "Display the location of your business on your account.",
-                action: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.environment?.controller()?.push(component.context.sharedContext.makeBusinessLocationSetupScreen(context: component.context))
-                }
-            ))
-            items.append(Item(
-                icon: "Settings/Menu/DataVoice",
-                title: "Opening Hours",
-                subtitle: "Show to your customers when you are open for business.",
-                action: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    self.environment?.controller()?.push(component.context.sharedContext.makeBusinessHoursSetupScreen(context: component.context))
-                }
-            ))
-            items.append(Item(
-                icon: "Settings/Menu/Photos",
-                title: "Quick Replies",
-                subtitle: "Set up shortcuts with rich text and media to respond to messages faster.",
-                action: {
-                }
-            ))
-            items.append(Item(
-                icon: "Settings/Menu/Stories",
-                title: "Greeting Messages",
-                subtitle: "Create greetings that will be automatically sent to new customers.",
-                action: { [weak self] in
-                    guard let self, let component = self.component, let environment = self.environment else {
-                        return
-                    }
-                    environment.controller()?.push(component.context.sharedContext.makeGreetingMessageSetupScreen(context: component.context))
-                }
-            ))
-            items.append(Item(
-                icon: "Settings/Menu/Trending",
-                title: "Away Messages",
-                subtitle: "Define messages that are automatically sent when you are off.",
-                action: {
-                }
-            ))
-            items.append(Item(
-                icon: "Settings/Menu/DataStickers",
-                title: "Chatbots",
-                subtitle: "Add any third-party chatbots that will process customer interactions.",
-                action: { [weak self] in
-                    guard let self, let component = self.component, let environment = self.environment else {
-                        return
-                    }
-                    environment.controller()?.push(component.context.sharedContext.makeChatbotSetupScreen(context: component.context))
-                }
-            ))
-            
-            var actionsSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            for item in items {
-                actionsSectionItems.append(AnyComponentWithIdentity(id: actionsSectionItems.count, component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
-                    title: AnyComponent(VStack([
-                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: item.title,
-                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: environment.theme.list.itemPrimaryTextColor
-                            )),
-                            maximumNumberOfLines: 0
-                        ))),
-                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: item.subtitle,
-                                font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)),
-                                textColor: environment.theme.list.itemSecondaryTextColor
-                            )),
-                            maximumNumberOfLines: 0,
-                            lineSpacing: 0.18
-                        )))
-                    ], alignment: .left, spacing: 2.0)),
-                    leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
-                        name: item.icon,
-                        tintColor: nil
-                    ))),
-                    action: { _ in
-                        item.action()
-                    }
-                ))))
-            }
-            
-            let actionsSectionSize = self.actionsSection.update(
+            let addressSectionSize = self.addressSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: nil,
                     footer: nil,
-                    items: actionsSectionItems
+                    items: addressSectionItems
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let actionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: actionsSectionSize)
-            if let actionsSectionView = self.actionsSection.view {
-                if actionsSectionView.superview == nil {
-                    self.scrollView.addSubview(actionsSectionView)
+            let addressSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: addressSectionSize)
+            if let addressSectionView = self.addressSection.view {
+                if addressSectionView.superview == nil {
+                    self.scrollView.addSubview(addressSectionView)
+                    self.addressSection.parentState = state
                 }
-                transition.setFrame(view: actionsSectionView, frame: actionsSectionFrame)
+                transition.setFrame(view: addressSectionView, frame: addressSectionFrame)
             }
-            contentHeight += actionsSectionSize.height
+            contentHeight += addressSectionSize.height
+            contentHeight += sectionSpacing
+            
+            var mapSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            //TODO:localize
+            mapSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                theme: environment.theme,
+                title: AnyComponent(VStack([
+                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Set Location on Map",
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    ))),
+                ], alignment: .left, spacing: 2.0)),
+                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.mapCoordinates != nil, isInteractive: self.mapCoordinates != nil)),
+                action: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    if self.mapCoordinates == nil {
+                        self.openLocationPicker()
+                    } else {
+                        self.mapCoordinates = nil
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    }
+                }
+            ))))
+            if let mapCoordinates = self.mapCoordinates {
+                mapSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MapPreviewComponent(
+                    theme: environment.theme,
+                    location: MapPreviewComponent.Location(
+                        latitude: mapCoordinates.0,
+                        longitude: mapCoordinates.1
+                    ),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.openLocationPicker()
+                    }
+                ))))
+            }
+            
+            //TODO:localize
+            let mapSectionSize = self.mapSection.update(
+                transition: transition,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    header: nil,
+                    footer: nil,
+                    items: mapSectionItems,
+                    displaySeparators: false
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+            )
+            let mapSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: mapSectionSize)
+            if let mapSectionView = self.mapSection.view {
+                if mapSectionView.superview == nil {
+                    self.scrollView.addSubview(mapSectionView)
+                }
+                transition.setFrame(view: mapSectionView, frame: mapSectionFrame)
+            }
+            contentHeight += mapSectionSize.height
             
             contentHeight += bottomContentInset
             contentHeight += environment.safeInsets.bottom
@@ -391,13 +427,13 @@ final class BusinessSetupScreenComponent: Component {
     }
 }
 
-public final class BusinessSetupScreen: ViewControllerComponentContainer {
+public final class BusinessLocationSetupScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
     public init(context: AccountContext) {
         self.context = context
         
-        super.init(context: context, component: BusinessSetupScreenComponent(
+        super.init(context: context, component: BusinessLocationSetupScreenComponent(
             context: context
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
@@ -406,14 +442,14 @@ public final class BusinessSetupScreen: ViewControllerComponentContainer {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            guard let self, let componentView = self.node.hostView.componentView as? BusinessSetupScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? BusinessLocationSetupScreenComponent.View else {
                 return
             }
             componentView.scrollToTop()
         }
         
         self.attemptNavigation = { [weak self] complete in
-            guard let self, let componentView = self.node.hostView.componentView as? BusinessSetupScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? BusinessLocationSetupScreenComponent.View else {
                 return true
             }
             

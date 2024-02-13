@@ -37,7 +37,7 @@ private let checkIcon: UIImage = {
     })!.withRenderingMode(.alwaysTemplate)
 }()
 
-final class ChatbotSetupScreenComponent: Component {
+final class GreetingMessageSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
@@ -48,7 +48,7 @@ final class ChatbotSetupScreenComponent: Component {
         self.context = context
     }
 
-    static func ==(lhs: ChatbotSetupScreenComponent, rhs: ChatbotSetupScreenComponent) -> Bool {
+    static func ==(lhs: GreetingMessageSetupScreenComponent, rhs: GreetingMessageSetupScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -112,22 +112,20 @@ final class ChatbotSetupScreenComponent: Component {
         private let navigationTitle = ComponentView<Empty>()
         private let icon = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
-        private let nameSection = ComponentView<Empty>()
+        private let generalSection = ComponentView<Empty>()
         private let accessSection = ComponentView<Empty>()
         private let excludedSection = ComponentView<Empty>()
         private let permissionsSection = ComponentView<Empty>()
         
         private var isUpdating: Bool = false
         
-        private var component: ChatbotSetupScreenComponent?
+        private var component: GreetingMessageSetupScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
         private var chevronImage: UIImage?
-        private let textFieldTag = NSObject()
         
-        private var botResolutionState: BotResolutionState?
-        private var botResolutionDisposable: Disposable?
+        private var isOn: Bool = false
         
         private var hasAccessToAllChatsByDefault: Bool = true
         private var additionalPeerList = AdditionalPeerList(
@@ -204,57 +202,6 @@ final class ChatbotSetupScreenComponent: Component {
             
             if let navigationTitleView = self.navigationTitle.view {
                 transition.setAlpha(view: navigationTitleView, alpha: 1.0)
-            }
-        }
-        
-        private func updateBotQuery(query: String) {
-            guard let component = self.component else {
-                return
-            }
-            
-            if !query.isEmpty {
-                if self.botResolutionState?.query != query {
-                    let previousState = self.botResolutionState?.state
-                    self.botResolutionState = BotResolutionState(
-                        query: query,
-                        state: self.botResolutionState?.state ?? .searching
-                    )
-                    self.botResolutionDisposable?.dispose()
-                    
-                    if previousState != self.botResolutionState?.state {
-                        self.state?.updated(transition: .spring(duration: 0.35))
-                    }
-                    
-                    self.botResolutionDisposable = (component.context.engine.peers.resolvePeerByName(name: query)
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        guard let self else {
-                            return
-                        }
-                        switch result {
-                        case .progress:
-                            break
-                        case let .result(peer):
-                            let previousState = self.botResolutionState?.state
-                            if let peer {
-                                self.botResolutionState?.state = .found(peer: peer, isInstalled: false)
-                            } else {
-                                self.botResolutionState?.state = .notFound
-                            }
-                            if previousState != self.botResolutionState?.state {
-                                self.state?.updated(transition: .spring(duration: 0.35))
-                            }
-                        }
-                    })
-                }
-            } else {
-                if let botResolutionDisposable = self.botResolutionDisposable {
-                    self.botResolutionDisposable = nil
-                    botResolutionDisposable.dispose()
-                }
-                if self.botResolutionState != nil {
-                    self.botResolutionState = nil
-                    self.state?.updated(transition: .spring(duration: 0.35))
-                }
             }
         }
         
@@ -385,7 +332,7 @@ final class ChatbotSetupScreenComponent: Component {
             self.environment?.controller()?.push(controller)
         }
         
-        func update(component: ChatbotSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: GreetingMessageSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -398,6 +345,8 @@ final class ChatbotSetupScreenComponent: Component {
             self.component = component
             self.state = state
             
+            let alphaTransition: Transition = transition.animation.isImmediate ? transition : transition.withAnimation(.curve(duration: 0.25, curve: .easeInOut))
+            
             if themeUpdated {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
@@ -408,7 +357,7 @@ final class ChatbotSetupScreenComponent: Component {
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Chatbots", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: "Greeting Message", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -438,7 +387,7 @@ final class ChatbotSetupScreenComponent: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "BotEmoji"),
+                    content: LottieComponent.AppBundleContent(name: "HandWaveEmoji"),
                     loop: true
                 )),
                 environment: {},
@@ -456,7 +405,7 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += 129.0
             
             //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More]()", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Greet customers when they message you the first time or after a period of no activity.", attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -508,94 +457,52 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += subtitleSize.height
             contentHeight += 27.0
             
-            var nameSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            nameSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListTextFieldItemComponent(
+            var generalSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            generalSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                 theme: environment.theme,
-                initialText: "",
-                placeholder: "Bot Username",
-                autocapitalizationType: .none,
-                autocorrectionType: .no,
-                updated: { [weak self] value in
+                title: AnyComponent(VStack([
+                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: "Send Greeting Message",
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 1
+                    ))),
+                ], alignment: .left, spacing: 2.0)),
+                accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.isOn, action: { [weak self] _ in
                     guard let self else {
                         return
                     }
-                    self.updateBotQuery(query: value)
-                },
-                tag: self.textFieldTag
+                    self.isOn = !self.isOn
+                    self.state?.updated(transition: .spring(duration: 0.4))
+                })),
+                action: nil
             ))))
-            if let botResolutionState = self.botResolutionState {
-                let mappedContent: ChatbotSearchResultItemComponent.Content
-                switch botResolutionState.state {
-                case .searching:
-                    mappedContent = .searching
-                case .notFound:
-                    mappedContent = .notFound
-                case let .found(peer, isInstalled):
-                    mappedContent = .found(peer: peer, isInstalled: isInstalled)
-                }
-                nameSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(ChatbotSearchResultItemComponent(
-                    context: component.context,
-                    theme: environment.theme,
-                    strings: environment.strings,
-                    content: mappedContent,
-                    installAction: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        if var botResolutionState = self.botResolutionState, case let .found(peer, isInstalled) = botResolutionState.state, !isInstalled {
-                            botResolutionState.state = .found(peer: peer, isInstalled: true)
-                            self.botResolutionState = botResolutionState
-                            self.state?.updated(transition: .spring(duration: 0.3))
-                        }
-                    },
-                    removeAction: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        if let botResolutionState = self.botResolutionState, case let .found(_, isInstalled) = botResolutionState.state, isInstalled {
-                            self.botResolutionState = nil
-                            if let botResolutionDisposable = self.botResolutionDisposable {
-                                self.botResolutionDisposable = nil
-                                botResolutionDisposable.dispose()
-                            }
-                            
-                            if let textFieldView = self.nameSection.findTaggedView(tag: self.textFieldTag) as? ListTextFieldItemComponent.View {
-                                textFieldView.setText(text: "", updateState: false)
-                            }
-                            self.state?.updated(transition: .spring(duration: 0.3))
-                        }
-                    }
-                ))))
-            }
             
             //TODO:localize
-            let nameSectionSize = self.nameSection.update(
+            let generalSectionSize = self.generalSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: nil,
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "Enter the username or URL of the Telegram bot that you want to automatically process your chats.",
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
-                        )),
-                        maximumNumberOfLines: 0
-                    )),
-                    items: nameSectionItems
+                    footer: nil,
+                    items: generalSectionItems
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let nameSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: nameSectionSize)
-            if let nameSectionView = self.nameSection.view {
-                if nameSectionView.superview == nil {
-                    self.scrollView.addSubview(nameSectionView)
+            let generalSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: generalSectionSize)
+            if let generalSectionView = self.generalSection.view {
+                if generalSectionView.superview == nil {
+                    self.scrollView.addSubview(generalSectionView)
                 }
-                transition.setFrame(view: nameSectionView, frame: nameSectionFrame)
+                transition.setFrame(view: generalSectionView, frame: generalSectionFrame)
             }
-            contentHeight += nameSectionSize.height
+            contentHeight += generalSectionSize.height
             contentHeight += sectionSpacing
+            
+            var otherSectionsHeight: CGFloat = 0.0
             
             //TODO:localize
             let accessSectionSize = self.accessSection.update(
@@ -604,7 +511,7 @@ final class ChatbotSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "CHATS ACCESSIBLE FOR THE BOT",
+                            string: "RECIPIENTS",
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -677,15 +584,17 @@ final class ChatbotSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let accessSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: accessSectionSize)
+            let accessSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: accessSectionSize)
             if let accessSectionView = self.accessSection.view {
                 if accessSectionView.superview == nil {
+                    accessSectionView.layer.allowsGroupOpacity = true
                     self.scrollView.addSubview(accessSectionView)
                 }
                 transition.setFrame(view: accessSectionView, frame: accessSectionFrame)
+                alphaTransition.setAlpha(view: accessSectionView, alpha: self.isOn ? 1.0 : 0.0)
             }
-            contentHeight += accessSectionSize.height
-            contentHeight += sectionSpacing
+            otherSectionsHeight += accessSectionSize.height
+            otherSectionsHeight += sectionSpacing
             
             var excludedSectionItems: [AnyComponentWithIdentity<Empty>] = []
             excludedSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
@@ -808,18 +717,20 @@ final class ChatbotSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let excludedSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: excludedSectionSize)
+            let excludedSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: excludedSectionSize)
             if let excludedSectionView = self.excludedSection.view {
                 if excludedSectionView.superview == nil {
+                    excludedSectionView.layer.allowsGroupOpacity = true
                     self.scrollView.addSubview(excludedSectionView)
                 }
                 transition.setFrame(view: excludedSectionView, frame: excludedSectionFrame)
+                alphaTransition.setAlpha(view: excludedSectionView, alpha: self.isOn ? 1.0 : 0.0)
             }
-            contentHeight += excludedSectionSize.height
-            contentHeight += sectionSpacing
+            otherSectionsHeight += excludedSectionSize.height
+            otherSectionsHeight += sectionSpacing
             
             //TODO:localize
-            let permissionsSectionSize = self.permissionsSection.update(
+            /*let permissionsSectionSize = self.permissionsSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
@@ -860,20 +771,27 @@ final class ChatbotSetupScreenComponent: Component {
                                 self.state?.updated(transition: .spring(duration: 0.4))
                             })),
                             action: nil
-                        ))),
+                        )))
                     ]
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let permissionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: permissionsSectionSize)
+            let permissionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: permissionsSectionSize)
             if let permissionsSectionView = self.permissionsSection.view {
                 if permissionsSectionView.superview == nil {
+                    permissionsSectionView.layer.allowsGroupOpacity = true
                     self.scrollView.addSubview(permissionsSectionView)
                 }
                 transition.setFrame(view: permissionsSectionView, frame: permissionsSectionFrame)
+                
+                alphaTransition.setAlpha(view: permissionsSectionView, alpha: self.isOn ? 1.0 : 0.0)
             }
-            contentHeight += permissionsSectionSize.height
+            otherSectionsHeight += permissionsSectionSize.height*/
+            
+            if self.isOn {
+                contentHeight += otherSectionsHeight
+            }
             
             contentHeight += bottomContentInset
             contentHeight += environment.safeInsets.bottom
@@ -917,13 +835,13 @@ final class ChatbotSetupScreenComponent: Component {
     }
 }
 
-public final class ChatbotSetupScreen: ViewControllerComponentContainer {
+public final class GreetingMessageSetupScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
     public init(context: AccountContext) {
         self.context = context
         
-        super.init(context: context, component: ChatbotSetupScreenComponent(
+        super.init(context: context, component: GreetingMessageSetupScreenComponent(
             context: context
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
@@ -932,14 +850,14 @@ public final class ChatbotSetupScreen: ViewControllerComponentContainer {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            guard let self, let componentView = self.node.hostView.componentView as? ChatbotSetupScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? GreetingMessageSetupScreenComponent.View else {
                 return
             }
             componentView.scrollToTop()
         }
         
         self.attemptNavigation = { [weak self] complete in
-            guard let self, let componentView = self.node.hostView.componentView as? ChatbotSetupScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? GreetingMessageSetupScreenComponent.View else {
                 return true
             }
             

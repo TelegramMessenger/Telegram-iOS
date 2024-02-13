@@ -934,6 +934,9 @@ public protocol SharedAccountContext: AnyObject {
     func makeArchiveSettingsController(context: AccountContext) -> ViewController
     func makeBusinessSetupScreen(context: AccountContext) -> ViewController
     func makeChatbotSetupScreen(context: AccountContext) -> ViewController
+    func makeBusinessLocationSetupScreen(context: AccountContext) -> ViewController
+    func makeBusinessHoursSetupScreen(context: AccountContext) -> ViewController
+    func makeGreetingMessageSetupScreen(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>

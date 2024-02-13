@@ -722,11 +722,11 @@ public extension CombinedComponent {
                             updatedChild.view.layer.shadowRadius = 0.0
                             updatedChild.view.layer.shadowOpacity = 0.0
                         }
-                        updatedChild.view.context(typeErasedComponent: updatedChild.component).erasedState._updated = { [weak viewContext] transition in
+                        updatedChild.view.context(typeErasedComponent: updatedChild.component).erasedState._updated = { [weak viewContext] transition, isLocal in
                             guard let viewContext = viewContext else {
                                 return
                             }
-                            viewContext.state.updated(transition: transition)
+                            viewContext.state.updated(transition: transition, isLocal: isLocal)
                         }
 
                         if let transitionAppearWithGuide = updatedChild.transitionAppearWithGuide {

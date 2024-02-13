@@ -21,9 +21,9 @@ public func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat
             periodString = "AM"
         }
         if minutes >= 10 {
-            return "\(hourString):\(minutes) \(periodString)"
+            return "\(hourString):\(minutes)\u{00a0}\(periodString)"
         } else {
-            return "\(hourString):0\(minutes) \(periodString)"
+            return "\(hourString):0\(minutes)\u{00a0}\(periodString)"
         }
     case .military:
         return String(format: "%02d:%02d", arguments: [Int(hours), Int(minutes)])

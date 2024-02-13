@@ -57,7 +57,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         
         super.init()
         
-        self.state._updated = { [weak self] transition in
+        self.state._updated = { [weak self] transition, _ in
             if let self {
                 self.update(transition: transition.containedViewLayoutTransition)
             }

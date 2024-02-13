@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ListTextFieldItemComponent",
-    module_name = "ListTextFieldItemComponent",
+    name = "ListItemSliderSelectorComponent",
+    module_name = "ListItemSliderSelectorComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,12 +11,10 @@ swift_library(
     ],
     deps = [
         "//submodules/Display",
-        "//submodules/ComponentFlow",
         "//submodules/TelegramPresentationData",
+        "//submodules/ComponentFlow",
         "//submodules/Components/MultilineTextComponent",
-        "//submodules/TelegramUI/Components/ListSectionComponent",
-        "//submodules/TelegramUI/Components/PlainButtonComponent",
-        "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/SliderComponent,
     ],
     visibility = [
         "//visibility:public",

@@ -53,6 +53,9 @@ import UndoUI
 import ChatMessageNotificationItem
 import BusinessSetupScreen
 import ChatbotSetupScreen
+import BusinessLocationSetupScreen
+import BusinessHoursSetupScreen
+import GreetingMessageSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1886,6 +1889,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChatbotSetupScreen(context: AccountContext) -> ViewController {
         return ChatbotSetupScreen(context: context)
+    }
+    
+    public func makeBusinessLocationSetupScreen(context: AccountContext) -> ViewController {
+        return BusinessLocationSetupScreen(context: context)
+    }
+    
+    public func makeBusinessHoursSetupScreen(context: AccountContext) -> ViewController {
+        return BusinessHoursSetupScreen(context: context)
+    }
+    
+    public func makeGreetingMessageSetupScreen(context: AccountContext) -> ViewController {
+        return GreetingMessageSetupScreen(context: context)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {

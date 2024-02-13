@@ -89,15 +89,15 @@ extension UIView {
 }
 
 open class ComponentState {
-    open var _updated: ((Transition) -> Void)?
+    open var _updated: ((Transition, Bool) -> Void)?
     var isUpdated: Bool = false
     
     public init() {
     }
     
-    public final func updated(transition: Transition = .immediate) {
+    public final func updated(transition: Transition = .immediate, isLocal: Bool = false) {
         self.isUpdated = true
-        self._updated?(transition)
+        self._updated?(transition, isLocal)
     }
 }
 

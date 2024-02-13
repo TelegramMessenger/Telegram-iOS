@@ -193,7 +193,7 @@ public final class TextFieldComponent: Component {
                 
         private let ellipsisView = ComponentView<Empty>()
         
-        private var inputState: InputState {
+        public var inputState: InputState {
             let selectionRange: Range<Int> = self.textView.selectedRange.location ..< (self.textView.selectedRange.location + self.textView.selectedRange.length)
             return InputState(inputText: stateAttributedStringForText(self.textView.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
         }
