@@ -1525,7 +1525,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                         controller?.push(giveawayController)
                     }
                 )
-                boostController.boostStatusUpdated = { boostStatus in
+                boostController.boostStatusUpdated = { boostStatus, _ in
                     boostDataPromise.set(.single(boostStatus))
                 }
                 controller?.push(boostController)
