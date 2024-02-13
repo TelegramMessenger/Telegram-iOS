@@ -11043,7 +11043,7 @@ Sorry for the inconvenience.";
 "ChannelBoost.Table.Group.Wallpaper_any" = "%@ Group Backgrounds";
 "ChannelBoost.Table.Group.CustomWallpaper" = "Custom Group Background";
 
-"Premium.Group.BoostByGiftDescription" = "Boost your group by gifting your subscribers Telegram Premium. [Get boosts >]()";
+"Premium.Group.BoostByGiftDescription" = "Boost your group by gifting your members Telegram Premium. [Get boosts >]()";
 
 "Conversation.BoostGroup" = "BOOST";
 
