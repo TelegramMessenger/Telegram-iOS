@@ -271,9 +271,9 @@ private final class LevelSectionComponent: CombinedComponent {
             case .customWallpaper:
                 return isGroup ? strings.ChannelBoost_Table_Group_CustomWallpaper : strings.ChannelBoost_Table_CustomWallpaper
             case .audioTranscription:
-                return "Voice-to-Text Conversion"
+                return strings.GroupBoost_Table_Group_VoiceToText
             case .emojiPack:
-                return "Custom Emojipack"
+                return strings.GroupBoost_Table_Group_EmojiPack
             }
         }
         
