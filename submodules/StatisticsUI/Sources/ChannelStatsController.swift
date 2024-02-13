@@ -1519,7 +1519,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                     peerId: peerId,
                     mode: .owner(subject: nil),
                     status: boostStatus,
-                    myBoostStatus: myBoostStatus
+                    myBoostStatus: myBoostStatus,
+                    openGift: { [weak controller] in
+                        let giveawayController = createGiveawayController(context: context, peerId: peerId, subject: .generic)
+                        controller?.push(giveawayController)
+                    }
                 )
                 boostController.boostStatusUpdated = { boostStatus in
                     boostDataPromise.set(.single(boostStatus))

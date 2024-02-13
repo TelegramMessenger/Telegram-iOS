@@ -1668,7 +1668,13 @@ public final class StoryItemSetContainerComponent: Component {
                             case .broadcast:
                                 displayFooter = true
                             case .group:
-                                displayFooter = false
+                                var canBypassRestrictions = false
+                                if let appliedBoosts = component.slice.additionalPeerData.appliedBoosts, let boostsToUnrestrict = component.slice.additionalPeerData.boostsToUnrestrict {
+                                    canBypassRestrictions = appliedBoosts >= boostsToUnrestrict
+                                }
+                                if let bannedSendText = channel.hasBannedPermission(.banSendText, ignoreDefault: canBypassRestrictions), bannedSendText.1 || component.slice.additionalPeerData.boostsToUnrestrict == nil {
+                                    displayFooter = true
+                                }
                             }
                         } else if component.slice.peer.id == component.context.account.peerId {
                             displayFooter = true
@@ -2744,9 +2750,42 @@ public final class StoryItemSetContainerComponent: Component {
                 inputPanelTransition = .immediate
             }
             
+            var canBypassRestrictions = false
+            if let appliedBoosts = component.slice.additionalPeerData.appliedBoosts, let boostsToUnrestrict = component.slice.additionalPeerData.boostsToUnrestrict {
+                canBypassRestrictions = appliedBoosts >= boostsToUnrestrict
+            }
+                        
+            var isChannel = false
+            var isGroup = false
+            var showMessageInputPanel = true
+            var isGroupCommentRestricted = false
+            if case let .channel(channel) = component.slice.peer {
+                switch channel.info {
+                case .broadcast:
+                    isChannel = true
+                    showMessageInputPanel = false
+                case .group:
+                    if let bannedSendText = channel.hasBannedPermission(.banSendText, ignoreDefault: canBypassRestrictions) {
+                        if bannedSendText.1 || component.slice.additionalPeerData.boostsToUnrestrict == nil {
+                            showMessageInputPanel = false
+                        } else {
+                            isGroupCommentRestricted = true
+                        }
+                    }
+                    isGroup = true
+                }
+            } else {
+                showMessageInputPanel = component.slice.peer.id != component.context.account.peerId
+            }
+            
             var isUnsupported = false
             var disabledPlaceholder: MessageInputPanelComponent.DisabledPlaceholder?
-            if component.slice.additionalPeerData.isPremiumRequiredForMessaging {
+            
+            if isGroupCommentRestricted {
+                disabledPlaceholder = .boostRequired(title: component.strings.Story_GroupCommentingRestrictedPlaceholder, subtitle: component.strings.Story_GroupCommentingRestrictedPlaceholderAction, action: { [weak self] in
+                    self?.presentBoostToUnrestrict()
+                })
+            } else if component.slice.additionalPeerData.isPremiumRequiredForMessaging {
                 disabledPlaceholder = .premiumRequired(title: component.strings.Story_MessagingRestrictedPlaceholder(component.slice.peer.compactDisplayTitle).string, subtitle: component.strings.Story_MessagingRestrictedPlaceholderAction, action: { [weak self] in
                     self?.presentPremiumRequiredForMessaging()
                 })
@@ -2755,21 +2794,6 @@ public final class StoryItemSetContainerComponent: Component {
             } else if case .unsupported = component.slice.item.storyItem.media {
                 isUnsupported = true
                 disabledPlaceholder = .text(component.strings.Story_FooterReplyUnavailable)
-            }
-            
-            var isChannel = false
-            var isGroup = false
-            var showMessageInputPanel = true
-            if case let .channel(channel) = component.slice.peer {
-                switch channel.info {
-                case .broadcast:
-                    isChannel = true
-                    showMessageInputPanel = false
-                case .group:
-                    isGroup = true
-                }
-            } else {
-                showMessageInputPanel = component.slice.peer.id != component.context.account.peerId
             }
             
             let inputPlaceholder: MessageInputPanelComponent.Placeholder
@@ -5673,7 +5697,7 @@ public final class StoryItemSetContainerComponent: Component {
 
             let controller = PremiumIntroScreen(context: component.context, source: .settings, forceDark: true)
             self.sendMessageContext.actionSheet = controller
-            controller.wasDismissed = { [weak self, weak controller]in
+            controller.wasDismissed = { [weak self, weak controller] in
                 guard let self else {
                     return
                 }
@@ -5686,6 +5710,45 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.updateIsProgressPaused()
             component.controller()?.push(controller)
+        }
+        
+        private func presentBoostToUnrestrict() {
+            guard let component = self.component, let boostsToUnrestrict = component.slice.additionalPeerData.boostsToUnrestrict else {
+                return
+            }
+            
+            HapticFeedback().impact()
+            
+            let _ = combineLatest(queue: Queue.mainQueue(),
+                component.context.engine.peers.getChannelBoostStatus(peerId: component.slice.peer.id),
+                component.context.engine.peers.getMyBoostStatus()
+            ).startStandalone(next: { [weak self] boostStatus, myBoostStatus in
+                guard let self, let component = self.component, let boostStatus, let myBoostStatus else {
+                    return
+                }
+                let boostController = PremiumBoostLevelsScreen(
+                    context: component.context,
+                    peerId: component.slice.peer.id,
+                    mode: .user(mode: .unrestrict(Int(boostsToUnrestrict))),
+                    status: boostStatus,
+                    myBoostStatus: myBoostStatus,
+                    forceDark: true
+                )
+                boostController.disposed = { [weak self, weak boostController] in
+                    guard let self else {
+                        return
+                    }
+                    
+                    if self.sendMessageContext.actionSheet === boostController {
+                        self.sendMessageContext.actionSheet = nil
+                    }
+                    self.updateIsProgressPaused()
+                }
+                self.sendMessageContext.actionSheet = boostController
+                
+                self.updateIsProgressPaused()
+                component.controller()?.push(boostController)
+            })
         }
         
         private func presentStoriesUpgradeScreen(source: PremiumSource) {

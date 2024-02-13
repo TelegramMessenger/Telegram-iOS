@@ -272,6 +272,10 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
                             controller.onStop()
                         }
                     }
+                }, error: { [weak self] _ in
+                    if let self, let controller = self.getController() {
+                        controller.completion(nil, nil, nil)
+                    }
                 }))
             }
             
@@ -1686,7 +1690,7 @@ public class VideoMessageCameraScreen: ViewController {
       
         self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: audioSessionType, activate: { [weak self] _ in
             if let self {
-                Queue.mainQueue().async {
+                Queue.mainQueue().after(0.05) {
                     self.node.setupCamera()
                 }
             }

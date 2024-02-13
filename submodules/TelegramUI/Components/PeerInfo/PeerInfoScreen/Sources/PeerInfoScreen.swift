@@ -926,10 +926,6 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
         }))
-        //TODO:localize
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Telegram Business", icon: PresentationResourcesSettings.chatFolders, action: {
-            interaction.openSettings(.businessSetup)
-        }))
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
             interaction.openSettings(.premiumGift)
         }))

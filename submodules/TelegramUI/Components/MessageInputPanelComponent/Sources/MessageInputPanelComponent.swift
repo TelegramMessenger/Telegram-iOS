@@ -92,10 +92,12 @@ public final class MessageInputPanelComponent: Component {
         enum Kind {
             case text
             case premiumRequired
+            case boostRequired
         }
         
         case text(String)
         case premiumRequired(title: String, subtitle: String, action: () -> Void)
+        case boostRequired(title: String, subtitle: String, action: () -> Void)
         
         var kind: Kind {
             switch self {
@@ -103,6 +105,8 @@ public final class MessageInputPanelComponent: Component {
                 return .text
             case .premiumRequired:
                 return .premiumRequired
+            case .boostRequired:
+                return .boostRequired
             }
         }
         
@@ -116,6 +120,12 @@ public final class MessageInputPanelComponent: Component {
                 }
             case let .premiumRequired(title, subtitle, _):
                 if case .premiumRequired(title, subtitle, _) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .boostRequired(title, subtitle, _):
+                if case .boostRequired(title, subtitle, _) = rhs {
                     return true
                 } else {
                     return false
@@ -1093,17 +1103,19 @@ public final class MessageInputPanelComponent: Component {
                     contents = AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: text, font: Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
                     ))
-                case let .premiumRequired(title, subtitle, action):
+                case let .premiumRequired(title, subtitle, action), let .boostRequired(title, subtitle, action):
                     leftAlignment = true
+                    
+                    let text = NSMutableAttributedString(attributedString: NSAttributedString())
+                    text.append(NSAttributedString(string: "\(title) ", font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
+                    text.append(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor))
+                    
                     contents = AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(VStack([
-                            AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: title, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3)))
-                            ))),
-                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: component.theme.list.itemAccentColor))
-                            )))
-                        ], alignment: .left, spacing: 1.0)),
+                        content: AnyComponent(MultilineTextComponent(
+                            text: .plain(text),
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.1
+                        )),
                         effectAlignment: .center,
                         action: {
                             action()
