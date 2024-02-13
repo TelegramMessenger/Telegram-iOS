@@ -402,13 +402,15 @@ private final class SheetContent: CombinedComponent {
     let mode: PremiumBoostLevelsScreen.Mode
     let status: ChannelBoostStatus?
     let boostState: InternalBoostState.DisplayData?
-
+    let initialized: Bool
+    
     let boost: () -> Void
     let copyLink: (String) -> Void
     let dismiss: () -> Void
     let openStats: (() -> Void)?
     let openGift: (() -> Void)?
     let openPeer: ((EnginePeer) -> Void)?
+    let updated: () -> Void
     
     init(context: AccountContext,
          theme: PresentationTheme,
@@ -419,12 +421,14 @@ private final class SheetContent: CombinedComponent {
          mode: PremiumBoostLevelsScreen.Mode,
          status: ChannelBoostStatus?,
          boostState: InternalBoostState.DisplayData?,
+         initialized: Bool,
          boost: @escaping () -> Void,
          copyLink: @escaping (String) -> Void,
          dismiss: @escaping () -> Void,
          openStats: (() -> Void)?,
          openGift: (() -> Void)?,
-         openPeer: ((EnginePeer) -> Void)?
+         openPeer: ((EnginePeer) -> Void)?,
+         updated: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -435,12 +439,14 @@ private final class SheetContent: CombinedComponent {
         self.mode = mode
         self.status = status
         self.boostState = boostState
+        self.initialized = initialized
         self.boost = boost
         self.copyLink = copyLink
         self.dismiss = dismiss
         self.openStats = openStats
         self.openGift = openGift
         self.openPeer = openPeer
+        self.updated = updated
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
@@ -468,6 +474,9 @@ private final class SheetContent: CombinedComponent {
         if lhs.boostState != rhs.boostState {
             return false
         }
+        if lhs.initialized != rhs.initialized {
+            return false
+        }
         return true
     }
     
@@ -479,35 +488,33 @@ private final class SheetContent: CombinedComponent {
         private(set) var memberPeer: EnginePeer?
         
         private var disposable: Disposable?
-        private var memberDisposable: Disposable?
         
-        init(context: AccountContext, peerId: EnginePeer.Id, userId: EnginePeer.Id?) {
+        init(context: AccountContext, peerId: EnginePeer.Id, userId: EnginePeer.Id?, updated: @escaping () -> Void) {
             super.init()
             
-            self.disposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
+            var peerIds: [EnginePeer.Id] = [peerId]
+            if let userId {
+                peerIds.append(userId)
+            }
+            
+            self.disposable = (context.engine.data.get(
+                EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
+            ) |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
                 guard let self else {
                     return
                 }
-                self.peer = peer
-                self.updated()
+                if let maybePeer = peers[peerId] {
+                    self.peer = maybePeer
+                }
+                if let userId, let maybePeer = peers[userId] {
+                    self.memberPeer = maybePeer
+                }
+                updated()
             })
-            
-            if let userId {
-                self.memberDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: userId))
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
-                    guard let self else {
-                        return
-                    }
-                    self.memberPeer = peer
-                    self.updated()
-                })
-            }
         }
         
         deinit {
             self.disposable?.dispose()
-            self.memberDisposable?.dispose()
         }
     }
     
@@ -516,7 +523,7 @@ private final class SheetContent: CombinedComponent {
         if case let .user(mode) = mode, case let .groupPeer(peerId, _) = mode {
             userId = peerId
         }
-        return State(context: self.context, peerId: self.peerId, userId: userId)
+        return State(context: self.context, peerId: self.peerId, userId: userId, updated: self.updated)
     }
     
     static var body: Body {
@@ -636,7 +643,11 @@ private final class SheetContent: CombinedComponent {
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
                         if myBoostCount > 0 {
-                            textString = strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string
+                            if remaining == 0 {
+                                textString = isGroup ? strings.GroupBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level + 1)").string : strings.ChannelBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level + 1)").string
+                            } else {
+                                textString = strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string
+                            }
                         } else {
                             textString = strings.ChannelBoost_MoreBoostsNeeded_Text(peerName, boostsString).string
                         }
@@ -674,7 +685,7 @@ private final class SheetContent: CombinedComponent {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
                         if myBoostCount > 0 {
                             if remaining == 0 {
-                                textString = isGroup ? strings.GroupBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level)").string : strings.ChannelBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level)").string
+                                textString = isGroup ? strings.GroupBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level + 1)").string : strings.ChannelBoost_MoreBoostsNeeded_Boosted_Level_Text("\(level + 1)").string
                             } else {
                                 textString = strings.ChannelBoost_MoreBoostsNeeded_Boosted_Text(boostsString).string
                             }
@@ -1267,6 +1278,8 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
         var cachedStatsImage: (UIImage, PresentationTheme)?
         var cachedCloseImage: (UIImage, PresentationTheme)?
         
+        var initialized = false
+        
         private var disposable: Disposable?
         private(set) var peer: EnginePeer?
         
@@ -1279,7 +1292,6 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                     return
                 }
                 self.peer = peer
-                self.updated()
                 updated()
             })
         }
@@ -1325,6 +1337,7 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
             
             if let isGroup {
                 component.externalState.isGroup = isGroup
+                let updated = component.updated
                 let scroll = scroll.update(
                     component: ScrollComponent<Empty>(
                         content: AnyComponent(
@@ -1338,12 +1351,17 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                                 mode: component.mode,
                                 status: component.status,
                                 boostState: component.boostState,
+                                initialized: state.initialized,
                                 boost: component.boost,
                                 copyLink: component.copyLink,
                                 dismiss: component.dismiss,
                                 openStats: component.openStats,
                                 openGift: component.openGift,
-                                openPeer: component.openPeer
+                                openPeer: component.openPeer,
+                                updated: { [weak state] in
+                                    state?.initialized = true
+                                    updated()
+                                }
                             )
                         ),
                         externalState: externalScrollState,
@@ -1677,7 +1695,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                             otherText = presentationData.strings.ReassignBoost_OtherGroupsAndChannels(Int32(sourcePeers.count))
                         }
                         let text = presentationData.strings.ReassignBoost_Success(presentationData.strings.ReassignBoost_Boosts(replacedBoosts), otherText).string
-                        let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostReplaceIcon"), color: .white)!, title: nil, text: text, round: false, undoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
+                        let undoController = UndoOverlayController(presentationData: presentationData, content:  .universal(animation: "BoostReplace", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil, timeout: 4.0), elevatedLayout: false, position: .top, action: { _ in return true })
                         controller.present(undoController, in: .current)
                     }
                 }
@@ -1757,9 +1775,16 @@ public class PremiumBoostLevelsScreen: ViewController {
             
             self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
         }
+        
+        func requestLayout(transition: Transition) {
+            guard let layout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
+        }
                 
         private var dismissOffset: CGFloat?
-        func containerLayoutUpdated(layout: ContainerViewLayout, transition: Transition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, transition: Transition) {
             guard !self.isDismissing else {
                 return
             }
@@ -1824,7 +1849,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                 effectiveExpanded = true
             }
         
-            self.updated(transition: transition)
+            self.updated(transition: transition, forceUpdate: forceUpdate)
                         
             let contentHeight = self.containerExternalState.contentHeight
             if contentHeight > 0.0 && contentHeight < 400.0, let view = self.footerView.componentView as? FooterComponent.View {
@@ -1856,7 +1881,7 @@ public class PremiumBoostLevelsScreen: ViewController {
         }
         
         private var boostState: InternalBoostState.DisplayData?
-        func updated(transition: Transition) {
+        func updated(transition: Transition, forceUpdate: Bool = false) {
             guard let controller = self.controller else {
                 return
             }
@@ -1895,11 +1920,12 @@ public class PremiumBoostLevelsScreen: ViewController {
                         openGift: controller.openGift,
                         openPeer: controller.openPeer,
                         updated: { [weak self] in
-                            self?.controller?.requestLayout(transition: .immediate)
+                            self?.requestLayout(transition: .immediate)
                         }
                     )
                 ),
                 environment: {},
+                forceUpdate: forceUpdate,
                 containerSize: self.containerView.bounds.size
             )
             self.contentView.frame = CGRect(origin: .zero, size: contentSize)
@@ -2200,6 +2226,7 @@ public class PremiumBoostLevelsScreen: ViewController {
             let canBoostAgain = premiumConfiguration.boostsPerGiftCount > 0
             let presentationData = self.presentationData
             let forceDark = controller.forceDark
+            let boostStatusUpdated = controller.boostStatusUpdated
             
             if let _ = status?.nextLevelBoosts {
                 if let availableBoost = self.availableBoosts.first {
@@ -2266,15 +2293,23 @@ public class PremiumBoostLevelsScreen: ViewController {
                                 ).startStandalone(next: { boostStatus, myBoostStatus in
                                     dismissReplaceImpl?()
                                     
+                                    if let boostStatus {
+                                        boostStatusUpdated(boostStatus)
+                                    }
+                                    
                                     let levelsController = PremiumBoostLevelsScreen(
                                         context: context,
                                         peerId: peerId,
                                         mode: mode,
-                                        status: status,
+                                        status: boostStatus,
                                         myBoostStatus: myBoostStatus,
                                         replacedBoosts: (Int32(slots.count), sourcePeers),
-                                        openStats: nil, openGift: nil, openPeer: openPeer, forceDark: forceDark
+                                        openStats: nil, 
+                                        openGift: nil,
+                                        openPeer: openPeer,
+                                        forceDark: forceDark
                                     )
+                                    levelsController.boostStatusUpdated = boostStatusUpdated
                                     if let navigationController {
                                         navigationController.pushViewController(levelsController, animated: true)
                                     }

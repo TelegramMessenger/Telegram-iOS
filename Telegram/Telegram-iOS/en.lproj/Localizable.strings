@@ -10988,8 +10988,8 @@ Sorry for the inconvenience.";
 "ChannelBoost.MaxLevelReached.Text" = "**%1$@** reached **Level %2$@**.";
 
 "ChannelBoost.MoreBoostsNeeded.Boosted.Text" = "%@ needed to unlock new features.";
-"ChannelBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This channel reached **%@** and unlocked new features.";
-"GroupBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This group reached **%@** and unlocked new features.";
+"ChannelBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This channel reached **Level %@** and unlocked new features.";
+"GroupBoost.MoreBoostsNeeded.Boosted.Level.Text" = "This group reached **Level %@** and unlocked new features.";
 
 "ContactList.Context.Delete" = "Delete Contact";
 "ContactList.Context.Select" = "Select";
@@ -11043,7 +11043,7 @@ Sorry for the inconvenience.";
 "ChannelBoost.Table.Group.Wallpaper_any" = "%@ Group Backgrounds";
 "ChannelBoost.Table.Group.CustomWallpaper" = "Custom Group Background";
 
-"Premium.Group.BoostByGiftDescription" = "Boost your group by gifting your subscribers Telegram Premium. [Get boosts >]()";
+"Premium.Group.BoostByGiftDescription" = "Boost your group by gifting your members Telegram Premium. [Get boosts >]()";
 
 "Conversation.BoostGroup" = "BOOST";
 
@@ -11303,6 +11303,7 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageChangedGroupEmojiPack" = "%@ changed group emoji pack";
 "Channel.AdminLog.MessageRemovedGroupEmojiPack" = "%@ removed group emoji pack";
 
-"Group.Appearance.EmojiPackUpdated" = "Group emoji pack updated.";
-
 "Attachment.BoostToUnlock" = "Boost to Unlock";
+
+"Story.GroupCommentingRestrictedPlaceholder" = "Comments restricted. Boost the group to unlock.";
+"Story.GroupCommentingRestrictedPlaceholderAction" = "Learn More...";

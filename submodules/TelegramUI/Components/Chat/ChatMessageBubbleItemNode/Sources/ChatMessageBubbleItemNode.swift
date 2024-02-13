@@ -2184,19 +2184,21 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 let attributedString: NSAttributedString
                 var adminBadgeString: NSAttributedString?
                 var boostBadgeString: NSAttributedString?
-                if let authorRank = authorRank {
-                    let string: String
-                    switch authorRank {
+                if incoming {
+                    if let authorRank = authorRank {
+                        let string: String
+                        switch authorRank {
                         case .owner:
                             string = item.presentationData.strings.Conversation_Owner
                         case .admin:
                             string = item.presentationData.strings.Conversation_Admin
                         case let .custom(rank):
                             string = rank.trimmingEmojis
+                        }
+                        adminBadgeString = NSAttributedString(string: " \(string)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
+                    } else if authorIsChannel, case .peer = item.chatLocation {
+                        adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                     }
-                    adminBadgeString = NSAttributedString(string: " \(string)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
-                } else if authorIsChannel, case .peer = item.chatLocation {
-                    adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 }
                 
                 var viaSuffix: NSAttributedString?
@@ -2240,9 +2242,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 var boostCount: Int = 0
-                for attribute in item.message.attributes {
-                    if let attribute = attribute as? BoostCountMessageAttribute {
-                        boostCount = attribute.count
+                if incoming {
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? BoostCountMessageAttribute {
+                            boostCount = attribute.count
+                        }
                     }
                 }
  
@@ -3181,9 +3185,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             var boostCount: Int = 0
-            for attribute in item.message.attributes {
-                if let attribute = attribute as? BoostCountMessageAttribute {
-                    boostCount = attribute.count
+            if incoming {
+                for attribute in item.message.attributes {
+                    if let attribute = attribute as? BoostCountMessageAttribute {
+                        boostCount = attribute.count
+                    }
                 }
             }
             
