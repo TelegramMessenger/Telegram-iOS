@@ -2905,14 +2905,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })))
                     } else if case let .channel(channel) = peer {
                         let openTitle: String
+                        let openIcon: String
                         switch channel.info {
                         case .broadcast:
                             openTitle = self.presentationData.strings.ChatList_ContextOpenChannel
+                            openIcon = "Chat/Context Menu/Channels"
                         case .group:
                             openTitle = self.presentationData.strings.ChatList_ContextOpenGroup
+                            openIcon = "Chat/Context Menu/Groups"
                         }
                         items.append(.action(ContextMenuActionItem(text: openTitle, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: openIcon), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
                                 guard let self else {

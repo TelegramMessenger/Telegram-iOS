@@ -1728,7 +1728,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }
                 }
                 
-                if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
+                if let cachedData = data.cachedData as? CachedChannelData, isCreator || cachedData.flags.contains(.canViewStats) {
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStats, label: .none, text: presentationData.strings.Channel_Info_Stats, icon: UIImage(bundleImageName: "Chat/Info/StatsIcon"), action: {
                         interaction.openStats(false)
                     }))
