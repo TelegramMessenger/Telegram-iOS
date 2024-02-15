@@ -399,7 +399,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                     content: AnyComponent(
                         BoostButtonComponent(
                             iconName: "Premium/Boosts/Boost",
-                            title: "boost"
+                            title: component.strings.ChannelBoost_Header_Boost
                         )
                     ),
                     effectAlignment: .center,
@@ -419,7 +419,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                     content: AnyComponent(
                         BoostButtonComponent(
                             iconName: "Premium/Boosts/Giveaway",
-                            title: "giveaway"
+                            title: component.strings.ChannelBoost_Header_Giveaway
                         )
                     ),
                     effectAlignment: .center,
@@ -439,7 +439,7 @@ private final class BoostHeaderComponent: CombinedComponent {
                     content: AnyComponent(
                         BoostButtonComponent(
                             iconName: "Premium/Boosts/Features",
-                            title: "features"
+                            title: component.strings.ChannelBoost_Header_Features
                         )
                     ),
                     effectAlignment: .center,
