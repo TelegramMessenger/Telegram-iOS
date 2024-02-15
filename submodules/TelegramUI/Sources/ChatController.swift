@@ -11096,6 +11096,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.push(boostController)
             })
+        }, updateVideoTrimRange: { [weak self] start, end, updatedEnd, apply in
+            if let videoRecorder = self?.videoRecorderValue {
+                videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+            }
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return
