@@ -50,6 +50,7 @@ public final class AvatarStoryIndicatorComponent: Component {
     public let inactiveLineWidth: CGFloat
     public let counters: Counters?
     public let progress: Progress?
+    public let isRoundedRect: Bool
     
     public init(
         hasUnseen: Bool,
@@ -58,7 +59,8 @@ public final class AvatarStoryIndicatorComponent: Component {
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
         counters: Counters?,
-        progress: Progress? = nil
+        progress: Progress? = nil,
+        isRoundedRect: Bool = false
     ) {
         self.hasUnseen = hasUnseen
         self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
@@ -67,6 +69,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         self.inactiveLineWidth = inactiveLineWidth
         self.counters = counters
         self.progress = progress
+        self.isRoundedRect = isRoundedRect
     }
     
     public static func ==(lhs: AvatarStoryIndicatorComponent, rhs: AvatarStoryIndicatorComponent) -> Bool {
@@ -89,6 +92,9 @@ public final class AvatarStoryIndicatorComponent: Component {
             return false
         }
         if lhs.progress != rhs.progress {
+            return false
+        }
+        if lhs.isRoundedRect != rhs.isRoundedRect {
             return false
         }
         return true
@@ -211,7 +217,7 @@ public final class AvatarStoryIndicatorComponent: Component {
             }
         }
         
-        func update(size: CGSize, radius: CGFloat, lineWidth: CGFloat, value: Value, transition: Transition) {
+        func update(size: CGSize, radius: CGFloat, isRoundedRect: Bool, lineWidth: CGFloat, value: Value, transition: Transition) {
             let params = Params(
                 size: size,
                 lineWidth: lineWidth,
@@ -295,7 +301,7 @@ public final class AvatarStoryIndicatorComponent: Component {
                 
                 var locations: [CGFloat] = [0.0, 1.0]
                 
-                if let counters = component.counters, counters.totalCount > 1 {
+                if let counters = component.counters, counters.totalCount > 1, !component.isRoundedRect {
                     let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
                     let spacing: CGFloat = component.activeLineWidth * 2.0
                     let angularSpacing: CGFloat = spacing / radius
@@ -347,7 +353,11 @@ public final class AvatarStoryIndicatorComponent: Component {
                 } else {
                     let lineWidth: CGFloat = component.hasUnseen ? component.activeLineWidth : component.inactiveLineWidth
                     context.setLineWidth(lineWidth)
-                    context.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                    if component.isRoundedRect {
+                        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5), cornerRadius: floor(diameter * 0.25)).cgPath)
+                    } else {
+                        context.addEllipse(in: CGRect(origin: CGPoint(x: size.width * 0.5 - diameter * 0.5, y: size.height * 0.5 - diameter * 0.5), size: size).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                    }
                     
                     context.replacePathWithStrokedPath()
                     context.clip()
@@ -369,7 +379,7 @@ public final class AvatarStoryIndicatorComponent: Component {
             transition.setFrame(view: self.indicatorView, frame: indicatorFrame)
             
             let progressTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
-            if let progress = component.progress {
+            if let progress = component.progress, !component.isRoundedRect {
                 let colorLayer: SimpleGradientLayer
                 if let current = self.colorLayer {
                     colorLayer = current
@@ -415,7 +425,7 @@ public final class AvatarStoryIndicatorComponent: Component {
                     mappedProgress = .progress(value)
                 }
                 
-                progressLayer.update(size: indicatorFrame.size, radius: radius, lineWidth: lineWidth, value: mappedProgress, transition: .immediate)
+                progressLayer.update(size: indicatorFrame.size, radius: radius, isRoundedRect: component.isRoundedRect, lineWidth: lineWidth, value: mappedProgress, transition: .immediate)
             } else {
                 progressTransition.setAlpha(view: self.indicatorView, alpha: 1.0)
                 

@@ -14087,7 +14087,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     updatedPresentationData: self.updatedPresentationData,
                     allowLiveUpload: peerId.namespace != Namespaces.Peer.SecretChat,
                     viewOnceAvailable: !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot,
-                    inputPanelFrame: currentInputPanelFrame,
+                    inputPanelFrame: (currentInputPanelFrame, self.chatDisplayNode.inputNode != nil),
                     chatNode: self.chatDisplayNode.historyNode,
                     completion: { [weak self] message, silentPosting, scheduleTime in
                         guard let self, let videoController = self.videoRecorderValue else {
