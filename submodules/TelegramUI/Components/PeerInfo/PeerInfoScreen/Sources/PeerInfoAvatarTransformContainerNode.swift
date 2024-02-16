@@ -126,10 +126,17 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 progress: storyProgress
             )
         }
+        
+        var isForum = false
+        if let peer, let channel = peer as? TelegramChannel, channel.isForum {
+            isForum = true
+        }
+        
         self.avatarNode.setStoryStats(storyStats: storyStats, presentationParams: AvatarNode.StoryPresentationParams(
             colors: colors,
             lineWidth: 3.0,
-            inactiveLineWidth: 1.5
+            inactiveLineWidth: 1.5,
+            forceRoundedRect: isForum
         ), transition: Transition(transition))
     }
     

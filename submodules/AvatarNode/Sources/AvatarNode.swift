@@ -1227,15 +1227,18 @@ public final class AvatarNode: ASDisplayNode {
         public var colors: Colors
         public var lineWidth: CGFloat
         public var inactiveLineWidth: CGFloat
+        public var forceRoundedRect: Bool
         
         public init(
             colors: Colors,
             lineWidth: CGFloat,
-            inactiveLineWidth: CGFloat
+            inactiveLineWidth: CGFloat,
+            forceRoundedRect: Bool =  false
         ) {
             self.colors = colors
             self.lineWidth = lineWidth
             self.inactiveLineWidth = inactiveLineWidth
+            self.forceRoundedRect = forceRoundedRect
         }
     }
     
@@ -1290,7 +1293,7 @@ public final class AvatarNode: ASDisplayNode {
                         unseenCount: storyStats.unseenCount
                     ),
                     progress: mappedProgress,
-                    isRoundedRect: self.contentNode.clipStyle == .roundedRect
+                    isRoundedRect: self.contentNode.clipStyle == .roundedRect || storyPresentationParams.forceRoundedRect
                 )),
                 environment: {},
                 containerSize: indicatorSize
