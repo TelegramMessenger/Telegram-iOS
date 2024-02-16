@@ -530,6 +530,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .lastSeen
                         case .messagePrivacy:
                             demoSubject = .messagePrivacy
+                        case .business:
+                            demoSubject = .business
                         }
                         
                         let buttonText: String

@@ -11315,3 +11315,44 @@ Sorry for the inconvenience.";
 "ChannelBoost.Header.Giveaway" = "giveaway";
 "ChannelBoost.Header.Features" = "features";
 
+"Premium.Business" = "Telegram Business";
+"Premium.BusinessInfo" = "Upgrade your account with business features such as location, opening hours and quick replies.";
+
+"Premium.Business.Location.Title" = "Location";
+"Premium.Business.Location.Text" = "Display the location of your business on your account.";
+            
+"Premium.Business.Hours.Title" = "Opening Hours";
+"Premium.Business.Hours.Text" = "Show to your customers when you are
+open for business.";
+
+"Premium.Business.Replies.Title" = "Quick Replies";
+"Premium.Business.Replies.Text" = "Set up shortcuts with rich text and media
+to respond to messages faster.";
+
+"Premium.Business.Greetings.Title" = "Greeting Messages";
+"Premium.Business.Greetings.Text" = "Create greetings that will be automatically sent to new customers.";
+
+"Premium.Business.Away.Title" = "Away Messages";
+"Premium.Business.Away.Text" = "Define messages that are automatically sent when you are off.";
+
+"Premium.Business.Chatbots.Title" = "Chatbots";
+"Premium.Business.Chatbots.Text" = "Add any third party chatbots that will process customer interactions.";
+
+"Business.Title" = "Telegram Business";
+"Business.Description" = "Turn your account into a **business page** with these additional features.";
+"Business.SubscribedDescription" = "You have now unlocked these additional business features.";
+"Business.PlusPremiumFeatures" = "+20 MORE TELEGRAM PREMIUM FEATURES";
+
+"Business.Location" = "Location";
+"Business.OpeningHours" = "Opening Hours";
+"Business.QuickReplies" = "Quick Replies";
+"Business.GreetingMessages" = "Greeting Messages";
+"Business.AwayMessages" = "Away Messages";
+"Business.Chatbots" = "Chatbots";
+
+"Business.LocationInfo" = "Display the location of your business on your account.";
+"Business.OpeningHoursInfo" = "Show to your customers when you are open for business.";
+"Business.QuickRepliesInfo" = "Set up shortcuts with rich text and media to respond to messages faster.";
+"Business.GreetingMessagesInfo" = "Create greetings that will be automatically sent to new customers.";
+"Business.AwayMessagesInfo" = "Define messages that are automatically sent when you are off.";
+"Business.ChatbotsInfo" = "Add any third-party chatbots that will process customer interactions.";
