@@ -2,7 +2,7 @@ import Foundation
 import CoreText
 import AVFoundation
 
-extension Character {
+public extension Character {
     var isSimpleEmoji: Bool {
         guard let firstScalar = unicodeScalars.first else { return false }
         if #available(iOS 10.2, macOS 10.12.2, *) {
