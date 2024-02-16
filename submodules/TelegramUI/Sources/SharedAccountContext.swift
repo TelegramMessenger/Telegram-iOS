@@ -1899,8 +1899,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return BusinessHoursSetupScreen(context: context)
     }
     
-    public func makeGreetingMessageSetupScreen(context: AccountContext) -> ViewController {
-        return GreetingMessageSetupScreen(context: context)
+    public func makeGreetingMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController {
+        return GreetingMessageSetupScreen(context: context, mode: isAwayMode ? .away : .greeting)
+    }
+    
+    public func makeQuickReplySetupScreen(context: AccountContext) -> ViewController {
+        return QuickReplySetupScreen(context: context)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {

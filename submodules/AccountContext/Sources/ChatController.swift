@@ -744,6 +744,7 @@ public enum ChatControllerSubject: Equatable {
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
     case messageOptions(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], info: MessageOptionsInfo)
+    case customChatContents(contents: ChatCustomContentsProtocol)
     
     public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
         switch lhs {
@@ -767,6 +768,12 @@ public enum ChatControllerSubject: Equatable {
             }
         case let .messageOptions(lhsPeerIds, lhsIds, lhsInfo):
             if case let .messageOptions(rhsPeerIds, rhsIds, rhsInfo) = rhs, lhsPeerIds == rhsPeerIds, lhsIds == rhsIds, lhsInfo == rhsInfo {
+                return true
+            } else {
+                return false
+            }
+        case let .customChatContents(lhsValue):
+            if case let .customChatContents(rhsValue) = rhs, lhsValue === rhsValue {
                 return true
             } else {
                 return false
@@ -1050,7 +1057,23 @@ public enum ChatHistoryListSource {
     }
     
     case `default`
-    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, quote: Quote?, loadMore: (() -> Void)?)
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId?, quote: Quote?, loadMore: (() -> Void)?)
+}
+
+public enum ChatCustomContentsKind: Equatable {
+    case greetingMessageInput
+    case awayMessageInput
+    case quickReplyMessageInput(shortcut: String)
+}
+
+public protocol ChatCustomContentsProtocol: AnyObject {
+    var kind: ChatCustomContentsKind { get }
+    var messages: Signal<[Message], NoError> { get }
+    var messageLimit: Int? { get }
+    
+    func enqueueMessages(messages: [EnqueueMessage])
+    func deleteMessages(ids: [EngineMessage.Id])
+    func editMessage(id: EngineMessage.Id, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool)
 }
 
 public enum ChatHistoryListDisplayHeaders {
@@ -1069,7 +1092,7 @@ public protocol ChatControllerInteractionProtocol: AnyObject {
 
 public enum ChatHistoryNodeHistoryState: Equatable {
     case loading
-    case loaded(isEmpty: Bool)
+    case loaded(isEmpty: Bool, hasReachedLimits: Bool)
 }
 
 public protocol ChatHistoryListNode: ListView {

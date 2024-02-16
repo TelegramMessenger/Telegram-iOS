@@ -26,6 +26,7 @@ import TextNodeWithEntities
 import ComponentFlow
 import EmojiStatusComponent
 import AvatarVideoNode
+import AppBundle
 
 public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {
@@ -89,6 +90,16 @@ public enum ChatListItemContent {
         }
     }
     
+    public struct CustomMessageListData: Equatable {
+        public var commandPrefix: String?
+        public var messageCount: Int?
+        
+        public init(commandPrefix: String?, messageCount: Int?) {
+            self.commandPrefix = commandPrefix
+            self.messageCount = messageCount
+        }
+    }
+    
     public struct PeerData {
         public var messages: [EngineMessage]
         public var peer: EngineRenderedPeer
@@ -112,6 +123,7 @@ public enum ChatListItemContent {
         public var requiresPremiumForMessaging: Bool
         public var displayAsTopicList: Bool
         public var tags: [Tag]
+        public var customMessageListData: CustomMessageListData?
         
         public init(
             messages: [EngineMessage],
@@ -135,7 +147,8 @@ public enum ChatListItemContent {
             storyState: StoryState?,
             requiresPremiumForMessaging: Bool,
             displayAsTopicList: Bool,
-            tags: [Tag]
+            tags: [Tag],
+            customMessageListData: CustomMessageListData? = nil
         ) {
             self.messages = messages
             self.peer = peer
@@ -159,6 +172,7 @@ public enum ChatListItemContent {
             self.requiresPremiumForMessaging = requiresPremiumForMessaging
             self.displayAsTopicList = displayAsTopicList
             self.tags = tags
+            self.customMessageListData = customMessageListData
         }
     }
     
@@ -1153,6 +1167,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let inputActivitiesNode: ChatListInputActivitiesNode
     let dateNode: TextNode
     var dateStatusIconNode: ASImageNode?
+    var dateDisclosureIconView: UIImageView?
     let separatorNode: ASDisplayNode
     let statusNode: ChatListStatusNode
     let badgeNode: ChatListBadgeNode
@@ -1587,7 +1602,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
-            if peer.id.isReplies {
+            if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
+            } else if peer.id.isReplies {
                 overrideImage = .repliesIcon
             } else if peer.id.isAnonymousSavedMessages {
                 overrideImage = .anonymousSavedMessagesIcon
@@ -2021,15 +2037,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let enableChatListPhotos = true
             
-            let avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
             
+            var avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
             let avatarLeftInset: CGFloat
-            if item.interaction.isInlineMode {
-                avatarLeftInset = 12.0
-            } else if !useChatListLayout {
-                avatarLeftInset = 50.0
-            } else {
+            
+            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
+                avatarDiameter = 40.0
                 avatarLeftInset = 18.0 + avatarDiameter
+            } else {
+                if item.interaction.isInlineMode {
+                    avatarLeftInset = 12.0
+                } else if !useChatListLayout {
+                    avatarLeftInset = 50.0
+                } else {
+                    avatarLeftInset = 18.0 + avatarDiameter
+                }
             }
             
             let badgeDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 20.0 / 17.0)
@@ -2083,7 +2105,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     hideAuthor = true
             }
             
-            let attributedText: NSAttributedString
+            var attributedText: NSAttributedString
             var hasDraft = false
             
             var inlineAuthorPrefix: String?
@@ -2401,6 +2423,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         attributedText = composedString
                         
+                        if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, let commandPrefix = customMessageListData.commandPrefix {
+                            let mutableAttributedText = NSMutableAttributedString(attributedString: attributedText)
+                            let boldTextFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+                            mutableAttributedText.insert(NSAttributedString(string: commandPrefix + " ", font: boldTextFont, textColor: theme.titleColor), at: 0)
+                            attributedText = mutableAttributedText
+                        }
+                        
                         if !ignoreForwardedIcon {
                             if case .savedMessagesChats = item.chatListLocation {
                                 displayForwardedIcon = false
@@ -2548,7 +2577,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             switch contentData {
                 case let .chat(itemPeer, threadInfo, _, _, _, _, _):
-                    if let threadInfo = threadInfo {
+                    if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                        if customMessageListData.commandPrefix != nil {
+                            titleAttributedString = nil
+                        } else {
+                            if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                                let textColor: UIColor
+                                if case let .chatList(index) = item.index, index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                                    textColor = theme.secretTitleColor
+                                } else {
+                                    textColor = theme.titleColor
+                                }
+                                titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: textColor)
+                            }
+                        }
+                    } else if let threadInfo = threadInfo {
                         titleAttributedString = NSAttributedString(string: threadInfo.info.title, font: titleFont, textColor: theme.titleColor)
                     } else if let message = messages.last, case let .user(author) = message.author, displayAsMessage {
                         titleAttributedString = NSAttributedString(string: author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer.user(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: titleFont, textColor: theme.titleColor)
@@ -2587,7 +2630,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             case let .peer(peerData):
                 topIndex = peerData.messages.first?.index
             }
-            if let topIndex {
+            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                if let messageCount = customMessageListData.messageCount {
+                    dateText = "\(messageCount)"
+                } else {
+                    dateText = " "
+                }
+            } else if let topIndex {
                 var t = Int(topIndex.timestamp)
                 var timeinfo = tm()
                 localtime_r(&t, &timeinfo)
@@ -2754,7 +2803,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     switch item.content {
                     case let .peer(peerData):
                         if let peer = peerData.messages.last?.author {
-                            if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
+                            if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
+                                currentCredibilityIconContent = nil
+                            } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
                                 currentCredibilityIconContent = nil
                             } else if peer.isScam {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
@@ -2776,7 +2827,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         break
                     }
                 } else if case let .chat(itemPeer) = contentPeer, let peer = itemPeer.chatMainPeer {
-                    if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
+                    if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
+                        currentCredibilityIconContent = nil
+                    } else if case .savedMessagesChats = item.chatListLocation, peer.id == item.context.account.peerId {
                         currentCredibilityIconContent = nil
                     } else if peer.isScam {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
@@ -3066,16 +3119,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 animateContent = true
             }
             
-            let (measureLayout, measureApply) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (measureLayout, measureApply) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: " ", font: titleFont, textColor: .black), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = -1.0
             let authorSpacing: CGFloat = -3.0
             var itemHeight: CGFloat = 8.0 * 2.0 + 1.0
             itemHeight -= 21.0
-            itemHeight += titleLayout.size.height
-            itemHeight += measureLayout.size.height * 3.0
-            itemHeight += titleSpacing
-            itemHeight += authorSpacing
+            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
+                itemHeight += measureLayout.size.height * 2.0
+                itemHeight += 22.0
+            } else {
+                itemHeight += titleLayout.size.height
+                itemHeight += measureLayout.size.height * 3.0
+                itemHeight += titleSpacing
+                itemHeight += authorSpacing
+            }
                         
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + floor(item.presentationData.fontSize.itemListBaseFontSize * 8.0 / 17.0)), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
@@ -3466,7 +3524,32 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = mentionBadgeApply(animateBadges, true)
                     let _ = onlineApply(animateContent && animateOnline)
                     
-                    transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size))
+                    var dateFrame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size)
+                    
+                    if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.messageCount != nil {
+                        dateFrame.origin.x -= 10.0
+                        
+                        let dateDisclosureIconView: UIImageView
+                        if let current = strongSelf.dateDisclosureIconView {
+                            dateDisclosureIconView = current
+                        } else {
+                            dateDisclosureIconView = UIImageView(image: UIImage(bundleImageName: "Item List/DisclosureArrow")?.withRenderingMode(.alwaysTemplate))
+                            strongSelf.dateDisclosureIconView = dateDisclosureIconView
+                            strongSelf.mainContentContainerNode.view.addSubview(dateDisclosureIconView)
+                        }
+                        dateDisclosureIconView.tintColor = item.presentationData.theme.list.disclosureArrowColor
+                        let iconScale: CGFloat = 0.7
+                        if let image = dateDisclosureIconView.image {
+                            let imageSize = CGSize(width: floor(image.size.width * iconScale), height: floor(image.size.height * iconScale))
+                            let iconFrame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - imageSize.width + 4.0, y: floorToScreenPixels(dateFrame.midY - imageSize.height * 0.5)), size: imageSize)
+                            dateDisclosureIconView.frame = iconFrame
+                        }
+                    } else if let dateDisclosureIconView = strongSelf.dateDisclosureIconView {
+                        strongSelf.dateDisclosureIconView = nil
+                        dateDisclosureIconView.removeFromSuperview()
+                    }
+                    
+                    transition.updateFrame(node: strongSelf.dateNode, frame: dateFrame)
                     
                     var statusOffset: CGFloat = 0.0
                     if let dateIconImage {
@@ -3997,6 +4080,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.updateAlpha(node: strongSelf.separatorNode, alpha: 1.0)
                     }
                     
+                    if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                        if customMessageListData.messageCount != nil {
+                            strongSelf.separatorNode.isHidden = true
+                        }
+                    }
+                    
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: itemHeight)))
                     let backgroundColor: UIColor
                     let highlightedBackgroundColor: UIColor
@@ -4012,7 +4101,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             highlightedBackgroundColor = theme.pinnedItemHighlightedBackgroundColor
                         }
                     } else {
-                        backgroundColor = theme.itemBackgroundColor
+                        if case let .peer(peerData) = item.content, peerData.customMessageListData != nil {
+                            backgroundColor = .clear
+                        } else {
+                            backgroundColor = theme.itemBackgroundColor
+                        }
                         highlightedBackgroundColor = theme.itemHighlightedBackgroundColor
                     }
                     

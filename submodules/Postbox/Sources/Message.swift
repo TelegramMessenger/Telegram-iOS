@@ -639,6 +639,10 @@ public extension MessageAttribute {
 
 public struct MessageGroupInfo: Equatable {
     public let stableId: UInt32
+    
+    public init(stableId: UInt32) {
+        self.stableId = stableId
+    }
 }
 
 public final class Message {

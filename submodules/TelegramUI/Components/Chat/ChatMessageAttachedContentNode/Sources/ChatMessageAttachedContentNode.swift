@@ -675,7 +675,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 
                 var statusLayoutAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode))?
-                if case let .linear(_, bottom) = position {
+                if case .customChatContents = associatedData.subject {
+                } else if case let .linear(_, bottom) = position {
                     switch bottom {
                     case .None, .Neighbour(_, .footer, _):
                         if message.adAttribute == nil {

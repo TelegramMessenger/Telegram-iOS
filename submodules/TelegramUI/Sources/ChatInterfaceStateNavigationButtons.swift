@@ -54,6 +54,15 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             }
         }
     }
+    
+    if case .customChatContents = presentationInterfaceState.subject {
+        if case .spacer = currentButton?.action {
+            return currentButton
+        } else {
+            return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: " ", style: .plain, target: nil, action: nil))
+        }
+    }
+    
     return nil
 }
 
@@ -95,7 +104,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     
     var hasMessages = false
     if let chatHistoryState = presentationInterfaceState.chatHistoryState {
-        if case .loaded(false) = chatHistoryState {
+        if case .loaded(false, _) = chatHistoryState {
             hasMessages = true
         }
     }
@@ -106,6 +115,16 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     
     if case .pinnedMessages = presentationInterfaceState.subject {
         return nil
+    }
+    
+    if case .customChatContents = presentationInterfaceState.subject {
+        if let currentButton = currentButton, currentButton.action == .dismiss {
+            return currentButton
+        } else {
+            let buttonItem = UIBarButtonItem(title: strings.Common_Done, style: .done, target: target, action: selector)
+            buttonItem.accessibilityLabel = strings.Common_Done
+            return ChatNavigationButton(action: .dismiss, buttonItem: buttonItem)
+        }
     }
     
     if case .replyThread = presentationInterfaceState.chatLocation {

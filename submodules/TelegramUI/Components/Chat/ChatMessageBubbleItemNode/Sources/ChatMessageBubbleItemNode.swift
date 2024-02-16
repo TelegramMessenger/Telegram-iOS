@@ -1446,8 +1446,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     
                     if !isBroadcastChannel {
                         hasAvatar = incoming
-                    } else if case .feed = item.chatLocation {
-                        hasAvatar = true
+                    } else if case .customChatContents = item.chatLocation {
+                        hasAvatar = false
                     }
                 }
             } else if incoming {
@@ -2072,7 +2072,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             maximumNodeWidth = size.width
             
-            if mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment {
+            if case .customChatContents = item.associatedData.subject {
+            } else if mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment {
                 let message = item.content.firstMessage
                 
                 var edited = false

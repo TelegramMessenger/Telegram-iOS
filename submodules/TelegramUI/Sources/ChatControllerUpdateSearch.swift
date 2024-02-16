@@ -33,7 +33,7 @@ extension ChatControllerImpl {
                 break
             case let .replyThread(replyThreadMessage):
                 threadId = replyThreadMessage.threadId
-            case .feed:
+            case .customChatContents:
                 break
             }
             
@@ -125,7 +125,7 @@ extension ChatControllerImpl {
                             })
                             if let navigateIndex = navigateIndex {
                                 switch strongSelf.chatLocation {
-                                case .peer, .replyThread, .feed:
+                                case .peer, .replyThread, .customChatContents:
                                     strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex), forceInCurrentChat: true)
                                 }
                             }

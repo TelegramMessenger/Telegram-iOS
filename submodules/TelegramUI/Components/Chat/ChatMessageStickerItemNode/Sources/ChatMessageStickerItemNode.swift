@@ -458,8 +458,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                         
                         if !isBroadcastChannel {
                             hasAvatar = true
-                        } else if case .feed = item.chatLocation {
-                            hasAvatar = true
+                        } else if case .customChatContents = item.chatLocation {
+                            hasAvatar = false
                         }
                     }
                 } else if incoming {
@@ -484,8 +484,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                 } else if incoming {
                     hasAvatar = true
                 }
-            case .feed:
-                hasAvatar = true
+            case .customChatContents:
+                hasAvatar = false
             }
             
             if hasAvatar {
@@ -975,6 +975,9 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     dateAndStatusApply(animation)
+                    if case .customChatContents = item.associatedData.subject {
+                        strongSelf.dateAndStatusNode.isHidden = true
+                    }
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {

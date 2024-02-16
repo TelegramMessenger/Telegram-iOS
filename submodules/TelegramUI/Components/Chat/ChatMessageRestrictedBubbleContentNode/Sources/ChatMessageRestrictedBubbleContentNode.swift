@@ -77,21 +77,25 @@ public class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNod
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType?
-                switch position {
-                case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
-                    if incoming {
-                        statusType = .BubbleIncoming
-                    } else {
-                        if message.flags.contains(.Failed) {
-                            statusType = .BubbleOutgoing(.Failed)
-                        } else if message.flags.isSending && !message.isSentOrAcknowledged {
-                            statusType = .BubbleOutgoing(.Sending)
-                        } else {
-                            statusType = .BubbleOutgoing(.Sent(read: item.read))
-                        }
-                    }
-                default:
+                if case .customChatContents = item.associatedData.subject {
                     statusType = nil
+                } else {
+                    switch position {
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
+                        if incoming {
+                            statusType = .BubbleIncoming
+                        } else {
+                            if message.flags.contains(.Failed) {
+                                statusType = .BubbleOutgoing(.Failed)
+                            } else if message.flags.isSending && !message.isSentOrAcknowledged {
+                                statusType = .BubbleOutgoing(.Sending)
+                            } else {
+                                statusType = .BubbleOutgoing(.Sent(read: item.read))
+                            }
+                        }
+                    default:
+                        statusType = nil
+                    }
                 }
                 
                 let entities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]

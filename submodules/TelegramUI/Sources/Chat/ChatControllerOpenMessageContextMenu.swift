@@ -289,7 +289,7 @@ extension ChatControllerImpl {
                 if let location = location {
                     source = .location(ChatMessageContextLocationContentSource(controller: self, location: node.view.convert(node.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
                 } else {
-                    source = .extracted(ChatMessageContextExtractedContentSource(chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: selectAll))
+                    source = .extracted(ChatMessageContextExtractedContentSource(chatController: self, chatNode: self.chatDisplayNode, engine: self.context.engine, message: message, selectAll: selectAll))
                 }
                 
                 self.canReadHistory.set(false)

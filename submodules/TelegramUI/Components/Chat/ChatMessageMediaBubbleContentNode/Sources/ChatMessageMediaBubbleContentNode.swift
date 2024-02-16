@@ -284,7 +284,10 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
 
             let statusType: ChatMessageDateAndStatusType?
-            switch preparePosition {
+            if case .customChatContents = item.associatedData.subject {
+                statusType = nil
+            } else {
+                switch preparePosition {
                 case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                     if item.message.effectivelyIncoming(item.context.account.peerId) {
                         statusType = .ImageIncoming
@@ -301,6 +304,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     statusType = nil
                 default:
                     statusType = nil
+                }
             }
 
             var isReplyThread = false

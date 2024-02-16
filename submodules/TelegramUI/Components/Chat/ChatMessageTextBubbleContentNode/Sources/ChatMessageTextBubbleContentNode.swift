@@ -263,6 +263,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 default:
                     break
                 }
+                if case .customChatContents = item.associatedData.subject {
+                    displayStatus = false
+                }
                 if displayStatus {
                     if incoming {
                         statusType = .BubbleIncoming

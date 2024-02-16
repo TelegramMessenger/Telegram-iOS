@@ -179,7 +179,7 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocationInput, a
                 result.append(.peerChatState(peerId))
             }
         }
-    case .feed:
+    case .customChatContents:
         break
     }
     return result
@@ -1839,7 +1839,7 @@ public final class AccountViewTracker {
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
                             strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
                         }
-                    case .feed:
+                    case .customChatContents:
                         break
                     }
                 }
@@ -1852,7 +1852,7 @@ public final class AccountViewTracker {
             peerId = peerIdValue
         case let .thread(peerIdValue, _, _):
             peerId = peerIdValue
-        case .feed:
+        case .customChatContents:
             peerId = nil
         }
         if let peerId = peerId, peerId.namespace == Namespaces.Peer.CloudChannel {

@@ -321,8 +321,8 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                         
                         if !isBroadcastChannel {
                             hasAvatar = true
-                        } else if case .feed = item.chatLocation {
-                            hasAvatar = true
+                        } else if case .customChatContents = item.chatLocation {
+                            hasAvatar = false
                         }
                     }
                 } else if incoming {

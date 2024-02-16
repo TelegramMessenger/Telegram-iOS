@@ -23,6 +23,11 @@ import LottieComponent
 import Markdown
 import PeerListItemComponent
 import AvatarNode
+import ListItemSliderSelectorComponent
+import DateSelectionUI
+import PlainButtonComponent
+import TelegramStringFormatting
+import TimeSelectionActionSheet
 
 private let checkIcon: UIImage = {
     return generateImage(CGSize(width: 12.0, height: 10.0), rotatedContext: { size, context in
@@ -41,15 +46,21 @@ final class GreetingMessageSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let mode: GreetingMessageSetupScreen.Mode
 
     init(
-        context: AccountContext
+        context: AccountContext,
+        mode: GreetingMessageSetupScreen.Mode
     ) {
         self.context = context
+        self.mode = mode
     }
 
     static func ==(lhs: GreetingMessageSetupScreenComponent, rhs: GreetingMessageSetupScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
 
@@ -59,22 +70,6 @@ final class GreetingMessageSetupScreenComponent: Component {
     private final class ScrollView: UIScrollView {
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
-        }
-    }
-    
-    private struct BotResolutionState: Equatable {
-        enum State: Equatable {
-            case searching
-            case notFound
-            case found(peer: EnginePeer, isInstalled: Bool)
-        }
-        
-        var query: String
-        var state: State
-        
-        init(query: String, state: State) {
-            self.query = query
-            self.state = state
         }
     }
     
@@ -105,6 +100,12 @@ final class GreetingMessageSetupScreenComponent: Component {
         }
     }
     
+    private enum Schedule {
+        case always
+        case outsideBusinessHours
+        case custom
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let topOverscrollLayer = SimpleLayer()
         private let scrollView: ScrollView
@@ -113,19 +114,27 @@ final class GreetingMessageSetupScreenComponent: Component {
         private let icon = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private let generalSection = ComponentView<Empty>()
+        private let messagesSection = ComponentView<Empty>()
+        private let scheduleSection = ComponentView<Empty>()
+        private let customScheduleSection = ComponentView<Empty>()
         private let accessSection = ComponentView<Empty>()
         private let excludedSection = ComponentView<Empty>()
-        private let permissionsSection = ComponentView<Empty>()
+        private let periodSection = ComponentView<Empty>()
         
+        private var ignoreScrolling: Bool = false
         private var isUpdating: Bool = false
         
         private var component: GreetingMessageSetupScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
-        private var chevronImage: UIImage?
-        
         private var isOn: Bool = false
+        private var accountPeer: EnginePeer?
+        private var messages: [EngineMessage] = []
+        
+        private var schedule: Schedule = .always
+        private var customScheduleStart: Date?
+        private var customScheduleEnd: Date?
         
         private var hasAccessToAllChatsByDefault: Bool = true
         private var additionalPeerList = AdditionalPeerList(
@@ -134,6 +143,8 @@ final class GreetingMessageSetupScreenComponent: Component {
         )
         
         private var replyToMessages: Bool = true
+        
+        private var messagesDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -161,6 +172,7 @@ final class GreetingMessageSetupScreenComponent: Component {
         }
         
         deinit {
+            self.messagesDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -172,7 +184,9 @@ final class GreetingMessageSetupScreenComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: .immediate)
+            if !self.ignoreScrolling {
+                self.updateScrolling(transition: .immediate)
+            }
         }
         
         var scrolledUp = true
@@ -332,10 +346,138 @@ final class GreetingMessageSetupScreenComponent: Component {
             self.environment?.controller()?.push(controller)
         }
         
+        private func openMessageList() {
+            guard let component = self.component else {
+                return
+            }
+            let contents = GreetingMessageSetupChatContents(
+                context: component.context,
+                messages: self.messages,
+                kind: component.mode == .away ? .awayMessageInput : .greetingMessageInput
+            )
+            let chatController = component.context.sharedContext.makeChatController(
+                context: component.context,
+                chatLocation: .customChatContents,
+                subject: .customChatContents(contents: contents),
+                botStart: nil,
+                mode: .standard(.default)
+            )
+            chatController.navigationPresentation = .modal
+            self.environment?.controller()?.push(chatController)
+            self.messagesDisposable?.dispose()
+            self.messagesDisposable = (contents.messages
+            |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
+                guard let self else {
+                    return
+                }
+                let messages = messages.map(EngineMessage.init)
+                if self.messages != messages {
+                    self.messages = messages
+                    self.state?.updated(transition: .immediate)
+                }
+            })
+        }
+        
+        private func openCustomScheduleDateSetup(isStartTime: Bool, isDate: Bool) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let currentValue: Date = (isStartTime ? self.customScheduleStart : self.customScheduleEnd) ?? Date()
+            
+            if isDate {
+                let calendar = Calendar.current
+                let components = calendar.dateComponents([.year, .month, .day], from: currentValue)
+                guard let clippedDate = calendar.date(from: components) else {
+                    return
+                }
+                
+                let controller = DateSelectionActionSheetController(
+                    context: component.context,
+                    title: nil,
+                    currentValue: Int32(clippedDate.timeIntervalSince1970),
+                    minimumDate: nil,
+                    maximumDate: nil,
+                    emptyTitle: nil,
+                    applyValue: { [weak self] value in
+                        guard let self else {
+                            return
+                        }
+                        guard let value else {
+                            return
+                        }
+                        let updatedDate = Date(timeIntervalSince1970: Double(value))
+                        let calendar = Calendar.current
+                        var updatedComponents = calendar.dateComponents([.year, .month, .day], from: updatedDate)
+                        let currentComponents = calendar.dateComponents([.hour, .minute], from: currentValue)
+                        updatedComponents.hour = currentComponents.hour
+                        updatedComponents.minute = currentComponents.minute
+                        guard let updatedClippedDate = calendar.date(from: updatedComponents) else {
+                            return
+                        }
+                        
+                        if isStartTime {
+                            self.customScheduleStart = updatedClippedDate
+                        } else {
+                            self.customScheduleEnd = updatedClippedDate
+                        }
+                        self.state?.updated(transition: .immediate)
+                    }
+                )
+                self.environment?.controller()?.present(controller, in: .window(.root))
+            } else {
+                let calendar = Calendar.current
+                let components = calendar.dateComponents([.hour, .minute], from: currentValue)
+                let hour = components.hour ?? 0
+                let minute = components.minute ?? 0
+                
+                let controller = TimeSelectionActionSheet(context: component.context, currentValue: Int32(hour * 60 * 60 + minute * 60), applyValue: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    guard let value else {
+                        return
+                    }
+                    
+                    let updatedHour = value / (60 * 60)
+                    let updatedMinute = (value % (60 * 60)) / 60
+                    
+                    let calendar = Calendar.current
+                    var updatedComponents = calendar.dateComponents([.year, .month, .day], from: currentValue)
+                    updatedComponents.hour = Int(updatedHour)
+                    updatedComponents.minute = Int(updatedMinute)
+                    
+                    guard let updatedClippedDate = calendar.date(from: updatedComponents) else {
+                        return
+                    }
+                    
+                    if isStartTime {
+                        self.customScheduleStart = updatedClippedDate
+                    } else {
+                        self.customScheduleEnd = updatedClippedDate
+                    }
+                    self.state?.updated(transition: .immediate)
+                })
+                self.environment?.controller()?.present(controller, in: .window(.root))
+            }
+        }
+        
         func update(component: GreetingMessageSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            if self.component == nil {
+                let _ = (component.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let self else {
+                        return
+                    }
+                    self.accountPeer = peer
+                })
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -357,7 +499,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Greeting Message", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: component.mode == .greeting ? "Greeting Message" : "Away Message", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -387,7 +529,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
-                    content: LottieComponent.AppBundleContent(name: "HandWaveEmoji"),
+                    content: LottieComponent.AppBundleContent(name: component.mode == .greeting ? "HandWaveEmoji" : "ZzzEmoji"),
                     loop: true
                 )),
                 environment: {},
@@ -405,7 +547,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             contentHeight += 129.0
             
             //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Greet customers when they message you the first time or after a period of no activity.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(component.mode == .greeting ? "Greet customers when they message you the first time or after a period of no activity." : "Automatically reply with a message when you are away.", attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -413,12 +555,6 @@ final class GreetingMessageSetupScreenComponent: Component {
                     return ("URL", "")
                 }), textAlignment: .center
             ))
-            if self.chevronImage == nil {
-                self.chevronImage = UIImage(bundleImageName: "Settings/TextArrowRight")
-            }
-            if let range = subtitleString.string.range(of: ">"), let chevronImage = self.chevronImage {
-                subtitleString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: subtitleString.string))
-            }
             
             //TODO:localize
             let subtitleSize = self.subtitle.update(
@@ -463,7 +599,7 @@ final class GreetingMessageSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Send Greeting Message",
+                            string: component.mode == .greeting ? "Send Greeting Message" : "Send Away Message",
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -504,6 +640,279 @@ final class GreetingMessageSetupScreenComponent: Component {
             
             var otherSectionsHeight: CGFloat = 0.0
             
+            //TODO:localize
+            var messagesSectionItems: [AnyComponentWithIdentity<Empty>] = []
+            if let topMessage = self.messages.first {
+                if let accountPeer = self.accountPeer {
+                    messagesSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(GreetingMessageListItemComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        accountPeer: accountPeer,
+                        message: topMessage,
+                        count: self.messages.count,
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.openMessageList()
+                        }
+                    ))))
+                }
+            } else {
+                messagesSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                    theme: environment.theme,
+                    title: AnyComponent(VStack([
+                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: component.mode == .greeting ? "Create a Greeting Message" : "Create an Away Message",
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemAccentColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))),
+                    ], alignment: .left, spacing: 2.0)),
+                    leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
+                        name: "Chat List/ComposeIcon",
+                        tintColor: environment.theme.list.itemAccentColor
+                    ))),
+                    accessory: nil,
+                    action: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.openMessageList()
+                    }
+                ))))
+            }
+            let messagesSectionSize = self.messagesSection.update(
+                transition: transition,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    header: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: component.mode == .greeting ? (self.messages.count > 1 ? "GREETING MESSAGES" : "GREETING MESSAGE") : (self.messages.count > 1 ? "AWAY MESSAGES" : "AWAY MESSAGE"),
+                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                            textColor: environment.theme.list.freeTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    )),
+                    footer: nil,
+                    items: messagesSectionItems
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+            )
+            let messagesSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: messagesSectionSize)
+            if let messagesSectionView = self.messagesSection.view {
+                if messagesSectionView.superview == nil {
+                    messagesSectionView.layer.allowsGroupOpacity = true
+                    self.scrollView.addSubview(messagesSectionView)
+                }
+                transition.setFrame(view: messagesSectionView, frame: messagesSectionFrame)
+                alphaTransition.setAlpha(view: messagesSectionView, alpha: self.isOn ? 1.0 : 0.0)
+            }
+            otherSectionsHeight += messagesSectionSize.height
+            otherSectionsHeight += sectionSpacing
+            
+            if case .away = component.mode {
+                //TODO:localize
+                var scheduleSectionItems: [AnyComponentWithIdentity<Empty>] = []
+                for i in 0 ..< 3 {
+                    let title: String
+                    let schedule: Schedule
+                    switch i {
+                    case 0:
+                        title = "Always Send"
+                        schedule = .always
+                    case 1:
+                        title = "Outside of Business Hours"
+                        schedule = .outsideBusinessHours
+                    default:
+                        title = "Custom Schedule"
+                        schedule = .custom
+                    }
+                    let isSelected = self.schedule == schedule
+                    scheduleSectionItems.append(AnyComponentWithIdentity(id: scheduleSectionItems.count, component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        title: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: title,
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            ))),
+                        ], alignment: .left, spacing: 2.0)),
+                        leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(Image(
+                            image: checkIcon,
+                            tintColor: !isSelected ? .clear : environment.theme.list.itemAccentColor,
+                            contentMode: .center
+                        ))),
+                        accessory: nil,
+                        action: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            
+                            if self.schedule != schedule {
+                                self.schedule = schedule
+                                self.state?.updated(transition: .immediate)
+                            }
+                        }
+                    ))))
+                }
+                let scheduleSectionSize = self.scheduleSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "SCHEDULE",
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        )),
+                        footer: nil,
+                        items: scheduleSectionItems
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let scheduleSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: scheduleSectionSize)
+                if let scheduleSectionView = self.scheduleSection.view {
+                    if scheduleSectionView.superview == nil {
+                        scheduleSectionView.layer.allowsGroupOpacity = true
+                        self.scrollView.addSubview(scheduleSectionView)
+                    }
+                    transition.setFrame(view: scheduleSectionView, frame: scheduleSectionFrame)
+                    alphaTransition.setAlpha(view: scheduleSectionView, alpha: self.isOn ? 1.0 : 0.0)
+                }
+                otherSectionsHeight += scheduleSectionSize.height
+                otherSectionsHeight += sectionSpacing
+                
+                var customScheduleSectionsHeight: CGFloat = 0.0
+                var customScheduleSectionItems: [AnyComponentWithIdentity<Empty>] = []
+                for i in 0 ..< 2 {
+                    let title: String
+                    let itemDate: Date?
+                    let isStartTime: Bool
+                    switch i {
+                    case 0:
+                        title = "Start Time"
+                        itemDate = self.customScheduleStart
+                        isStartTime = true
+                    default:
+                        title = "End Time"
+                        itemDate = self.customScheduleEnd
+                        isStartTime = false
+                    }
+                    
+                    var icon: ListActionItemComponent.Icon?
+                    if let itemDate {
+                        let calendar = Calendar.current
+                        let hours = calendar.component(.hour, from: itemDate)
+                        let minutes = calendar.component(.minute, from: itemDate)
+                        
+                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                        
+                        let timeText = stringForShortTimestamp(hours: Int32(hours), minutes: Int32(minutes), dateTimeFormat: presentationData.dateTimeFormat)
+                        
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.timeStyle = .none
+                        dateFormatter.dateStyle = .medium
+                        let dateText = stringForCompactDate(timestamp: Int32(itemDate.timeIntervalSince1970), strings: environment.strings, dateTimeFormat: presentationData.dateTimeFormat)
+                        
+                        icon = ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(PlainButtonComponent(
+                                content: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: dateText, font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                                )),
+                                background: AnyComponent(RoundedRectangle(color: environment.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1), cornerRadius: 6.0)),
+                                effectAlignment: .center,
+                                minSize: nil,
+                                contentInsets: UIEdgeInsets(top: 7.0, left: 8.0, bottom: 7.0, right: 8.0),
+                                action: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openCustomScheduleDateSetup(isStartTime: isStartTime, isDate: true)
+                                },
+                                animateAlpha: true,
+                                animateScale: false
+                            ))),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(PlainButtonComponent(
+                                content: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: timeText, font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+                                )),
+                                background: AnyComponent(RoundedRectangle(color: environment.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1), cornerRadius: 6.0)),
+                                effectAlignment: .center,
+                                minSize: nil,
+                                contentInsets: UIEdgeInsets(top: 7.0, left: 8.0, bottom: 7.0, right: 8.0),
+                                action: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openCustomScheduleDateSetup(isStartTime: isStartTime, isDate: false)
+                                },
+                                animateAlpha: true,
+                                animateScale: false
+                            )))
+                        ], spacing: 4.0))), insets: .custom(UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), allowUserInteraction: true)
+                    }
+                    
+                    customScheduleSectionItems.append(AnyComponentWithIdentity(id: customScheduleSectionItems.count, component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        title: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: title,
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            ))),
+                        ], alignment: .left, spacing: 2.0)),
+                        icon: icon,
+                        accessory: nil,
+                        action: itemDate != nil ? nil : { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.openCustomScheduleDateSetup(isStartTime: isStartTime, isDate: true)
+                        }
+                    ))))
+                }
+                let customScheduleSectionSize = self.customScheduleSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: nil,
+                        items: customScheduleSectionItems
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let customScheduleSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight + customScheduleSectionsHeight), size: customScheduleSectionSize)
+                if let customScheduleSectionView = self.customScheduleSection.view {
+                    if customScheduleSectionView.superview == nil {
+                        customScheduleSectionView.layer.allowsGroupOpacity = true
+                        self.scrollView.addSubview(customScheduleSectionView)
+                    }
+                    transition.setFrame(view: customScheduleSectionView, frame: customScheduleSectionFrame)
+                    alphaTransition.setAlpha(view: customScheduleSectionView, alpha: (self.isOn && self.schedule == .custom) ? 1.0 : 0.0)
+                }
+                customScheduleSectionsHeight += customScheduleSectionSize.height
+                customScheduleSectionsHeight += sectionSpacing
+                
+                if self.schedule == .custom {
+                    otherSectionsHeight += customScheduleSectionsHeight
+                }
+            }
+                
             //TODO:localize
             let accessSectionSize = self.accessSection.update(
                 transition: transition,
@@ -700,7 +1109,7 @@ final class GreetingMessageSetupScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: self.hasAccessToAllChatsByDefault ? "Select chats or entire chat categories which the bot **WILL NOT** have access to." : "Select chats or entire chat categories which the bot **WILL** have access to.",
+                            text: component.mode == .greeting ? "Choose chats or entire chat categories for sending a greeting message." : "Choose chats or entire chat categories for sending an away message.",
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
@@ -729,65 +1138,61 @@ final class GreetingMessageSetupScreenComponent: Component {
             otherSectionsHeight += excludedSectionSize.height
             otherSectionsHeight += sectionSpacing
             
-            //TODO:localize
-            /*let permissionsSectionSize = self.permissionsSection.update(
-                transition: transition,
-                component: AnyComponent(ListSectionComponent(
-                    theme: environment.theme,
-                    header: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "BOT PERMISSIONS",
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+            if case .greeting = component.mode {
+                let periodSectionSize = self.periodSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "PERIOD OF NO ACTIVITY",
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
                         )),
-                        maximumNumberOfLines: 0
-                    )),
-                    footer: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(
-                            string: "The bot will be able to view all new incoming messages, but not the messages that had been sent before you added the bot.",
-                            font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                            textColor: environment.theme.list.freeTextColor
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Choose how many days should pass after your last interaction with a recipient to send them the greeting in response to their message.",
+                                font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
                         )),
-                        maximumNumberOfLines: 0
-                    )),
-                    items: [
-                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
-                            theme: environment.theme,
-                            title: AnyComponent(VStack([
-                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: "Reply to Messages",
-                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                        textColor: environment.theme.list.itemPrimaryTextColor
-                                    )),
-                                    maximumNumberOfLines: 1
-                                ))),
-                            ], alignment: .left, spacing: 2.0)),
-                            accessory: .toggle(ListActionItemComponent.Toggle(style: .icons, isOn: self.replyToMessages, action: { [weak self] _ in
-                                guard let self else {
-                                    return
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
+                                theme: environment.theme,
+                                values: [
+                                    "7 days",
+                                    "14 days",
+                                    "21 days",
+                                    "28 days"
+                                ],
+                                selectedIndex: 0,
+                                selectedIndexUpdated: { [weak self] index in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = self
                                 }
-                                self.replyToMessages = !self.replyToMessages
-                                self.state?.updated(transition: .spring(duration: 0.4))
-                            })),
-                            action: nil
-                        )))
-                    ]
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
-            )
-            let permissionsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: permissionsSectionSize)
-            if let permissionsSectionView = self.permissionsSection.view {
-                if permissionsSectionView.superview == nil {
-                    permissionsSectionView.layer.allowsGroupOpacity = true
-                    self.scrollView.addSubview(permissionsSectionView)
+                            )))
+                        ]
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let periodSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: periodSectionSize)
+                if let periodSectionView = self.periodSection.view {
+                    if periodSectionView.superview == nil {
+                        periodSectionView.layer.allowsGroupOpacity = true
+                        self.scrollView.addSubview(periodSectionView)
+                    }
+                    transition.setFrame(view: periodSectionView, frame: periodSectionFrame)
+                    alphaTransition.setAlpha(view: periodSectionView, alpha: self.isOn ? 1.0 : 0.0)
                 }
-                transition.setFrame(view: permissionsSectionView, frame: permissionsSectionFrame)
-                
-                alphaTransition.setAlpha(view: permissionsSectionView, alpha: self.isOn ? 1.0 : 0.0)
+                otherSectionsHeight += periodSectionSize.height
+                otherSectionsHeight += sectionSpacing
             }
-            otherSectionsHeight += permissionsSectionSize.height*/
             
             if self.isOn {
                 contentHeight += otherSectionsHeight
@@ -799,6 +1204,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             let previousBounds = self.scrollView.bounds
             
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
+            self.ignoreScrolling = true
             if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
                 self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
             }
@@ -809,6 +1215,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
             }
+            self.ignoreScrolling = false
                         
             if !previousBounds.isEmpty, !transition.animation.isImmediate {
                 let bounds = self.scrollView.bounds
@@ -836,13 +1243,19 @@ final class GreetingMessageSetupScreenComponent: Component {
 }
 
 public final class GreetingMessageSetupScreen: ViewControllerComponentContainer {
+    public enum Mode {
+        case greeting
+        case away
+    }
+    
     private let context: AccountContext
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, mode: Mode) {
         self.context = context
         
         super.init(context: context, component: GreetingMessageSetupScreenComponent(
-            context: context
+            context: context,
+            mode: mode
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

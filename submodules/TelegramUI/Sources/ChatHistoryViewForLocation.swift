@@ -333,7 +333,7 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
                         readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, notificationSettings: notificationSettings)
                     }
                 }
-            case .replyThread, .feed:
+            case .replyThread, .customChatContents:
                 break
                 }
             default:

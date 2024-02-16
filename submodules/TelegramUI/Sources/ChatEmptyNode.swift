@@ -53,7 +53,7 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
                 text = interfaceState.strings.ChatList_StartMessaging
             } else {
                 switch interfaceState.chatLocation {
-                case .peer, .replyThread, .feed:
+                case .peer, .replyThread, .customChatContents:
                     if case .scheduledMessages = interfaceState.subject {
                         text = interfaceState.strings.ScheduledMessages_EmptyPlaceholder
                     } else {
@@ -701,6 +701,12 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        var maxWidth: CGFloat = size.width
+        var centerText = false
+        if case .customChatContents = interfaceState.subject {
+            maxWidth = min(240.0, maxWidth)
+        }
+        
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
@@ -709,17 +715,56 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Cloud"), color: serviceColor.primaryText)
             
-            let titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
+            let titleString: String
+            let strings: [String]
+            
+            if case let .customChatContents(customChatContents) = interfaceState.subject {
+                switch customChatContents.kind {
+                case .greetingMessageInput:
+                    //TODO:localize
+                    centerText = true
+                    titleString = "New Greeting Message"
+                    strings = [
+                        "Create greetings that will be automatically sent to new customers"
+                    ]
+                case .awayMessageInput:
+                    //TODO:localize
+                    centerText = true
+                    titleString = "New Away Message"
+                    strings = [
+                        "Add messages that are automatically sent when you are off."
+                    ]
+                case let .quickReplyMessageInput(shortcut):
+                    //TODO:localize
+                    centerText = false
+                    titleString = "New Quick Reply"
+                    strings = [
+                        "Enter a message below that will be sent in chats when you type \"**/\(shortcut)\"**.",
+                        "You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu."
+                    ]
+                }
+            } else {
+                titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
+                strings = [
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description1,
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description2,
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description3,
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description4
+                ]
+            }
+            
             self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
             
-            let strings: [String] = [
-                interfaceState.strings.Conversation_ClousStorageInfo_Description1,
-                interfaceState.strings.Conversation_ClousStorageInfo_Description2,
-                interfaceState.strings.Conversation_ClousStorageInfo_Description3,
-                interfaceState.strings.Conversation_ClousStorageInfo_Description4
-            ]
-            
-            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
+            let lines: [NSAttributedString] = strings.map {
+                return parseMarkdownIntoAttributedString($0, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(14.0), textColor: serviceColor.primaryText),
+                    bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: serviceColor.primaryText),
+                    link: MarkdownAttributeSet(font: Font.regular(14.0), textColor: serviceColor.primaryText),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ), textAlignment: centerText ? .center : .natural)
+            }
             
             for i in 0 ..< lines.count {
                 if i >= self.lineNodes.count {
@@ -727,6 +772,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     textNode.maximumNumberOfLines = 0
                     textNode.isUserInteractionEnabled = false
                     textNode.displaysAsynchronously = false
+                    textNode.textAlignment = centerText ? .center : .natural
                     self.addSubnode(textNode)
                     self.lineNodes.append(textNode)
                 }
@@ -751,7 +797,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         
         var lineNodes: [(CGSize, ImmediateTextNode)] = []
         for textNode in self.lineNodes {
-            let textSize = textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
+            let textSize = textNode.updateLayout(CGSize(width: maxWidth - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
             contentWidth = max(contentWidth, textSize.width)
             contentHeight += textSize.height + titleSpacing
             lineNodes.append((textSize, textNode))
@@ -1166,7 +1212,9 @@ final class ChatEmptyNode: ASDisplayNode {
         case .detailsPlaceholder:
             contentType = .regular
         case let .emptyChat(emptyType):
-            if case .replyThread = interfaceState.chatLocation {
+            if case .customChatContents = interfaceState.subject {
+                contentType = .cloud
+            } else if case .replyThread = interfaceState.chatLocation {
                 if case .topic = emptyType {
                     contentType = .topic
                 } else {

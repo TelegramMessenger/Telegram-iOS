@@ -223,7 +223,10 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType?
-                switch position {
+                if case .customChatContents = item.associatedData.subject {
+                    statusType = nil
+                } else {
+                    switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if selectedMedia?.venue != nil || activeLiveBroadcastingTimeout != nil {
                             if incoming {
@@ -252,6 +255,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     default:
                         statusType = nil
+                    }
                 }
                 
                 var statusSize = CGSize()

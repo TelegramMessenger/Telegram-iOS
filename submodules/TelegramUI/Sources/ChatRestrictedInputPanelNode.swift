@@ -101,6 +101,14 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
                     self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_DefaultRestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
                 }
             }
+        } else if case let .customChatContents(customChatContents) = interfaceState.subject {
+            let displayCount: Int
+            switch customChatContents.kind {
+            case .greetingMessageInput, .awayMessageInput, .quickReplyMessageInput:
+                displayCount = 20
+            }
+            //TODO:localize
+            self.textNode.attributedText = NSAttributedString(string: "Limit of \(displayCount) messages reached", font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         }
         self.buttonNode.isUserInteractionEnabled = isUserInteractionEnabled
         
