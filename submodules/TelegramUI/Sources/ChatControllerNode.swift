@@ -188,7 +188,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let inputContextOverTextPanelContainer: ChatControllerTitlePanelNodeContainer
     private var overlayContextPanelNode: ChatInputContextPanelNode?
     
-    private var inputNode: ChatInputNode?
+    private(set) var inputNode: ChatInputNode?
     private var disappearingNode: ChatInputNode?
     
     private(set) var textInputPanelNode: ChatTextInputPanelNode?

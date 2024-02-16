@@ -11307,3 +11307,11 @@ Sorry for the inconvenience.";
 
 "Story.GroupCommentingRestrictedPlaceholder" = "Comments restricted. Boost the group to unlock.";
 "Story.GroupCommentingRestrictedPlaceholderAction" = "Learn More...";
+
+"GroupBoost.Table.Group.VoiceToText" = "Voice-to-Text Conversion";
+"GroupBoost.Table.Group.EmojiPack" = "Custom Emojipack";
+
+"ChannelBoost.Header.Boost" = "boost";
+"ChannelBoost.Header.Giveaway" = "giveaway";
+"ChannelBoost.Header.Features" = "features";
+

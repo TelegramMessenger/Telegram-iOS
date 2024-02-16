@@ -328,8 +328,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                                     )
                                 ],
                                 positionUpdated: { _, _ in },
-                                trackTrimUpdated: { _, start, end, updatedEnd, apply in
-//                                    video.control.updateTrimRange(start, end, updatedEnd, apply)
+                                trackTrimUpdated: { [weak self] _, start, end, updatedEnd, apply in
+                                    if let self {
+                                        self.interfaceInteraction?.updateVideoTrimRange(start, end, updatedEnd, apply)
+                                    }
                                 },
                                 trackOffsetUpdated: { _, _, _ in },
                                 trackLongPressed: { _, _ in }

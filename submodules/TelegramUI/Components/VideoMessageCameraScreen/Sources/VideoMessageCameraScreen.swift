@@ -966,7 +966,7 @@ public class VideoMessageCameraScreen: ViewController {
             
             if let controller = self.controller, let layout = self.validLayout {
                 let insets = layout.insets(options: .input)
-                if point.y > layout.size.height - insets.bottom - controller.inputPanelFrame.height {
+                if point.y > layout.size.height - insets.bottom - controller.inputPanelFrame.0.height {
                     if layout.metrics.isTablet {
                         if point.x < layout.size.width * 0.33 {
                             return result
@@ -1111,9 +1111,9 @@ public class VideoMessageCameraScreen: ViewController {
                 self.didAppear()
             }
 
-            var backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: controller.inputPanelFrame.minY))
-            if backgroundFrame.maxY < layout.size.height - 100.0 && (layout.inputHeight ?? 0.0).isZero {
-                backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: layout.size.height - layout.intrinsicInsets.bottom - controller.inputPanelFrame.height))
+            var backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: controller.inputPanelFrame.0.minY))
+            if backgroundFrame.maxY < layout.size.height - 100.0 && (layout.inputHeight ?? 0.0).isZero && !controller.inputPanelFrame.1 {
+                backgroundFrame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: layout.size.height - layout.intrinsicInsets.bottom - controller.inputPanelFrame.0.height))
             }
                         
             transition.setPosition(view: self.backgroundView, position: backgroundFrame.center)
@@ -1266,7 +1266,7 @@ public class VideoMessageCameraScreen: ViewController {
 
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    private let inputPanelFrame: CGRect
+    private let inputPanelFrame: (CGRect, Bool)
     fileprivate var allowLiveUpload: Bool
     fileprivate var viewOnceAvailable: Bool
     
@@ -1417,7 +1417,7 @@ public class VideoMessageCameraScreen: ViewController {
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         allowLiveUpload: Bool,
         viewOnceAvailable: Bool,
-        inputPanelFrame: CGRect,
+        inputPanelFrame: (CGRect, Bool),
         chatNode: ASDisplayNode?,
         completion: @escaping (EnqueueMessage?, Bool?, Int32?) -> Void
     ) {

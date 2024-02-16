@@ -11136,6 +11136,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.push(boostController)
             })
+        }, updateVideoTrimRange: { [weak self] start, end, updatedEnd, apply in
+            if let videoRecorder = self?.videoRecorderValue {
+                videoRecorder.updateTrimRange(start: start, end: end, updatedEnd: updatedEnd, apply: apply)
+            }
         }, updateHistoryFilter: { [weak self] update in
             guard let self else {
                 return
@@ -14128,7 +14132,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     updatedPresentationData: self.updatedPresentationData,
                     allowLiveUpload: peerId.namespace != Namespaces.Peer.SecretChat,
                     viewOnceAvailable: !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot,
-                    inputPanelFrame: currentInputPanelFrame,
+                    inputPanelFrame: (currentInputPanelFrame, self.chatDisplayNode.inputNode != nil),
                     chatNode: self.chatDisplayNode.historyNode,
                     completion: { [weak self] message, silentPosting, scheduleTime in
                         guard let self, let videoController = self.videoRecorderValue else {

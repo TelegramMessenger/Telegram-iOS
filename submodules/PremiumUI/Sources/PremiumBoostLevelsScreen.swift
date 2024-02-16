@@ -271,9 +271,9 @@ private final class LevelSectionComponent: CombinedComponent {
             case .customWallpaper:
                 return isGroup ? strings.ChannelBoost_Table_Group_CustomWallpaper : strings.ChannelBoost_Table_CustomWallpaper
             case .audioTranscription:
-                return "Voice-to-Text Conversion"
+                return strings.GroupBoost_Table_Group_VoiceToText
             case .emojiPack:
-                return "Custom Emojipack"
+                return strings.GroupBoost_Table_Group_EmojiPack
             }
         }
         
@@ -2234,12 +2234,12 @@ public class PremiumBoostLevelsScreen: ViewController {
                     self.myBoostCount += 1
                     
                     let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot])
-                    |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] myBoostStatus in
                         self?.updatedState.set(context.engine.peers.getChannelBoostStatus(peerId: peerId)
-                        |> beforeNext { [weak self] status in
-                            if let self, let status {
+                        |> beforeNext { [weak self] boostStatus in
+                            if let self, let boostStatus, let myBoostStatus {
                                 Queue.mainQueue().async {
-                                    self.controller?.boostStatusUpdated(status)
+                                    self.controller?.boostStatusUpdated(boostStatus, myBoostStatus)
                                 }
                             }
                         }
@@ -2293,8 +2293,8 @@ public class PremiumBoostLevelsScreen: ViewController {
                                 ).startStandalone(next: { boostStatus, myBoostStatus in
                                     dismissReplaceImpl?()
                                     
-                                    if let boostStatus {
-                                        boostStatusUpdated(boostStatus)
+                                    if let boostStatus, let myBoostStatus {
+                                        boostStatusUpdated(boostStatus, myBoostStatus)
                                     }
                                     
                                     let levelsController = PremiumBoostLevelsScreen(
@@ -2466,7 +2466,7 @@ public class PremiumBoostLevelsScreen: ViewController {
     
     private var currentLayout: ContainerViewLayout?
         
-    public var boostStatusUpdated: (ChannelBoostStatus) -> Void = { _ in }
+    public var boostStatusUpdated: (ChannelBoostStatus, MyBoostStatus) -> Void = { _, _ in }
     public var disposed: () -> Void = {}
     
     public init(

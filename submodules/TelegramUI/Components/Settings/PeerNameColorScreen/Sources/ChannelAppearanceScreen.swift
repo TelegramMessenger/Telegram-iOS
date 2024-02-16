@@ -304,6 +304,7 @@ final class ChannelAppearanceScreenComponent: Component {
         private var premiumConfiguration: PremiumConfiguration?
         private var boostLevel: Int?
         private var boostStatus: ChannelBoostStatus?
+        private var myBoostStatus: MyBoostStatus?
         private var boostStatusDisposable: Disposable?
         
         private var isApplyingSettings: Bool = false
@@ -656,6 +657,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 peerId: component.peerId,
                 mode: .owner(subject: subject),
                 status: status,
+                myBoostStatus: myBoostStatus,
                 openStats: { [weak self] in
                     guard let self else {
                         return
@@ -670,6 +672,14 @@ final class ChannelAppearanceScreenComponent: Component {
                     self.environment?.controller()?.push(controller)
                 }
             )
+            controller.boostStatusUpdated = { [weak self] boostStatus, myBoostStatus in
+                if let self {
+                    self.boostStatus = boostStatus
+                    self.boostLevel = boostStatus.level
+                    self.myBoostStatus = myBoostStatus
+                    self.state?.updated(transition: .immediate)
+                }
+            }
             self.environment?.controller()?.push(controller)
             
             HapticFeedback().impact(.light)
@@ -924,13 +934,16 @@ final class ChannelAppearanceScreenComponent: Component {
                 })
             }
             if self.boostStatusDisposable == nil {
-                self.boostStatusDisposable = (component.context.engine.peers.getChannelBoostStatus(peerId: component.peerId)
-                |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                self.boostStatusDisposable = combineLatest(queue: Queue.mainQueue(),
+                    component.context.engine.peers.getChannelBoostStatus(peerId: component.peerId),
+                    component.context.engine.peers.getMyBoostStatus()
+                ).start(next: { [weak self] boostStatus, myBoostStatus in
                     guard let self else {
                         return
                     }
                     self.boostLevel = boostStatus?.level
                     self.boostStatus = boostStatus
+                    self.myBoostStatus = myBoostStatus
                     
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
