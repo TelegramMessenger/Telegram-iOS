@@ -1985,11 +1985,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             case .hours:
                                 push(accountContext.sharedContext.makeBusinessHoursSetupScreen(context: accountContext))
                             case .quickReplies:
-                                break
+                                push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext))
                             case .greetings:
-                                push(accountContext.sharedContext.makeGreetingMessageSetupScreen(context: accountContext))
+                                push(accountContext.sharedContext.makeGreetingMessageSetupScreen(context: accountContext, isAwayMode: false))
                             case .awayMessages:
-                                break
+                                push(accountContext.sharedContext.makeGreetingMessageSetupScreen(context: accountContext, isAwayMode: true))
                             case .chatbots:
                                 push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
                             }
