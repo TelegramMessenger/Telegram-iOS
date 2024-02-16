@@ -605,7 +605,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 case let .replyThread(message):
                     peerIdValue = message.peerId
                     threadIdValue = message.threadId
-                case .feed:
+                case .customChatContents:
                     break
                 }
                 if peerIdValue == context.account.peerId, let customTag {

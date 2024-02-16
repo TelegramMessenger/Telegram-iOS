@@ -818,8 +818,6 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         if !isBroadcastChannel {
                             hasAvatar = true
-                        } else if case .feed = item.chatLocation {
-                            hasAvatar = true
                         }
                     }
                 } else if incoming {
@@ -844,8 +842,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if incoming {
                     hasAvatar = true
                 }
-            case .feed:
-                hasAvatar = true
+            case .customChatContents:
+                hasAvatar = false
             }
             
             if hasAvatar {
@@ -1445,6 +1443,9 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0 + imageBottomPadding), size: dateAndStatusSize)
                     animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     dateAndStatusApply(animation)
+                    if case .customChatContents = item.associatedData.subject {
+                        strongSelf.dateAndStatusNode.isHidden = true
+                    }
 
                     if needsReplyBackground {
                         if strongSelf.replyBackgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {

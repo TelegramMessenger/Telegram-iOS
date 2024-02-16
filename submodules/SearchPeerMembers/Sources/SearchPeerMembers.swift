@@ -81,7 +81,7 @@ public func searchPeerMembers(context: AccountContext, peerId: EnginePeer.Id, ch
                     return ActionDisposable {
                         disposable.dispose()
                     }
-                case .feed:
+                case .customChatContents:
                     subscriber.putNext(([], true))
                     
                     return ActionDisposable {

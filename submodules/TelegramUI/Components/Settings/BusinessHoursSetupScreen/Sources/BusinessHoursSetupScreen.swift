@@ -20,6 +20,7 @@ import LottieComponent
 import Markdown
 import LocationUI
 import TelegramStringFormatting
+import TimezoneSelectionScreen
 
 final class BusinessHoursSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -75,7 +76,9 @@ final class BusinessHoursSetupScreenComponent: Component {
         private let subtitle = ComponentView<Empty>()
         private let generalSection = ComponentView<Empty>()
         private let daysSection = ComponentView<Empty>()
+        private let timezoneSection = ComponentView<Empty>()
         
+        private var ignoreScrolling: Bool = false
         private var isUpdating: Bool = false
         
         private var component: BusinessHoursSetupScreenComponent?
@@ -84,6 +87,7 @@ final class BusinessHoursSetupScreenComponent: Component {
         
         private var showHours: Bool = false
         private var days: [Day] = []
+        private var timezoneId: String
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -97,6 +101,8 @@ final class BusinessHoursSetupScreenComponent: Component {
                 self.scrollView.automaticallyAdjustsScrollIndicatorInsets = false
             }
             self.scrollView.alwaysBounceVertical = true
+            
+            self.timezoneId = TimeZone.current.identifier
             
             super.init(frame: frame)
             
@@ -126,7 +132,9 @@ final class BusinessHoursSetupScreenComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: .immediate)
+            if !self.ignoreScrolling {
+                self.updateScrolling(transition: .immediate)
+            }
         }
         
         var scrolledUp = true
@@ -320,6 +328,8 @@ final class BusinessHoursSetupScreenComponent: Component {
             contentHeight += generalSectionSize.height
             contentHeight += sectionSpacing
             
+            var daysContentHeight: CGFloat = 0.0
+            
             var daysSectionItems: [AnyComponentWithIdentity<Empty>] = []
             for day in self.days {
                 let dayIndex = daysSectionItems.count
@@ -441,7 +451,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
             )
-            let daysSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: daysSectionSize)
+            let daysSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + daysContentHeight), size: daysSectionSize)
             if let daysSectionView = self.daysSection.view {
                 if daysSectionView.superview == nil {
                     daysSectionView.layer.allowsGroupOpacity = true
@@ -452,13 +462,80 @@ final class BusinessHoursSetupScreenComponent: Component {
                 let alphaTransition = transition.animation.isImmediate ? transition : .easeInOut(duration: 0.25)
                 alphaTransition.setAlpha(view: daysSectionView, alpha: self.showHours ? 1.0 : 0.0)
             }
+            daysContentHeight += daysSectionSize.height
+            daysContentHeight += sectionSpacing
+            
+            let timezoneSectionSize = self.timezoneSection.update(
+                transition: transition,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    header: nil,
+                    footer: nil,
+                    items: [
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                            theme: environment.theme,
+                            title: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: "Time Zone", //TODO:localize
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            )),
+                            icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: TimeZone(identifier: self.timezoneId)?.localizedName(for: .shortStandard, locale: Locale.current) ?? self.timezoneId,
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemSecondaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            )))),
+                            accessory: .arrow,
+                            action: { [weak self] _ in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                var completed: ((String) -> Void)?
+                                let controller = TimezoneSelectionScreen(context: component.context, completed: { timezoneId in
+                                    completed?(timezoneId)
+                                })
+                                controller.navigationPresentation = .modal
+                                self.environment?.controller()?.push(controller)
+                                completed = { [weak self, weak controller] timezoneId in
+                                    guard let self else {
+                                        controller?.dismiss()
+                                        return
+                                    }
+                                    self.timezoneId = timezoneId
+                                    self.state?.updated(transition: .immediate)
+                                    controller?.dismiss()
+                                }
+                            }
+                        )))
+                    ]
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+            )
+            let timezoneSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + daysContentHeight), size: timezoneSectionSize)
+            if let timezoneSectionView = self.timezoneSection.view {
+                if timezoneSectionView.superview == nil {
+                    self.scrollView.addSubview(timezoneSectionView)
+                }
+                transition.setFrame(view: timezoneSectionView, frame: timezoneSectionFrame)
+                let alphaTransition = transition.animation.isImmediate ? transition : .easeInOut(duration: 0.25)
+                alphaTransition.setAlpha(view: timezoneSectionView, alpha: self.showHours ? 1.0 : 0.0)
+            }
+            daysContentHeight += timezoneSectionSize.height
+            
             if self.showHours {
-                contentHeight += daysSectionSize.height
+                contentHeight += daysContentHeight
             }
             
             contentHeight += bottomContentInset
             contentHeight += environment.safeInsets.bottom
             
+            self.ignoreScrolling = true
             let previousBounds = self.scrollView.bounds
             
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
@@ -472,6 +549,7 @@ final class BusinessHoursSetupScreenComponent: Component {
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
             }
+            self.ignoreScrolling = false
                         
             if !previousBounds.isEmpty, !transition.animation.isImmediate {
                 let bounds = self.scrollView.bounds

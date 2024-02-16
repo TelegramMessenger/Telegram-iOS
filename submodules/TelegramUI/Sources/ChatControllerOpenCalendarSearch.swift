@@ -59,7 +59,7 @@ extension ChatControllerImpl {
                 case let .replyThread(replyThreadMessage):
                     peerId = replyThreadMessage.peerId
                     threadId = replyThreadMessage.threadId
-                case .feed:
+                case .customChatContents:
                     return
                 }
 
@@ -96,7 +96,7 @@ extension ChatControllerImpl {
                     case let .replyThread(replyThreadMessage):
                         peerId = replyThreadMessage.peerId
                         threadId = replyThreadMessage.threadId
-                    case .feed:
+                    case .customChatContents:
                         return
                     }
 

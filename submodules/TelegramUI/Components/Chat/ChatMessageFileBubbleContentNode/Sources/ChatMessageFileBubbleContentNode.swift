@@ -112,8 +112,11 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 incoming = false
             }
             let statusType: ChatMessageDateAndStatusType?
-            switch preparePosition {
-            case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
+            if case .customChatContents = item.associatedData.subject {
+                statusType = nil
+            } else {
+                switch preparePosition {
+                case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                     if incoming {
                         statusType = .BubbleIncoming
                     } else {
@@ -127,6 +130,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 default:
                     statusType = nil
+                }
             }
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)

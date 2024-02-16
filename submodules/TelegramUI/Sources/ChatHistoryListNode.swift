@@ -212,13 +212,18 @@ extension ListMessageItemInteraction {
 }
 
 private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, lastHeaderId: Int64, entries: [ChatHistoryViewTransitionInsertEntry]) -> [ListViewInsertItem] {
+    var disableFloatingDateHeaders = false
+    if case .customChatContents = chatLocation {
+        disableFloatingDateHeaders = true
+    }
+    
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .MessageEntry(message, presentationData, read, location, selection, attributes):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders)
                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -236,7 +241,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages), disableDate: disableFloatingDateHeaders)
                     case .list:
                         assertionFailure()
                         item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
@@ -257,13 +262,18 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
 }
 
 private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, lastHeaderId: Int64, entries: [ChatHistoryViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
+    var disableFloatingDateHeaders = false
+    if case .customChatContents = chatLocation {
+        disableFloatingDateHeaders = true
+    }
+    
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .MessageEntry(message, presentationData, read, location, selection, attributes):
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders)
                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -281,7 +291,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages), disableDate: disableFloatingDateHeaders)
                     case .list:
                         assertionFailure()
                         item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
@@ -2011,10 +2021,12 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
             if apply {
                 switch strongSelf.chatLocation {
-                case .peer, .replyThread, .feed:
+                case .peer, .replyThread:
                     if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                         strongSelf.context.applyMaxReadIndex(for: strongSelf.chatLocation, contextHolder: strongSelf.chatLocationContextHolder, messageIndex: messageIndex)
                     }
+                case .customChatContents:
+                    break
                 }
             }
         }).strict())
@@ -2757,7 +2769,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 switch self.chatLocation {
                 case .peer:
                     messageIndex = maxIncomingIndex
-                case .replyThread, .feed:
+                case .replyThread, .customChatContents:
                     messageIndex = maxOverallIndex
                 }
                 
@@ -3142,7 +3154,13 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
             
             let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
-            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty)
+            
+            var hasReachedLimits = false
+            if case let .customChatContents(customChatContents) = self.subject, let messageLimit = customChatContents.messageLimit {
+                hasReachedLimits = transition.historyView.originalView.entries.count >= messageLimit
+            }
+            
+            let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty, hasReachedLimits: hasReachedLimits)
             if self.currentHistoryState != historyState {
                 self.currentHistoryState = historyState
                 self.historyState.set(historyState)
@@ -3403,7 +3421,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 strongSelf.historyView = transition.historyView
                 
                 let loadState: ChatHistoryNodeLoadState
+                var alwaysHasMessages = false
                 if case .custom = strongSelf.source {
+                    if case .customChatContents = strongSelf.chatLocation {
+                    } else {
+                        alwaysHasMessages = true
+                    }
+                }
+                if alwaysHasMessages {
                     loadState = .messages
                 } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
@@ -3513,7 +3538,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             switch strongSelf.chatLocation {
                             case .peer:
                                 messageIndex = incomingIndex
-                            case .replyThread, .feed:
+                            case .replyThread, .customChatContents:
                                 messageIndex = overallIndex
                             }
                             
@@ -3534,7 +3559,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 strongSelf._cachedPeerDataAndMessages.set(.single((transition.cachedData, transition.cachedDataMessages)))
                 let isEmpty = transition.historyView.originalView.entries.isEmpty || loadState == .empty(.botInfo)
-                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty)
+                var hasReachedLimits = false
+                if case let .customChatContents(customChatContents) = strongSelf.subject, let messageLimit = customChatContents.messageLimit {
+                    hasReachedLimits = transition.historyView.originalView.entries.count >= messageLimit
+                }
+                let historyState: ChatHistoryNodeHistoryState = .loaded(isEmpty: isEmpty, hasReachedLimits: hasReachedLimits)
                 if strongSelf.currentHistoryState != historyState {
                     strongSelf.currentHistoryState = historyState
                     strongSelf.historyState.set(historyState)
@@ -4027,6 +4056,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             
             if let messageItem = messageItem {
                 let associatedData = messageItem.associatedData
+                let disableFloatingDateHeaders = messageItem.disableDate
                 
                 loop: for i in 0 ..< historyView.filteredEntries.count {
                     switch historyView.filteredEntries[i] {
@@ -4036,7 +4066,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 let item: ListViewItem
                                 switch self.mode {
                                     case .bubbles:
-                                        item = ChatMessageItemImpl(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                                        item = ChatMessageItemImpl(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders)
                                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                                         let displayHeader: Bool
                                         switch displayHeaders {
@@ -4083,6 +4113,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
 
             if let messageItem = messageItem {
                 let associatedData = messageItem.associatedData
+                let disableFloatingDateHeaders = messageItem.disableDate
 
                 loop: for i in 0 ..< historyView.filteredEntries.count {
                     switch historyView.filteredEntries[i] {
@@ -4092,7 +4123,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 let item: ListViewItem
                                 switch self.mode {
                                     case .bubbles:
-                                        item = ChatMessageItemImpl(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                                        item = ChatMessageItemImpl(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders)
                                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                                         let displayHeader: Bool
                                         switch displayHeaders {

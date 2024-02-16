@@ -588,6 +588,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: nil, loadMore: nil)
             }
+        } else if case .customChatContents = chatLocation {
+            if case let .customChatContents(customChatContents) = subject {
+                source = .custom(
+                    messages: customChatContents.messages
+                    |> map { messages in
+                        return (messages, 0, false)
+                    },
+                    messageId: nil,
+                    quote: nil,
+                    loadMore: nil
+                )
+            } else {
+                source = .custom(messages: .single(([], 0, false)), messageId: nil, quote: nil, loadMore: nil)
+            }
         } else {
             source = .default
         }

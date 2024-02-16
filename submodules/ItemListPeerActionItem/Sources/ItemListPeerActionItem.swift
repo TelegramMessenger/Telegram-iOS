@@ -55,6 +55,9 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
             if self.alwaysPlain {
                 neighbors.top = .sameSection(alwaysPlain: false)
             }
+            if self.alwaysPlain {
+                neighbors.bottom = .sameSection(alwaysPlain: false)
+            }
             let (layout, apply) = node.asyncLayout()(self, params, neighbors)
             
             node.contentSize = layout.contentSize
@@ -82,6 +85,9 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
                     var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
                     if self.alwaysPlain {
                         neighbors.top = .sameSection(alwaysPlain: false)
+                    }
+                    if self.alwaysPlain {
+                        neighbors.bottom = .sameSection(alwaysPlain: false)
                     }
                     let (layout, apply) = makeLayout(self, params, neighbors)
                     Queue.mainQueue().async {

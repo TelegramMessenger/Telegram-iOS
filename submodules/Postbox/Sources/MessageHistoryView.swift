@@ -1101,7 +1101,7 @@ public final class MessageHistoryView {
         self.topTaggedMessages = []
         self.additionalData = []
         self.isLoading = isLoading
-        self.isLoadingEarlier = true
+        self.isLoadingEarlier = false
         self.isAddedToChatList = false
         self.peerStoryStats = [:]
     }

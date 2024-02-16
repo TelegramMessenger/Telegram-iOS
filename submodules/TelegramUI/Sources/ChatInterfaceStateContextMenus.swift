@@ -337,7 +337,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         }
     case .replyThread:
         canReply = true
-    case .feed:
+    case .customChatContents:
         canReply = false
     }
     return canReply
@@ -597,6 +597,68 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return .single(ContextController.Items(content: .list(actions)))
     }
     
+    if let message = messages.first, case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
+        var actions: [ContextMenuItem] = []
+        
+        switch customChatContents.kind {
+        case .greetingMessageInput, .awayMessageInput, .quickReplyMessageInput:
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                var messageEntities: [MessageTextEntity]?
+                var restrictedText: String?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        messageEntities = attribute.entities
+                    }
+                    if let attribute = attribute as? RestrictedContentMessageAttribute {
+                        restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                    }
+                }
+
+                if let restrictedText = restrictedText {
+                    storeMessageTextInPasteboard(restrictedText, entities: nil)
+                } else {
+                    if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
+                       let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                        storeMessageTextInPasteboard(translation.text, entities: translation.entities)
+                    } else {
+                        storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                    }
+                }
+
+                Queue.mainQueue().after(0.2, {
+                    let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                    controllerInteraction.displayUndo(content)
+                })
+                
+                f(.default)
+            })))
+            
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, f in
+                interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                    f(.custom(transition))
+                })
+            })))
+            
+            actions.append(.separator)
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+            }, action: { [weak customChatContents] _, f in
+                f(.dismissWithoutContent)
+                
+                guard let customChatContents else {
+                    return
+                }
+                customChatContents.deleteMessages(ids: messages.map(\.id))
+            })))
+        }
+        
+        return .single(ContextController.Items(content: .list(actions)))
+    }
+    
     var loadStickerSaveStatus: MediaId?
     var loadCopyMediaResource: MediaResource?
     var isAction = false
@@ -654,7 +716,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
-        case .peer, .replyThread, .feed:
+        case .peer, .replyThread, .customChatContents:
             if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                 if !isAction {
                     canPin = channel.hasPermission(.pinMessages)

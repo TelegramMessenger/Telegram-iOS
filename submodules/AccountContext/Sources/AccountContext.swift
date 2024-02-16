@@ -395,13 +395,13 @@ public enum ChatSearchDomain: Equatable {
 public enum ChatLocation: Equatable {
     case peer(id: PeerId)
     case replyThread(message: ChatReplyThreadMessage)
-    case feed(id: Int32)
+    case customChatContents
 }
 
 public extension ChatLocation {
     var normalized: ChatLocation {
         switch self {
-        case .peer, .feed:
+        case .peer, .customChatContents:
             return self
         case let .replyThread(message):
             return .replyThread(message: message.normalized)
@@ -936,7 +936,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatbotSetupScreen(context: AccountContext) -> ViewController
     func makeBusinessLocationSetupScreen(context: AccountContext) -> ViewController
     func makeBusinessHoursSetupScreen(context: AccountContext) -> ViewController
-    func makeGreetingMessageSetupScreen(context: AccountContext) -> ViewController
+    func makeGreetingMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController
+    func makeQuickReplySetupScreen(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>

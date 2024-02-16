@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "SliderComponent",
-    module_name = "SliderComponent",
+    name = "TimeSelectionActionSheet",
+    module_name = "TimeSelectionActionSheet",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,11 +10,14 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/AsyncDisplayKit",
         "//submodules/Display",
+        "//submodules/AsyncDisplayKit",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
-        "//submodules/LegacyComponents",
-        "//submodules/ComponentFlow",
+        "//submodules/TelegramStringFormatting",
+        "//submodules/AccountContext",
+        "//submodules/UIKitRuntimeUtils",        
     ],
     visibility = [
         "//visibility:public",

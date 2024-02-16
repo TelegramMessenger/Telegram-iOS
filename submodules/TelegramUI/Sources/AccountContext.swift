@@ -483,7 +483,7 @@ public final class AccountContextImpl: AccountContext {
                 let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
                 return .thread(peerId: data.peerId, threadId: data.threadId, data: context.state)
             }
-        case .feed:
+        case .customChatContents:
             preconditionFailure()
         }
     }
@@ -509,7 +509,7 @@ public final class AccountContextImpl: AccountContext {
             } else {
                 return .single(nil)
             }
-        case .feed:
+        case .customChatContents:
             return .single(nil)
         }
     }
@@ -547,7 +547,7 @@ public final class AccountContextImpl: AccountContext {
                 let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
                 return context.unreadCount
             }
-        case .feed:
+        case .customChatContents:
             return .single(0)
         }
     }
@@ -559,7 +559,7 @@ public final class AccountContextImpl: AccountContext {
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
             context.applyMaxReadIndex(messageIndex: messageIndex)
-        case .feed:
+        case .customChatContents:
             break
         }
     }

@@ -34,7 +34,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasBackground: false, hasSeparator: false), strings: strings, fieldStyle: .modern)
         let placeholderText: String
         switch chatLocation {
-        case .peer, .replyThread, .feed:
+        case .peer, .replyThread, .customChatContents:
             if chatLocation.peerId == context.account.peerId, presentationInterfaceState.hasSearchTags {
                 if case .standard(.embedded(false)) = presentationInterfaceState.mode {
                     placeholderText = strings.Common_Search
@@ -114,7 +114,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                 self.searchBar.prefixString = nil
                 let placeholderText: String
                 switch self.chatLocation {
-                case .peer, .replyThread, .feed:
+                case .peer, .replyThread, .customChatContents:
                     if presentationInterfaceState.historyFilter != nil {
                         placeholderText = self.strings.Common_Search
                     } else if self.chatLocation.peerId == self.context.account.peerId, presentationInterfaceState.hasSearchTags {

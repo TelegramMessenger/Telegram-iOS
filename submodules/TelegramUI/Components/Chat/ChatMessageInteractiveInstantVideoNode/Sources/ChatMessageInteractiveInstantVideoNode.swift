@@ -949,6 +949,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     }
                     
+                    if case .customChatContents = item.associatedData.subject {
+                        strongSelf.dateAndStatusNode.isHidden = true
+                    }
+                    
                     if let videoNode = strongSelf.videoNode {
                         videoNode.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
                         if strongSelf.imageScale != imageScale {

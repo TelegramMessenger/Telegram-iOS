@@ -263,7 +263,11 @@ final class BusinessSetupScreenComponent: Component {
                 icon: "Settings/Menu/Photos",
                 title: "Quick Replies",
                 subtitle: "Set up shortcuts with rich text and media to respond to messages faster.",
-                action: {
+                action: { [weak self] in
+                    guard let self, let component = self.component, let environment = self.environment else {
+                        return
+                    }
+                    environment.controller()?.push(component.context.sharedContext.makeQuickReplySetupScreen(context: component.context))
                 }
             ))
             items.append(Item(
@@ -274,14 +278,18 @@ final class BusinessSetupScreenComponent: Component {
                     guard let self, let component = self.component, let environment = self.environment else {
                         return
                     }
-                    environment.controller()?.push(component.context.sharedContext.makeGreetingMessageSetupScreen(context: component.context))
+                    environment.controller()?.push(component.context.sharedContext.makeGreetingMessageSetupScreen(context: component.context, isAwayMode: false))
                 }
             ))
             items.append(Item(
                 icon: "Settings/Menu/Trending",
                 title: "Away Messages",
                 subtitle: "Define messages that are automatically sent when you are off.",
-                action: {
+                action: { [weak self] in
+                    guard let self, let component = self.component, let environment = self.environment else {
+                        return
+                    }
+                    environment.controller()?.push(component.context.sharedContext.makeGreetingMessageSetupScreen(context: component.context, isAwayMode: true))
                 }
             ))
             items.append(Item(

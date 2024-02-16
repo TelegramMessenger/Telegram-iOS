@@ -107,6 +107,46 @@ public func stringForMonth(strings: PresentationStrings, month: Int32, ofYear ye
     }
 }
 
+private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
+    switch index {
+    case 0:
+        return strings.Month_ShortJanuary
+    case 1:
+        return strings.Month_ShortFebruary
+    case 2:
+        return strings.Month_ShortMarch
+    case 3:
+        return strings.Month_ShortApril
+    case 4:
+        return strings.Month_ShortMay
+    case 5:
+        return strings.Month_ShortJune
+    case 6:
+        return strings.Month_ShortJuly
+    case 7:
+        return strings.Month_ShortAugust
+    case 8:
+        return strings.Month_ShortSeptember
+    case 9:
+        return strings.Month_ShortOctober
+    case 10:
+        return strings.Month_ShortNovember
+    case 11:
+        return strings.Month_ShortDecember
+    default:
+        return ""
+    }
+}
+
+public func stringForCompactDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    var t: time_t = time_t(timestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    //TODO:localize
+    return "\(shortStringForDayOfWeek(strings: strings, day: timeinfo.tm_wday)) \(timeinfo.tm_mday) \(monthAtIndex(Int(timeinfo.tm_mon), strings: strings))"
+}
+
 public enum RelativeTimestampFormatDay {
     case today
     case yesterday
@@ -359,37 +399,6 @@ public func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationSt
         }
     } else {
         return stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, dateTimeFormat: dateTimeFormat)
-    }
-}
-
-private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
-    switch index {
-        case 0:
-            return strings.Month_GenJanuary
-        case 1:
-            return strings.Month_GenFebruary
-        case 2:
-            return strings.Month_GenMarch
-        case 3:
-            return strings.Month_GenApril
-        case 4:
-            return strings.Month_GenMay
-        case 5:
-            return strings.Month_GenJune
-        case 6:
-            return strings.Month_GenJuly
-        case 7:
-            return strings.Month_GenAugust
-        case 8:
-            return strings.Month_GenSeptember
-        case 9:
-            return strings.Month_GenOctober
-        case 10:
-            return strings.Month_GenNovember
-        case 11:
-            return strings.Month_GenDecember
-        default:
-            return ""
     }
 }
 

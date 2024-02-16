@@ -9,15 +9,15 @@ import TelegramStringFormatting
 import AccountContext
 import UIKitRuntimeUtils
 
-final class TimeSelectionActionSheet: ActionSheetController {
+public final class TimeSelectionActionSheet: ActionSheetController {
     private var presentationDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    override public var ready: Promise<Bool> {
         return self._ready
     }
     
-    init(context: AccountContext, currentValue: Int32, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
+    public init(context: AccountContext, currentValue: Int32, emptyTitle: String? = nil, applyValue: @escaping (Int32?) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let strings = presentationData.strings
         
@@ -56,7 +56,7 @@ final class TimeSelectionActionSheet: ActionSheetController {
         ])
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     

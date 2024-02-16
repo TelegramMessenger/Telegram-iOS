@@ -365,7 +365,10 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
         self.avatarHeader = avatarHeader
         
-        var headers: [ListViewItemHeader] = [self.dateHeader]
+        var headers: [ListViewItemHeader] = []
+        if !self.disableDate {
+            headers.append(self.dateHeader)
+        }
         if case .messageOptions = associatedData.subject {
             headers = []
         }
