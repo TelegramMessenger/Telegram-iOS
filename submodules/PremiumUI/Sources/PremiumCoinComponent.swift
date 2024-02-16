@@ -316,8 +316,8 @@ class PremiumCoinComponent: Component {
                 return
             }
 
-            let fromScale: Float = 0.9
-            let toScale: Float = 1.0
+            let fromScale: Float = 0.85
+            let toScale: Float = 0.9
             
             let animation = CABasicAnimation(keyPath: "scale")
             animation.duration = 2.0
