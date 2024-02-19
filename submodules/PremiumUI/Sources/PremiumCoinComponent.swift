@@ -334,13 +334,8 @@ class PremiumCoinComponent: Component {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
-            
-            guard let first = node.childNodes.first, let last = node.childNodes.last else {
-                return
-            }
-            let nodes = [first, last]
-                        
-            for node in nodes {
+      
+            for node in node.childNodes {
                 guard let initial = node.geometry?.materials.first?.diffuse.contentsTransform else {
                     return
                 }
@@ -362,12 +357,7 @@ class PremiumCoinComponent: Component {
                 return
             }
             
-            guard let first = node.childNodes.first, let last = node.childNodes.last else {
-                return
-            }
-            let nodes = [first, last]
-            
-            for node in nodes {
+            for node in node.childNodes {
                 guard let initial = node.geometry?.materials.first?.emission.contentsTransform else {
                     return
                 }
