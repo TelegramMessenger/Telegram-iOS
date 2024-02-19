@@ -817,12 +817,8 @@ public final class ManagedAudioSession: NSObject {
                         mode = .voiceChat
                     case .videoCall:
                         mode = .videoChat
-                    case let .record(_, video, withOthers):
-                        if video && !withOthers {
-                            mode = .videoRecording
-                        } else {
-                            mode = .default
-                        }
+                    case .record(_, true, _):
+                        mode = .videoRecording
                     default:
                         mode = .default
                 }
