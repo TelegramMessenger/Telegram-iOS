@@ -10,7 +10,6 @@ import ItemListUI
 import PresentationDataUtils
 import PhoneInputNode
 import CountrySelectionUI
-import CoreTelephony
 
 private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 56, height: 44.0 + 6.0), rotatedContext: { size, context in
@@ -234,18 +233,9 @@ class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
             }
         }
         
-        var countryId: String? = nil
-        let networkInfo = CTTelephonyNetworkInfo()
-        if let carrier = networkInfo.serviceSubscriberCellularProviders?.values.first {
-            countryId = carrier.isoCountryCode
-        }
-        
-        if countryId == nil {
-            countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
-        }
-        
+        let countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
+   
         var countryCodeAndId: (Int32, String) = (1, "US")
-        
         if let countryId = countryId {
             let normalizedId = countryId.uppercased()
             for (code, idAndName) in countryCodeToIdAndName {
