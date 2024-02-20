@@ -236,7 +236,13 @@ public final class ListActionItemComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                 )
-                let iconFrame = CGRect(origin: CGPoint(x: availableSize.width - contentRightInset - iconSize.width, y: floor((contentHeight - iconSize.height) * 0.5)), size: iconSize)
+                
+                var iconOffset: CGFloat = 0.0
+                if case .none = component.accessory {
+                    iconOffset = 6.0
+                }
+                
+                let iconFrame = CGRect(origin: CGPoint(x: availableSize.width - contentRightInset - iconSize.width + iconOffset, y: floor((contentHeight - iconSize.height) * 0.5)), size: iconSize)
                 if let iconView = icon.view {
                     if iconView.superview == nil {
                         self.addSubview(iconView)

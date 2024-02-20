@@ -8751,7 +8751,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })
         case .chatFolders:
-            push(chatListFilterPresetListController(context: self.context, mode: .default))
+            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: false, dismissed: nil)
+            push(controller)
         case .notificationsAndSounds:
             if let settings = self.data?.globalSettings {
                 push(notificationsAndSoundsController(context: self.context, exceptionsList: settings.notificationExceptions))
