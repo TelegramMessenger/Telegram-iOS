@@ -391,12 +391,15 @@ public class PremiumLimitsListScreen: ViewController {
                 
                 var storiesIndex: Int?
                 var limitsIndex: Int?
+                var businessIndex: Int?
                 var storiesNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
                 var limitsNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
+                let businessNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
                 if let order = controller.order {
                     storiesIndex = order.firstIndex(where: { $0 == .stories })
                     limitsIndex = order.firstIndex(where: { $0 == .doubleLimits })
-                    if let limitsIndex, let storiesIndex {
+                    businessIndex = order.firstIndex(where: { $0 == .doubleLimits })
+                    if let limitsIndex, let storiesIndex, let _ = businessIndex {
                         if limitsIndex == storiesIndex + 1 {
                             storiesNeighbors.rightIsList = true
                             limitsNeighbors.leftIsList = true
@@ -799,6 +802,37 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
+                availableItems[.business] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.business,
+                        component: AnyComponent(
+                            BusinessPageComponent(
+                                context: context,
+                                theme: self.presentationData.theme,
+                                neighbors: businessNeighbors,
+                                bottomInset: self.footerNode.frame.height,
+                                updatedBottomAlpha: { [weak self] alpha in
+                                    if let strongSelf = self {
+                                        strongSelf.footerNode.updateCoverAlpha(alpha, transition: .immediate)
+                                    }
+                                },
+                                updatedDismissOffset: { [weak self] offset in
+                                    if let strongSelf = self {
+                                        strongSelf.updateDismissOffset(offset)
+                                    }
+                                },
+                                updatedIsDisplaying: { [weak self] isDisplaying in
+                                    if let self, self.isExpanded && !isDisplaying {
+                                        if let limitsIndex, let indexPosition = self.indexPosition, abs(CGFloat(limitsIndex) - indexPosition) < 0.1 {
+                                        } else {
+                                            self.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                        }
+                                    }
+                                }
+                            )
+                        )
+                    )
+                )
             
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }
@@ -852,7 +886,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 id: "background",
                                 component: AnyComponent(
                                     BlurredBackgroundComponent(
-                                        color:  UIColor(rgb: 0x888888, alpha: 0.3)
+                                        color:  UIColor(rgb: 0xbbbbbb, alpha: 0.22)
                                     )
                                 )
                             ),

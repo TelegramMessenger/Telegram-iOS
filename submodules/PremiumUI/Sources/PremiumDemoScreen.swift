@@ -1177,7 +1177,7 @@ private final class DemoSheetContent: CombinedComponent {
                         text = strings.Premium_LastSeenInfo
                     case .messagePrivacy:
                         text = strings.Premium_MessagePrivacyInfo
-                    case .doubleLimits, .stories:
+                    case .doubleLimits, .stories, .business:
                         text = ""
                     }
                 
@@ -1391,6 +1391,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case messageTags
         case lastSeen
         case messagePrivacy
+        case business
     }
     
     public enum Source: Equatable {

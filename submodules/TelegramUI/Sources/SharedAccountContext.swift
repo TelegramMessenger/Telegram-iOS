@@ -1884,7 +1884,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
-        return BusinessSetupScreen(context: context)
+        return PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, forceDark: false)
     }
     
     public func makeChatbotSetupScreen(context: AccountContext) -> ViewController {
@@ -1989,7 +1989,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         case .messageTags:
             mappedSource = .messageTags
         }
-        let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
+        let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
         controller.wasDismissed = dismissed
         return controller
     }

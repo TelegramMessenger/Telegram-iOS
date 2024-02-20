@@ -20,7 +20,6 @@ import TelegramIntents
 import AnimationCache
 import MultiAnimationRenderer
 import ObjectiveC
-import PremiumUI
 import UndoUI
 
 private var ObjCKey_DeinitWatcher: Int?
@@ -1241,7 +1240,8 @@ public final class ShareController: ViewController {
                 }
                 if case .undo = action {
                     self.controllerNode.cancel?()
-                    let premiumController = PremiumIntroScreen(context: context.context, source: .settings)
+                    
+                    let premiumController = context.context.sharedContext.makePremiumIntroController(context: context.context, source: .settings, forceDark: false, dismissed: nil)
                     parentNavigationController.pushViewController(premiumController)
                 }
                 return false

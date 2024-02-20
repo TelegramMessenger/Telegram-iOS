@@ -40,7 +40,6 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/UndoUI",
-        "//submodules/PremiumUI",
     ],
     visibility = [
         "//visibility:public",
