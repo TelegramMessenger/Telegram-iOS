@@ -436,7 +436,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/ChatbotSetupScreen",
         "//submodules/TelegramUI/Components/Settings/BusinessLocationSetupScreen",
         "//submodules/TelegramUI/Components/Settings/BusinessHoursSetupScreen",
-        "//submodules/TelegramUI/Components/Settings/GreetingMessageSetupScreen",
+        "//submodules/TelegramUI/Components/Settings/AutomaticBusinessMessageSetupScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

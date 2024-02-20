@@ -803,11 +803,30 @@ public enum ChatControllerPresentationMode: Equatable {
     case inline(NavigationController?)
 }
 
+public enum ChatInputTextCommand: Equatable {
+    case command(PeerCommand)
+    case shortcut(QuickReplyMessageShortcut)
+}
+
+public struct ChatInputQueryCommandsResult: Equatable {
+    public var commands: [ChatInputTextCommand]
+    public var accountPeer: EnginePeer?
+    public var hasShortcuts: Bool
+    public var query: String
+    
+    public init(commands: [ChatInputTextCommand], accountPeer: EnginePeer?, hasShortcuts: Bool, query: String) {
+        self.commands = commands
+        self.accountPeer = accountPeer
+        self.hasShortcuts = hasShortcuts
+        self.query = query
+    }
+}
+
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
     case hashtags([String])
     case mentions([EnginePeer])
-    case commands([PeerCommand])
+    case commands(ChatInputQueryCommandsResult)
     case emojis([(String, TelegramMediaFile?, String)], NSRange)
     case contextRequestResult(EnginePeer?, ChatContextResultCollection?)
     

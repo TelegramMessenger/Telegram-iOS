@@ -42,21 +42,21 @@ private let checkIcon: UIImage = {
     })!.withRenderingMode(.alwaysTemplate)
 }()
 
-final class GreetingMessageSetupScreenComponent: Component {
+final class AutomaticBusinessMessageSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let mode: GreetingMessageSetupScreen.Mode
+    let mode: AutomaticBusinessMessageSetupScreen.Mode
 
     init(
         context: AccountContext,
-        mode: GreetingMessageSetupScreen.Mode
+        mode: AutomaticBusinessMessageSetupScreen.Mode
     ) {
         self.context = context
         self.mode = mode
     }
 
-    static func ==(lhs: GreetingMessageSetupScreenComponent, rhs: GreetingMessageSetupScreenComponent) -> Bool {
+    static func ==(lhs: AutomaticBusinessMessageSetupScreenComponent, rhs: AutomaticBusinessMessageSetupScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -124,7 +124,7 @@ final class GreetingMessageSetupScreenComponent: Component {
         private var ignoreScrolling: Bool = false
         private var isUpdating: Bool = false
         
-        private var component: GreetingMessageSetupScreenComponent?
+        private var component: AutomaticBusinessMessageSetupScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
@@ -350,7 +350,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             guard let component = self.component else {
                 return
             }
-            let contents = GreetingMessageSetupChatContents(
+            let contents = AutomaticBusinessMessageSetupChatContents(
                 context: component.context,
                 messages: self.messages,
                 kind: component.mode == .away ? .awayMessageInput : .greetingMessageInput
@@ -386,7 +386,8 @@ final class GreetingMessageSetupScreenComponent: Component {
             let currentValue: Date = (isStartTime ? self.customScheduleStart : self.customScheduleEnd) ?? Date()
             
             if isDate {
-                let calendar = Calendar.current
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = TimeZone(secondsFromGMT: 0)!
                 let components = calendar.dateComponents([.year, .month, .day], from: currentValue)
                 guard let clippedDate = calendar.date(from: components) else {
                     return
@@ -462,7 +463,7 @@ final class GreetingMessageSetupScreenComponent: Component {
             }
         }
         
-        func update(component: GreetingMessageSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        func update(component: AutomaticBusinessMessageSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
@@ -811,6 +812,7 @@ final class GreetingMessageSetupScreenComponent: Component {
                     }
                     
                     var icon: ListActionItemComponent.Icon?
+                    var accessory: ListActionItemComponent.Accessory?
                     if let itemDate {
                         let calendar = Calendar.current
                         let hours = calendar.component(.hour, from: itemDate)
@@ -861,6 +863,16 @@ final class GreetingMessageSetupScreenComponent: Component {
                                 animateScale: false
                             )))
                         ], spacing: 4.0))), insets: .custom(UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), allowUserInteraction: true)
+                    } else {
+                        icon = ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "Set",
+                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                textColor: environment.theme.list.itemSecondaryTextColor
+                            )),
+                            maximumNumberOfLines: 1
+                        ))))
+                        accessory = .arrow
                     }
                     
                     customScheduleSectionItems.append(AnyComponentWithIdentity(id: customScheduleSectionItems.count, component: AnyComponent(ListActionItemComponent(
@@ -876,7 +888,7 @@ final class GreetingMessageSetupScreenComponent: Component {
                             ))),
                         ], alignment: .left, spacing: 2.0)),
                         icon: icon,
-                        accessory: nil,
+                        accessory: accessory,
                         action: itemDate != nil ? nil : { [weak self] _ in
                             guard let self else {
                                 return
@@ -1242,7 +1254,7 @@ final class GreetingMessageSetupScreenComponent: Component {
     }
 }
 
-public final class GreetingMessageSetupScreen: ViewControllerComponentContainer {
+public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentContainer {
     public enum Mode {
         case greeting
         case away
@@ -1253,7 +1265,7 @@ public final class GreetingMessageSetupScreen: ViewControllerComponentContainer 
     public init(context: AccountContext, mode: Mode) {
         self.context = context
         
-        super.init(context: context, component: GreetingMessageSetupScreenComponent(
+        super.init(context: context, component: AutomaticBusinessMessageSetupScreenComponent(
             context: context,
             mode: mode
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
@@ -1263,14 +1275,14 @@ public final class GreetingMessageSetupScreen: ViewControllerComponentContainer 
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
-            guard let self, let componentView = self.node.hostView.componentView as? GreetingMessageSetupScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? AutomaticBusinessMessageSetupScreenComponent.View else {
                 return
             }
             componentView.scrollToTop()
         }
         
         self.attemptNavigation = { [weak self] complete in
-            guard let self, let componentView = self.node.hostView.componentView as? GreetingMessageSetupScreenComponent.View else {
+            guard let self, let componentView = self.node.hostView.componentView as? AutomaticBusinessMessageSetupScreenComponent.View else {
                 return true
             }
             

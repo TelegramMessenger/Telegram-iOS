@@ -235,6 +235,7 @@ final class GreetingMessageListItemComponent: Component {
                     tags: [],
                     customMessageListData: ChatListItemContent.CustomMessageListData(
                         commandPrefix: nil,
+                        searchQuery: nil,
                         messageCount: component.count
                     )
                 )),

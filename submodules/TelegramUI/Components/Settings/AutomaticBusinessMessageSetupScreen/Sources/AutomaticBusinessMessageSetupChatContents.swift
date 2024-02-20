@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 import AccountContext
 
-final class GreetingMessageSetupChatContents: ChatCustomContentsProtocol {
+final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtocol {
     private final class Impl {
         let queue: Queue
         let context: AccountContext

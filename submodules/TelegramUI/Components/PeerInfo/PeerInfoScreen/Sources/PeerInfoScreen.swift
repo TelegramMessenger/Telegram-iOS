@@ -346,6 +346,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, sendContextResult: { _, _, _, _ in
             return false
         }, sendBotCommand: { _, _ in
+        }, sendShortcut: { _ in
+        }, openEditShortcuts: {
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
         }, beginMediaRecording: { _ in
@@ -1161,6 +1163,91 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout(false)
                 }))
+            }
+            
+            if let businessHours = cachedData.businessHours {
+                //TODO:localize
+                var businessHoursText: String = ""
+                let days = businessHours.splitIntoWeekDays()
+                for i in 0 ..< days.count {
+                    let title: String
+                    //TODO:localize
+                    switch i {
+                    case 0:
+                        title = "Monday"
+                    case 1:
+                        title = "Tuesday"
+                    case 2:
+                        title = "Wednesday"
+                    case 3:
+                        title = "Thursday"
+                    case 4:
+                        title = "Friday"
+                    case 5:
+                        title = "Saturday"
+                    case 6:
+                        title = "Sunday"
+                    default:
+                        title = " "
+                    }
+                    
+                    //TODO:localize
+                    if !businessHoursText.isEmpty {
+                        businessHoursText += "\n"
+                    }
+                    businessHoursText += "\(title): "
+                    switch days[i] {
+                    case .open:
+                        businessHoursText += "open 24 hours"
+                    case .closed:
+                        businessHoursText += "closed"
+                    case let .intervals(intervals):
+                        func clipMinutes(_ value: Int) -> Int {
+                            return value % (24 * 60)
+                        }
+                        
+                        var resultText: String = ""
+                        for range in intervals {
+                            if !resultText.isEmpty {
+                                resultText.append(", ")
+                            }
+                            let startHours = clipMinutes(range.startMinute) / 60
+                            let startMinutes = clipMinutes(range.startMinute) % 60
+                            let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
+                            let endHours = clipMinutes(range.endMinute) / 60
+                            let endMinutes = clipMinutes(range.endMinute) % 60
+                            let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
+                            resultText.append("\(startText)\u{00a0}- \(endText)")
+                        }
+                        businessHoursText += resultText
+                    }
+                }
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 300, label: "business hours", text: businessHoursText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                    interaction.requestLayout(false)
+                }))
+            }
+            
+            if let businessLocation = cachedData.businessLocation {
+                if let coordinates = businessLocation.coordinates {
+                    let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: coordinates.latitude, longitude: coordinates.longitude, width: 90, height: 90))
+                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                        id: 301,
+                        label: "",
+                        text: businessLocation.address,
+                        imageSignal: imageSignal,
+                        action: {
+                            interaction.openLocation()
+                        }
+                    ))
+                } else {
+                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                        id: 301,
+                        label: "",
+                        text: businessLocation.address,
+                        imageSignal: nil,
+                        action: nil
+                    ))
+                }
             }
         }
         if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
@@ -7529,9 +7616,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openLocation() {
-        guard let data = self.data, let peer = data.peer, let cachedData = data.cachedData as? CachedChannelData, let location = cachedData.peerGeoLocation else {
+        guard let data = self.data, let peer = data.peer else {
             return
         }
+        
+        var location: PeerGeoLocation?
+        if let cachedData = data.cachedData as? CachedChannelData, let locationValue = cachedData.peerGeoLocation {
+            location = locationValue
+        } else if let cachedData = data.cachedData as? CachedUserData, let businessLocation = cachedData.businessLocation, let coordinates = businessLocation.coordinates {
+            location = PeerGeoLocation(latitude: coordinates.latitude, longitude: coordinates.longitude, address: businessLocation.address)
+        }
+        
+        guard let location else {
+            return
+        }
+        
         let context = self.context
         let presentationData = self.presentationData
         let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)

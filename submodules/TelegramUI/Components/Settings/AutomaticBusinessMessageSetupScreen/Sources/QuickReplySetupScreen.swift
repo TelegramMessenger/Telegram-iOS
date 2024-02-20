@@ -18,16 +18,20 @@ import ItemListPeerActionItem
 import ItemListUI
 import ChatListUI
 import QuickReplyNameAlertController
+import ChatListHeaderComponent
 
 final class QuickReplySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let initialData: QuickReplySetupScreen.InitialData
 
     init(
-        context: AccountContext
+        context: AccountContext,
+        initialData: QuickReplySetupScreen.InitialData
     ) {
         self.context = context
+        self.initialData = initialData
     }
 
     static func ==(lhs: QuickReplySetupScreenComponent, rhs: QuickReplySetupScreenComponent) -> Bool {
@@ -36,16 +40,6 @@ final class QuickReplySetupScreenComponent: Component {
         }
 
         return true
-    }
-    
-    private struct ShortcutItem: Equatable {
-        var shortcut: String
-        var messages: [EngineMessage]
-        
-        init(shortcut: String, messages: [EngineMessage]) {
-            self.shortcut = shortcut
-            self.messages = messages
-        }
     }
     
     private enum ContentEntry: Comparable, Identifiable {
@@ -58,23 +52,23 @@ final class QuickReplySetupScreenComponent: Component {
             switch self {
             case .add:
                 return .add
-            case let .item(item, _, _):
+            case let .item(item, _, _, _):
                 return .item(item.shortcut)
             }
         }
         
         case add
-        case item(item: ShortcutItem, accountPeer: EnginePeer, sortIndex: Int)
+        case item(item: QuickReplyMessageShortcut, accountPeer: EnginePeer, sortIndex: Int, isEditing: Bool)
         
         static func <(lhs: ContentEntry, rhs: ContentEntry) -> Bool {
             switch lhs {
             case .add:
                 return false
-            case let .item(lhsItem, _, lhsSortIndex):
+            case let .item(lhsItem, _, lhsSortIndex, _):
                 switch rhs {
                 case .add:
                     return false
-                case let .item(rhsItem, _, rhsSortIndex):
+                case let .item(rhsItem, _, rhsSortIndex, _):
                     if lhsSortIndex != rhsSortIndex {
                         return lhsSortIndex < rhsSortIndex
                     }
@@ -106,7 +100,7 @@ final class QuickReplySetupScreenComponent: Component {
                         parentView.openQuickReplyChat(shortcut: nil)
                     }
                 )
-            case let .item(item, accountPeer, _):
+            case let .item(item, accountPeer, _, isEditing):
                 let chatListNodeInteraction = ChatListNodeInteraction(
                     context: listNode.context,
                     animationCache: listNode.context.animationCache,
@@ -235,10 +229,11 @@ final class QuickReplySetupScreenComponent: Component {
                         tags: [],
                         customMessageListData: ChatListItemContent.CustomMessageListData(
                             commandPrefix: "/\(item.shortcut)",
+                            searchQuery: nil,
                             messageCount: nil
                         )
                     )),
-                    editing: false,
+                    editing: isEditing,
                     hasActiveRevealControls: false,
                     selected: false,
                     header: nil,
@@ -285,11 +280,16 @@ final class QuickReplySetupScreenComponent: Component {
             let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(listNode: self), directionHint: nil) }
             let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(listNode: self), directionHint: nil) }
             
+            var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
+            if animated {
+                options.insert(.AnimateInsertion)
+            }
+            
             self.transaction(
                 deleteIndices: deletions,
                 insertIndicesAndItems: insertions,
                 updateIndicesAndItems: updates,
-                options: [.Synchronous, .LowLatency],
+                options: options,
                 scrollToItem: nil,
                 stationaryItemRange: nil,
                 updateOpaqueState: nil,
@@ -303,14 +303,20 @@ final class QuickReplySetupScreenComponent: Component {
         private var emptyState: ComponentView<Empty>?
         private var contentListNode: ContentListNode?
         
+        private let navigationBarView = ComponentView<Empty>()
+        private var navigationHeight: CGFloat?
+        
         private var isUpdating: Bool = false
         
         private var component: QuickReplySetupScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
-        private var items: [ShortcutItem] = []
+        private var items: [QuickReplyMessageShortcut] = []
         private var messagesDisposable: Disposable?
+        
+        private var isEditing: Bool = false
+        private var isSearchDisplayControllerActive: Bool = false
 
         private var accountPeer: EnginePeer?
         
@@ -330,6 +336,10 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            component.context.engine.accountData.updateShortcutMessages(state: QuickReplyMessageShortcutsState(shortcuts: self.items))
             return true
         }
         
@@ -339,9 +349,22 @@ final class QuickReplySetupScreenComponent: Component {
             }
             
             if let shortcut {
-                let contents = GreetingMessageSetupChatContents(
+                var mappedMessages: [EngineMessage] = []
+                if let messages = self.items.first(where: { $0.shortcut == shortcut })?.messages {
+                    var nextId: Int32 = 1
+                    for message in messages {
+                        var mappedMessage = message._asMessage()
+                        mappedMessage = mappedMessage.withUpdatedId(id: MessageId(peerId: component.context.account.peerId, namespace: 0, id: nextId))
+                        mappedMessage = mappedMessage.withUpdatedStableId(stableId: UInt32(nextId))
+                        mappedMessage = mappedMessage.withUpdatedTimestamp(nextId)
+                        mappedMessages.append(EngineMessage(mappedMessage))
+                        
+                        nextId += 1
+                    }
+                }
+                let contents = AutomaticBusinessMessageSetupChatContents(
                     context: component.context,
-                    messages: self.items.first(where: { $0.shortcut == shortcut })?.messages ?? [],
+                    messages: mappedMessages,
                     kind: .quickReplyMessageInput(shortcut: shortcut)
                 )
                 let chatController = component.context.sharedContext.makeChatController(
@@ -359,7 +382,7 @@ final class QuickReplySetupScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    let messages = messages.map(EngineMessage.init)
+                    let messages = messages.reversed().map(EngineMessage.init)
                     
                     if messages.isEmpty {
                         if let index = self.items.firstIndex(where: { $0.shortcut == shortcut }) {
@@ -367,12 +390,9 @@ final class QuickReplySetupScreenComponent: Component {
                         }
                     } else {
                         if let index = self.items.firstIndex(where: { $0.shortcut == shortcut }) {
-                            self.items[index].messages = messages
+                            self.items[index] = QuickReplyMessageShortcut(id: self.items[index].id, shortcut: self.items[index].shortcut, messages: messages)
                         } else {
-                            self.items.insert(ShortcutItem(
-                                shortcut: shortcut,
-                                messages: messages
-                            ), at: 0)
+                            self.items.insert(QuickReplyMessageShortcut(id: Int32.random(in: Int32.min ... Int32.max), shortcut: shortcut, messages: messages), at: 0)
                         }
                     }
                     
@@ -406,6 +426,147 @@ final class QuickReplySetupScreenComponent: Component {
             self.contentListNode?.clearHighlightAnimated(true)
         }
         
+        private func updateNavigationBar(
+            component: QuickReplySetupScreenComponent,
+            theme: PresentationTheme,
+            strings: PresentationStrings,
+            size: CGSize,
+            insets: UIEdgeInsets,
+            statusBarHeight: CGFloat,
+            transition: Transition,
+            deferScrollApplication: Bool
+        ) -> CGFloat {
+            var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
+            if self.isEditing {
+                rightButtons.append(AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                    content: .text(title: strings.Common_Done, isBold: true),
+                    pressed: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.isEditing = false
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    }
+                ))))
+            } else {
+                rightButtons.append(AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
+                    content: .text(title: strings.Common_Edit, isBold: false),
+                    pressed: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.isEditing = true
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    }
+                ))))
+            }
+            let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
+                title: "Quick Replies",
+                navigationBackTitle: nil,
+                titleComponent: nil,
+                chatListTitle: nil,
+                leftButton: nil,
+                rightButtons: rightButtons,
+                backTitle: "Back",
+                backPressed: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.environment?.controller()?.dismiss()
+                }
+            )
+            
+            let navigationBarSize = self.navigationBarView.update(
+                transition: transition,
+                component: AnyComponent(ChatListNavigationBar(
+                    context: component.context,
+                    theme: theme,
+                    strings: strings,
+                    statusBarHeight: statusBarHeight,
+                    sideInset: insets.left,
+                    isSearchActive: self.isSearchDisplayControllerActive,
+                    isSearchEnabled: !self.isEditing,
+                    primaryContent: headerContent,
+                    secondaryContent: nil,
+                    secondaryTransition: 0.0,
+                    storySubscriptions: nil,
+                    storiesIncludeHidden: false,
+                    uploadProgress: [:],
+                    tabsNode: nil,
+                    tabsNodeIsSearch: false,
+                    accessoryPanelContainer: nil,
+                    accessoryPanelContainerHeight: 0.0,
+                    activateSearch: { [weak self] searchContentNode in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.isSearchDisplayControllerActive = true
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    },
+                    openStatusSetup: { _ in
+                    },
+                    allowAutomaticOrder: {
+                    }
+                )),
+                environment: {},
+                containerSize: size
+            )
+            if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+                if deferScrollApplication {
+                    navigationBarComponentView.deferScrollApplication = true
+                }
+                
+                if navigationBarComponentView.superview == nil {
+                    self.addSubview(navigationBarComponentView)
+                }
+                transition.setFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
+                
+                return navigationBarSize.height
+            } else {
+                return 0.0
+            }
+        }
+        
+        private func updateNavigationScrolling(navigationHeight: CGFloat, transition: Transition) {
+            var mainOffset: CGFloat
+            if self.items.isEmpty {
+                mainOffset = navigationHeight
+            } else {
+                if let contentListNode = self.contentListNode {
+                    switch contentListNode.visibleContentOffset() {
+                    case .none:
+                        mainOffset = 0.0
+                    case .unknown:
+                        mainOffset = navigationHeight
+                    case let .known(value):
+                        mainOffset = value
+                    }
+                } else {
+                    mainOffset = navigationHeight
+                }
+            }
+            
+            mainOffset = min(mainOffset, ChatListNavigationBar.searchScrollHeight)
+            if abs(mainOffset) < 0.1 {
+                mainOffset = 0.0
+            }
+            
+            let resultingOffset = mainOffset
+            
+            var offset = resultingOffset
+            if self.isSearchDisplayControllerActive {
+                offset = 0.0
+            }
+            
+            if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+                navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: false, forceUpdate: false, transition: transition.withUserData(ChatListNavigationBar.AnimationHint(
+                    disableStoriesAnimations: false,
+                    crossfadeStoryPeers: false
+                )))
+            }
+        }
+        
         func update(component: QuickReplySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -413,15 +574,8 @@ final class QuickReplySetupScreenComponent: Component {
             }
             
             if self.component == nil {
-                let _ = (component.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
-                )
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let self else {
-                        return
-                    }
-                    self.accountPeer = peer
-                })
+                self.accountPeer = component.initialData.accountPeer
+                self.items = component.initialData.shortcutMessages.shortcuts
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -479,28 +633,63 @@ final class QuickReplySetupScreenComponent: Component {
                 }
             }
             
+            let navigationHeight = self.updateNavigationBar(
+                component: component,
+                theme: environment.theme,
+                strings: environment.strings,
+                size: availableSize,
+                insets: environment.safeInsets,
+                statusBarHeight: environment.statusBarHeight,
+                transition: transition,
+                deferScrollApplication: true
+            )
+            self.navigationHeight = navigationHeight
+            
             let contentListNode: ContentListNode
             if let current = self.contentListNode {
                 contentListNode = current
             } else {
                 contentListNode = ContentListNode(parentView: self, context: component.context)
                 self.contentListNode = contentListNode
-                self.addSubview(contentListNode.view)
+                
+                contentListNode.visibleContentOffsetChanged = { [weak self] offset in
+                    guard let self else {
+                        return
+                    }
+                    guard let navigationHeight = self.navigationHeight else {
+                        return
+                    }
+                    
+                    self.updateNavigationScrolling(navigationHeight: navigationHeight, transition: .immediate)
+                }
+                
+                if let navigationBarComponentView = self.navigationBarView.view {
+                    self.insertSubview(contentListNode.view, belowSubview: navigationBarComponentView)
+                } else {
+                    self.addSubview(contentListNode.view)
+                }
             }
             
             transition.setFrame(view: contentListNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            contentListNode.update(size: availableSize, insets: UIEdgeInsets(top: environment.navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right), transition: transition)
+            contentListNode.update(size: availableSize, insets: UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right), transition: transition)
             
             var entries: [ContentEntry] = []
             if let accountPeer = self.accountPeer {
                 entries.append(.add)
                 for item in self.items {
-                    entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count))
+                    entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing))
                 }
             }
-            contentListNode.setEntries(entries: entries, animated: false)
+            contentListNode.setEntries(entries: entries, animated: !transition.animation.isImmediate)
             
             contentListNode.isHidden = self.items.isEmpty
+            
+            self.updateNavigationScrolling(navigationHeight: navigationHeight, transition: transition)
+            
+            if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
+                navigationBarComponentView.deferScrollApplication = false
+                navigationBarComponentView.applyCurrentScroll(transition: transition)
+            }
             
             return availableSize
         }
@@ -516,19 +705,28 @@ final class QuickReplySetupScreenComponent: Component {
 }
 
 public final class QuickReplySetupScreen: ViewControllerComponentContainer {
+    public final class InitialData: QuickReplySetupScreenInitialData {
+        let accountPeer: EnginePeer?
+        let shortcutMessages: QuickReplyMessageShortcutsState
+        
+        init(
+            accountPeer: EnginePeer?,
+            shortcutMessages: QuickReplyMessageShortcutsState
+        ) {
+            self.accountPeer = accountPeer
+            self.shortcutMessages = shortcutMessages
+        }
+    }
+    
     private let context: AccountContext
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, initialData: InitialData) {
         self.context = context
         
         super.init(context: context, component: QuickReplySetupScreenComponent(
-            context: context
-        ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        //TODO:localize
-        self.title = "Quick Replies"
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+            context: context,
+            initialData: initialData
+        ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)
         
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? QuickReplySetupScreenComponent.View else {
@@ -559,5 +757,21 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public static func initialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {
+        return combineLatest(
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+            ),
+            context.engine.accountData.shortcutMessages()
+            |> take(1)
+        )
+        |> map { accountPeer, shortcutMessages -> QuickReplySetupScreenInitialData in
+            return InitialData(
+                accountPeer: accountPeer,
+                shortcutMessages: shortcutMessages
+            )
+        }
     }
 }

@@ -59,6 +59,10 @@ final class BusinessSetupScreenComponent: Component {
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
+        private var businessHours: TelegramBusinessHours?
+        private var businessLocation: TelegramBusinessLocation?
+        private var dataDisposable: Disposable?
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -85,6 +89,7 @@ final class BusinessSetupScreenComponent: Component {
         }
         
         deinit {
+            self.dataDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -137,6 +142,20 @@ final class BusinessSetupScreenComponent: Component {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            if self.dataDisposable == nil {
+                self.dataDisposable = (component.context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.BusinessHours(id: component.context.account.peerId),
+                    TelegramEngine.EngineData.Item.Peer.BusinessLocation(id: component.context.account.peerId)
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] businessHours, businessLocation in
+                    guard let self else {
+                        return
+                    }
+                    self.businessHours = businessHours
+                    self.businessLocation = businessLocation
+                })
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -245,7 +264,8 @@ final class BusinessSetupScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.environment?.controller()?.push(component.context.sharedContext.makeBusinessLocationSetupScreen(context: component.context))
+                    self.environment?.controller()?.push(component.context.sharedContext.makeBusinessLocationSetupScreen(context: component.context, initialValue: self.businessLocation, completion: { _ in
+                    }))
                 }
             ))
             items.append(Item(
@@ -256,7 +276,7 @@ final class BusinessSetupScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.environment?.controller()?.push(component.context.sharedContext.makeBusinessHoursSetupScreen(context: component.context))
+                    self.environment?.controller()?.push(component.context.sharedContext.makeBusinessHoursSetupScreen(context: component.context, initialValue: self.businessHours, completion: { _ in }))
                 }
             ))
             items.append(Item(
@@ -264,10 +284,19 @@ final class BusinessSetupScreenComponent: Component {
                 title: "Quick Replies",
                 subtitle: "Set up shortcuts with rich text and media to respond to messages faster.",
                 action: { [weak self] in
-                    guard let self, let component = self.component, let environment = self.environment else {
+                    guard let self, let component = self.component else {
                         return
                     }
-                    environment.controller()?.push(component.context.sharedContext.makeQuickReplySetupScreen(context: component.context))
+                    
+                    let _ = (component.context.sharedContext.makeQuickReplySetupScreenInitialData(context: component.context)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] initialData in
+                        guard let self, let component = self.component, let environment = self.environment else {
+                            return
+                        }
+                        
+                        environment.controller()?.push(component.context.sharedContext.makeQuickReplySetupScreen(context: component.context, initialData: initialData))
+                    })
                 }
             ))
             items.append(Item(
@@ -278,7 +307,7 @@ final class BusinessSetupScreenComponent: Component {
                     guard let self, let component = self.component, let environment = self.environment else {
                         return
                     }
-                    environment.controller()?.push(component.context.sharedContext.makeGreetingMessageSetupScreen(context: component.context, isAwayMode: false))
+                    environment.controller()?.push(component.context.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: component.context, isAwayMode: false))
                 }
             ))
             items.append(Item(
@@ -289,7 +318,7 @@ final class BusinessSetupScreenComponent: Component {
                     guard let self, let component = self.component, let environment = self.environment else {
                         return
                     }
-                    environment.controller()?.push(component.context.sharedContext.makeGreetingMessageSetupScreen(context: component.context, isAwayMode: true))
+                    environment.controller()?.push(component.context.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: component.context, isAwayMode: true))
                 }
             ))
             items.append(Item(

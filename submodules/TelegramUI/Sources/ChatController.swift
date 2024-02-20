@@ -9460,6 +9460,56 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
+        }, sendShortcut: { [weak self] shortcut in
+            guard let self else {
+                return
+            }
+            
+            self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                guard let self else {
+                    return
+                }
+                self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+                })
+            }, nil)
+            
+            var messages: [EnqueueMessage] = []
+            for message in shortcut.messages {
+                var attributes: [MessageAttribute] = []
+                let entities = generateTextEntities(message.text, enabledTypes: .all)
+                if !entities.isEmpty {
+                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                }
+                
+                messages.append(.message(
+                    text: message.text,
+                    attributes: attributes,
+                    inlineStickers: [:],
+                    mediaReference: message.media.first.flatMap { AnyMediaReference.standalone(media: $0) },
+                    threadId: self.chatLocation.threadId,
+                    replyToMessageId: nil,
+                    replyToStoryId: nil,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                ))
+            }
+            
+            self.sendMessages(messages)
+        }, openEditShortcuts: { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = (self.context.sharedContext.makeQuickReplySetupScreenInitialData(context: self.context)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] initialData in
+                guard let self else {
+                    return
+                }
+                
+                self.push(self.context.sharedContext.makeQuickReplySetupScreen(context: self.context, initialData: initialData))
+            })
         }, sendBotStart: { [weak self] payload in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 strongSelf.startBot(payload)
