@@ -557,6 +557,7 @@ private enum RevealOptionKey: Int32 {
     case hidePsa
     case open
     case close
+    case edit
 }
 
 private func canArchivePeer(id: EnginePeer.Id, accountPeerId: EnginePeer.Id) -> Bool {
@@ -3123,6 +3124,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
                             ]
                             peerLeftRevealOptions = []
+                        } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                            peerLeftRevealOptions = []
+                            if customMessageListData.commandPrefix != nil {
+                                //TODO:localize
+                                peerRevealOptions = [
+                                    ItemListRevealOption(key: RevealOptionKey.edit.rawValue, title: "Edit", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.neutral2.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral2.foregroundColor),
+                                    ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: "Delete", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)
+                                ]
+                            } else {
+                                peerRevealOptions = []
+                            }
                         } else if promoInfo == nil {
                             peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: !isAccountPeer ? (currentMutedIconImage != nil) : nil, location: item.chatListLocation, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, filterData: item.filterData)
                             if case let .chat(itemPeer) = contentPeer {
@@ -4356,6 +4368,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     self.revealOptionsInteractivelyClosed()
                     self.customAnimationInProgress = false
                 }
+            case RevealOptionKey.edit.rawValue:
+                item.interaction.editPeer(item)
+                close = true
             default:
                 break
             }

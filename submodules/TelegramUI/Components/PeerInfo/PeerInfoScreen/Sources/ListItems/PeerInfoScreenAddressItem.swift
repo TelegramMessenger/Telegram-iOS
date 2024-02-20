@@ -90,7 +90,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
             itemNode = current
             addressItem.updateNode(async: { $0() }, node: {
                 return itemNode
-            }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+            }, params: params, previousItem: topItem != nil ? addressItem : nil, nextItem: bottomItem != nil ? addressItem : nil, animation: .None, completion: { (layout, apply) in
                 let nodeFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.size.height))
                 
                 itemNode.contentSize = layout.contentSize
@@ -119,7 +119,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
         self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
-        self.bottomSeparatorNode.isHidden = hasBottomCorners
+        self.bottomSeparatorNode.isHidden = hasBottomCorners || bottomItem != nil
         
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
         

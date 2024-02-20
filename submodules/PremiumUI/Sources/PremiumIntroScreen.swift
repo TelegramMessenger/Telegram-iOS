@@ -1981,15 +1981,38 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         action: {
                             switch perk {
                             case .location:
-                                push(accountContext.sharedContext.makeBusinessLocationSetupScreen(context: accountContext))
+                                let _ = (accountContext.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.BusinessLocation(id: accountContext.account.peerId)
+                                )
+                                |> deliverOnMainQueue).start(next: { [weak accountContext] businessLocation in
+                                    guard let accountContext else {
+                                        return
+                                    }
+                                    push(accountContext.sharedContext.makeBusinessLocationSetupScreen(context: accountContext, initialValue: businessLocation, completion: { _ in }))
+                                })
                             case .hours:
-                                push(accountContext.sharedContext.makeBusinessHoursSetupScreen(context: accountContext))
+                                let _ = (accountContext.engine.data.get(
+                                    TelegramEngine.EngineData.Item.Peer.BusinessHours(id: accountContext.account.peerId)
+                                )
+                                |> deliverOnMainQueue).start(next: { [weak accountContext] businessHours in
+                                    guard let accountContext else {
+                                        return
+                                    }
+                                    push(accountContext.sharedContext.makeBusinessHoursSetupScreen(context: accountContext, initialValue: businessHours, completion: { _ in }))
+                                })
                             case .quickReplies:
-                                push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext))
+                                let _ = (accountContext.sharedContext.makeQuickReplySetupScreenInitialData(context: accountContext)
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                    guard let accountContext else {
+                                        return
+                                    }
+                                    push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext, initialData: initialData))
+                                })
                             case .greetings:
-                                push(accountContext.sharedContext.makeGreetingMessageSetupScreen(context: accountContext, isAwayMode: false))
+                                push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: false))
                             case .awayMessages:
-                                push(accountContext.sharedContext.makeGreetingMessageSetupScreen(context: accountContext, isAwayMode: true))
+                                push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: true))
                             case .chatbots:
                                 push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
                             }

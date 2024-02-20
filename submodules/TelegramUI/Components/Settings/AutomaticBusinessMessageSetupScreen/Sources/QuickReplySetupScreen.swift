@@ -139,7 +139,11 @@ final class QuickReplySetupScreenComponent: Component {
                     },
                     setPeerThreadMuted: { _, _, _ in
                     },
-                    deletePeer: { _, _ in
+                    deletePeer: { [weak listNode] _, _ in
+                        guard let listNode, let parentView = listNode.parentView else {
+                            return
+                        }
+                        parentView.openDeleteShortcut(shortcut: item.shortcut)
                     },
                     deletePeerThread: { _, _ in
                     },
@@ -184,6 +188,12 @@ final class QuickReplySetupScreenComponent: Component {
                     openStories: { _, _ in
                     },
                     dismissNotice: { _ in
+                    },
+                    editPeer: { [weak listNode] _ in
+                        guard let listNode, let parentView = listNode.parentView else {
+                            return
+                        }
+                        parentView.openEditShortcut(shortcut: item.shortcut)
                     }
                 )
                 
@@ -237,7 +247,7 @@ final class QuickReplySetupScreenComponent: Component {
                     hasActiveRevealControls: false,
                     selected: false,
                     header: nil,
-                    enableContextActions: false,
+                    enableContextActions: true,
                     hiddenOffset: false,
                     interaction: chatListNodeInteraction
                 )
@@ -313,6 +323,7 @@ final class QuickReplySetupScreenComponent: Component {
         private var environment: EnvironmentType?
         
         private var items: [QuickReplyMessageShortcut] = []
+        private var itemsDisposable: Disposable?
         private var messagesDisposable: Disposable?
         
         private var isEditing: Bool = false
@@ -329,6 +340,7 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         deinit {
+            self.itemsDisposable?.dispose()
             self.messagesDisposable?.dispose()
         }
 
@@ -379,7 +391,7 @@ final class QuickReplySetupScreenComponent: Component {
                 self.messagesDisposable?.dispose()
                 self.messagesDisposable = (contents.messages
                 |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
-                    guard let self else {
+                    guard let self, let component = self.component else {
                         return
                     }
                     let messages = messages.reversed().map(EngineMessage.init)
@@ -395,6 +407,8 @@ final class QuickReplySetupScreenComponent: Component {
                             self.items.insert(QuickReplyMessageShortcut(id: Int32.random(in: Int32.min ... Int32.max), shortcut: shortcut, messages: messages), at: 0)
                         }
                     }
+                    
+                    component.context.engine.accountData.updateShortcutMessages(state: QuickReplyMessageShortcutsState(shortcuts: self.items))
                     
                     self.state?.updated(transition: .immediate)
                 })
@@ -416,6 +430,13 @@ final class QuickReplySetupScreenComponent: Component {
                         return
                     }
                     if let value, !value.isEmpty {
+                        if self.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
+                            if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
+                                contentNode.setErrorText(errorText: "Shortcut with that name already exists")
+                            }
+                            return
+                        }
+                        
                         alertController?.dismissAnimated()
                         self.openQuickReplyChat(shortcut: value)
                     }
@@ -424,6 +445,81 @@ final class QuickReplySetupScreenComponent: Component {
             }
             
             self.contentListNode?.clearHighlightAnimated(true)
+        }
+        
+        func openEditShortcut(shortcut: String) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let currentValue = shortcut
+            
+            var completion: ((String?) -> Void)?
+            let alertController = quickReplyNameAlertController(
+                context: component.context,
+                text: "Edit Shortcut",
+                subtext: "Add a new name for your shortcut.",
+                value: currentValue,
+                characterLimit: 32,
+                apply: { value in
+                    completion?(value)
+                }
+            )
+            completion = { [weak self, weak alertController] value in
+                guard let self, let component = self.component else {
+                    alertController?.dismissAnimated()
+                    return
+                }
+                if let value, !value.isEmpty {
+                    if value == currentValue {
+                        alertController?.dismissAnimated()
+                        return
+                    }
+                    
+                    var shortcuts = self.items
+                    guard let index = shortcuts.firstIndex(where: { $0.shortcut.lowercased() == currentValue }) else {
+                        alertController?.dismissAnimated()
+                        return
+                    }
+                    
+                    if shortcuts.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
+                        if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
+                            contentNode.setErrorText(errorText: "Shortcut with that name already exists")
+                        }
+                    } else {
+                        shortcuts[index] = QuickReplyMessageShortcut(
+                            id: shortcuts[index].id,
+                            shortcut: value,
+                            messages: shortcuts[index].messages
+                        )
+                        self.items = shortcuts
+                        let updatedShortcutMessages = QuickReplyMessageShortcutsState(shortcuts: shortcuts)
+                        component.context.engine.accountData.updateShortcutMessages(state: updatedShortcutMessages)
+                        
+                        alertController?.dismissAnimated()
+                    }
+                }
+            }
+            self.environment?.controller()?.present(alertController, in: .window(.root))
+        }
+        
+        func openDeleteShortcut(shortcut: String) {
+            guard let component = self.component else {
+                return
+            }
+            
+            var shortcuts = self.items
+            guard let index = shortcuts.firstIndex(where: { $0.shortcut.lowercased() == shortcut }) else {
+                return
+            }
+            
+            shortcuts.remove(at: index)
+            self.items = shortcuts
+            
+            self.state?.updated(transition: .spring(duration: 0.4))
+            
+            let updatedShortcutMessages = QuickReplyMessageShortcutsState(shortcuts: shortcuts)
+            component.context.engine.accountData.updateShortcutMessages(state: updatedShortcutMessages)
         }
         
         private func updateNavigationBar(
@@ -472,7 +568,10 @@ final class QuickReplySetupScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.environment?.controller()?.dismiss()
+                    
+                    if self.attemptNavigation(complete: {}) {
+                        self.environment?.controller()?.dismiss()
+                    }
                 }
             )
             
@@ -576,6 +675,17 @@ final class QuickReplySetupScreenComponent: Component {
             if self.component == nil {
                 self.accountPeer = component.initialData.accountPeer
                 self.items = component.initialData.shortcutMessages.shortcuts
+                
+                self.itemsDisposable = (component.context.engine.accountData.shortcutMessages()
+                |> deliverOnMainQueue).start(next: { [weak self] shortcutMessages in
+                    guard let self else {
+                        return
+                    }
+                    self.items = shortcutMessages.shortcuts
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
+                })
             }
             
             let environment = environment[EnvironmentType.self].value

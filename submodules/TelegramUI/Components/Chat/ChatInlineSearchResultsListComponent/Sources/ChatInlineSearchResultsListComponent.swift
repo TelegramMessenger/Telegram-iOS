@@ -617,6 +617,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         openStories: { _, _ in
                         },
                         dismissNotice: { _ in
+                        },
+                        editPeer: { _ in
                         }
                     )
                     self.chatListNodeInteraction = chatListNodeInteraction

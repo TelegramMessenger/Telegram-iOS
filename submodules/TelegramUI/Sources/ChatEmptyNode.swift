@@ -24,8 +24,8 @@ private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
 }
 
-private let titleFont = Font.medium(15.0)
-private let messageFont = Font.regular(14.0)
+private let titleFont = Font.semibold(15.0)
+private let messageFont = Font.regular(13.0)
 
 private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNodeContent {
     private let textNode: ImmediateTextNode
@@ -739,8 +739,8 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     centerText = false
                     titleString = "New Quick Reply"
                     strings = [
-                        "Enter a message below that will be sent in chats when you type \"**/\(shortcut)\"**.",
-                        "You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu."
+                        "· Enter a message below that will be sent in chats when you type \"**/\(shortcut)\"**.",
+                        "· You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu."
                     ]
                 }
             } else {

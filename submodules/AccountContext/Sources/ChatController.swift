@@ -1093,6 +1093,8 @@ public protocol ChatCustomContentsProtocol: AnyObject {
     func enqueueMessages(messages: [EnqueueMessage])
     func deleteMessages(ids: [EngineMessage.Id])
     func editMessage(id: EngineMessage.Id, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool)
+    
+    func quickReplyUpdateShortcut(value: String)
 }
 
 public enum ChatHistoryListDisplayHeaders {

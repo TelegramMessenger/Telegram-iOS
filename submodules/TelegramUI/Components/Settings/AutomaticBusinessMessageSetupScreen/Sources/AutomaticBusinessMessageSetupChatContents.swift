@@ -168,7 +168,7 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
         }
     }
     
-    let kind: ChatCustomContentsKind
+    var kind: ChatCustomContentsKind
 
     var messages: Signal<[Message], NoError> {
         return self.impl.signalWith({ impl, subscriber in
@@ -209,5 +209,9 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
         self.impl.with { impl in
             impl.editMessage(id: id, text: text, media: media, entities: entities, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
         }
+    }
+    
+    func quickReplyUpdateShortcut(value: String) {
+        self.kind = .quickReplyMessageInput(shortcut: value)
     }
 }

@@ -83,7 +83,7 @@ open class AlertController: ViewController, StandalonePresentableController, Key
             }
         }
     }
-    private let contentNode: AlertContentNode
+    public let contentNode: AlertContentNode
     private let allowInputInset: Bool
     
     private weak var existingAlertController: AlertController?

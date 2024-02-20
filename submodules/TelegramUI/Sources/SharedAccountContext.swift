@@ -51,7 +51,6 @@ import PeerInfoScreen
 import ChatQrCodeScreen
 import UndoUI
 import ChatMessageNotificationItem
-import BusinessSetupScreen
 import ChatbotSetupScreen
 import BusinessLocationSetupScreen
 import BusinessHoursSetupScreen

@@ -15,6 +15,7 @@ import ChatContextQuery
 import ChatInputContextPanelNode
 import ChatListUI
 import ComponentFlow
+import ComponentDisplayAdapters
 
 private enum CommandChatInputContextPanelEntryStableId: Hashable {
     case editShortcuts
@@ -165,6 +166,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     openStories: { _, _ in
                     },
                     dismissNotice: { _ in
+                    },
+                    editPeer: { _ in
                     }
                 )
                 
@@ -479,7 +482,11 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve)
         
+        self.contentOffsetChangeTransition = Transition(transition)
+        
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        self.contentOffsetChangeTransition = nil
         
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {

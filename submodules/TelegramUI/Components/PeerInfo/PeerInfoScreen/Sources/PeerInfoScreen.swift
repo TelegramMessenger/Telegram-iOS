@@ -1167,72 +1167,18 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             if let businessHours = cachedData.businessHours {
                 //TODO:localize
-                var businessHoursText: String = ""
-                let days = businessHours.splitIntoWeekDays()
-                for i in 0 ..< days.count {
-                    let title: String
-                    //TODO:localize
-                    switch i {
-                    case 0:
-                        title = "Monday"
-                    case 1:
-                        title = "Tuesday"
-                    case 2:
-                        title = "Wednesday"
-                    case 3:
-                        title = "Thursday"
-                    case 4:
-                        title = "Friday"
-                    case 5:
-                        title = "Saturday"
-                    case 6:
-                        title = "Sunday"
-                    default:
-                        title = " "
-                    }
-                    
-                    //TODO:localize
-                    if !businessHoursText.isEmpty {
-                        businessHoursText += "\n"
-                    }
-                    businessHoursText += "\(title): "
-                    switch days[i] {
-                    case .open:
-                        businessHoursText += "open 24 hours"
-                    case .closed:
-                        businessHoursText += "closed"
-                    case let .intervals(intervals):
-                        func clipMinutes(_ value: Int) -> Int {
-                            return value % (24 * 60)
-                        }
-                        
-                        var resultText: String = ""
-                        for range in intervals {
-                            if !resultText.isEmpty {
-                                resultText.append(", ")
-                            }
-                            let startHours = clipMinutes(range.startMinute) / 60
-                            let startMinutes = clipMinutes(range.startMinute) % 60
-                            let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
-                            let endHours = clipMinutes(range.endMinute) / 60
-                            let endMinutes = clipMinutes(range.endMinute) % 60
-                            let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
-                            resultText.append("\(startText)\u{00a0}- \(endText)")
-                        }
-                        businessHoursText += resultText
-                    }
-                }
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 300, label: "business hours", text: businessHoursText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
-                    interaction.requestLayout(false)
+                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: {
+                    interaction.requestLayout(true)
                 }))
             }
             
             if let businessLocation = cachedData.businessLocation {
+                //TODO:localize
                 if let coordinates = businessLocation.coordinates {
                     let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: coordinates.latitude, longitude: coordinates.longitude, width: 90, height: 90))
                     items[.peerInfo]!.append(PeerInfoScreenAddressItem(
                         id: 301,
-                        label: "",
+                        label: "location",
                         text: businessLocation.address,
                         imageSignal: imageSignal,
                         action: {
@@ -1242,7 +1188,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 } else {
                     items[.peerInfo]!.append(PeerInfoScreenAddressItem(
                         id: 301,
-                        label: "",
+                        label: "location",
                         text: businessLocation.address,
                         imageSignal: nil,
                         action: nil

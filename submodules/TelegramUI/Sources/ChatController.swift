@@ -719,6 +719,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
+            if case let .customChatContents(customChatContents) = strongSelf.presentationInterfaceState.subject {
+                switch customChatContents.kind {
+                case .greetingMessageInput, .awayMessageInput:
+                    break
+                case .quickReplyMessageInput:
+                    if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
+                        //TODO:localize
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: "Remove Shortcut", text: "You didn't create a quick reply message. Exiting will remove the shortcut.", actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                            TextAlertAction(type: .defaultAction, title: "Remove", action: { [weak strongSelf] in
+                                strongSelf?.dismiss()
+                            })
+                        ]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            }
+            
             return true
         }
         
@@ -12811,7 +12830,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .search:
             self.interfaceInteraction?.beginMessageSearch(.everything, "")
         case .dismiss:
-            self.dismiss()
+            if self.attemptNavigation({}) {
+                self.dismiss()
+            }
         case .clearCache:
             let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
             self.present(controller, in: .window(.root))
@@ -13019,6 +13040,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .customChatContents:
                 break
             }
+        case .edit:
+            self.editChat()
         }
     }
     
