@@ -112,6 +112,10 @@ swift_library(
         "//submodules/AlertUI",
         "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
         "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
+        "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
     ],
     visibility = [
         "//visibility:public",

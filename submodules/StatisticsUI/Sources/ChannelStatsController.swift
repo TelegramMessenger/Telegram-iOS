@@ -1311,9 +1311,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         var headerItem: BoostHeaderItem?
         var leftNavigationButton: ItemListNavigationButton?
         var boostsOnly = false
-        if isGroup, section == .boosts {
+        if section == .boosts {
             title = .text("")
-            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostData, title: presentationData.strings.GroupBoost_Title, text: presentationData.strings.GroupBoost_Info, openBoost: {
+            
+            let headerTitle = isGroup ? presentationData.strings.GroupBoost_Title : presentationData.strings.ChannelBoost_Title
+            let headerText = isGroup ? presentationData.strings.GroupBoost_Info : presentationData.strings.ChannelBoost_Info
+            
+            headerItem = BoostHeaderItem(context: context, theme: presentationData.theme, strings: presentationData.strings, status: boostData, title: headerTitle, text: headerText, openBoost: {
                 openBoostImpl?(false)
             }, createGiveaway: {
                 arguments.openGifts()

@@ -5742,16 +5742,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
-                        if case .group = channel.info {
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_Group_Boost, badge: ContextMenuActionBadge(value: presentationData.strings.Settings_New, color: .accent, style: .label), icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, f in
-                                f(.dismissWithoutContent)
-                                
-                                self?.openBoost()
-                            })))
+                        let boostTitle: String
+                        var isNew = false
+                        switch channel.info {
+                        case .group:
+                            boostTitle = presentationData.strings.PeerInfo_Group_Boost
+                            isNew = true
+                        case .broadcast:
+                            boostTitle = presentationData.strings.PeerInfo_Channel_Boost
                         }
                         
+                        items.append(.action(ContextMenuActionItem(text: boostTitle, badge: isNew ? ContextMenuActionBadge(value: presentationData.strings.Settings_New, color: .accent, style: .label) : nil, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            self?.openBoost()
+                        })))
+                                                
                         if channel.hasPermission(.editStories) {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_Channel_ArchivedStories, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
@@ -8788,7 +8796,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })
         case .chatFolders:
-            push(chatListFilterPresetListController(context: self.context, mode: .default))
+            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: false, dismissed: nil)
+            push(controller)
         case .notificationsAndSounds:
             if let settings = self.data?.globalSettings {
                 push(notificationsAndSoundsController(context: self.context, exceptionsList: settings.notificationExceptions))
