@@ -678,8 +678,6 @@ public class ContactsController: ViewController {
                     return false
                 }
                 if value == .commit {
-                    let presentationData = self.presentationData
-                    
                     let deleteContactsFromDevice: Signal<Never, NoError>
                     if let contactDataManager = self.context.sharedContext.contactDataManager {
                         deleteContactsFromDevice = combineLatest(peerIds.map { contactDataManager.deleteContactWithAppSpecificReference(peerId: $0) }
