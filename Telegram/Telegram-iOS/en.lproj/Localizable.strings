@@ -11341,7 +11341,6 @@ to respond to messages faster.";
 "Business.Title" = "Telegram Business";
 "Business.Description" = "Turn your account into a **business page** with these additional features.";
 "Business.SubscribedDescription" = "You have now unlocked these additional business features.";
-"Business.PlusPremiumFeatures" = "+20 MORE TELEGRAM PREMIUM FEATURES";
 
 "Business.Location" = "Location";
 "Business.OpeningHours" = "Opening Hours";
@@ -11356,3 +11355,24 @@ to respond to messages faster.";
 "Business.GreetingMessagesInfo" = "Create greetings that will be automatically sent to new customers.";
 "Business.AwayMessagesInfo" = "Define messages that are automatically sent when you are off.";
 "Business.ChatbotsInfo" = "Add any third-party chatbots that will process customer interactions.";
+
+"Business.MoreFeaturesTitle" = "MORE BUSINESS FEATURES";
+"Business.MoreFeaturesInfo" = "Check this section later for new business features.";
+
+"Business.SetEmojiStatus" = "Set Emoji Status";
+"Business.SetEmojiStatusInfo" = "Display the current status of your business next to your name.";
+
+"Business.TagYourChats" = "Tag Your Chats";
+"Business.TagYourChatsInfo" = "Add colorful labels to chats for faster access in chat list.";
+
+"Business.AddPost" = "Add a Post";
+"Business.AddPostInfo" = "Publish photos and videos of your goods or services on your page.";
+
+"StoryList.SavedEmptyPosts.Title" = "No posts yet...";
+"StoryList.SavedEmptyPosts.Text" = "Publish photos and videos to display on your profile page.";
+"StoryList.SavedAddAction" = "Add a Post";
+
+"PeerInfo.Channel.Boost" = "Boost Channel";
+
+"ChannelBoost.Title" = "Boost Channel";
+"ChannelBoost.Info" = "Subscribers of your channel can **boost** it so that it **levels up** and gets **exclusive features**.";

@@ -162,8 +162,26 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
     }
     
     Queue.mainQueue().justDispatch {
-        controller.updateData(countryCode: AuthorizationSequenceController.defaultCountryCode(), countryName: nil, number: "")
-        controller.updateCountryCode()
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        |> deliverOnMainQueue).start(next: { accountPeer in
+            guard let accountPeer, case let .user(user) = accountPeer else {
+                return
+            }
+            
+            let initialCountryCode: Int32
+            if let phone = user.phone {
+                if let (_, countryCode) = lookupCountryIdByNumber(phone, configuration: context.currentCountriesConfiguration.with { $0 }), let codeValue = Int32(countryCode.code) {
+                    initialCountryCode = codeValue
+                } else {
+                    initialCountryCode = AuthorizationSequenceController.defaultCountryCode()
+                }
+            } else {
+                initialCountryCode = AuthorizationSequenceController.defaultCountryCode()
+            }
+            controller.updateData(countryCode: initialCountryCode, countryName: nil, number: "")
+            controller.updateCountryCode()
+        })
+
     }
     
     return controller

@@ -1296,18 +1296,9 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     }
     
     public static func defaultCountryCode() -> Int32 {
-        var countryId: String? = nil
-        let networkInfo = CTTelephonyNetworkInfo()
-        if let carrier = networkInfo.serviceSubscriberCellularProviders?.values.first {
-            countryId = carrier.isoCountryCode
-        }
-        
-        if countryId == nil {
-            countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
-        }
-        
+        let countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
+     
         var countryCode: Int32 = 1
-        
         if let countryId = countryId {
             let normalizedId = countryId.uppercased()
             for (code, idAndName) in countryCodeToIdAndName {

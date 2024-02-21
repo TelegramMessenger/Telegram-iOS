@@ -516,6 +516,64 @@ func chatHistoryEntriesForView(
         }
     }
     
+    if let subject = associatedData.subject, case let .customChatContents(customChatContents) = subject, case .quickReplyMessageInput = customChatContents.kind {
+        if !view.isLoading && view.laterId == nil && !view.entries.isEmpty {
+            for i in 0 ..< 2 {
+                let string = i == 1 ? "To edit or delete your quick reply, tap an hold on it." : "To use this quick reply in a chat, type / and select the shortcut from the list."
+                let formattedString = parseMarkdownIntoAttributedString(
+                    string,
+                    attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .black),
+                        bold: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .black),
+                        link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white),
+                        linkAttribute: { url in
+                            return ("URL", url)
+                        }
+                    )
+                )
+                var entities: [MessageTextEntity] = []
+                formattedString.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: formattedString.length), options: [], using: { value, range, _ in
+                    if let value = value as? UIColor, value == .white {
+                        entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Bold))
+                    }
+                })
+                formattedString.enumerateAttribute(NSAttributedString.Key(rawValue: "URL"), in: NSRange(location: 0, length: formattedString.length), options: [], using: { value, range, _ in
+                    if value != nil {
+                        entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: context.account.peerId)))
+                    }
+                })
+                
+                let message = Message(
+                    stableId: UInt32.max - 1001 - UInt32(i),
+                    stableVersion: 0,
+                    id: MessageId(peerId: context.account.peerId, namespace: Namespaces.Message.Local, id: 123 - Int32(i)),
+                    globallyUniqueId: nil,
+                    groupingKey: nil,
+                    groupInfo: nil,
+                    threadId: nil,
+                    timestamp: Int32(i),
+                    flags: [.Incoming],
+                    tags: [],
+                    globalTags: [],
+                    localTags: [],
+                    customTags: [],
+                    forwardInfo: nil,
+                    author: nil,
+                    text: "",
+                    attributes: [],
+                    media: [TelegramMediaAction(action: .customText(text: formattedString.string, entities: entities, additionalAttributes: nil))],
+                    peers: SimpleDictionary<PeerId, Peer>(),
+                    associatedMessages: SimpleDictionary<MessageId, Message>(),
+                    associatedMessageIds: [],
+                    associatedMedia: [:],
+                    associatedThreadInfo: nil,
+                    associatedStories: [:]
+                )
+                entries.insert(.MessageEntry(message, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)), at: 0)
+            }
+        }
+    }
+    
     if reverse {
         return entries.reversed()
     } else {

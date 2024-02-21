@@ -589,6 +589,138 @@ public extension Api {
     }
 }
 public extension Api {
+    enum BusinessLocation: TypeConstructorDescription {
+        case businessLocation(geoPoint: Api.GeoPoint, address: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessLocation(let geoPoint, let address):
+                    if boxed {
+                        buffer.appendInt32(-1104414653)
+                    }
+                    geoPoint.serialize(buffer, true)
+                    serializeString(address, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessLocation(let geoPoint, let address):
+                return ("businessLocation", [("geoPoint", geoPoint as Any), ("address", address as Any)])
+    }
+    }
+    
+        public static func parse_businessLocation(_ reader: BufferReader) -> BusinessLocation? {
+            var _1: Api.GeoPoint?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BusinessLocation.businessLocation(geoPoint: _1!, address: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessWeeklyOpen: TypeConstructorDescription {
+        case businessWeeklyOpen(startMinute: Int32, endMinute: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessWeeklyOpen(let startMinute, let endMinute):
+                    if boxed {
+                        buffer.appendInt32(302717625)
+                    }
+                    serializeInt32(startMinute, buffer: buffer, boxed: false)
+                    serializeInt32(endMinute, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessWeeklyOpen(let startMinute, let endMinute):
+                return ("businessWeeklyOpen", [("startMinute", startMinute as Any), ("endMinute", endMinute as Any)])
+    }
+    }
+    
+        public static func parse_businessWeeklyOpen(_ reader: BufferReader) -> BusinessWeeklyOpen? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BusinessWeeklyOpen.businessWeeklyOpen(startMinute: _1!, endMinute: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessWorkHours: TypeConstructorDescription {
+        case businessWorkHours(flags: Int32, timezoneId: String, weeklyOpen: [Api.BusinessWeeklyOpen])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessWorkHours(let flags, let timezoneId, let weeklyOpen):
+                    if boxed {
+                        buffer.appendInt32(-1936543592)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(timezoneId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(weeklyOpen.count))
+                    for item in weeklyOpen {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessWorkHours(let flags, let timezoneId, let weeklyOpen):
+                return ("businessWorkHours", [("flags", flags as Any), ("timezoneId", timezoneId as Any), ("weeklyOpen", weeklyOpen as Any)])
+    }
+    }
+    
+        public static func parse_businessWorkHours(_ reader: BufferReader) -> BusinessWorkHours? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: [Api.BusinessWeeklyOpen]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BusinessWeeklyOpen.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessWorkHours.businessWorkHours(flags: _1!, timezoneId: _2!, weeklyOpen: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum CdnConfig: TypeConstructorDescription {
         case cdnConfig(publicKeys: [Api.CdnPublicKey])
     

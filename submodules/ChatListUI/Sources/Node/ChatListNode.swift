@@ -108,6 +108,7 @@ public final class ChatListNodeInteraction {
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
     let dismissNotice: (ChatListNotice) -> Void
+    let editPeer: (ChatListItem) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -159,7 +160,8 @@ public final class ChatListNodeInteraction {
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
         openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void,
-        dismissNotice: @escaping (ChatListNotice) -> Void
+        dismissNotice: @escaping (ChatListNotice) -> Void,
+        editPeer: @escaping (ChatListItem) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -199,6 +201,7 @@ public final class ChatListNodeInteraction {
         self.hideChatFolderUpdates = hideChatFolderUpdates
         self.openStories = openStories
         self.dismissNotice = dismissNotice
+        self.editPeer = editPeer
     }
 }
 
@@ -1785,6 +1788,7 @@ public final class ChatListNode: ListView {
             default:
                 break
             }
+        }, editPeer: { _ in
         })
         nodeInteraction.isInlineMode = isInlineMode
         

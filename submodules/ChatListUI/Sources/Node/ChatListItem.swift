@@ -92,10 +92,12 @@ public enum ChatListItemContent {
     
     public struct CustomMessageListData: Equatable {
         public var commandPrefix: String?
+        public var searchQuery: String?
         public var messageCount: Int?
         
-        public init(commandPrefix: String?, messageCount: Int?) {
+        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?) {
             self.commandPrefix = commandPrefix
+            self.searchQuery = searchQuery
             self.messageCount = messageCount
         }
     }
@@ -555,6 +557,7 @@ private enum RevealOptionKey: Int32 {
     case hidePsa
     case open
     case close
+    case edit
 }
 
 private func canArchivePeer(id: EnginePeer.Id, accountPeerId: EnginePeer.Id) -> Bool {
@@ -1625,7 +1628,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     isForumAvatar = true
                 }
             }
+            
+            var avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
+            
+            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
+                avatarDiameter = 40.0
+            }
                 
+            if avatarDiameter != 60.0 {
+                let avatarFontSize = floor(avatarDiameter * 26.0 / 60.0)
+                if self.avatarNode.font.pointSize != avatarFontSize {
+                    self.avatarNode.font = avatarPlaceholderFont(size: avatarFontSize)
+                }
+            }
             self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForumAvatar ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
             
             if peer.isPremium && peer.id != item.context.account.peerId {
@@ -2011,25 +2026,40 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let editingOffset: CGFloat
             var reorderInset: CGFloat = 0.0
             if item.editing {
-                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.selected, true)
+                let selectionControlStyle: ItemListSelectableControlNode.Style
+                if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
+                    selectionControlStyle = .small
+                } else {
+                    selectionControlStyle = .compact
+                }
+                
+                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.selected, selectionControlStyle)
                 if promoInfo == nil && !isPeerGroup {
                     selectableControlSizeAndApply = sizeAndApply
                 }
                 editingOffset = sizeAndApply.0
                 
+                var canReorder = false
+                
                 if case let .chatList(index) = item.index, index.pinningIndex != nil, promoInfo == nil, !isPeerGroup {
-                    let sizeAndApply = reorderControlLayout(item.presentationData.theme)
-                    reorderControlSizeAndApply = sizeAndApply
-                    reorderInset = sizeAndApply.0
+                    canReorder = true
                 } else if case let .forum(pinnedIndex, _, _, _, _) = item.index, case .index = pinnedIndex {
                     if case let .chat(itemPeer) = contentPeer, case let .channel(channel) = itemPeer.peer {
                         let canPin = channel.flags.contains(.isCreator) || channel.hasPermission(.pinMessages)
                         if canPin {
-                            let sizeAndApply = reorderControlLayout(item.presentationData.theme)
-                            reorderControlSizeAndApply = sizeAndApply
-                            reorderInset = sizeAndApply.0
+                            canReorder = true
                         }
                     }
+                }
+                
+                if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
+                    canReorder = true
+                }
+                
+                if canReorder {
+                    let sizeAndApply = reorderControlLayout(item.presentationData.theme)
+                    reorderControlSizeAndApply = sizeAndApply
+                    reorderInset = sizeAndApply.0
                 }
             } else {
                 editingOffset = 0.0
@@ -2037,7 +2067,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let enableChatListPhotos = true
             
-            
+            // if changed, adjust setupItem accordingly
             var avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
             let avatarLeftInset: CGFloat
             
@@ -2427,6 +2457,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             let mutableAttributedText = NSMutableAttributedString(attributedString: attributedText)
                             let boldTextFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
                             mutableAttributedText.insert(NSAttributedString(string: commandPrefix + " ", font: boldTextFont, textColor: theme.titleColor), at: 0)
+                            if let searchQuery = customMessageListData.searchQuery {
+                                let range = (mutableAttributedText.string as NSString).range(of: searchQuery)
+                                if range.location == 0 {
+                                    mutableAttributedText.addAttribute(.foregroundColor, value: item.presentationData.theme.list.itemAccentColor, range: range)
+                                }
+                            }
                             attributedText = mutableAttributedText
                         }
                         
@@ -3088,6 +3124,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
                             ]
                             peerLeftRevealOptions = []
+                        } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
+                            peerLeftRevealOptions = []
+                            if customMessageListData.commandPrefix != nil {
+                                //TODO:localize
+                                peerRevealOptions = [
+                                    ItemListRevealOption(key: RevealOptionKey.edit.rawValue, title: "Edit", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.neutral2.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral2.foregroundColor),
+                                    ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: "Delete", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)
+                                ]
+                            } else {
+                                peerRevealOptions = []
+                            }
                         } else if promoInfo == nil {
                             peerRevealOptions = revealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isPinned: isPinned, isMuted: !isAccountPeer ? (currentMutedIconImage != nil) : nil, location: item.chatListLocation, peerId: renderedPeer.peerId, accountPeerId: item.context.account.peerId, canDelete: true, isEditing: item.editing, filterData: item.filterData)
                             if case let .chat(itemPeer) = contentPeer {
@@ -3127,7 +3174,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             itemHeight -= 21.0
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
                 itemHeight += measureLayout.size.height * 2.0
-                itemHeight += 22.0
+                itemHeight += 20.0
             } else {
                 itemHeight += titleLayout.size.height
                 itemHeight += measureLayout.size.height * 3.0
@@ -4321,6 +4368,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     self.revealOptionsInteractivelyClosed()
                     self.customAnimationInProgress = false
                 }
+            case RevealOptionKey.edit.rawValue:
+                item.interaction.editPeer(item)
+                close = true
             default:
                 break
             }

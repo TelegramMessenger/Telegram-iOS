@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "GreetingMessageSetupScreen",
-    module_name = "GreetingMessageSetupScreen",
+    name = "AutomaticBusinessMessageSetupScreen",
+    module_name = "AutomaticBusinessMessageSetupScreen",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -45,6 +45,7 @@ swift_library(
         "//submodules/DateSelectionUI",
         "//submodules/TelegramStringFormatting",
         "//submodules/TelegramUI/Components/TimeSelectionActionSheet",
+        "//submodules/TelegramUI/Components/ChatListHeaderComponent",
     ],
     visibility = [
         "//visibility:public",

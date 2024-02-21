@@ -847,6 +847,9 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func openSettings()
 }
 
+public protocol QuickReplySetupScreenInitialData: AnyObject {
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -932,12 +935,14 @@ public protocol SharedAccountContext: AnyObject {
     func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, all: Bool) -> ViewController
     func makeMyStoriesController(context: AccountContext, isArchive: Bool) -> ViewController
     func makeArchiveSettingsController(context: AccountContext) -> ViewController
+    func makeFilterSettingsController(context: AccountContext, modal: Bool, dismissed: (() -> Void)?) -> ViewController
     func makeBusinessSetupScreen(context: AccountContext) -> ViewController
     func makeChatbotSetupScreen(context: AccountContext) -> ViewController
-    func makeBusinessLocationSetupScreen(context: AccountContext) -> ViewController
-    func makeBusinessHoursSetupScreen(context: AccountContext) -> ViewController
-    func makeGreetingMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController
-    func makeQuickReplySetupScreen(context: AccountContext) -> ViewController
+    func makeBusinessLocationSetupScreen(context: AccountContext, initialValue: TelegramBusinessLocation?, completion: @escaping (TelegramBusinessLocation?) -> Void) -> ViewController
+    func makeBusinessHoursSetupScreen(context: AccountContext, initialValue: TelegramBusinessHours?, completion: @escaping (TelegramBusinessHours?) -> Void) -> ViewController
+    func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController
+    func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController
+    func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func navigateToForumChannel(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController)
     func navigateToForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?,  navigationController: NavigationController, activateInput: ChatControllerActivateInput?, keepStack: NavigateToChatKeepStack) -> Signal<Never, NoError>

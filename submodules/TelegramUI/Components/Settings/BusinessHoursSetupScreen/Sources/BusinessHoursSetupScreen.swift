@@ -26,15 +26,24 @@ final class BusinessHoursSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let initialValue: TelegramBusinessHours?
+    let completion: (TelegramBusinessHours?) -> Void
 
     init(
-        context: AccountContext
+        context: AccountContext,
+        initialValue: TelegramBusinessHours?,
+        completion: @escaping (TelegramBusinessHours?) -> Void
     ) {
         self.context = context
+        self.initialValue = initialValue
+        self.completion = completion
     }
 
     static func ==(lhs: BusinessHoursSetupScreenComponent, rhs: BusinessHoursSetupScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.initialValue != rhs.initialValue {
             return false
         }
 
@@ -49,13 +58,13 @@ final class BusinessHoursSetupScreenComponent: Component {
     
     struct WorkingHourRange: Equatable {
         var id: Int
-        var startTime: Int
-        var endTime: Int
+        var startMinute: Int
+        var endMinute: Int
         
-        init(id: Int, startTime: Int, endTime: Int) {
+        init(id: Int, startMinute: Int, endMinute: Int) {
             self.id = id
-            self.startTime = startTime
-            self.endTime = endTime
+            self.startMinute = startMinute
+            self.endMinute = endMinute
         }
     }
     
@@ -64,6 +73,74 @@ final class BusinessHoursSetupScreenComponent: Component {
         
         init(ranges: [WorkingHourRange]?) {
             self.ranges = ranges
+        }
+    }
+    
+    struct DaysState: Equatable {
+        enum ValidationError: Error {
+            case intersectingRanges
+        }
+        
+        var timezoneId: String
+        var days: [Day]
+        
+        init(timezoneId: String, days: [Day]) {
+            self.timezoneId = timezoneId
+            self.days = days
+        }
+        
+        init(businessHours: TelegramBusinessHours) {
+            self.timezoneId = businessHours.timezoneId
+            
+            self.days = businessHours.splitIntoWeekDays().map { day in
+                switch day {
+                case .closed:
+                    return Day(ranges: nil)
+                case .open:
+                    return Day(ranges: [])
+                case let .intervals(intervals):
+                    var nextIntervalId = 0
+                    return Day(ranges: intervals.map { interval in
+                        let intervalId = nextIntervalId
+                        nextIntervalId += 1
+                        return WorkingHourRange(id: intervalId, startMinute: interval.startMinute, endMinute: interval.endMinute)
+                    })
+                }
+            }
+        }
+        
+        func asBusinessHours() throws -> TelegramBusinessHours {
+            var mappedIntervals: [TelegramBusinessHours.WorkingTimeInterval] = []
+            
+            var filledMinutes = IndexSet()
+            for i in 0 ..< self.days.count {
+                let dayStartMinute = i * 24 * 60
+                guard var effectiveRanges = self.days[i].ranges else {
+                    continue
+                }
+                if effectiveRanges.isEmpty {
+                    effectiveRanges = [WorkingHourRange(id: 0, startMinute: 0, endMinute: 24 * 60)]
+                }
+                for range in effectiveRanges {
+                    let minuteRange: Range<Int> = (dayStartMinute + range.startMinute) ..< (dayStartMinute + range.endMinute)
+                    
+                    var wrappedMinutes = IndexSet()
+                    if minuteRange.upperBound > 7 * 24 * 60 {
+                        wrappedMinutes.insert(integersIn: minuteRange.lowerBound ..< 7 * 24 * 60)
+                        wrappedMinutes.insert(integersIn: 0 ..< (7 * 24 * 60 - minuteRange.upperBound))
+                    } else {
+                        wrappedMinutes.insert(integersIn: minuteRange)
+                    }
+                    
+                    if !filledMinutes.intersection(wrappedMinutes).isEmpty {
+                        throw ValidationError.intersectingRanges
+                    }
+                    filledMinutes.formUnion(wrappedMinutes)
+                    mappedIntervals.append(TelegramBusinessHours.WorkingTimeInterval(startMinute: minuteRange.lowerBound, endMinute: minuteRange.upperBound))
+                }
+            }
+            
+            return TelegramBusinessHours(timezoneId: self.timezoneId, weeklyTimeIntervals: mappedIntervals)
         }
     }
     
@@ -86,8 +163,7 @@ final class BusinessHoursSetupScreenComponent: Component {
         private var environment: EnvironmentType?
         
         private var showHours: Bool = false
-        private var days: [Day] = []
-        private var timezoneId: String
+        private var daysState = DaysState(timezoneId: "", days: [])
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -102,18 +178,12 @@ final class BusinessHoursSetupScreenComponent: Component {
             }
             self.scrollView.alwaysBounceVertical = true
             
-            self.timezoneId = TimeZone.current.identifier
-            
             super.init(frame: frame)
             
             self.scrollView.delegate = self
             self.addSubview(self.scrollView)
             
             self.scrollView.layer.addSublayer(self.topOverscrollLayer)
-            
-            self.days = (0 ..< 7).map { _ in
-                return Day(ranges: [])
-            }
         }
         
         required init?(coder: NSCoder) {
@@ -128,7 +198,28 @@ final class BusinessHoursSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            return true
+            guard let component = self.component else {
+                return true
+            }
+            
+            if self.showHours {
+                do {
+                    let businessHours = try self.daysState.asBusinessHours()
+                    let _ = component.context.engine.accountData.updateAccountBusinessHours(businessHours: businessHours).startStandalone()
+                    return true
+                } catch let error {
+                    let _ = error
+                    //TODO:localize
+                    return false
+                }
+            } else {
+                if component.initialValue != nil {
+                    let _ = component.context.engine.accountData.updateAccountBusinessHours(businessHours: nil).startStandalone()
+                    return true
+                } else {
+                    return true
+                }
+            }
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -171,6 +262,19 @@ final class BusinessHoursSetupScreenComponent: Component {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            if self.component == nil {
+                if let initialValue = component.initialValue {
+                    self.showHours = true
+                    self.daysState = DaysState(businessHours: initialValue)
+                } else {
+                    self.showHours = false
+                    self.daysState.timezoneId = TimeZone.current.identifier
+                    self.daysState.days = (0 ..< 7).map { _ in
+                        return Day(ranges: [])
+                    }
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -331,7 +435,7 @@ final class BusinessHoursSetupScreenComponent: Component {
             var daysContentHeight: CGFloat = 0.0
             
             var daysSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            for day in self.days {
+            for day in self.daysState.days {
                 let dayIndex = daysSectionItems.count
                 
                 let title: String
@@ -356,7 +460,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                 }
                 
                 let subtitle: String
-                if let ranges = self.days[dayIndex].ranges {
+                if let ranges = self.daysState.days[dayIndex].ranges {
                     if ranges.isEmpty {
                         subtitle = "Open 24 Hours"
                     } else {
@@ -365,11 +469,11 @@ final class BusinessHoursSetupScreenComponent: Component {
                             if !resultText.isEmpty {
                                 resultText.append(", ")
                             }
-                            let startHours = range.startTime / (60 * 60)
-                            let startMinutes = range.startTime % (60 * 60)
+                            let startHours = clipMinutes(range.startMinute) / 60
+                            let startMinutes = clipMinutes(range.startMinute) % 60
                             let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
-                            let endHours = range.endTime / (60 * 60)
-                            let endMinutes = range.endTime % (60 * 60)
+                            let endHours = clipMinutes(range.endMinute) / 60
+                            let endMinutes = clipMinutes(range.endMinute) % 60
                             let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
                             resultText.append("\(startText)\u{00a0}- \(endText)")
                         }
@@ -403,11 +507,11 @@ final class BusinessHoursSetupScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        if dayIndex < self.days.count {
-                            if self.days[dayIndex].ranges == nil {
-                                self.days[dayIndex].ranges = []
+                        if dayIndex < self.daysState.days.count {
+                            if self.daysState.days[dayIndex].ranges == nil {
+                                self.daysState.days[dayIndex].ranges = []
                             } else {
-                                self.days[dayIndex].ranges = nil
+                                self.daysState.days[dayIndex].ranges = nil
                             }
                         }
                         self.state?.updated(transition: .immediate)
@@ -419,13 +523,13 @@ final class BusinessHoursSetupScreenComponent: Component {
                         self.environment?.controller()?.push(BusinessDaySetupScreen(
                             context: component.context,
                             dayIndex: dayIndex,
-                            day: self.days[dayIndex],
+                            day: self.daysState.days[dayIndex],
                             updateDay: { [weak self] day in
                                 guard let self else {
                                     return
                                 }
-                                if self.days[dayIndex] != day {
-                                    self.days[dayIndex] = day
+                                if self.daysState.days[dayIndex] != day {
+                                    self.daysState.days[dayIndex] = day
                                     self.state?.updated(transition: .immediate)
                                 }
                             }
@@ -484,7 +588,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                             )),
                             icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: TimeZone(identifier: self.timezoneId)?.localizedName(for: .shortStandard, locale: Locale.current) ?? self.timezoneId,
+                                    string: TimeZone(identifier: self.daysState.timezoneId)?.localizedName(for: .shortStandard, locale: Locale.current) ?? self.daysState.timezoneId,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemSecondaryTextColor
                                 )),
@@ -506,7 +610,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                                         controller?.dismiss()
                                         return
                                     }
-                                    self.timezoneId = timezoneId
+                                    self.daysState.timezoneId = timezoneId
                                     self.state?.updated(transition: .immediate)
                                     controller?.dismiss()
                                 }
@@ -579,11 +683,13 @@ final class BusinessHoursSetupScreenComponent: Component {
 public final class BusinessHoursSetupScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, initialValue: TelegramBusinessHours?, completion: @escaping (TelegramBusinessHours?) -> Void) {
         self.context = context
         
         super.init(context: context, component: BusinessHoursSetupScreenComponent(
-            context: context
+            context: context,
+            initialValue: initialValue,
+            completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

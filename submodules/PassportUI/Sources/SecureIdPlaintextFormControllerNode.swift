@@ -5,7 +5,6 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
-import CoreTelephony
 import TelegramPresentationData
 import AccountContext
 import AlertUI
@@ -382,17 +381,9 @@ extension SecureIdPlaintextFormInnerState {
     init(type: SecureIdPlaintextFormType, immediatelyAvailableValue: SecureIdValue?) {
         switch type {
             case .phone:
-                var countryId: String? = nil
-                if let carrier = CTTelephonyNetworkInfo().serviceSubscriberCellularProviders?.values.first {
-                    countryId = carrier.isoCountryCode
-                }
-                
-                if countryId == nil {
-                    countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
-                }
+                let countryId = (Locale.current as NSLocale).object(forKey: .countryCode) as? String
                 
                 var countryCodeAndId: (Int32, String) = (1, "US")
-                
                 if let countryId = countryId {
                     let normalizedId = countryId.uppercased()
                     for (code, idAndName) in countryCodeToIdAndName {

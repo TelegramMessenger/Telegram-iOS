@@ -199,6 +199,8 @@ final class GreetingMessageListItemComponent: Component {
                     openStories: { _, _ in
                     },
                     dismissNotice: { _ in
+                    },
+                    editPeer: { _ in
                     }
                 )
                 self.chatListNodeInteraction = chatListNodeInteraction
@@ -235,6 +237,7 @@ final class GreetingMessageListItemComponent: Component {
                     tags: [],
                     customMessageListData: ChatListItemContent.CustomMessageListData(
                         commandPrefix: nil,
+                        searchQuery: nil,
                         messageCount: component.count
                     )
                 )),

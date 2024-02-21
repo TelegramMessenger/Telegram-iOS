@@ -4,6 +4,7 @@ import Postbox
 public typealias EngineExportedPeerInvitation = ExportedInvitation
 public typealias EngineSecretChatKeyFingerprint = SecretChatKeyFingerprint
 
+
 public enum EnginePeerCachedInfoItem<T> {
     case known(T)
     case unknown
@@ -1443,6 +1444,61 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct BusinessHours: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = TelegramBusinessHours?
 
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.businessHours
+                } else {
+                    return nil
+                }
+            }
+        }
+
+        public struct BusinessLocation: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = TelegramBusinessLocation?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.businessLocation
+                } else {
+                    return nil
+                }
+            }
+        }
     }
 }

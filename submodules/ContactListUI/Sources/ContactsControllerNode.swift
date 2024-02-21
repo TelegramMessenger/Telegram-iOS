@@ -362,6 +362,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 sideInset: layout.safeInsets.left,
                 isSearchActive: self.isSearchDisplayControllerActive,
+                isSearchEnabled: true,
                 primaryContent: primaryContent,
                 secondaryContent: nil,
                 secondaryTransition: 0.0,

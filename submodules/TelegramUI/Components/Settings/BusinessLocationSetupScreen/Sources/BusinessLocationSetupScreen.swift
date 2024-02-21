@@ -25,15 +25,24 @@ final class BusinessLocationSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let initialValue: TelegramBusinessLocation?
+    let completion: (TelegramBusinessLocation?) -> Void
 
     init(
-        context: AccountContext
+        context: AccountContext,
+        initialValue: TelegramBusinessLocation?,
+        completion: @escaping (TelegramBusinessLocation?) -> Void
     ) {
         self.context = context
+        self.initialValue = initialValue
+        self.completion = completion
     }
 
     static func ==(lhs: BusinessLocationSetupScreenComponent, rhs: BusinessLocationSetupScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.initialValue != rhs.initialValue {
             return false
         }
 
@@ -65,7 +74,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         private let textFieldTag = NSObject()
         private var resetAddressText: String?
         
-        private var mapCoordinates: (Double, Double)?
+        private var mapCoordinates: TelegramBusinessLocation.Coordinates?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -100,6 +109,20 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            if let component = self.component {
+                var address = ""
+                if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
+                    address = textView.currentText
+                }
+                
+                var businessLocation: TelegramBusinessLocation?
+                if !address.isEmpty || self.mapCoordinates != nil {
+                    businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
+                }
+                
+                let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
+            }
+            
             return true
         }
         
@@ -147,7 +170,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                     return
                 }
                 
-                self.mapCoordinates = (location.latitude, location.longitude)
+                self.mapCoordinates = TelegramBusinessLocation.Coordinates(latitude: location.latitude, longitude: location.longitude)
                 if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View, textView.currentText.isEmpty {
                     self.resetAddressText = address
                 }
@@ -161,6 +184,13 @@ final class BusinessLocationSetupScreenComponent: Component {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            if self.component == nil {
+                if let initialValue = component.initialValue {
+                    self.mapCoordinates = initialValue.coordinates
+                    self.resetAddressText = initialValue.address
+                }
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -286,6 +316,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 placeholder: "Enter Address",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
+                characterLimit: 64,
                 updated: { [weak self] value in
                     guard let self else {
                         return
@@ -351,8 +382,8 @@ final class BusinessLocationSetupScreenComponent: Component {
                 mapSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MapPreviewComponent(
                     theme: environment.theme,
                     location: MapPreviewComponent.Location(
-                        latitude: mapCoordinates.0,
-                        longitude: mapCoordinates.1
+                        latitude: mapCoordinates.latitude,
+                        longitude: mapCoordinates.longitude
                     ),
                     action: { [weak self] in
                         guard let self else {
@@ -430,11 +461,17 @@ final class BusinessLocationSetupScreenComponent: Component {
 public final class BusinessLocationSetupScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     
-    public init(context: AccountContext) {
+    public init(
+        context: AccountContext,
+        initialValue: TelegramBusinessLocation?,
+        completion: @escaping (TelegramBusinessLocation?) -> Void
+    ) {
         self.context = context
         
         super.init(context: context, component: BusinessLocationSetupScreenComponent(
-            context: context
+            context: context,
+            initialValue: initialValue,
+            completion: completion
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

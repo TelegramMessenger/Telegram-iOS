@@ -10,6 +10,7 @@ public enum ChatNavigationButtonAction: Equatable {
     case dismiss
     case toggleInfoPanel
     case spacer
+    case edit
 }
 
 public struct ChatNavigationButton: Equatable {

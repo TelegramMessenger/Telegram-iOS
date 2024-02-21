@@ -719,6 +719,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             
+            if case let .customChatContents(customChatContents) = strongSelf.presentationInterfaceState.subject {
+                switch customChatContents.kind {
+                case .greetingMessageInput, .awayMessageInput:
+                    break
+                case .quickReplyMessageInput:
+                    if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
+                        //TODO:localize
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: "Remove Shortcut", text: "You didn't create a quick reply message. Exiting will remove the shortcut.", actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
+                            TextAlertAction(type: .defaultAction, title: "Remove", action: { [weak strongSelf] in
+                                strongSelf?.dismiss()
+                            })
+                        ]), in: .window(.root))
+                        
+                        return false
+                    }
+                }
+            }
+            
             return true
         }
         
@@ -9460,6 +9479,56 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
+        }, sendShortcut: { [weak self] shortcut in
+            guard let self else {
+                return
+            }
+            
+            self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                guard let self else {
+                    return
+                }
+                self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+                })
+            }, nil)
+            
+            var messages: [EnqueueMessage] = []
+            for message in shortcut.messages {
+                var attributes: [MessageAttribute] = []
+                let entities = generateTextEntities(message.text, enabledTypes: .all)
+                if !entities.isEmpty {
+                    attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                }
+                
+                messages.append(.message(
+                    text: message.text,
+                    attributes: attributes,
+                    inlineStickers: [:],
+                    mediaReference: message.media.first.flatMap { AnyMediaReference.standalone(media: $0) },
+                    threadId: self.chatLocation.threadId,
+                    replyToMessageId: nil,
+                    replyToStoryId: nil,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                ))
+            }
+            
+            self.sendMessages(messages)
+        }, openEditShortcuts: { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = (self.context.sharedContext.makeQuickReplySetupScreenInitialData(context: self.context)
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] initialData in
+                guard let self else {
+                    return
+                }
+                
+                self.push(self.context.sharedContext.makeQuickReplySetupScreen(context: self.context, initialData: initialData))
+            })
         }, sendBotStart: { [weak self] payload in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 strongSelf.startBot(payload)
@@ -12761,7 +12830,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         case .search:
             self.interfaceInteraction?.beginMessageSearch(.everything, "")
         case .dismiss:
-            self.dismiss()
+            if self.attemptNavigation({}) {
+                self.dismiss()
+            }
         case .clearCache:
             let controller = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: nil))
             self.present(controller, in: .window(.root))
@@ -12969,6 +13040,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .customChatContents:
                 break
             }
+        case .edit:
+            self.editChat()
         }
     }
     

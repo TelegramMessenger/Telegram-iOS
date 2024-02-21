@@ -287,7 +287,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private func topInsetForLayout(size: CGSize, hasSwitchPeer: Bool) -> CGFloat {
         var minimumItemHeights: CGFloat = floor(VerticalListContextResultsChatInputPanelItemNode.itemHeight * 3.5)
         if hasSwitchPeer {
-            minimumItemHeights += VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight
+            minimumItemHeights += VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight(style: .regular)
         }
         
         return max(size.height - minimumItemHeights, 0.0)

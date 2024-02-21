@@ -460,6 +460,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var enableUnreadAlignment: Bool = true
     
     private var historyView: ChatHistoryView?
+    public var originalHistoryView: MessageHistoryView? {
+        return self.historyView?.originalView
+    }
     
     private let historyDisposable = MetaDisposable()
     private let readHistoryDisposable = MetaDisposable()

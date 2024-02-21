@@ -355,6 +355,64 @@ public extension Api.help {
     }
 }
 public extension Api.help {
+    enum TimezonesList: TypeConstructorDescription {
+        case timezonesList(timezones: [Api.Timezone], hash: Int32)
+        case timezonesListNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .timezonesList(let timezones, let hash):
+                    if boxed {
+                        buffer.appendInt32(2071260529)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(timezones.count))
+                    for item in timezones {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    break
+                case .timezonesListNotModified:
+                    if boxed {
+                        buffer.appendInt32(-1761146676)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .timezonesList(let timezones, let hash):
+                return ("timezonesList", [("timezones", timezones as Any), ("hash", hash as Any)])
+                case .timezonesListNotModified:
+                return ("timezonesListNotModified", [])
+    }
+    }
+    
+        public static func parse_timezonesList(_ reader: BufferReader) -> TimezonesList? {
+            var _1: [Api.Timezone]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Timezone.self)
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.help.TimezonesList.timezonesList(timezones: _1!, hash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_timezonesListNotModified(_ reader: BufferReader) -> TimezonesList? {
+            return Api.help.TimezonesList.timezonesListNotModified
+        }
+    
+    }
+}
+public extension Api.help {
     enum UserInfo: TypeConstructorDescription {
         case userInfo(message: String, entities: [Api.MessageEntity], author: String, date: Int32)
         case userInfoEmpty

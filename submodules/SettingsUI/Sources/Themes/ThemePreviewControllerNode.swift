@@ -376,6 +376,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
         }, openStories: { _, _ in
         }, dismissNotice: { _ in
+        }, editPeer: { _ in
         })
 
         func makeChatListItem(
