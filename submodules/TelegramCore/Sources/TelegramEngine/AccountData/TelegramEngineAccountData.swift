@@ -105,5 +105,65 @@ public extension TelegramEngine {
             |> ignoreValues
             |> then(remoteApply)
         }
+        
+        public func updateAccountBusinessHours(businessHours: TelegramBusinessHours?) -> Signal<Never, NoError> {
+            let peerId = self.account.peerId
+            
+            var flags: Int32 = 0
+            if businessHours != nil {
+                flags |= 1 << 0
+            }
+            let remoteApply: Signal<Never, NoError> = self.account.network.request(Api.functions.account.updateBusinessWorkHours(flags: flags, businessWorkHours: businessHours?.apiBusinessHours))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+            
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    let current = current as? CachedUserData ?? CachedUserData()
+                    return current.withUpdatedBusinessHours(businessHours)
+                })
+            }
+            |> ignoreValues
+            |> then(remoteApply)
+        }
+        
+        public func updateAccountBusinessLocation(businessLocation: TelegramBusinessLocation?) -> Signal<Never, NoError> {
+            let peerId = self.account.peerId
+            
+            var flags: Int32 = 0
+            
+            var inputGeoPoint: Api.InputGeoPoint?
+            var inputAddress: String?
+            if let businessLocation {
+                flags |= 1 << 0
+                inputGeoPoint = businessLocation.coordinates?.apiInputGeoPoint ?? .inputGeoPointEmpty
+                inputAddress = businessLocation.address
+            }
+            
+            let remoteApply: Signal<Never, NoError> = self.account.network.request(Api.functions.account.updateBusinessLocation(flags: flags, geoPoint: inputGeoPoint, address: inputAddress))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+            
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    let current = current as? CachedUserData ?? CachedUserData()
+                    return current.withUpdatedBusinessLocation(businessLocation)
+                })
+            }
+            |> ignoreValues
+            |> then(remoteApply)
+        }
+        
+        public func shortcutMessages() -> Signal<QuickReplyMessageShortcutsState, NoError> {
+            return _internal_shortcutMessages(account: self.account)
+        }
+
+        public func updateShortcutMessages(state: QuickReplyMessageShortcutsState) {
+            let _ = _internal_updateShortcutMessages(account: self.account, state: state).startStandalone()
+        }
     }
 }

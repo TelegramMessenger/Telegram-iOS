@@ -96,6 +96,7 @@ public final class TextFieldComponent: Component {
     public let customInputView: UIView?
     public let resetText: NSAttributedString?
     public let isOneLineWhenUnfocused: Bool
+    public let characterLimit: Int?
     public let formatMenuAvailability: FormatMenuAvailability
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
@@ -112,6 +113,7 @@ public final class TextFieldComponent: Component {
         customInputView: UIView?,
         resetText: NSAttributedString?,
         isOneLineWhenUnfocused: Bool,
+        characterLimit: Int? = nil,
         formatMenuAvailability: FormatMenuAvailability,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
@@ -127,6 +129,7 @@ public final class TextFieldComponent: Component {
         self.customInputView = customInputView
         self.resetText = resetText
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
+        self.characterLimit = characterLimit
         self.formatMenuAvailability = formatMenuAvailability
         self.lockedFormatAction = lockedFormatAction
         self.present = present
@@ -159,6 +162,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.isOneLineWhenUnfocused != rhs.isOneLineWhenUnfocused {
+            return false
+        }
+        if lhs.characterLimit != rhs.characterLimit {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
@@ -537,6 +543,17 @@ public final class TextFieldComponent: Component {
         }
         
         public func chatInputTextNode(shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            if let characterLimit = component.characterLimit {
+                let string = self.inputState.inputText.string as NSString
+                let updatedString = string.replacingCharacters(in: range, with: text)
+                if (updatedString as NSString).length > characterLimit {
+                    return false
+                }
+            }
+            
             return true
         }
         

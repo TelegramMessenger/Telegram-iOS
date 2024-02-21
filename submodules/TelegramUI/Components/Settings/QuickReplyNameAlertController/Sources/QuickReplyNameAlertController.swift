@@ -187,7 +187,7 @@ private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDeleg
     }
 }
 
-private final class QuickReplyNameAlertContentNode: AlertContentNode {
+public final class QuickReplyNameAlertContentNode: AlertContentNode {
     private let context: AccountContext
     private var theme: AlertControllerTheme
     private let strings: PresentationStrings
@@ -198,7 +198,7 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
     private let textView = ComponentView<Empty>()
     private let subtextView = ComponentView<Empty>()
     
-    let inputFieldNode: PromptInputFieldNode
+    fileprivate let inputFieldNode: PromptInputFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -207,6 +207,7 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
     private let disposable = MetaDisposable()
     
     private var validLayout: CGSize?
+    private var errorText: String?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -216,7 +217,7 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
         }
     }
     
-    override var dismissOnOutsideTap: Bool {
+    override public var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
@@ -289,8 +290,20 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
     var value: String {
         return self.inputFieldNode.text
     }
+    
+    public func setErrorText(errorText: String?) {
+        if self.errorText != errorText {
+            self.errorText = errorText
+            self.requestLayout?(.immediate)
+        }
+        
+        if errorText != nil {
+            HapticFeedback().error()
+            self.inputFieldNode.layer.addShakeAnimation()
+        }
+    }
 
-    override func updateTheme(_ theme: AlertControllerTheme) {
+    override public func updateTheme(_ theme: AlertControllerTheme) {
         self.theme = theme
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
@@ -306,7 +319,7 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
         }
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    override public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
         size.width = min(size.width, 270.0)
         let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
@@ -332,16 +345,18 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
         let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) * 0.5), y: origin.y), size: textSize)
         if let textComponentView = self.textView.view {
             if textComponentView.superview == nil {
+                textComponentView.layer.anchorPoint = CGPoint()
                 self.view.addSubview(textComponentView)
             }
-            textComponentView.frame = textFrame
+            textComponentView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
+            transition.updatePosition(layer: textComponentView.layer, position: textFrame.origin)
         }
         origin.y += textSize.height + 6.0 + subtextSpacing
         
         let subtextSize = self.subtextView.update(
             transition: .immediate,
             component: AnyComponent(BalancedTextComponent(
-                text: .plain(NSAttributedString(string: self.subtext, font: Font.regular(13.0), textColor: self.theme.primaryColor)),
+                text: .plain(NSAttributedString(string: self.errorText ?? self.subtext, font: Font.regular(13.0), textColor: self.errorText != nil ? self.theme.destructiveColor : self.theme.primaryColor)),
                 horizontalAlignment: .center,
                 maximumNumberOfLines: 0
             )),
@@ -351,9 +366,11 @@ private final class QuickReplyNameAlertContentNode: AlertContentNode {
         let subtextFrame = CGRect(origin: CGPoint(x: floor((size.width - subtextSize.width) * 0.5), y: origin.y), size: subtextSize)
         if let subtextComponentView = self.subtextView.view {
             if subtextComponentView.superview == nil {
+                subtextComponentView.layer.anchorPoint = CGPoint()
                 self.view.addSubview(subtextComponentView)
             }
-            subtextComponentView.frame = subtextFrame
+            subtextComponentView.bounds = CGRect(origin: CGPoint(), size: subtextFrame.size)
+            transition.updatePosition(layer: subtextComponentView.layer, position: subtextFrame.origin)
         }
         origin.y += subtextSize.height + 6.0 + spacing
         

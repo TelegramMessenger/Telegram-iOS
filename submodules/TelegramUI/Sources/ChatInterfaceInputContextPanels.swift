@@ -15,7 +15,7 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
         case let .mentions(items):
             return (2, !items.isEmpty)
         case let .commands(items):
-            return (3, !items.isEmpty)
+            return (3, !items.commands.isEmpty || items.hasShortcuts)
         case let .contextRequestResult(_, result):
             var nonEmpty = false
             if let result = result, !result.results.isEmpty {
@@ -141,14 +141,14 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 return nil
             }
         case let .commands(commands):
-            if !commands.isEmpty {
+            if !commands.commands.isEmpty || commands.hasShortcuts {
                 if let currentPanel = currentPanel as? CommandChatInputContextPanelNode {
-                    currentPanel.updateResults(commands)
+                    currentPanel.updateResults(commands.commands, accountPeer: commands.accountPeer, hasShortcuts: commands.hasShortcuts, query: commands.query)
                     return currentPanel
                 } else {
                     let panel = CommandChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
                     panel.interfaceInteraction = interfaceInteraction
-                    panel.updateResults(commands)
+                    panel.updateResults(commands.commands, accountPeer: commands.accountPeer, hasShortcuts: commands.hasShortcuts, query: commands.query)
                     return panel
                 }
             } else {

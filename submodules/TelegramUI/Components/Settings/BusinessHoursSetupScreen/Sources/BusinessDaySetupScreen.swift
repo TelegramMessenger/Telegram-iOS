@@ -23,6 +23,10 @@ import TelegramStringFormatting
 import PlainButtonComponent
 import TimeSelectionActionSheet
 
+func clipMinutes(_ value: Int) -> Int {
+    return value % (24 * 60)
+}
+
 final class BusinessDaySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -157,7 +161,7 @@ final class BusinessDaySetupScreenComponent: Component {
                 return
             }
             
-            let controller = TimeSelectionActionSheet(context: component.context, currentValue: Int32(isStartTime ? range.startTime : range.endTime), applyValue: { [weak self] value in
+            let controller = TimeSelectionActionSheet(context: component.context, currentValue: Int32(isStartTime ? clipMinutes(range.startMinute) : clipMinutes(range.endMinute)) * 60, applyValue: { [weak self] value in
                 guard let self else {
                     return
                 }
@@ -165,15 +169,28 @@ final class BusinessDaySetupScreenComponent: Component {
                     return
                 }
                 if let index = self.ranges.firstIndex(where: { $0.id == rangeId }) {
+                    var startMinute = range.startMinute
+                    var endMinute = range.endMinute
                     if isStartTime {
-                        self.ranges[index].startTime = Int(value)
+                        startMinute = Int(value) / 60
                     } else {
-                        self.ranges[index].endTime = Int(value)
+                        endMinute = Int(value) / 60
                     }
+                    if endMinute < startMinute {
+                        endMinute = endMinute + 24 * 60
+                    }
+                    self.ranges[index].startMinute = startMinute
+                    self.ranges[index].endMinute = endMinute
+                    self.validateRanges()
+                    
                     self.state?.updated(transition: .immediate)
                 }
             })
             self.environment?.controller()?.present(controller, in: .window(.root))
+        }
+        
+        private func validateRanges() {
+            self.ranges.sort(by: { $0.startMinute < $1.startMinute })
         }
         
         func update(component: BusinessDaySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -190,6 +207,7 @@ final class BusinessDaySetupScreenComponent: Component {
                 self.isOpen = component.day.ranges != nil
                 self.ranges = component.day.ranges ?? []
                 self.nextRangeId = (self.ranges.map(\.id).max() ?? 0) + 1
+                self.validateRanges()
             }
             
             self.component = component
@@ -309,11 +327,11 @@ final class BusinessDaySetupScreenComponent: Component {
                     rangeSectionTransition = rangeSectionTransition.withAnimation(.none)
                 }
                 
-                let startHours = range.startTime / (60 * 60)
-                let startMinutes = range.startTime % (60 * 60)
+                let startHours = clipMinutes(range.startMinute) / 60
+                let startMinutes = clipMinutes(range.startMinute) % 60
                 let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
-                let endHours = range.endTime / (60 * 60)
-                let endMinutes = range.endTime % (60 * 60)
+                let endHours = clipMinutes(range.endMinute) / 60
+                let endMinutes = clipMinutes(range.endMinute) % 60
                 let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
                 
                 var rangeSectionItems: [AnyComponentWithIdentity<Empty>] = []
@@ -409,6 +427,7 @@ final class BusinessDaySetupScreenComponent: Component {
                             return
                         }
                         self.ranges.removeAll(where: { $0.id == rangeId })
+                        self.validateRanges()
                         self.state?.updated(transition: .spring(duration: 0.4))
                     }
                 ))))
@@ -473,6 +492,11 @@ final class BusinessDaySetupScreenComponent: Component {
                 self.rangeSections.removeValue(forKey: id)
             }
             
+            var canAddRanges = true
+            if let lastRange = self.ranges.last, lastRange.endMinute >= 24 * 60 * 2 - 1 {
+                canAddRanges = false
+            }
+            
             //TODO:localize
             let addSectionSize = self.addSection.update(
                 transition: transition,
@@ -509,10 +533,22 @@ final class BusinessDaySetupScreenComponent: Component {
                                 guard let self else {
                                     return
                                 }
+                                
+                                var rangeStart = 9 * 60
+                                if let lastRange = self.ranges.last {
+                                    rangeStart = lastRange.endMinute + 1
+                                }
+                                if rangeStart >= 2 * 24 * 60 - 1 {
+                                    return
+                                }
+                                let rangeEnd = min(rangeStart + 9 * 60, 2 * 24 * 60)
+                                
                                 let rangeId = self.nextRangeId
                                 self.nextRangeId += 1
+                                
                                 self.ranges.append(BusinessHoursSetupScreenComponent.WorkingHourRange(
-                                    id: rangeId, startTime: 9 * (60 * 60), endTime: 18 * (60 * 60)))
+                                    id: rangeId, startMinute: rangeStart, endMinute: rangeEnd))
+                                self.validateRanges()
                                 self.state?.updated(transition: .spring(duration: 0.4))
                             }
                         )))
@@ -529,9 +565,11 @@ final class BusinessDaySetupScreenComponent: Component {
                 transition.setFrame(view: addSectionView, frame: addSectionFrame)
                 
                 let alphaTransition = transition.animation.isImmediate ? transition : .easeInOut(duration: 0.25)
-                alphaTransition.setAlpha(view: addSectionView, alpha: self.isOpen ? 1.0 : 0.0)
+                alphaTransition.setAlpha(view: addSectionView, alpha: (self.isOpen && canAddRanges) ? 1.0 : 0.0)
             }
-            rangesSectionsHeight += addSectionSize.height
+            if canAddRanges {
+                rangesSectionsHeight += addSectionSize.height
+            }
             
             if self.isOpen {
                 contentHeight += rangesSectionsHeight

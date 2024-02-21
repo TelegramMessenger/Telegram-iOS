@@ -440,7 +440,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     if case let .check(checked) = item.control {
                         selected = checked
                     }
-                    let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, selected, true)
+                    let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, selected, .compact)
                     selectableControlSizeAndApply = sizeAndApply
                     editingOffset = sizeAndApply.0
                 } else {

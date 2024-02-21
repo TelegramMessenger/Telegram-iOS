@@ -1289,6 +1289,138 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum QuickReplies: TypeConstructorDescription {
+        case quickReplies(quickReplies: [Api.messages.QuickReply], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case quickRepliesNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .quickReplies(let quickReplies, let messages, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(2094438528)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(quickReplies.count))
+                    for item in quickReplies {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .quickRepliesNotModified:
+                    if boxed {
+                        buffer.appendInt32(1603398491)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .quickReplies(let quickReplies, let messages, let chats, let users):
+                return ("quickReplies", [("quickReplies", quickReplies as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .quickRepliesNotModified:
+                return ("quickRepliesNotModified", [])
+    }
+    }
+    
+        public static func parse_quickReplies(_ reader: BufferReader) -> QuickReplies? {
+            var _1: [Api.messages.QuickReply]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.messages.QuickReply.self)
+            }
+            var _2: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _3: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.QuickReplies.quickReplies(quickReplies: _1!, messages: _2!, chats: _3!, users: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_quickRepliesNotModified(_ reader: BufferReader) -> QuickReplies? {
+            return Api.messages.QuickReplies.quickRepliesNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum QuickReply: TypeConstructorDescription {
+        case quickReply(shortcutId: Int32, shortcut: String, topMessage: Int32, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .quickReply(let shortcutId, let shortcut, let topMessage, let count):
+                    if boxed {
+                        buffer.appendInt32(-1810973582)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    serializeString(shortcut, buffer: buffer, boxed: false)
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .quickReply(let shortcutId, let shortcut, let topMessage, let count):
+                return ("quickReply", [("shortcutId", shortcutId as Any), ("shortcut", shortcut as Any), ("topMessage", topMessage as Any), ("count", count as Any)])
+    }
+    }
+    
+        public static func parse_quickReply(_ reader: BufferReader) -> QuickReply? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.QuickReply.quickReply(shortcutId: _1!, shortcut: _2!, topMessage: _3!, count: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum Reactions: TypeConstructorDescription {
         case reactions(hash: Int64, reactions: [Api.Reaction])
         case reactionsNotModified
@@ -1420,158 +1552,6 @@ public extension Api.messages {
         }
         public static func parse_recentStickersNotModified(_ reader: BufferReader) -> RecentStickers? {
             return Api.messages.RecentStickers.recentStickersNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum SavedDialogs: TypeConstructorDescription {
-        case savedDialogs(dialogs: [Api.SavedDialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
-        case savedDialogsNotModified(count: Int32)
-        case savedDialogsSlice(count: Int32, dialogs: [Api.SavedDialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .savedDialogs(let dialogs, let messages, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(-130358751)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(dialogs.count))
-                    for item in dialogs {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .savedDialogsNotModified(let count):
-                    if boxed {
-                        buffer.appendInt32(-1071681560)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    break
-                case .savedDialogsSlice(let count, let dialogs, let messages, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(1153080793)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(dialogs.count))
-                    for item in dialogs {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .savedDialogs(let dialogs, let messages, let chats, let users):
-                return ("savedDialogs", [("dialogs", dialogs as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
-                case .savedDialogsNotModified(let count):
-                return ("savedDialogsNotModified", [("count", count as Any)])
-                case .savedDialogsSlice(let count, let dialogs, let messages, let chats, let users):
-                return ("savedDialogsSlice", [("count", count as Any), ("dialogs", dialogs as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_savedDialogs(_ reader: BufferReader) -> SavedDialogs? {
-            var _1: [Api.SavedDialog]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedDialog.self)
-            }
-            var _2: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _3: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _4: [Api.User]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.SavedDialogs.savedDialogs(dialogs: _1!, messages: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_savedDialogsNotModified(_ reader: BufferReader) -> SavedDialogs? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.SavedDialogs.savedDialogsNotModified(count: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_savedDialogsSlice(_ reader: BufferReader) -> SavedDialogs? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.SavedDialog]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedDialog.self)
-            }
-            var _3: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.SavedDialogs.savedDialogsSlice(count: _1!, dialogs: _2!, messages: _3!, chats: _4!, users: _5!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

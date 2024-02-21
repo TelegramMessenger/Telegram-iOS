@@ -51,11 +51,10 @@ import PeerInfoScreen
 import ChatQrCodeScreen
 import UndoUI
 import ChatMessageNotificationItem
-import BusinessSetupScreen
 import ChatbotSetupScreen
 import BusinessLocationSetupScreen
 import BusinessHoursSetupScreen
-import GreetingMessageSetupScreen
+import AutomaticBusinessMessageSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1895,20 +1894,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatbotSetupScreen(context: context)
     }
     
-    public func makeBusinessLocationSetupScreen(context: AccountContext) -> ViewController {
-        return BusinessLocationSetupScreen(context: context)
+    public func makeBusinessLocationSetupScreen(context: AccountContext, initialValue: TelegramBusinessLocation?, completion: @escaping (TelegramBusinessLocation?) -> Void) -> ViewController {
+        return BusinessLocationSetupScreen(context: context, initialValue: initialValue, completion: completion)
     }
     
-    public func makeBusinessHoursSetupScreen(context: AccountContext) -> ViewController {
-        return BusinessHoursSetupScreen(context: context)
+    public func makeBusinessHoursSetupScreen(context: AccountContext, initialValue: TelegramBusinessHours?, completion: @escaping (TelegramBusinessHours?) -> Void) -> ViewController {
+        return BusinessHoursSetupScreen(context: context, initialValue: initialValue, completion: completion)
     }
     
-    public func makeGreetingMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController {
-        return GreetingMessageSetupScreen(context: context, mode: isAwayMode ? .away : .greeting)
+    public func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController {
+        return AutomaticBusinessMessageSetupScreen(context: context, mode: isAwayMode ? .away : .greeting)
     }
     
-    public func makeQuickReplySetupScreen(context: AccountContext) -> ViewController {
-        return QuickReplySetupScreen(context: context)
+    public func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController {
+        return QuickReplySetupScreen(context: context, initialData: initialData as! QuickReplySetupScreen.InitialData)
+    }
+    
+    public func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {
+        return QuickReplySetupScreen.initialData(context: context)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {

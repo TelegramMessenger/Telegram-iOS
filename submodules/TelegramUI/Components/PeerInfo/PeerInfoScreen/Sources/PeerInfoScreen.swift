@@ -346,6 +346,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, sendContextResult: { _, _, _, _ in
             return false
         }, sendBotCommand: { _, _ in
+        }, sendShortcut: { _ in
+        }, openEditShortcuts: {
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
         }, beginMediaRecording: { _ in
@@ -1161,6 +1163,37 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout(false)
                 }))
+            }
+            
+            if let businessHours = cachedData.businessHours {
+                //TODO:localize
+                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: {
+                    interaction.requestLayout(true)
+                }))
+            }
+            
+            if let businessLocation = cachedData.businessLocation {
+                //TODO:localize
+                if let coordinates = businessLocation.coordinates {
+                    let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: coordinates.latitude, longitude: coordinates.longitude, width: 90, height: 90))
+                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                        id: 301,
+                        label: "location",
+                        text: businessLocation.address,
+                        imageSignal: imageSignal,
+                        action: {
+                            interaction.openLocation()
+                        }
+                    ))
+                } else {
+                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                        id: 301,
+                        label: "location",
+                        text: businessLocation.address,
+                        imageSignal: nil,
+                        action: nil
+                    ))
+                }
             }
         }
         if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
@@ -7537,9 +7570,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openLocation() {
-        guard let data = self.data, let peer = data.peer, let cachedData = data.cachedData as? CachedChannelData, let location = cachedData.peerGeoLocation else {
+        guard let data = self.data, let peer = data.peer else {
             return
         }
+        
+        var location: PeerGeoLocation?
+        if let cachedData = data.cachedData as? CachedChannelData, let locationValue = cachedData.peerGeoLocation {
+            location = locationValue
+        } else if let cachedData = data.cachedData as? CachedUserData, let businessLocation = cachedData.businessLocation, let coordinates = businessLocation.coordinates {
+            location = PeerGeoLocation(latitude: coordinates.latitude, longitude: coordinates.longitude, address: businessLocation.address)
+        }
+        
+        guard let location else {
+            return
+        }
+        
         let context = self.context
         let presentationData = self.presentationData
         let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)

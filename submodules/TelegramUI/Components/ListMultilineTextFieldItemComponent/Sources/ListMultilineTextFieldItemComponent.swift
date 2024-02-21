@@ -29,6 +29,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let placeholder: String
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
+    public let characterLimit: Int?
     public let updated: ((String) -> Void)?
     public let tag: AnyObject?
     
@@ -41,6 +42,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         placeholder: String,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
+        characterLimit: Int? = nil,
         updated: ((String) -> Void)?,
         tag: AnyObject? = nil
     ) {
@@ -52,6 +54,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.placeholder = placeholder
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
+        self.characterLimit = characterLimit
         self.updated = updated
         self.tag = tag
     }
@@ -79,6 +82,9 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return false
         }
         if lhs.autocorrectionType != rhs.autocorrectionType {
+            return false
+        }
+        if lhs.characterLimit != rhs.characterLimit {
             return false
         }
         if (lhs.updated == nil) != (rhs.updated == nil) {
@@ -189,6 +195,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                         return NSAttributedString(string: resetText.value, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)
                     },
                     isOneLineWhenUnfocused: false,
+                    characterLimit: component.characterLimit,
                     formatMenuAvailability: .none,
                     lockedFormatAction: {
                     },

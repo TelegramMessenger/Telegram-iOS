@@ -199,25 +199,59 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
                 switch previousQuery {
-                    case .command:
-                        break
-                    default:
-                        signal = .single({ _ in return .commands([]) })
+                case .command:
+                    break
+                default:
+                    signal = .single({ _ in return .commands(ChatInputQueryCommandsResult(
+                        commands: [],
+                        accountPeer: nil,
+                        hasShortcuts: false,
+                        query: ""
+                    )) })
                 }
             } else {
-                signal = .single({ _ in return .commands([]) })
+                signal = .single({ _ in return .commands(ChatInputQueryCommandsResult(
+                    commands: [],
+                    accountPeer: nil,
+                    hasShortcuts: false,
+                    query: ""
+                )) })
+            }
+        
+            var shortcuts: Signal<[QuickReplyMessageShortcut], NoError> = .single([])
+            if peer is TelegramUser {
+                shortcuts = context.engine.accountData.shortcutMessages()
+                |> map { shortcuts -> [QuickReplyMessageShortcut] in
+                    return shortcuts.shortcuts.filter { item in
+                        return item.shortcut.hasPrefix(normalizedQuery)
+                    }
+                }
             }
             
-            let commands = context.engine.peers.peerCommands(id: peer.id)
-            |> map { commands -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+            let commands = combineLatest(
+                context.engine.peers.peerCommands(id: peer.id),
+                shortcuts,
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+                )
+            )
+            |> map { commands, shortcuts, accountPeer -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let filteredCommands = commands.commands.filter { command in
                     if command.command.text.hasPrefix(normalizedQuery) {
                         return true
                     }
                     return false
                 }
-                let sortedCommands = filteredCommands
-                return { _ in return .commands(sortedCommands) }
+                var sortedCommands = filteredCommands.map(ChatInputTextCommand.command)
+                for shortcut in shortcuts {
+                    sortedCommands.append(.shortcut(shortcut))
+                }
+                return { _ in return .commands(ChatInputQueryCommandsResult(
+                    commands: sortedCommands,
+                    accountPeer: accountPeer,
+                    hasShortcuts: !shortcuts.isEmpty,
+                    query: normalizedQuery
+                )) }
             }
             |> castError(ChatContextQueryError.self)
             return signal |> then(commands)

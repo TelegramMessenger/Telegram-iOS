@@ -255,6 +255,50 @@ public extension Api {
     }
 }
 public extension Api {
+    enum Timezone: TypeConstructorDescription {
+        case timezone(id: String, name: String, utcOffset: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .timezone(let id, let name, let utcOffset):
+                    if boxed {
+                        buffer.appendInt32(-7173643)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeString(name, buffer: buffer, boxed: false)
+                    serializeInt32(utcOffset, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .timezone(let id, let name, let utcOffset):
+                return ("timezone", [("id", id as Any), ("name", name as Any), ("utcOffset", utcOffset as Any)])
+    }
+    }
+    
+        public static func parse_timezone(_ reader: BufferReader) -> Timezone? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Timezone.timezone(id: _1!, name: _2!, utcOffset: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum TopPeer: TypeConstructorDescription {
         case topPeer(peer: Api.Peer, rating: Double)
     
@@ -503,6 +547,8 @@ public extension Api {
         case updateDcOptions(dcOptions: [Api.DcOption])
         case updateDeleteChannelMessages(channelId: Int64, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateDeleteMessages(messages: [Int32], pts: Int32, ptsCount: Int32)
+        case updateDeleteQuickReply(shortcutId: Int32)
+        case updateDeleteQuickReplyMessages(shortcutId: Int32, messages: [Int32])
         case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
         case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
         case updateDialogFilterOrder(order: [Int32])
@@ -536,6 +582,7 @@ public extension Api {
         case updateNewChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
         case updateNewMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
+        case updateNewQuickReply(quickReply: Api.messages.QuickReply)
         case updateNewScheduledMessage(message: Api.Message)
         case updateNewStickerSet(stickerset: Api.messages.StickerSet)
         case updateNotifySettings(peer: Api.NotifyPeer, notifySettings: Api.PeerNotifySettings)
@@ -553,6 +600,8 @@ public extension Api {
         case updatePinnedSavedDialogs(flags: Int32, order: [Api.DialogPeer]?)
         case updatePrivacy(key: Api.PrivacyKey, rules: [Api.PrivacyRule])
         case updatePtsChanged
+        case updateQuickReplies(quickReplies: [Api.messages.QuickReply])
+        case updateQuickReplyMessage(message: Api.Message)
         case updateReadChannelDiscussionInbox(flags: Int32, channelId: Int64, topMsgId: Int32, readMaxId: Int32, broadcastId: Int64?, broadcastPost: Int32?)
         case updateReadChannelDiscussionOutbox(channelId: Int64, topMsgId: Int32, readMaxId: Int32)
         case updateReadChannelInbox(flags: Int32, folderId: Int32?, channelId: Int64, maxId: Int32, stillUnreadCount: Int32, pts: Int32)
@@ -572,6 +621,7 @@ public extension Api {
         case updateSavedRingtones
         case updateSentStoryReaction(peer: Api.Peer, storyId: Int32, reaction: Api.Reaction)
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
+        case updateSmsJob(jobId: String)
         case updateStickerSets(flags: Int32)
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateStoriesStealthMode(stealthMode: Api.StoriesStealthMode)
@@ -981,6 +1031,23 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+                case .updateDeleteQuickReply(let shortcutId):
+                    if boxed {
+                        buffer.appendInt32(1407644140)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    break
+                case .updateDeleteQuickReplyMessages(let shortcutId, let messages):
+                    if boxed {
+                        buffer.appendInt32(1450174413)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
                 case .updateDeleteScheduledMessages(let peer, let messages):
                     if boxed {
                         buffer.appendInt32(-1870238482)
@@ -1251,6 +1318,12 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
+                case .updateNewQuickReply(let quickReply):
+                    if boxed {
+                        buffer.appendInt32(-1386034803)
+                    }
+                    quickReply.serialize(buffer, true)
+                    break
                 case .updateNewScheduledMessage(let message):
                     if boxed {
                         buffer.appendInt32(967122427)
@@ -1402,6 +1475,22 @@ public extension Api {
                         buffer.appendInt32(861169551)
                     }
                     
+                    break
+                case .updateQuickReplies(let quickReplies):
+                    if boxed {
+                        buffer.appendInt32(230929261)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(quickReplies.count))
+                    for item in quickReplies {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .updateQuickReplyMessage(let message):
+                    if boxed {
+                        buffer.appendInt32(1040518415)
+                    }
+                    message.serialize(buffer, true)
                     break
                 case .updateReadChannelDiscussionInbox(let flags, let channelId, let topMsgId, let readMaxId, let broadcastId, let broadcastPost):
                     if boxed {
@@ -1559,6 +1648,12 @@ public extension Api {
                     for item in entities {
                         item.serialize(buffer, true)
                     }
+                    break
+                case .updateSmsJob(let jobId):
+                    if boxed {
+                        buffer.appendInt32(-245208620)
+                    }
+                    serializeString(jobId, buffer: buffer, boxed: false)
                     break
                 case .updateStickerSets(let flags):
                     if boxed {
@@ -1761,6 +1856,10 @@ public extension Api {
                 return ("updateDeleteChannelMessages", [("channelId", channelId as Any), ("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateDeleteMessages(let messages, let pts, let ptsCount):
                 return ("updateDeleteMessages", [("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
+                case .updateDeleteQuickReply(let shortcutId):
+                return ("updateDeleteQuickReply", [("shortcutId", shortcutId as Any)])
+                case .updateDeleteQuickReplyMessages(let shortcutId, let messages):
+                return ("updateDeleteQuickReplyMessages", [("shortcutId", shortcutId as Any), ("messages", messages as Any)])
                 case .updateDeleteScheduledMessages(let peer, let messages):
                 return ("updateDeleteScheduledMessages", [("peer", peer as Any), ("messages", messages as Any)])
                 case .updateDialogFilter(let flags, let id, let filter):
@@ -1827,6 +1926,8 @@ public extension Api {
                 return ("updateNewEncryptedMessage", [("message", message as Any), ("qts", qts as Any)])
                 case .updateNewMessage(let message, let pts, let ptsCount):
                 return ("updateNewMessage", [("message", message as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
+                case .updateNewQuickReply(let quickReply):
+                return ("updateNewQuickReply", [("quickReply", quickReply as Any)])
                 case .updateNewScheduledMessage(let message):
                 return ("updateNewScheduledMessage", [("message", message as Any)])
                 case .updateNewStickerSet(let stickerset):
@@ -1861,6 +1962,10 @@ public extension Api {
                 return ("updatePrivacy", [("key", key as Any), ("rules", rules as Any)])
                 case .updatePtsChanged:
                 return ("updatePtsChanged", [])
+                case .updateQuickReplies(let quickReplies):
+                return ("updateQuickReplies", [("quickReplies", quickReplies as Any)])
+                case .updateQuickReplyMessage(let message):
+                return ("updateQuickReplyMessage", [("message", message as Any)])
                 case .updateReadChannelDiscussionInbox(let flags, let channelId, let topMsgId, let readMaxId, let broadcastId, let broadcastPost):
                 return ("updateReadChannelDiscussionInbox", [("flags", flags as Any), ("channelId", channelId as Any), ("topMsgId", topMsgId as Any), ("readMaxId", readMaxId as Any), ("broadcastId", broadcastId as Any), ("broadcastPost", broadcastPost as Any)])
                 case .updateReadChannelDiscussionOutbox(let channelId, let topMsgId, let readMaxId):
@@ -1899,6 +2004,8 @@ public extension Api {
                 return ("updateSentStoryReaction", [("peer", peer as Any), ("storyId", storyId as Any), ("reaction", reaction as Any)])
                 case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
                 return ("updateServiceNotification", [("flags", flags as Any), ("inboxDate", inboxDate as Any), ("type", type as Any), ("message", message as Any), ("media", media as Any), ("entities", entities as Any)])
+                case .updateSmsJob(let jobId):
+                return ("updateSmsJob", [("jobId", jobId as Any)])
                 case .updateStickerSets(let flags):
                 return ("updateStickerSets", [("flags", flags as Any)])
                 case .updateStickerSetsOrder(let flags, let order):
@@ -2766,6 +2873,33 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateDeleteQuickReply(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateDeleteQuickReply(shortcutId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateDeleteQuickReplyMessages(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateDeleteQuickReplyMessages(shortcutId: _1!, messages: _2!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateDeleteScheduledMessages(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
@@ -3321,6 +3455,19 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateNewQuickReply(_ reader: BufferReader) -> Update? {
+            var _1: Api.messages.QuickReply?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.messages.QuickReply
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateNewQuickReply(quickReply: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateNewScheduledMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.Message?
             if let signature = reader.readInt32() {
@@ -3608,6 +3755,32 @@ public extension Api {
         public static func parse_updatePtsChanged(_ reader: BufferReader) -> Update? {
             return Api.Update.updatePtsChanged
         }
+        public static func parse_updateQuickReplies(_ reader: BufferReader) -> Update? {
+            var _1: [Api.messages.QuickReply]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.messages.QuickReply.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateQuickReplies(quickReplies: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateQuickReplyMessage(_ reader: BufferReader) -> Update? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateQuickReplyMessage(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateReadChannelDiscussionInbox(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -3871,6 +4044,17 @@ public extension Api {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.Update.updateServiceNotification(flags: _1!, inboxDate: _2, type: _3!, message: _4!, media: _5!, entities: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateSmsJob(_ reader: BufferReader) -> Update? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateSmsJob(jobId: _1!)
             }
             else {
                 return nil

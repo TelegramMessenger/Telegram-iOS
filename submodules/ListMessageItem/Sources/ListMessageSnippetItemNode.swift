@@ -259,7 +259,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             var leftOffset: CGFloat = 0.0
             var selectionNodeWidthAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             if case let .selectable(selected) = item.selection {
-                let (selectionWidth, selectionApply) = selectionNodeLayout(item.presentationData.theme.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.theme.list.itemCheckColors.fillColor, item.presentationData.theme.theme.list.itemCheckColors.foregroundColor, selected, false)
+                let (selectionWidth, selectionApply) = selectionNodeLayout(item.presentationData.theme.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.theme.list.itemCheckColors.fillColor, item.presentationData.theme.theme.list.itemCheckColors.foregroundColor, selected, .regular)
                 selectionNodeWidthAndApply = (selectionWidth, selectionApply)
                 leftOffset += selectionWidth
             }

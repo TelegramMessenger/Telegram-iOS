@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 import AccountContext
 
-final class GreetingMessageSetupChatContents: ChatCustomContentsProtocol {
+final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtocol {
     private final class Impl {
         let queue: Queue
         let context: AccountContext
@@ -168,7 +168,7 @@ final class GreetingMessageSetupChatContents: ChatCustomContentsProtocol {
         }
     }
     
-    let kind: ChatCustomContentsKind
+    var kind: ChatCustomContentsKind
 
     var messages: Signal<[Message], NoError> {
         return self.impl.signalWith({ impl, subscriber in
@@ -209,5 +209,9 @@ final class GreetingMessageSetupChatContents: ChatCustomContentsProtocol {
         self.impl.with { impl in
             impl.editMessage(id: id, text: text, media: media, entities: entities, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
         }
+    }
+    
+    func quickReplyUpdateShortcut(value: String) {
+        self.kind = .quickReplyMessageInput(shortcut: value)
     }
 }
