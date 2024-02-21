@@ -91,6 +91,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
     private var theme: PresentationTheme?
     
     private var cachedDays: [TelegramBusinessHours.WeekDay] = []
+    private var cachedWeekMinuteSet = IndexSet()
     
     private var isExpanded: Bool = false
     
@@ -197,6 +198,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         if self.item?.businessHours != item.businessHours {
             businessDays = item.businessHours.splitIntoWeekDays()
             self.cachedDays = businessDays
+            self.cachedWeekMinuteSet = item.businessHours.weekMinuteSet()
         } else {
             businessDays = self.cachedDays
         }
@@ -239,10 +241,64 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             transition.updateTransformRotation(view: arrowIconView, angle: self.isExpanded ? CGFloat.pi * 1.0 : CGFloat.pi * 0.0)
         }
         
+        var currentCalendar = Calendar(identifier: .gregorian)
+        currentCalendar.timeZone = TimeZone(identifier: item.businessHours.timezoneId) ?? TimeZone.current
+        let currentDate = Date()
+        var currentDayIndex = currentCalendar.component(.weekday, from: currentDate)
+        if currentDayIndex == 1 {
+            currentDayIndex = 6
+        } else {
+            currentDayIndex -= 2
+        }
+        
+        let currentMinute = currentCalendar.component(.minute, from: currentDate)
+        let currentHour = currentCalendar.component(.hour, from: currentDate)
+        let currentWeekMinute = currentDayIndex * 24 * 60 + currentHour * 60 + currentMinute
+        
+        let isOpen = self.cachedWeekMinuteSet.contains(currentWeekMinute)
+        //TODO:localize
+        let openStatusText = isOpen ? "Open" : "Closed"
+        
+        var currentDayStatusText = currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(businessDays[currentDayIndex]) : " "
+        
+        if !isOpen {
+            for range in self.cachedWeekMinuteSet.rangeView {
+                if range.lowerBound > currentWeekMinute {
+                    let openInMinutes = range.lowerBound - currentWeekMinute
+                    let _ = openInMinutes
+                    /*if openInMinutes < 60 {
+                        openStatusText = "Opens in \(openInMinutes) minutes"
+                    } else if openInMinutes < 6 * 60 {
+                        openStatusText = "Opens in \(openInMinutes / 60) hours"
+                    } else*/ do {
+                        let openDate = currentDate.addingTimeInterval(Double(openInMinutes * 60))
+                        let openTimestamp = Int32(openDate.timeIntervalSince1970) + Int32(currentCalendar.timeZone.secondsFromGMT() - TimeZone.current.secondsFromGMT())
+                        
+                        let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: openTimestamp, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(
+                            dateFormatString: { value in
+                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_Date(value).string, ranges: [])
+                            },
+                            tomorrowFormatString: { value in
+                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                            },
+                            todayFormatString: { value in
+                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_TodayAt(value).string, ranges: [])
+                            },
+                            yesterdayFormatString: { value in
+                                return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
+                            }
+                        )).string
+                        currentDayStatusText = "opens \(dateText)"
+                    }
+                    break
+                }
+            }
+        }
+        
         let currentStatusTextSize = self.currentStatusText.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: "Open", font: Font.regular(15.0), textColor: presentationData.theme.list.freeTextSuccessColor))
+                text: .plain(NSAttributedString(string: openStatusText, font: Font.regular(15.0), textColor: isOpen ? presentationData.theme.list.freeTextSuccessColor : presentationData.theme.list.itemDestructiveColor))
             )),
             environment: {},
             containerSize: CGSize(width: width - sideInset * 2.0, height: 100.0)
@@ -259,23 +315,10 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         
         let dayRightInset = sideInset + 17.0
         
-        var currentCalendar = Calendar(identifier: .gregorian)
-        currentCalendar.timeZone = TimeZone.current
-        var currentDayIndex = currentCalendar.component(.weekday, from: Date())
-        if currentDayIndex == 1 {
-            currentDayIndex = 6
-        } else {
-            currentDayIndex -= 2
-        }
-        
-        var targetCalendar = Calendar(identifier: .gregorian)
-        targetCalendar.timeZone = TimeZone(identifier: item.businessHours.timezoneId) ?? TimeZone.current
-        //targetCalendar.component(<#T##component: Calendar.Component##Calendar.Component#>, from: <#T##Date#>)
-        
         let currentDayTextSize = self.currentDayText.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(businessDays[currentDayIndex]) : " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)),
+                text: .plain(NSAttributedString(string: currentDayStatusText, font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)),
                 horizontalAlignment: .right,
                 maximumNumberOfLines: 0
             )),

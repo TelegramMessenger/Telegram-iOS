@@ -343,6 +343,16 @@ public final class TelegramBusinessHours: Equatable, Codable {
             }
         }
     }
+    
+    public func weekMinuteSet() -> IndexSet {
+        var result = IndexSet()
+        
+        for interval in self.weeklyTimeIntervals {
+            result.insert(integersIn: interval.startMinute ..< interval.endMinute)
+        }
+        
+        return result
+    }
 }
 
 public final class TelegramBusinessLocation: Equatable, Codable {
