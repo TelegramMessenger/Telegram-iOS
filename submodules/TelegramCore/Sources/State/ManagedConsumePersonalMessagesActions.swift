@@ -21,7 +21,7 @@ private func md5Hash(_ data: Data) -> Md5Hash {
     return Md5Hash(data: hashData)
 }
 
-private func md5StringHash(_ string: String) -> UInt64 {
+func md5StringHash(_ string: String) -> UInt64 {
     guard let data = string.data(using: .utf8) else {
         return 0
     }

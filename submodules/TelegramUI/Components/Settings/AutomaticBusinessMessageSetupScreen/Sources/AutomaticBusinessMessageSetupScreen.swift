@@ -352,8 +352,8 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             }
             let contents = AutomaticBusinessMessageSetupChatContents(
                 context: component.context,
-                messages: self.messages,
-                kind: component.mode == .away ? .awayMessageInput : .greetingMessageInput
+                kind: component.mode == .away ? .awayMessageInput : .greetingMessageInput,
+                shortcutId: nil
             )
             let chatController = component.context.sharedContext.makeChatController(
                 context: component.context,
@@ -365,17 +365,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             chatController.navigationPresentation = .modal
             self.environment?.controller()?.push(chatController)
             self.messagesDisposable?.dispose()
-            self.messagesDisposable = (contents.messages
-            |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
-                guard let self else {
-                    return
-                }
-                let messages = messages.map(EngineMessage.init)
-                if self.messages != messages {
-                    self.messages = messages
-                    self.state?.updated(transition: .immediate)
-                }
-            })
         }
         
         private func openCustomScheduleDateSetup(isStartTime: Bool, isDate: Bool) {

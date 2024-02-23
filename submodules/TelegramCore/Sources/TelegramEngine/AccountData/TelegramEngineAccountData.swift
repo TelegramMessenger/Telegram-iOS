@@ -138,8 +138,12 @@ public extension TelegramEngine {
             var inputAddress: String?
             if let businessLocation {
                 flags |= 1 << 0
-                inputGeoPoint = businessLocation.coordinates?.apiInputGeoPoint ?? .inputGeoPointEmpty
                 inputAddress = businessLocation.address
+                
+                inputGeoPoint = businessLocation.coordinates?.apiInputGeoPoint
+                if inputGeoPoint != nil {
+                    flags |= 1 << 1
+                }
             }
             
             let remoteApply: Signal<Never, NoError> = self.account.network.request(Api.functions.account.updateBusinessLocation(flags: flags, geoPoint: inputGeoPoint, address: inputAddress))
@@ -158,12 +162,28 @@ public extension TelegramEngine {
             |> then(remoteApply)
         }
         
-        public func shortcutMessages() -> Signal<QuickReplyMessageShortcutsState, NoError> {
-            return _internal_shortcutMessages(account: self.account)
+        public func shortcutMessageList() -> Signal<ShortcutMessageList, NoError> {
+            return _internal_shortcutMessageList(account: self.account)
         }
 
-        public func updateShortcutMessages(state: QuickReplyMessageShortcutsState) {
-            let _ = _internal_updateShortcutMessages(account: self.account, state: state).startStandalone()
+        public func keepShortcutMessageListUpdated() -> Signal<Never, NoError> {
+            return _internal_keepShortcutMessagesUpdated(account: self.account)
+        }
+        
+        public func editMessageShortcut(id: Int32, shortcut: String) {
+            let _ = _internal_editMessageShortcut(account: self.account, id: id, shortcut: shortcut).startStandalone()
+        }
+        
+        public func deleteMessageShortcuts(ids: [Int32]) {
+            let _ = _internal_deleteMessageShortcuts(account: self.account, ids: ids).startStandalone()
+        }
+        
+        public func reorderMessageShortcuts(ids: [Int32], completion: @escaping () -> Void) {
+            let _ = _internal_reorderMessageShortcuts(account: self.account, ids: ids, localCompletion: completion).startStandalone()
+        }
+        
+        public func sendMessageShortcut(peerId: EnginePeer.Id, id: Int32) {
+            let _ = _internal_sendMessageShortcut(account: self.account, peerId: peerId, id: id).startStandalone()
         }
     }
 }

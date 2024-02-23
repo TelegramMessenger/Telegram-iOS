@@ -711,7 +711,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
-    if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
+    if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {

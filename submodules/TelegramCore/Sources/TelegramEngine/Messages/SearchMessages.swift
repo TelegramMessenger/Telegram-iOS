@@ -584,12 +584,18 @@ func _internal_downloadMessage(accountPeerId: PeerId, postbox: Postbox, network:
 }
 
 func fetchRemoteMessage(accountPeerId: PeerId, postbox: Postbox, source: FetchMessageHistoryHoleSource, message: MessageReference) -> Signal<Message?, NoError> {
-    guard case let .message(peer, _, id, _, _, _) = message.content else {
+    guard case let .message(peer, _, id, _, _, _, threadId) = message.content else {
         return .single(nil)
     }
     let signal: Signal<Api.messages.Messages, MTRpcError>
     if id.namespace == Namespaces.Message.ScheduledCloud {
         signal = source.request(Api.functions.messages.getScheduledMessages(peer: peer.inputPeer, id: [id.id]))
+    } else if id.namespace == Namespaces.Message.QuickReplyCloud {
+        if let threadId {
+            signal = source.request(Api.functions.messages.getQuickReplyMessages(flags: 1 << 0, shortcutId: Int32(clamping: threadId), id: [id.id], hash: 0))
+        } else {
+            signal = .never()
+        }
     } else if id.peerId.namespace == Namespaces.Peer.CloudChannel {
         if let channel = peer.inputChannel {
             signal = source.request(Api.functions.channels.getMessages(channel: channel, id: [Api.InputMessage.inputMessageID(id: id.id)]))

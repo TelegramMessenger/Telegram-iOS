@@ -7,7 +7,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(peer, _, _, _, _, _):
+            case let .message(peer, _, _, _, _, _, _):
                 return peer
         }
     }
@@ -15,7 +15,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, author, _, _, _, _):
+            case let .message(_, author, _, _, _, _, _):
                 return author
         }
     }
@@ -24,7 +24,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
         case .none:
             return nil
-        case let .message(_, _, id, _, _, _):
+        case let .message(_, _, id, _, _, _, _):
             return id
         }
     }
@@ -33,7 +33,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, _, _, timestamp, _, _):
+            case let .message(_, _, _, timestamp, _, _, _):
                 return timestamp
         }
     }
@@ -42,7 +42,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, _, _, _, incoming, _):
+            case let .message(_, _, _, _, incoming, _, _):
                 return incoming
         }
     }
@@ -51,8 +51,17 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         switch content {
             case .none:
                 return nil
-            case let .message(_, _, _, _, _, secret):
+            case let .message(_, _, _, _, _, secret, _):
                 return secret
+        }
+    }
+    
+    public var threadId: Int64? {
+        switch content {
+            case .none:
+                return nil
+            case let .message(_, _, _, _, _, _, threadId):
+                return threadId
         }
     }
     
@@ -64,13 +73,13 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
             } else {
                 author = nil
             }
-            self.content = .message(peer: inputPeer, author: author, id: message.id, timestamp: message.timestamp, incoming: message.flags.contains(.Incoming), secret: message.containsSecretMedia)
+            self.content = .message(peer: inputPeer, author: author, id: message.id, timestamp: message.timestamp, incoming: message.flags.contains(.Incoming), secret: message.containsSecretMedia, threadId: message.threadId)
         } else {
             self.content = .none
         }
     }
     
-    public init(peer: Peer, author: Peer?, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool) {
+    public init(peer: Peer, author: Peer?, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool, threadId: Int64?) {
         if let inputPeer = PeerReference(peer) {
             let a: PeerReference?
             if let peer = author {
@@ -78,7 +87,7 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
             } else {
                 a = nil
             }
-            self.content = .message(peer: inputPeer, author: a, id: id, timestamp: timestamp, incoming: incoming, secret: secret)
+            self.content = .message(peer: inputPeer, author: a, id: id, timestamp: timestamp, incoming: incoming, secret: secret, threadId: threadId)
         } else {
             self.content = .none
         }
@@ -95,14 +104,14 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
 
 public enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
     case none
-    case message(peer: PeerReference, author: PeerReference?, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool)
+    case message(peer: PeerReference, author: PeerReference?, id: MessageId, timestamp: Int32, incoming: Bool, secret: Bool, threadId: Int64?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_r", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-            self = .message(peer: decoder.decodeObjectForKey("p", decoder: { PeerReference(decoder: $0) }) as! PeerReference, author: decoder.decodeObjectForKey("author") as? PeerReference, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), timestamp: 0, incoming: false, secret: false)
+                self = .message(peer: decoder.decodeObjectForKey("p", decoder: { PeerReference(decoder: $0) }) as! PeerReference, author: decoder.decodeObjectForKey("author") as? PeerReference, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), timestamp: 0, incoming: false, secret: false, threadId: decoder.decodeOptionalInt64ForKey("tid"))
             default:
                 assertionFailure()
                 self = .none
@@ -113,7 +122,7 @@ public enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "_r")
-            case let .message(peer, author, id, _, _, _):
+            case let .message(peer, author, id, _, _, _, threadId):
                 encoder.encodeInt32(1, forKey: "_r")
                 encoder.encodeObject(peer, forKey: "p")
                 if let author = author {
@@ -124,6 +133,11 @@ public enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
                 encoder.encodeInt64(id.peerId.toInt64(), forKey: "i.p")
                 encoder.encodeInt32(id.namespace, forKey: "i.n")
                 encoder.encodeInt32(id.id, forKey: "i.i")
+                if let threadId {
+                    encoder.encodeInt64(threadId, forKey: "tid")
+                } else {
+                    encoder.encodeNil(forKey: "tid")
+                }
         }
     }
 }

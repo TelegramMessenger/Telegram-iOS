@@ -464,7 +464,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     break
                 }
             }
-            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
+            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal || item.message.id.namespace == Namespaces.Message.QuickReplyLocal {
                 notConsumed = true
             }
             

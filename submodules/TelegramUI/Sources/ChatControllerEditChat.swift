@@ -11,6 +11,7 @@ import QuickReplyNameAlertController
 
 extension ChatControllerImpl {
     func editChat() {
+        //TODO:localize
         if case let .customChatContents(customChatContents) = self.subject, case let .quickReplyMessageInput(currentValue) = customChatContents.kind {
             var completion: ((String?) -> Void)?
             let alertController = quickReplyNameAlertController(
@@ -34,40 +35,25 @@ extension ChatControllerImpl {
                         return
                     }
                     
-                    let _ = (self.context.engine.accountData.shortcutMessages()
+                    let _ = (self.context.engine.accountData.shortcutMessageList()
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] shortcutMessages in
+                    |> deliverOnMainQueue).start(next: { [weak self] shortcutMessageList in
                         guard let self else {
                             alertController?.dismissAnimated()
                             return
                         }
                         
-                        var shortcuts = shortcutMessages.shortcuts
-                        guard let index = shortcuts.firstIndex(where: { $0.shortcut.lowercased() == currentValue }) else {
-                            alertController?.dismissAnimated()
-                            return
-                        }
-                        
-                        if shortcuts.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
+                        if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
                             if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
                                 contentNode.setErrorText(errorText: "Shortcut with that name already exists")
                             }
                         } else {
-                            shortcuts[index] = QuickReplyMessageShortcut(
-                                id: shortcuts[index].id,
-                                shortcut: value,
-                                messages: shortcuts[index].messages
-                            )
-                            let updatedShortcutMessages = QuickReplyMessageShortcutsState(shortcuts: shortcuts)
-                            self.context.engine.accountData.updateShortcutMessages(state: updatedShortcutMessages)
-                            
-                            self.chatTitleView?.titleContent = .custom("/\(value)", nil, false)
+                            self.chatTitleView?.titleContent = .custom("\(value)", nil, false)
+                            alertController?.dismissAnimated()
                             
                             if case let .customChatContents(customChatContents) = self.subject {
                                 customChatContents.quickReplyUpdateShortcut(value: value)
                             }
-                            
-                            alertController?.dismissAnimated()
                         }
                     })
                 }

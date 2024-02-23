@@ -195,7 +195,7 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     filterData: nil,
                     index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: context.account.peerId, namespace: 0, id: 0), timestamp: 0))),
                     content: .peer(ChatListItemContent.PeerData(
-                        messages: shortcut.messages.first.flatMap({ [$0] }) ?? [],
+                        messages: [shortcut.topMessage],
                         peer: renderedPeer,
                         threadInfo: nil,
                         combinedReadState: nil,
@@ -375,7 +375,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                     }
                 }
             case let .shortcut(shortcut):
-                interfaceInteraction.sendShortcut(shortcut)
+                interfaceInteraction.sendShortcut(shortcut.id)
             }
         }, openEditShortcuts: { [weak self] in
             guard let self, let interfaceInteraction = self.interfaceInteraction else {

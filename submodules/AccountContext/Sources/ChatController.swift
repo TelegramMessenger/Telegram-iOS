@@ -805,7 +805,7 @@ public enum ChatControllerPresentationMode: Equatable {
 
 public enum ChatInputTextCommand: Equatable {
     case command(PeerCommand)
-    case shortcut(QuickReplyMessageShortcut)
+    case shortcut(ShortcutMessageList.Item)
 }
 
 public struct ChatInputQueryCommandsResult: Equatable {
@@ -1077,6 +1077,7 @@ public enum ChatHistoryListSource {
     
     case `default`
     case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId?, quote: Quote?, loadMore: (() -> Void)?)
+    case customView(historyView: Signal<(MessageHistoryView, ViewUpdateType), NoError>)
 }
 
 public enum ChatCustomContentsKind: Equatable {
@@ -1087,7 +1088,7 @@ public enum ChatCustomContentsKind: Equatable {
 
 public protocol ChatCustomContentsProtocol: AnyObject {
     var kind: ChatCustomContentsKind { get }
-    var messages: Signal<[Message], NoError> { get }
+    var historyView: Signal<(MessageHistoryView, ViewUpdateType), NoError> { get }
     var messageLimit: Int? { get }
     
     func enqueueMessages(messages: [EnqueueMessage])

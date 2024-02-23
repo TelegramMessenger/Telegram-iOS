@@ -271,6 +271,8 @@ extension Api.Update {
                 return message
             case let .updateNewScheduledMessage(message):
                 return message
+            case let .updateQuickReplyMessage(message):
+                return message
             default:
                 return nil
         }
@@ -334,6 +336,8 @@ extension Api.Update {
                 return [peer.peerId]
             case let .updateNewScheduledMessage(message):
                 return apiMessagePeerIds(message)
+            case let .updateQuickReplyMessage(message):
+                return apiMessagePeerIds(message)
             default:
                 return []
         }
@@ -348,6 +352,8 @@ extension Api.Update {
             case let .updateEditChannelMessage(message, _, _):
                 return apiMessageAssociatedMessageIds(message)
             case let .updateNewScheduledMessage(message):
+                return apiMessageAssociatedMessageIds(message)
+            case let .updateQuickReplyMessage(message):
                 return apiMessageAssociatedMessageIds(message)
             default:
                 break

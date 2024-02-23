@@ -582,7 +582,7 @@ public extension Api {
         case updateNewChannelMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
         case updateNewEncryptedMessage(message: Api.EncryptedMessage, qts: Int32)
         case updateNewMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
-        case updateNewQuickReply(quickReply: Api.messages.QuickReply)
+        case updateNewQuickReply(quickReply: Api.QuickReply)
         case updateNewScheduledMessage(message: Api.Message)
         case updateNewStickerSet(stickerset: Api.messages.StickerSet)
         case updateNotifySettings(peer: Api.NotifyPeer, notifySettings: Api.PeerNotifySettings)
@@ -600,7 +600,7 @@ public extension Api {
         case updatePinnedSavedDialogs(flags: Int32, order: [Api.DialogPeer]?)
         case updatePrivacy(key: Api.PrivacyKey, rules: [Api.PrivacyRule])
         case updatePtsChanged
-        case updateQuickReplies(quickReplies: [Api.messages.QuickReply])
+        case updateQuickReplies(quickReplies: [Api.QuickReply])
         case updateQuickReplyMessage(message: Api.Message)
         case updateReadChannelDiscussionInbox(flags: Int32, channelId: Int64, topMsgId: Int32, readMaxId: Int32, broadcastId: Int64?, broadcastPost: Int32?)
         case updateReadChannelDiscussionOutbox(channelId: Int64, topMsgId: Int32, readMaxId: Int32)
@@ -1320,7 +1320,7 @@ public extension Api {
                     break
                 case .updateNewQuickReply(let quickReply):
                     if boxed {
-                        buffer.appendInt32(-1386034803)
+                        buffer.appendInt32(-180508905)
                     }
                     quickReply.serialize(buffer, true)
                     break
@@ -1478,7 +1478,7 @@ public extension Api {
                     break
                 case .updateQuickReplies(let quickReplies):
                     if boxed {
-                        buffer.appendInt32(230929261)
+                        buffer.appendInt32(-112784718)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(quickReplies.count))
@@ -3456,9 +3456,9 @@ public extension Api {
             }
         }
         public static func parse_updateNewQuickReply(_ reader: BufferReader) -> Update? {
-            var _1: Api.messages.QuickReply?
+            var _1: Api.QuickReply?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.messages.QuickReply
+                _1 = Api.parse(reader, signature: signature) as? Api.QuickReply
             }
             let _c1 = _1 != nil
             if _c1 {
@@ -3756,9 +3756,9 @@ public extension Api {
             return Api.Update.updatePtsChanged
         }
         public static func parse_updateQuickReplies(_ reader: BufferReader) -> Update? {
-            var _1: [Api.messages.QuickReply]?
+            var _1: [Api.QuickReply]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.messages.QuickReply.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.QuickReply.self)
             }
             let _c1 = _1 != nil
             if _c1 {

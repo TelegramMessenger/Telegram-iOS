@@ -245,6 +245,54 @@ public extension Api {
     }
 }
 public extension Api {
+    enum QuickReply: TypeConstructorDescription {
+        case quickReply(shortcutId: Int32, shortcut: String, topMessage: Int32, count: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .quickReply(let shortcutId, let shortcut, let topMessage, let count):
+                    if boxed {
+                        buffer.appendInt32(110563371)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    serializeString(shortcut, buffer: buffer, boxed: false)
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .quickReply(let shortcutId, let shortcut, let topMessage, let count):
+                return ("quickReply", [("shortcutId", shortcutId as Any), ("shortcut", shortcut as Any), ("topMessage", topMessage as Any), ("count", count as Any)])
+    }
+    }
+    
+        public static func parse_quickReply(_ reader: BufferReader) -> QuickReply? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.QuickReply.quickReply(shortcutId: _1!, shortcut: _2!, topMessage: _3!, count: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Reaction: TypeConstructorDescription {
         case reactionCustomEmoji(documentId: Int64)
         case reactionEmoji(emoticon: String)

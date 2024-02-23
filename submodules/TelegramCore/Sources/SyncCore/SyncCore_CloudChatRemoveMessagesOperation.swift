@@ -24,21 +24,29 @@ public extension CloudChatRemoveMessagesType {
 
 public final class CloudChatRemoveMessagesOperation: PostboxCoding {
     public let messageIds: [MessageId]
+    public let threadId: Int64?
     public let type: CloudChatRemoveMessagesType
     
-    public init(messageIds: [MessageId], type: CloudChatRemoveMessagesType) {
+    public init(messageIds: [MessageId], threadId: Int64?, type: CloudChatRemoveMessagesType) {
         self.messageIds = messageIds
+        self.threadId = threadId
         self.type = type
     }
     
     public init(decoder: PostboxDecoder) {
         self.messageIds = MessageId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("i")!)
+        self.threadId = decoder.decodeOptionalInt64ForKey("threadId")
         self.type = CloudChatRemoveMessagesType(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         let buffer = WriteBuffer()
         MessageId.encodeArrayToBuffer(self.messageIds, buffer: buffer)
+        if let threadId = self.threadId {
+            encoder.encodeInt64(threadId, forKey: "threadId")
+        } else {
+            encoder.encodeNil(forKey: "threadId")
+        }
         encoder.encodeBytes(buffer, forKey: "i")
         encoder.encodeInt32(self.type.rawValue, forKey: "t")
     }
@@ -88,6 +96,7 @@ public enum CloudChatClearHistoryType: Int32 {
     case forLocalPeer
     case forEveryone
     case scheduledMessages
+    case quickReplyMessages
 }
 
 public enum InteractiveHistoryClearingType: Int32 {

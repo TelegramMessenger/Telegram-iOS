@@ -590,15 +590,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         } else if case .customChatContents = chatLocation {
             if case let .customChatContents(customChatContents) = subject {
-                source = .custom(
-                    messages: customChatContents.messages
-                    |> map { messages in
-                        return (messages, 0, false)
-                    },
-                    messageId: nil,
-                    quote: nil,
-                    loadMore: nil
-                )
+                source = .customView(historyView: customChatContents.historyView)
             } else {
                 source = .custom(messages: .single(([], 0, false)), messageId: nil, quote: nil, loadMore: nil)
             }

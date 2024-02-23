@@ -794,35 +794,35 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         //self.debugInfo = true
         
         self.messageProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds, clientId: clientId.with { $0 })
+            context?.account.viewTracker.updateViewCountForMessageIds(messageIds: Set(messageIds.map(\.messageId)), clientId: clientId.with { $0 })
         }
         self.messageWithReactionsProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateReactionsForMessageIds(messageIds: messageIds)
+            context?.account.viewTracker.updateReactionsForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
         }
         self.seenLiveLocationProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateSeenLiveLocationForMessageIds(messageIds: messageIds)
+            context?.account.viewTracker.updateSeenLiveLocationForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
         }
         self.unsupportedMessageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateUnsupportedMediaForMessageIds(messageIds: messageIds)
         }
         self.refreshMediaProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
+            context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
         }
         self.refreshStoriesProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: messageIds)
+            context?.account.viewTracker.refreshStoriesForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
         }
         self.translationProcessingManager.process = { [weak self, weak context] messageIds in
             if let context = context, let toLang = self?.toLang {
-                let _ = translateMessageIds(context: context, messageIds: Array(messageIds), toLang: toLang).startStandalone()
+                let _ = translateMessageIds(context: context, messageIds: Array(messageIds.map(\.messageId)), toLang: toLang).startStandalone()
             }
         }
         
         self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue {
-                    context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                    context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
                 } else {
-                    strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds)
+                    strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
                 }
             }
         }
@@ -832,9 +832,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 return
             }
             if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                strongSelf.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+                strongSelf.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
             } else {
-                strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds)
+                strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds.map(\.messageId))
             }
         }
         
@@ -842,7 +842,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.context.account.viewTracker.updatedExtendedMediaForMessageIds(messageIds: messageIds)
+            strongSelf.context.account.viewTracker.updatedExtendedMediaForMessageIds(messageIds: Set(messageIds.map(\.messageId)))
         }
         
         self.preloadPages = false
@@ -1268,6 +1268,53 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 
                 return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tag: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil, nil)
+            }
+        } else if case let .customView(historyView) = self.source {
+            historyViewUpdate = combineLatest(queue: .mainQueue(),
+                self.chatHistoryLocationPromise.get(),
+                self.ignoreMessagesInTimestampRangePromise.get()
+            )
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs.0 != rhs.0 {
+                    return false
+                }
+                if lhs.1 != rhs.1 {
+                    return false
+                }
+                return true
+            })
+            |> mapToSignal { _ in
+                return historyView
+            }
+            |> map { view, update in
+                let version = currentViewVersion.modify({ value in
+                    if let value = value {
+                        return value + 1
+                    } else {
+                        return 0
+                    }
+                })!
+                
+                return (
+                    ChatHistoryViewUpdate.HistoryView(
+                        view: view,
+                        type: .Generic(type: update),
+                        scrollPosition: nil,
+                        flashIndicators: false,
+                        originalScrollPosition: nil,
+                        initialData: ChatHistoryCombinedInitialData(
+                            initialData: nil,
+                            buttonKeyboardMessage: nil,
+                            cachedData: nil,
+                            cachedDataMessages: nil,
+                            readStateData: nil
+                        ),
+                        id: 0
+                    ),
+                    version,
+                    nil,
+                    nil
+                )
             }
         } else {
             historyViewUpdate = combineLatest(queue: .mainQueue(),
@@ -2415,7 +2462,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             
             var messageIdsWithViewCount: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
-            var messageIdsWithUnsupportedMedia: [MessageId] = []
+            var messageIdsWithUnsupportedMedia: [MessageAndThreadId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithRefreshStories: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
@@ -2516,7 +2563,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             }
                         }
                         if contentRequiredValidation {
-                            messageIdsWithUnsupportedMedia.append(message.id)
+                            messageIdsWithUnsupportedMedia.append(MessageAndThreadId(messageId: message.id, threadId: message.threadId))
                         }
                         if mediaRequiredValidation {
                             messageIdsWithRefreshMedia.append(message.id)
@@ -2712,41 +2759,41 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             }
             
             if !messageIdsWithViewCount.isEmpty {
-                self.messageProcessingManager.add(messageIdsWithViewCount)
+                self.messageProcessingManager.add(messageIdsWithViewCount.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !messageIdsWithLiveLocation.isEmpty {
-                self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation)
+                self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !messageIdsWithUnsupportedMedia.isEmpty {
                 self.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
             }
             if !messageIdsWithRefreshMedia.isEmpty {
-                self.refreshMediaProcessingManager.add(messageIdsWithRefreshMedia)
+                self.refreshMediaProcessingManager.add(messageIdsWithRefreshMedia.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !messageIdsWithRefreshStories.isEmpty {
-                self.refreshStoriesProcessingManager.add(messageIdsWithRefreshStories)
+                self.refreshStoriesProcessingManager.add(messageIdsWithRefreshStories.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !messageIdsWithUnseenPersonalMention.isEmpty {
-                self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
+                self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !messageIdsWithUnseenReactions.isEmpty {
-                self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions)
+                self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                 
                 if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                     let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
                 }
             }
             if !messageIdsWithPossibleReactions.isEmpty {
-                self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions)
+                self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !downloadableResourceIds.isEmpty {
                 let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).startStandalone()
             }
             if !messageIdsWithInactiveExtendedMedia.isEmpty {
-                self.extendedMediaProcessingManager.update(messageIdsWithInactiveExtendedMedia)
+                self.extendedMediaProcessingManager.update(Set(messageIdsWithInactiveExtendedMedia.map { MessageAndThreadId(messageId: $0, threadId: nil) }))
             }
             if !messageIdsToTranslate.isEmpty {
-                self.translationProcessingManager.add(messageIdsToTranslate)
+                self.translationProcessingManager.add(messageIdsToTranslate.map { MessageAndThreadId(messageId: $0, threadId: nil) })
             }
             if !visibleAdOpaqueIds.isEmpty {
                 for opaqueId in visibleAdOpaqueIds {
@@ -3650,7 +3697,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     
                     let visibleNewIncomingReactionMessageIds = strongSelf.displayUnseenReactionAnimations(messageIds: messageIds)
                     if !visibleNewIncomingReactionMessageIds.isEmpty {
-                        strongSelf.unseenReactionsProcessingManager.add(visibleNewIncomingReactionMessageIds)
+                        strongSelf.unseenReactionsProcessingManager.add(visibleNewIncomingReactionMessageIds.map { MessageAndThreadId(messageId: $0, threadId: nil) })
                     }
                 }
                 

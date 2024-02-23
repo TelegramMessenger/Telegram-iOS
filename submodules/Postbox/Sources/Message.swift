@@ -1029,7 +1029,7 @@ final class InternalStoreMessage {
     }
 }
 
-public enum MessageIdNamespaces {
+public enum MessageIdNamespaces: Equatable {
     case all
     case just(Set<MessageId.Namespace>)
     case not(Set<MessageId.Namespace>)
@@ -1043,5 +1043,25 @@ public enum MessageIdNamespaces {
         case let .not(namespaces):
             return !namespaces.contains(namespace)
         }
+    }
+}
+
+public struct PeerAndThreadId: Hashable {
+    public var peerId: PeerId
+    public var threadId: Int64?
+    
+    public init(peerId: PeerId, threadId: Int64?) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
+}
+
+public struct MessageAndThreadId: Hashable {
+    public var messageId: MessageId
+    public var threadId: Int64?
+    
+    public init(messageId: MessageId, threadId: Int64?) {
+        self.messageId = messageId
+        self.threadId = threadId
     }
 }

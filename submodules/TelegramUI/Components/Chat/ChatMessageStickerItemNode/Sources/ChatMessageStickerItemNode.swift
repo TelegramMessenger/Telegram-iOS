@@ -499,7 +499,7 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             var needsShareButton = false
             if case .pinnedMessages = item.associatedData.subject {
                 needsShareButton = true
-            } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            } else if isFailed || Namespaces.Message.allNonRegular.contains(item.message.id.namespace) {
                 needsShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {

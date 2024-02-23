@@ -656,8 +656,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
                         let namespaces: MessageIdNamespaces
                         if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                             namespaces = .just(Namespaces.Message.allScheduled)
+                        } else if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
+                            namespaces = .just(Namespaces.Message.allQuickReply)
                         } else {
-                            namespaces = .not(Namespaces.Message.allScheduled)
+                            namespaces = .not(Namespaces.Message.allNonRegular)
                         }
                         let inputTag: HistoryViewInputTag
                         if let customTag {
@@ -1391,8 +1393,10 @@ public class GalleryController: ViewController, StandalonePresentableController,
                                 let namespaces: MessageIdNamespaces
                                 if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                                     namespaces = .just(Namespaces.Message.allScheduled)
+                                } else if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
+                                    namespaces = .just(Namespaces.Message.allQuickReply)
                                 } else {
-                                    namespaces = .not(Namespaces.Message.allScheduled)
+                                    namespaces = .not(Namespaces.Message.allNonRegular)
                                 }
                                 let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), ignoreMessagesInTimestampRange: nil, count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tag: tag, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
                                 |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in

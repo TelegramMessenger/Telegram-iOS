@@ -265,12 +265,12 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             for range in self.cachedWeekMinuteSet.rangeView {
                 if range.lowerBound > currentWeekMinute {
                     let openInMinutes = range.lowerBound - currentWeekMinute
-                    let _ = openInMinutes
-                    /*if openInMinutes < 60 {
-                        openStatusText = "Opens in \(openInMinutes) minutes"
+                    //TODO:localize
+                    if openInMinutes < 60 {
+                        currentDayStatusText = "Opens in \(openInMinutes) minutes"
                     } else if openInMinutes < 6 * 60 {
-                        openStatusText = "Opens in \(openInMinutes / 60) hours"
-                    } else*/ do {
+                        currentDayStatusText = "Opens in \(openInMinutes / 60) hours"
+                    } else {
                         let openDate = currentDate.addingTimeInterval(Double(openInMinutes * 60))
                         let openTimestamp = Int32(openDate.timeIntervalSince1970) + Int32(currentCalendar.timeZone.secondsFromGMT() - TimeZone.current.secondsFromGMT())
                         

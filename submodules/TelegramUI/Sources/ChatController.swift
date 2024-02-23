@@ -6180,7 +6180,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     case .awayMessageInput:
                         self.chatTitleView?.titleContent = .custom("Away Message", nil, false)
                     case let .quickReplyMessageInput(shortcut):
-                        self.chatTitleView?.titleContent = .custom("/\(shortcut)", nil, false)
+                        self.chatTitleView?.titleContent = .custom("\(shortcut)", nil, false)
                     }
                 } else {
                     self.chatTitleView?.titleContent = .custom("Messages", nil, false)
@@ -9105,15 +9105,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let sourceMessage: Signal<EngineMessage?, NoError>
-            if case let .customChatContents(customChatContents) = strongSelf.subject {
-                sourceMessage = customChatContents.messages
-                |> take(1)
-                |> map { messages -> EngineMessage? in
-                    return messages.first(where: { $0.id == editMessage.messageId }).flatMap(EngineMessage.init)
-                }
-            } else {
-                sourceMessage = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: editMessage.messageId))
-            }
+            sourceMessage = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: editMessage.messageId))
             
             let _ = (sourceMessage
             |> deliverOnMainQueue).start(next: { [weak strongSelf] message in
@@ -9210,37 +9202,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     media = .keep
                 }
                 
-                if case let .customChatContents(customChatContents) = strongSelf.subject {
-                    customChatContents.editMessage(id: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                        var state = state
-                        state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
-                        state = state.updatedEditMessageState(nil)
-                        return state
-                    })
-                } else {
-                    let _ = (strongSelf.context.account.postbox.messageAtId(editMessage.messageId)
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self] currentMessage in
-                        if let strongSelf = self {
-                            if let currentMessage = currentMessage {
-                                let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
-                                let currentWebpagePreviewAttribute = currentMessage.webpagePreviewAttribute ?? WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: nil, isManuallyAdded: true, isSafe: false)
-                                
-                                if currentMessage.text != text.string || currentEntities != entities || updatingMedia || webpagePreviewAttribute != currentWebpagePreviewAttribute || disableUrlPreview {
-                                    strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
-                                }
-                            }
+                let _ = (strongSelf.context.account.postbox.messageAtId(editMessage.messageId)
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] currentMessage in
+                    if let strongSelf = self {
+                        if let currentMessage = currentMessage {
+                            let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
+                            let currentWebpagePreviewAttribute = currentMessage.webpagePreviewAttribute ?? WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: nil, isManuallyAdded: true, isSafe: false)
                             
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                                var state = state
-                                state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
-                                state = state.updatedEditMessageState(nil)
-                                return state
-                            })
+                            if currentMessage.text != text.string || currentEntities != entities || updatingMedia || webpagePreviewAttribute != currentWebpagePreviewAttribute || disableUrlPreview {
+                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
+                            }
                         }
-                    })
-                }
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            var state = state
+                            state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
+                            state = state.updatedEditMessageState(nil)
+                            return state
+                        })
+                    }
+                })
             })
         }, beginMessageSearch: { [weak self] domain, query in
             guard let strongSelf = self else {
@@ -9479,12 +9460,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, sendShortcut: { [weak self] shortcut in
+        }, sendShortcut: { [weak self] shortcutId in
             guard let self else {
                 return
             }
+            guard let peerId = self.chatLocation.peerId else {
+                return
+            }
+            let _ = self
+            let _ = shortcutId
             
-            self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+            })
+            self.context.engine.accountData.sendMessageShortcut(peerId: peerId, id: shortcutId)
+            
+            /*self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 guard let self else {
                     return
                 }
@@ -9494,7 +9485,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, nil)
             
             var messages: [EnqueueMessage] = []
-            for message in shortcut.messages {
+            do {
+                let message = shortcut.topMessage
                 var attributes: [MessageAttribute] = []
                 let entities = generateTextEntities(message.text, enabledTypes: .all)
                 if !entities.isEmpty {
@@ -9515,7 +9507,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 ))
             }
             
-            self.sendMessages(messages)
+            self.sendMessages(messages)*/
         }, openEditShortcuts: { [weak self] in
             guard let self else {
                 return

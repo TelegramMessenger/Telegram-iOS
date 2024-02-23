@@ -19,6 +19,8 @@ import ItemListUI
 import ChatListUI
 import QuickReplyNameAlertController
 import ChatListHeaderComponent
+import PlainButtonComponent
+import MultilineTextComponent
 
 final class QuickReplySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -45,30 +47,30 @@ final class QuickReplySetupScreenComponent: Component {
     private enum ContentEntry: Comparable, Identifiable {
         enum Id: Hashable {
             case add
-            case item(String)
+            case item(Int32)
         }
         
         var stableId: Id {
             switch self {
             case .add:
                 return .add
-            case let .item(item, _, _, _):
-                return .item(item.shortcut)
+            case let .item(item, _, _, _, _):
+                return .item(item.id)
             }
         }
         
         case add
-        case item(item: QuickReplyMessageShortcut, accountPeer: EnginePeer, sortIndex: Int, isEditing: Bool)
+        case item(item: ShortcutMessageList.Item, accountPeer: EnginePeer, sortIndex: Int, isEditing: Bool, isSelected: Bool)
         
         static func <(lhs: ContentEntry, rhs: ContentEntry) -> Bool {
             switch lhs {
             case .add:
                 return false
-            case let .item(lhsItem, _, lhsSortIndex, _):
+            case let .item(lhsItem, _, lhsSortIndex, _, _):
                 switch rhs {
                 case .add:
                     return false
-                case let .item(rhsItem, _, rhsSortIndex, _):
+                case let .item(rhsItem, _, rhsSortIndex, _, _):
                     if lhsSortIndex != rhsSortIndex {
                         return lhsSortIndex < rhsSortIndex
                     }
@@ -97,10 +99,10 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openQuickReplyChat(shortcut: nil)
+                        parentView.openQuickReplyChat(shortcut: nil, shortcutId: nil)
                     }
                 )
-            case let .item(item, accountPeer, _, isEditing):
+            case let .item(item, accountPeer, _, isEditing, isSelected):
                 let chatListNodeInteraction = ChatListNodeInteraction(
                     context: listNode.context,
                     animationCache: listNode.context.animationCache,
@@ -111,13 +113,21 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openQuickReplyChat(shortcut: item.shortcut)
+                        parentView.openQuickReplyChat(shortcut: item.shortcut, shortcutId: item.id)
                     },
                     disabledPeerSelected: { _, _, _ in
                     },
-                    togglePeerSelected: { _, _ in
+                    togglePeerSelected: { [weak listNode] _, _ in
+                        guard let listNode, let parentView = listNode.parentView else {
+                            return
+                        }
+                        parentView.toggleShortcutSelection(id: item.id)
                     },
-                    togglePeersSelection: { _, _ in
+                    togglePeersSelection: { [weak listNode] _, _ in
+                        guard let listNode, let parentView = listNode.parentView else {
+                            return
+                        }
+                        parentView.toggleShortcutSelection(id: item.id)
                     },
                     additionalCategorySelected: { _ in
                     },
@@ -125,7 +135,7 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openQuickReplyChat(shortcut: item.shortcut)
+                        parentView.openQuickReplyChat(shortcut: item.shortcut, shortcutId: item.id)
                     },
                     groupSelected: { _ in
                     },
@@ -143,7 +153,7 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openDeleteShortcut(shortcut: item.shortcut)
+                        parentView.openDeleteShortcuts(ids: [item.id])
                     },
                     deletePeerThread: { _, _ in
                     },
@@ -193,7 +203,7 @@ final class QuickReplySetupScreenComponent: Component {
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }
-                        parentView.openEditShortcut(shortcut: item.shortcut)
+                        parentView.openEditShortcut(id: item.id, currentValue: item.shortcut)
                     }
                 )
                 
@@ -215,7 +225,7 @@ final class QuickReplySetupScreenComponent: Component {
                     filterData: nil,
                     index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: listNode.context.account.peerId, namespace: 0, id: 0), timestamp: 0))),
                     content: .peer(ChatListItemContent.PeerData(
-                        messages: item.messages.first.flatMap({ [$0] }) ?? [],
+                        messages: [item.topMessage],
                         peer: EngineRenderedPeer(peer: accountPeer),
                         threadInfo: nil,
                         combinedReadState: nil,
@@ -245,7 +255,7 @@ final class QuickReplySetupScreenComponent: Component {
                     )),
                     editing: isEditing,
                     hasActiveRevealControls: false,
-                    selected: false,
+                    selected: isSelected,
                     header: nil,
                     enableContextActions: true,
                     hiddenOffset: false,
@@ -260,6 +270,10 @@ final class QuickReplySetupScreenComponent: Component {
         let context: AccountContext
         var presentationData: PresentationData
         private var currentEntries: [ContentEntry] = []
+        private var originalEntries: [ContentEntry] = []
+        private var tempOrder: [Int32]?
+        private var pendingRemoveItems: [Int32]?
+        private var resetTempOrderOnNextUpdate: Bool = false
         
         init(parentView: View, context: AccountContext) {
             self.parentView = parentView
@@ -267,6 +281,87 @@ final class QuickReplySetupScreenComponent: Component {
             self.presentationData = context.sharedContext.currentPresentationData.with({ $0 })
             
             super.init()
+            
+            self.reorderBegan = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.tempOrder = nil
+            }
+            self.reorderCompleted = { [weak self] _ in
+                guard let self, let tempOrder = self.tempOrder else {
+                    return
+                }
+                self.resetTempOrderOnNextUpdate = true
+                self.context.engine.accountData.reorderMessageShortcuts(ids: tempOrder, completion: {})
+            }
+            self.reorderItem = { [weak self] fromIndex, toIndex, transactionOpaqueState -> Signal<Bool, NoError> in
+                guard let self else {
+                    return .single(false)
+                }
+                guard fromIndex >= 0 && fromIndex < self.currentEntries.count && toIndex >= 0 && toIndex < self.currentEntries.count else {
+                    return .single(false)
+                }
+                
+                let fromEntry = self.currentEntries[fromIndex]
+                let toEntry = self.currentEntries[toIndex]
+                    
+                var referenceId: Int32?
+                var beforeAll = false
+                switch toEntry {
+                case let .item(item, _, _, _, _):
+                    referenceId = item.id
+                case .add:
+                    beforeAll = true
+                }
+                
+                if case let .item(item, _, _, _, _) = fromEntry {
+                    var itemIds = self.currentEntries.compactMap { entry -> Int32? in
+                        switch entry {
+                        case .add:
+                            return nil
+                        case let .item(item, _, _, _, _):
+                            return item.id
+                        }
+                    }
+                    let itemId: Int32? = item.id
+                    
+                    if let itemId {
+                        itemIds = itemIds.filter({ $0 != itemId })
+                        if let referenceId {
+                            var inserted = false
+                            for i in 0 ..< itemIds.count {
+                                if itemIds[i] == referenceId {
+                                    if fromIndex < toIndex {
+                                        itemIds.insert(itemId, at: i + 1)
+                                    } else {
+                                        itemIds.insert(itemId, at: i)
+                                    }
+                                    inserted = true
+                                    break
+                                }
+                            }
+                            if !inserted {
+                                itemIds.append(itemId)
+                            }
+                        } else if beforeAll {
+                            itemIds.insert(itemId, at: 0)
+                        } else {
+                            itemIds.append(itemId)
+                        }
+                        if self.tempOrder != itemIds {
+                            self.tempOrder = itemIds
+                            self.setEntries(entries: self.originalEntries, animated: true)
+                        }
+                        
+                        return .single(true)
+                    } else {
+                        return .single(false)
+                    }
+                } else {
+                    return .single(false)
+                }
+            }
         }
         
         func update(size: CGSize, insets: UIEdgeInsets, transition: Transition) {
@@ -275,14 +370,74 @@ final class QuickReplySetupScreenComponent: Component {
                 deleteIndices: [],
                 insertIndicesAndItems: [],
                 updateIndicesAndItems: [],
-                options: [.Synchronous, .LowLatency],
+                options: [.Synchronous, .LowLatency, .PreferSynchronousResourceLoading],
                 additionalScrollDistance: 0.0,
                 updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: listViewDuration, curve: listViewCurve),
                 updateOpaqueState: nil
             )
         }
         
+        func setPendingRemoveItems(itemIds: [Int32]) {
+            self.pendingRemoveItems = itemIds
+            self.setEntries(entries: self.originalEntries, animated: true)
+        }
+        
         func setEntries(entries: [ContentEntry], animated: Bool) {
+            if self.resetTempOrderOnNextUpdate {
+                self.resetTempOrderOnNextUpdate = false
+                self.tempOrder = nil
+            }
+            let pendingRemoveItems = self.pendingRemoveItems
+            self.pendingRemoveItems = nil
+            
+            self.originalEntries = entries
+            
+            var entries = entries
+            if let pendingRemoveItems {
+                entries = entries.filter { entry in
+                    switch entry.stableId {
+                    case .add:
+                        return true
+                    case let .item(id):
+                        return !pendingRemoveItems.contains(id)
+                    }
+                }
+            }
+            
+            if let tempOrder = self.tempOrder {
+                let originalList = entries
+                entries.removeAll()
+                
+                if let entry = originalList.first(where: { entry in
+                    if case .add = entry {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    entries.append(entry)
+                }
+                
+                for id in tempOrder {
+                    if let entry = originalList.first(where: { entry in
+                        if case let .item(listId) = entry.stableId, listId == id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        entries.append(entry)
+                    }
+                }
+                for entry in originalList {
+                    if !entries.contains(where: { listEntry in
+                        listEntry.stableId == entry.stableId
+                    }) {
+                        entries.append(entry)
+                    }
+                }
+            }
+            
             let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: self.currentEntries, rightList: entries)
             self.currentEntries = entries
             
@@ -316,15 +471,19 @@ final class QuickReplySetupScreenComponent: Component {
         private let navigationBarView = ComponentView<Empty>()
         private var navigationHeight: CGFloat?
         
+        private var selectionPanel: ComponentView<Empty>?
+        
         private var isUpdating: Bool = false
         
         private var component: QuickReplySetupScreenComponent?
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
-        private var items: [QuickReplyMessageShortcut] = []
-        private var itemsDisposable: Disposable?
-        private var messagesDisposable: Disposable?
+        private var shortcutMessageList: ShortcutMessageList?
+        private var shortcutMessageListDisposable: Disposable?
+        private var keepUpdatedDisposable: Disposable?
+        
+        private var selectedIds = Set<Int32>()
         
         private var isEditing: Bool = false
         private var isSearchDisplayControllerActive: Bool = false
@@ -340,44 +499,27 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         deinit {
-            self.itemsDisposable?.dispose()
-            self.messagesDisposable?.dispose()
+            self.shortcutMessageListDisposable?.dispose()
+            self.keepUpdatedDisposable?.dispose()
         }
 
         func scrollToTop() {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            guard let component = self.component else {
-                return true
-            }
-            component.context.engine.accountData.updateShortcutMessages(state: QuickReplyMessageShortcutsState(shortcuts: self.items))
             return true
         }
         
-        func openQuickReplyChat(shortcut: String?) {
+        func openQuickReplyChat(shortcut: String?, shortcutId: Int32?) {
             guard let component = self.component else {
                 return
             }
             
             if let shortcut {
-                var mappedMessages: [EngineMessage] = []
-                if let messages = self.items.first(where: { $0.shortcut == shortcut })?.messages {
-                    var nextId: Int32 = 1
-                    for message in messages {
-                        var mappedMessage = message._asMessage()
-                        mappedMessage = mappedMessage.withUpdatedId(id: MessageId(peerId: component.context.account.peerId, namespace: 0, id: nextId))
-                        mappedMessage = mappedMessage.withUpdatedStableId(stableId: UInt32(nextId))
-                        mappedMessage = mappedMessage.withUpdatedTimestamp(nextId)
-                        mappedMessages.append(EngineMessage(mappedMessage))
-                        
-                        nextId += 1
-                    }
-                }
                 let contents = AutomaticBusinessMessageSetupChatContents(
                     context: component.context,
-                    messages: mappedMessages,
-                    kind: .quickReplyMessageInput(shortcut: shortcut)
+                    kind: .quickReplyMessageInput(shortcut: shortcut),
+                    shortcutId: shortcutId
                 )
                 let chatController = component.context.sharedContext.makeChatController(
                     context: component.context,
@@ -388,30 +530,6 @@ final class QuickReplySetupScreenComponent: Component {
                 )
                 chatController.navigationPresentation = .modal
                 self.environment?.controller()?.push(chatController)
-                self.messagesDisposable?.dispose()
-                self.messagesDisposable = (contents.messages
-                |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
-                    guard let self, let component = self.component else {
-                        return
-                    }
-                    let messages = messages.reversed().map(EngineMessage.init)
-                    
-                    if messages.isEmpty {
-                        if let index = self.items.firstIndex(where: { $0.shortcut == shortcut }) {
-                            self.items.remove(at: index)
-                        }
-                    } else {
-                        if let index = self.items.firstIndex(where: { $0.shortcut == shortcut }) {
-                            self.items[index] = QuickReplyMessageShortcut(id: self.items[index].id, shortcut: self.items[index].shortcut, messages: messages)
-                        } else {
-                            self.items.insert(QuickReplyMessageShortcut(id: Int32.random(in: Int32.min ... Int32.max), shortcut: shortcut, messages: messages), at: 0)
-                        }
-                    }
-                    
-                    component.context.engine.accountData.updateShortcutMessages(state: QuickReplyMessageShortcutsState(shortcuts: self.items))
-                    
-                    self.state?.updated(transition: .immediate)
-                })
             } else {
                 var completion: ((String?) -> Void)?
                 let alertController = quickReplyNameAlertController(
@@ -430,7 +548,12 @@ final class QuickReplySetupScreenComponent: Component {
                         return
                     }
                     if let value, !value.isEmpty {
-                        if self.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
+                        guard let shortcutMessageList = self.shortcutMessageList else {
+                            alertController?.dismissAnimated()
+                            return
+                        }
+                        
+                        if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
                             if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
                                 contentNode.setErrorText(errorText: "Shortcut with that name already exists")
                             }
@@ -438,7 +561,7 @@ final class QuickReplySetupScreenComponent: Component {
                         }
                         
                         alertController?.dismissAnimated()
-                        self.openQuickReplyChat(shortcut: value)
+                        self.openQuickReplyChat(shortcut: value, shortcutId: nil)
                     }
                 }
                 self.environment?.controller()?.present(alertController, in: .window(.root))
@@ -447,12 +570,10 @@ final class QuickReplySetupScreenComponent: Component {
             self.contentListNode?.clearHighlightAnimated(true)
         }
         
-        func openEditShortcut(shortcut: String) {
+        func openEditShortcut(id: Int32, currentValue: String) {
             guard let component = self.component else {
                 return
             }
-            
-            let currentValue = shortcut
             
             var completion: ((String?) -> Void)?
             let alertController = quickReplyNameAlertController(
@@ -475,26 +596,17 @@ final class QuickReplySetupScreenComponent: Component {
                         alertController?.dismissAnimated()
                         return
                     }
-                    
-                    var shortcuts = self.items
-                    guard let index = shortcuts.firstIndex(where: { $0.shortcut.lowercased() == currentValue }) else {
+                    guard let shortcutMessageList = self.shortcutMessageList else {
                         alertController?.dismissAnimated()
                         return
                     }
                     
-                    if shortcuts.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
+                    if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
                         if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
                             contentNode.setErrorText(errorText: "Shortcut with that name already exists")
                         }
                     } else {
-                        shortcuts[index] = QuickReplyMessageShortcut(
-                            id: shortcuts[index].id,
-                            shortcut: value,
-                            messages: shortcuts[index].messages
-                        )
-                        self.items = shortcuts
-                        let updatedShortcutMessages = QuickReplyMessageShortcutsState(shortcuts: shortcuts)
-                        component.context.engine.accountData.updateShortcutMessages(state: updatedShortcutMessages)
+                        component.context.engine.accountData.editMessageShortcut(id: id, shortcut: value)
                         
                         alertController?.dismissAnimated()
                     }
@@ -503,23 +615,48 @@ final class QuickReplySetupScreenComponent: Component {
             self.environment?.controller()?.present(alertController, in: .window(.root))
         }
         
-        func openDeleteShortcut(shortcut: String) {
+        func toggleShortcutSelection(id: Int32) {
+            if self.selectedIds.contains(id) {
+                self.selectedIds.remove(id)
+            } else {
+                self.selectedIds.insert(id)
+            }
+            self.state?.updated(transition: .spring(duration: 0.4))
+        }
+        
+        func openDeleteShortcuts(ids: [Int32]) {
             guard let component = self.component else {
                 return
             }
             
-            var shortcuts = self.items
-            guard let index = shortcuts.firstIndex(where: { $0.shortcut.lowercased() == shortcut }) else {
-                return
-            }
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let actionSheet = ActionSheetController(presentationData: presentationData)
+            var items: [ActionSheetItem] = []
             
-            shortcuts.remove(at: index)
-            self.items = shortcuts
-            
-            self.state?.updated(transition: .spring(duration: 0.4))
-            
-            let updatedShortcutMessages = QuickReplyMessageShortcutsState(shortcuts: shortcuts)
-            component.context.engine.accountData.updateShortcutMessages(state: updatedShortcutMessages)
+            //TODO:localize
+            items.append(ActionSheetButtonItem(title: ids.count == 1 ? "Delete Shortcut" : "Delete Shortcuts", color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                guard let self, let component = self.component else {
+                    return
+                }
+                
+                for id in ids {
+                    self.selectedIds.remove(id)
+                }
+                self.contentListNode?.setPendingRemoveItems(itemIds: ids)
+                component.context.engine.accountData.deleteMessageShortcuts(ids: ids)
+                self.state?.updated(transition: .spring(duration: 0.4))
+            }))
+                
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])
+            ])
+            self.environment?.controller()?.present(actionSheet, in: .window(.root))
         }
         
         private func updateNavigationBar(
@@ -533,31 +670,43 @@ final class QuickReplySetupScreenComponent: Component {
             deferScrollApplication: Bool
         ) -> CGFloat {
             var rightButtons: [AnyComponentWithIdentity<NavigationButtonComponentEnvironment>] = []
-            if self.isEditing {
-                rightButtons.append(AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
-                    content: .text(title: strings.Common_Done, isBold: true),
-                    pressed: { [weak self] _ in
-                        guard let self else {
-                            return
+            if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
+                if self.isEditing {
+                    rightButtons.append(AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
+                        content: .text(title: strings.Common_Done, isBold: true),
+                        pressed: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isEditing = false
+                            self.selectedIds.removeAll()
+                            self.state?.updated(transition: .spring(duration: 0.4))
                         }
-                        self.isEditing = false
-                        self.state?.updated(transition: .spring(duration: 0.4))
-                    }
-                ))))
-            } else {
-                rightButtons.append(AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
-                    content: .text(title: strings.Common_Edit, isBold: false),
-                    pressed: { [weak self] _ in
-                        guard let self else {
-                            return
+                    ))))
+                } else {
+                    rightButtons.append(AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
+                        content: .text(title: strings.Common_Edit, isBold: false),
+                        pressed: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isEditing = true
+                            self.state?.updated(transition: .spring(duration: 0.4))
                         }
-                        self.isEditing = true
-                        self.state?.updated(transition: .spring(duration: 0.4))
-                    }
-                ))))
+                    ))))
+                }
             }
+            
+            let titleText: String
+            if !self.selectedIds.isEmpty {
+                //TODO:localize
+                titleText = "\(self.selectedIds.count) Selected"
+            } else {
+                titleText = "Quick Replies"
+            }
+            
             let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
-                title: "Quick Replies",
+                title: titleText,
                 navigationBackTitle: nil,
                 titleComponent: nil,
                 chatListTitle: nil,
@@ -629,9 +778,7 @@ final class QuickReplySetupScreenComponent: Component {
         
         private func updateNavigationScrolling(navigationHeight: CGFloat, transition: Transition) {
             var mainOffset: CGFloat
-            if self.items.isEmpty {
-                mainOffset = navigationHeight
-            } else {
+            if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
                 if let contentListNode = self.contentListNode {
                     switch contentListNode.visibleContentOffset() {
                     case .none:
@@ -644,6 +791,8 @@ final class QuickReplySetupScreenComponent: Component {
                 } else {
                     mainOffset = navigationHeight
                 }
+            } else {
+                mainOffset = navigationHeight
             }
             
             mainOffset = min(mainOffset, ChatListNavigationBar.searchScrollHeight)
@@ -674,18 +823,20 @@ final class QuickReplySetupScreenComponent: Component {
             
             if self.component == nil {
                 self.accountPeer = component.initialData.accountPeer
-                self.items = component.initialData.shortcutMessages.shortcuts
+                self.shortcutMessageList = component.initialData.shortcutMessageList
                 
-                self.itemsDisposable = (component.context.engine.accountData.shortcutMessages()
-                |> deliverOnMainQueue).start(next: { [weak self] shortcutMessages in
+                self.shortcutMessageListDisposable = (component.context.engine.accountData.shortcutMessageList()
+                |> deliverOnMainQueue).startStrict(next: { [weak self] shortcutMessageList in
                     guard let self else {
                         return
                     }
-                    self.items = shortcutMessages.shortcuts
+                    self.shortcutMessageList = shortcutMessageList
                     if !self.isUpdating {
                         self.state?.updated(transition: .immediate)
                     }
                 })
+                
+                self.keepUpdatedDisposable = component.context.engine.accountData.keepShortcutMessageListUpdated().startStrict()
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -702,7 +853,12 @@ final class QuickReplySetupScreenComponent: Component {
                 self.backgroundColor = environment.theme.list.plainBackgroundColor
             }
             
-            if self.items.isEmpty {
+            if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
+                if let emptyState = self.emptyState {
+                    self.emptyState = nil
+                    emptyState.view?.removeFromSuperview()
+                }
+            } else {
                 let emptyState: ComponentView<Empty>
                 var emptyStateTransition = transition
                 if let current = self.emptyState {
@@ -713,18 +869,18 @@ final class QuickReplySetupScreenComponent: Component {
                     emptyStateTransition = emptyStateTransition.withAnimation(.none)
                 }
                 
-                let emptyStateFrame = CGRect(origin: CGPoint(x: 0.0, y: environment.navigationHeight), size: CGSize(width: availableSize.width, height: availableSize.height - environment.navigationHeight))
+                let emptyStateFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: availableSize.height))
                 let _ = emptyState.update(
                     transition: emptyStateTransition,
                     component: AnyComponent(QuickReplyEmptyStateComponent(
                         theme: environment.theme,
                         strings: environment.strings,
-                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+                        insets: UIEdgeInsets(top: environment.navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
                         action: { [weak self] in
                             guard let self else {
                                 return
                             }
-                            self.openQuickReplyChat(shortcut: nil)
+                            self.openQuickReplyChat(shortcut: nil, shortcutId: nil)
                         }
                     )),
                     environment: {},
@@ -736,13 +892,9 @@ final class QuickReplySetupScreenComponent: Component {
                     }
                     emptyStateTransition.setFrame(view: emptyStateView, frame: emptyStateFrame)
                 }
-            } else {
-                if let emptyState = self.emptyState {
-                    self.emptyState = nil
-                    emptyState.view?.removeFromSuperview()
-                }
             }
             
+            var listBottomInset = environment.safeInsets.bottom
             let navigationHeight = self.updateNavigationBar(
                 component: component,
                 theme: environment.theme,
@@ -754,6 +906,78 @@ final class QuickReplySetupScreenComponent: Component {
                 deferScrollApplication: true
             )
             self.navigationHeight = navigationHeight
+            
+            if !self.selectedIds.isEmpty {
+                let selectionPanel: ComponentView<Empty>
+                var selectionPanelTransition = transition
+                if let current = self.selectionPanel {
+                    selectionPanel = current
+                } else {
+                    selectionPanelTransition = selectionPanelTransition.withAnimation(.none)
+                    selectionPanel = ComponentView()
+                    self.selectionPanel = selectionPanel
+                }
+                
+                let buttonTitle: String
+                if self.selectedIds.count == 1 {
+                    buttonTitle = "Delete 1 Quick Reply"
+                } else {
+                    buttonTitle = "Delete \(self.selectedIds.count) Quick Replies"
+                }
+                
+                let selectionPanelSize = selectionPanel.update(
+                    transition: selectionPanelTransition,
+                    component: AnyComponent(BottomPanelComponent(
+                        theme: environment.theme,
+                        content: AnyComponentWithIdentity(id: 0, component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: buttonTitle, font: Font.regular(17.0), textColor: environment.theme.list.itemDestructiveColor))
+                            )),
+                            background: nil,
+                            effectAlignment: .center,
+                            minSize: CGSize(width: availableSize.width - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
+                            contentInsets: UIEdgeInsets(),
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                if self.selectedIds.isEmpty {
+                                    return
+                                }
+                                self.openDeleteShortcuts(ids: Array(self.selectedIds))
+                            },
+                            animateAlpha: true,
+                            animateScale: false,
+                            animateContents: false
+                        ))),
+                        insets: UIEdgeInsets(top: 4.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right)
+                    )),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                let selectionPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - selectionPanelSize.height), size: selectionPanelSize)
+                listBottomInset = selectionPanelSize.height
+                if let selectionPanelView = selectionPanel.view {
+                    var animateIn = false
+                    if selectionPanelView.superview == nil {
+                        animateIn = true
+                        self.addSubview(selectionPanelView)
+                    }
+                    selectionPanelTransition.setFrame(view: selectionPanelView, frame: selectionPanelFrame)
+                    if animateIn {
+                        transition.animatePosition(view: selectionPanelView, from: CGPoint(x: 0.0, y: selectionPanelFrame.height), to: CGPoint(), additive: true)
+                    }
+                }
+            } else {
+                if let selectionPanel = self.selectionPanel {
+                    self.selectionPanel = nil
+                    if let selectionPanelView = selectionPanel.view {
+                        transition.setPosition(view: selectionPanelView, position: CGPoint(x: selectionPanelView.center.x, y: availableSize.height + selectionPanelView.bounds.height * 0.5), completion: { [weak selectionPanelView] _ in
+                            selectionPanelView?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
             
             let contentListNode: ContentListNode
             if let current = self.contentListNode {
@@ -773,7 +997,9 @@ final class QuickReplySetupScreenComponent: Component {
                     self.updateNavigationScrolling(navigationHeight: navigationHeight, transition: .immediate)
                 }
                 
-                if let navigationBarComponentView = self.navigationBarView.view {
+                if let selectionPanelView = self.selectionPanel?.view {
+                    self.insertSubview(contentListNode.view, belowSubview: selectionPanelView)
+                } else if let navigationBarComponentView = self.navigationBarView.view {
                     self.insertSubview(contentListNode.view, belowSubview: navigationBarComponentView)
                 } else {
                     self.addSubview(contentListNode.view)
@@ -781,18 +1007,22 @@ final class QuickReplySetupScreenComponent: Component {
             }
             
             transition.setFrame(view: contentListNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-            contentListNode.update(size: availableSize, insets: UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right), transition: transition)
+            contentListNode.update(size: availableSize, insets: UIEdgeInsets(top: navigationHeight, left: environment.safeInsets.left, bottom: listBottomInset, right: environment.safeInsets.right), transition: transition)
             
             var entries: [ContentEntry] = []
-            if let accountPeer = self.accountPeer {
+            if let shortcutMessageList = self.shortcutMessageList, let accountPeer = self.accountPeer {
                 entries.append(.add)
-                for item in self.items {
-                    entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing))
+                for item in shortcutMessageList.items {
+                    entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing, isSelected: self.selectedIds.contains(item.id)))
                 }
             }
             contentListNode.setEntries(entries: entries, animated: !transition.animation.isImmediate)
             
-            contentListNode.isHidden = self.items.isEmpty
+            if let shortcutMessageList = self.shortcutMessageList, !shortcutMessageList.items.isEmpty {
+                contentListNode.isHidden = false
+            } else {
+                contentListNode.isHidden = true
+            }
             
             self.updateNavigationScrolling(navigationHeight: navigationHeight, transition: transition)
             
@@ -817,14 +1047,14 @@ final class QuickReplySetupScreenComponent: Component {
 public final class QuickReplySetupScreen: ViewControllerComponentContainer {
     public final class InitialData: QuickReplySetupScreenInitialData {
         let accountPeer: EnginePeer?
-        let shortcutMessages: QuickReplyMessageShortcutsState
+        let shortcutMessageList: ShortcutMessageList
         
         init(
             accountPeer: EnginePeer?,
-            shortcutMessages: QuickReplyMessageShortcutsState
+            shortcutMessageList: ShortcutMessageList
         ) {
             self.accountPeer = accountPeer
-            self.shortcutMessages = shortcutMessages
+            self.shortcutMessageList = shortcutMessageList
         }
     }
     
@@ -874,13 +1104,13 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer {
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
             ),
-            context.engine.accountData.shortcutMessages()
+            context.engine.accountData.shortcutMessageList()
             |> take(1)
         )
-        |> map { accountPeer, shortcutMessages -> QuickReplySetupScreenInitialData in
+        |> map { accountPeer, shortcutMessageList -> QuickReplySetupScreenInitialData in
             return InitialData(
                 accountPeer: accountPeer,
-                shortcutMessages: shortcutMessages
+                shortcutMessageList: shortcutMessageList
             )
         }
     }

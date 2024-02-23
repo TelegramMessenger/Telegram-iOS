@@ -8,8 +8,12 @@ public struct Namespaces {
         public static let SecretIncoming: Int32 = 2
         public static let ScheduledCloud: Int32 = 3
         public static let ScheduledLocal: Int32 = 4
+        public static let QuickReplyCloud: Int32 = 5
+        public static let QuickReplyLocal: Int32 = 6
         
         public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
+        public static let allQuickReply: Set<Int32> = Set([Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
+        public static let allNonRegular: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal, Namespaces.Message.QuickReplyCloud, Namespaces.Message.QuickReplyLocal])
     }
     
     public struct Media {
@@ -280,7 +284,7 @@ private enum PreferencesKeyValues: Int32 {
     case audioTranscriptionTrialState = 33
     case didCacheSavedMessageTagsPrefix = 34
     case displaySavedChatsAsTopics = 35
-    case shortcutMessages = 36
+    case shortcutMessages = 37
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {

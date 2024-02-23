@@ -703,8 +703,22 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var maxWidth: CGFloat = size.width
         var centerText = false
-        if case .customChatContents = interfaceState.subject {
+        
+        var insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        var imageSpacing: CGFloat = 12.0
+        var titleSpacing: CGFloat = 4.0
+        
+        if case let .customChatContents(customChatContents) = interfaceState.subject {
             maxWidth = min(240.0, maxWidth)
+            
+            switch customChatContents.kind {
+            case .greetingMessageInput, .awayMessageInput:
+                break
+            case .quickReplyMessageInput:
+                insets.top = 10.0
+                imageSpacing = 5.0
+                titleSpacing = 5.0
+            }
         }
         
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
@@ -713,7 +727,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             
             let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
             
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Cloud"), color: serviceColor.primaryText)
+            var iconName = "Chat/Empty Chat/Cloud"
             
             let titleString: String
             let strings: [String]
@@ -735,6 +749,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                         "Add messages that are automatically sent when you are off."
                     ]
                 case let .quickReplyMessageInput(shortcut):
+                    iconName = "Chat/Empty Chat/QuickReplies"
                     //TODO:localize
                     centerText = false
                     titleString = "New Quick Reply"
@@ -752,6 +767,8 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     interfaceState.strings.Conversation_ClousStorageInfo_Description4
                 ]
             }
+            
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: serviceColor.primaryText)
             
             self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
             
@@ -780,11 +797,6 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 self.lineNodes[i].attributedText = lines[i]
             }
         }
-        
-        let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
-        
-        let imageSpacing: CGFloat = 12.0
-        let titleSpacing: CGFloat = 4.0
         
         var contentWidth: CGFloat = 100.0
         var contentHeight: CGFloat = 0.0

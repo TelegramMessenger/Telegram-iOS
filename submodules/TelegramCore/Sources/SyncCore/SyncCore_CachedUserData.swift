@@ -429,8 +429,8 @@ extension TelegramBusinessLocation.Coordinates {
 extension TelegramBusinessLocation {
     convenience init(apiLocation: Api.BusinessLocation) {
         switch apiLocation {
-        case let .businessLocation(geoPoint, address):
-            self.init(address: address, coordinates: Coordinates(apiGeoPoint: geoPoint))
+        case let .businessLocation(_, geoPoint, address):
+            self.init(address: address, coordinates: geoPoint.flatMap { Coordinates(apiGeoPoint: $0) })
         }
     }
 }

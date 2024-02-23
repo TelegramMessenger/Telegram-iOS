@@ -104,7 +104,7 @@ public final class ChatPanelInterfaceInteraction {
     public let togglePeerNotifications: () -> Void
     public let sendContextResult: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool
     public let sendBotCommand: (Peer, String) -> Void
-    public let sendShortcut: (QuickReplyMessageShortcut) -> Void
+    public let sendShortcut: (Int32) -> Void
     public let openEditShortcuts: () -> Void
     public let sendBotStart: (String?) -> Void
     public let botSwitchChatWithPayload: (PeerId, String) -> Void
@@ -219,7 +219,7 @@ public final class ChatPanelInterfaceInteraction {
         togglePeerNotifications: @escaping () -> Void,
         sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
         sendBotCommand: @escaping (Peer, String) -> Void,
-        sendShortcut: @escaping (QuickReplyMessageShortcut) -> Void,
+        sendShortcut: @escaping (Int32) -> Void,
         openEditShortcuts: @escaping () -> Void,
         sendBotStart: @escaping (String?) -> Void,
         botSwitchChatWithPayload: @escaping (PeerId, String) -> Void,

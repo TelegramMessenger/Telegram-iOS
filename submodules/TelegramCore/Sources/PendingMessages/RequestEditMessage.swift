@@ -174,7 +174,13 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
                     }
                 }
                 
-                return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime, quickReplyShortcutId: nil))
+                var quickReplyShortcutId: Int32?
+                if messageId.namespace == Namespaces.Message.QuickReplyCloud {
+                    quickReplyShortcutId = Int32(clamping: message.threadId ?? 0)
+                    flags |= Int32(1 << 17)
+                }
+                
+                return network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime, quickReplyShortcutId: quickReplyShortcutId))
                 |> map { result -> Api.Updates? in
                     return result
                 }
