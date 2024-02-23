@@ -220,7 +220,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                         customMessageListData: ChatListItemContent.CustomMessageListData(
                             commandPrefix: "/\(shortcut.shortcut)",
                             searchQuery: command.searchQuery.flatMap { "/\($0)"},
-                            messageCount: nil
+                            messageCount: shortcut.totalCount,
+                            hideSeparator: false
                         )
                     )),
                     editing: false,

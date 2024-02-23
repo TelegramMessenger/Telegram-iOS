@@ -271,6 +271,10 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
 }
 
 func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, accountPeerId: PeerId) -> Bool {
+    if case .customChatContents = chatPresentationInterfaceState.chatLocation {
+        return true
+    }
+    
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return false
     }
@@ -338,7 +342,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     case .replyThread:
         canReply = true
     case .customChatContents:
-        canReply = false
+        canReply = true
     }
     return canReply
 }

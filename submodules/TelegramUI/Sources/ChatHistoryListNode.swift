@@ -1283,10 +1283,15 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
                 return true
             })
-            |> mapToSignal { _ in
+            |> mapToSignal { location, _ -> Signal<((MessageHistoryView, ViewUpdateType), ChatHistoryLocationInput?), NoError> in
                 return historyView
+                |> map { historyView in
+                    return (historyView, location)
+                }
             }
-            |> map { view, update in
+            |> map { viewAndUpdate, location in
+                let (view, update) = viewAndUpdate
+                
                 let version = currentViewVersion.modify({ value in
                     if let value = value {
                         return value + 1
@@ -1295,11 +1300,21 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                 })!
                 
+                var scrollPositionValue: ChatHistoryViewScrollPosition?
+                if let location {
+                    switch location.content {
+                    case let .Scroll(subject, _, _, scrollPosition, animated, highlight):
+                        scrollPositionValue = .index(subject: subject, position: scrollPosition, directionHint: .Up, animated: animated, highlight: highlight, displayLink: false)
+                    default:
+                        break
+                    }
+                }
+                
                 return (
                     ChatHistoryViewUpdate.HistoryView(
                         view: view,
                         type: .Generic(type: update),
-                        scrollPosition: nil,
+                        scrollPosition: scrollPositionValue,
                         flashIndicators: false,
                         originalScrollPosition: nil,
                         initialData: ChatHistoryCombinedInitialData(
@@ -1309,10 +1324,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             cachedDataMessages: nil,
                             readStateData: nil
                         ),
-                        id: 0
+                        id: location?.id ?? 0
                     ),
                     version,
-                    nil,
+                    location,
                     nil
                 )
             }

@@ -58,8 +58,7 @@ private func preparedLanguageListSearchContainerTransition(presentationData: Pre
 }
 
 private final class TimezoneListSearchContainerNode: SearchDisplayControllerContentNode {
-    private let timezoneData: TimezoneData
-    
+    private let timeZoneList: TimeZoneList
     private let dimNode: ASDisplayNode
     private let listNode: ListView
     
@@ -78,8 +77,8 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
         return true
     }
     
-    init(context: AccountContext, timezoneData: TimezoneData, action: @escaping (String) -> Void) {
-        self.timezoneData = timezoneData
+    init(context: AccountContext, timeZoneList: TimeZoneList, action: @escaping (String) -> Void) {
+        self.timeZoneList = timeZoneList
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
@@ -102,16 +101,18 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
         self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
         
+        let querySplitCharacterSet: CharacterSet = CharacterSet(charactersIn: " /.+")
+        
         let foundItems = self.searchQuery.get()
-        |> mapToSignal { query -> Signal<[TimezoneData.Item]?, NoError> in
+        |> mapToSignal { query -> Signal<[TimeZoneList.Item]?, NoError> in
             if let query, !query.isEmpty {
                 let query = query.lowercased()
                 
-                return .single(timezoneData.items.filter { item in
+                return .single(timeZoneList.items.filter { item in
                     if item.id.lowercased().hasPrefix(query) {
                         return true
                     }
-                    if item.title.lowercased().split(separator: " ").contains(where: { $0.hasPrefix(query) }) {
+                    if item.title.lowercased().components(separatedBy: querySplitCharacterSet).contains(where: { $0.hasPrefix(query) }) {
                         return true
                     }
                     
@@ -132,7 +133,7 @@ private final class TimezoneListSearchContainerNode: SearchDisplayControllerCont
                 for item in items {
                     entries.append(TimezoneListEntry(
                         id: item.id,
-                        offset: item.offset,
+                        offset: Int(item.utcOffset),
                         title: item.title
                     ))
                 }
@@ -301,7 +302,7 @@ final class TimezoneSelectionScreenNode: ViewControllerTracingNode {
     private let requestDeactivateSearch: () -> Void
     private let present: (ViewController, Any?) -> Void
     private let push: (ViewController) -> Void
-    private let timezoneData: TimezoneData
+    private var timeZoneList: TimeZoneList?
     
     private var didSetReady = false
     let _ready = ValuePromise<Bool>()
@@ -331,28 +332,32 @@ final class TimezoneSelectionScreenNode: ViewControllerTracingNode {
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        let timezoneData = TimezoneData()
-        self.timezoneData = timezoneData
-        
         super.init()
         
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         self.addSubnode(self.listNode)
         
         let previousEntriesHolder = Atomic<([TimezoneListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.listDisposable = (self.presentationDataValue.get()
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        self.listDisposable = (combineLatest(queue: .mainQueue(),
+            self.presentationDataValue.get(),
+            context.engine.accountData.cachedTimeZoneList()
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, timeZoneList in
             guard let strongSelf = self else {
                 return
             }
-                        
+            
+            strongSelf.timeZoneList = timeZoneList
+            
             var entries: [TimezoneListEntry] = []
-            for item in timezoneData.items {
-                entries.append(TimezoneListEntry(
-                    id: item.id,
-                    offset: item.offset,
-                    title: item.title
-                ))
+            if let timeZoneList {
+                for item in timeZoneList.items {
+                    entries.append(TimezoneListEntry(
+                        id: item.id,
+                        offset: Int(item.utcOffset),
+                        title: item.title
+                    ))
+                }
             }
             entries.sort()
             
@@ -447,8 +452,11 @@ final class TimezoneSelectionScreenNode: ViewControllerTracingNode {
         guard let (containerLayout, navigationBarHeight) = self.containerLayout, self.searchDisplayController == nil else {
             return
         }
+        guard let timeZoneList = self.timeZoneList else {
+            return
+        }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: TimezoneListSearchContainerNode(context: self.context, timezoneData: self.timezoneData, action: self.action), inline: true, cancel: { [weak self] in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: TimezoneListSearchContainerNode(context: self.context, timeZoneList: timeZoneList, action: self.action), inline: true, cancel: { [weak self] in
             self?.requestDeactivateSearch()
         })
         

@@ -250,7 +250,8 @@ final class QuickReplySetupScreenComponent: Component {
                         customMessageListData: ChatListItemContent.CustomMessageListData(
                             commandPrefix: "/\(item.shortcut)",
                             searchQuery: nil,
-                            messageCount: nil
+                            messageCount: item.totalCount,
+                            hideSeparator: false
                         )
                     )),
                     editing: isEditing,
@@ -744,13 +745,14 @@ final class QuickReplySetupScreenComponent: Component {
                     tabsNodeIsSearch: false,
                     accessoryPanelContainer: nil,
                     accessoryPanelContainerHeight: 0.0,
-                    activateSearch: { [weak self] searchContentNode in
+                    activateSearch: { [weak self] _ in
                         guard let self else {
                             return
                         }
                         
-                        self.isSearchDisplayControllerActive = true
-                        self.state?.updated(transition: .spring(duration: 0.4))
+                        let _ = self
+                        //self.isSearchDisplayControllerActive = true
+                        //self.state?.updated(transition: .spring(duration: 0.4))
                     },
                     openStatusSetup: { _ in
                     },
