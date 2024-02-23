@@ -15468,14 +15468,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
                         }
                         if let giveaway {
-                            Queue.mainQueue().after(0.2) {
-                                let dateString = stringForDate(timestamp: giveaway.untilDate, timeZone: .current, strings: strongSelf.presentationData.strings)
-                                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Title, text: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Text(dateString).string, actions: [TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Common_Delete, action: {
-                                    commit()
-                                }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                })], parseMarkdown: true), in: .window(.root))
+                            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                            if currentTime < giveaway.untilDate {
+                                Queue.mainQueue().after(0.2) {
+                                    let dateString = stringForDate(timestamp: giveaway.untilDate, timeZone: .current, strings: strongSelf.presentationData.strings)
+                                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Title, text: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Text(dateString).string, actions: [TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Common_Delete, action: {
+                                        commit()
+                                    }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                    })], parseMarkdown: true), in: .window(.root))
+                                }
+                                f(.default)
+                            } else {
+                                f(.dismissWithoutContent)
+                                commit()
                             }
-                            f(.default)
                         } else {
                             if "".isEmpty {
                                 f(.dismissWithoutContent)

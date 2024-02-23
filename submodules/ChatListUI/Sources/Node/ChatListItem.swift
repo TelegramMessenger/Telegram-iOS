@@ -2260,12 +2260,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         
-                        //TODO:localize
                         switch mediaDraftContentType {
                         case .audio:
-                            attributedText = NSAttributedString(string: "Voice Message", font: textFont, textColor: theme.messageTextColor)
+                            attributedText = NSAttributedString(string: item.presentationData.strings.Message_VoiceMessage, font: textFont, textColor: theme.messageTextColor)
                         case .video:
-                            attributedText = NSAttributedString(string: "Video Message", font: textFont, textColor: theme.messageTextColor)
+                            attributedText = NSAttributedString(string: item.presentationData.strings.Message_VideoMessage, font: textFont, textColor: theme.messageTextColor)
                         }
                     } else if inlineAuthorPrefix == nil, let draftState = draftState {
                         hasDraft = true

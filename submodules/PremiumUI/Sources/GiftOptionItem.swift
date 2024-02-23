@@ -309,6 +309,10 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                 textConstrainedWidth -= 54.0
                 subtitleConstrainedWidth -= 30.0
             }
+            if let _ = item.titleBadge {
+                textConstrainedWidth -= 32.0
+                subtitleConstrainedWidth -= 32.0
+            }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: textConstrainedWidth, height: .greatestFiniteMagnitude)))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: subtitleConstrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
