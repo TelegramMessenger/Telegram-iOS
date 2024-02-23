@@ -2262,7 +2262,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         switch mediaDraftContentType {
                         case .audio:
-                            attributedText = NSAttributedString(string: item.presentationData.strings.Message_VoiceMessage, font: textFont, textColor: theme.messageTextColor)
+                            attributedText = NSAttributedString(string: item.presentationData.strings.Message_Audio, font: textFont, textColor: theme.messageTextColor)
                         case .video:
                             attributedText = NSAttributedString(string: item.presentationData.strings.Message_VideoMessage, font: textFont, textColor: theme.messageTextColor)
                         }
