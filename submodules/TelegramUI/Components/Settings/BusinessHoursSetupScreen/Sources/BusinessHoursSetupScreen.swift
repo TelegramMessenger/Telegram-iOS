@@ -82,11 +82,14 @@ final class BusinessHoursSetupScreenComponent: Component {
         }
         
         var timezoneId: String
-        var days: [Day]
+        private(set) var days: [Day]
+        private(set) var intersectingDays = Set<Int>()
         
         init(timezoneId: String, days: [Day]) {
             self.timezoneId = timezoneId
             self.days = days
+            
+            self.validate()
         }
         
         init(businessHours: TelegramBusinessHours) {
@@ -107,6 +110,19 @@ final class BusinessHoursSetupScreenComponent: Component {
                     })
                 }
             }
+            
+            self.validate()
+        }
+        
+        mutating func validate() {
+            self.intersectingDays.removeAll()
+            
+            
+        }
+        
+        mutating func update(days: [Day]) {
+            self.days = days
+            self.validate()
         }
         
         func asBusinessHours() throws -> TelegramBusinessHours {
@@ -165,6 +181,10 @@ final class BusinessHoursSetupScreenComponent: Component {
         private var showHours: Bool = false
         private var daysState = DaysState(timezoneId: "", days: [])
         
+        private var timeZoneList: TimeZoneList?
+        private var timezonesDisposable: Disposable?
+        private var keepTimezonesUpdatedDisposable: Disposable?
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -191,6 +211,8 @@ final class BusinessHoursSetupScreenComponent: Component {
         }
         
         deinit {
+            self.timezonesDisposable?.dispose()
+            self.keepTimezonesUpdatedDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -210,6 +232,21 @@ final class BusinessHoursSetupScreenComponent: Component {
                 } catch let error {
                     let _ = error
                     //TODO:localize
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    //TODO:localize
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Business hours are intersecting. Reset?", actions: [
+                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "Reset", action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            let _ = self
+                            complete()
+                        })
+                    ]), in: .window(.root))
+                    
                     return false
                 }
             } else {
@@ -271,10 +308,20 @@ final class BusinessHoursSetupScreenComponent: Component {
                 } else {
                     self.showHours = false
                     self.daysState.timezoneId = TimeZone.current.identifier
-                    self.daysState.days = (0 ..< 7).map { _ in
+                    self.daysState.update(days: (0 ..< 7).map { _ in
                         return Day(ranges: [])
-                    }
+                    })
                 }
+                
+                self.timezonesDisposable = (component.context.engine.accountData.cachedTimeZoneList()
+                |> deliverOnMainQueue).start(next: { [weak self] timeZoneList in
+                    guard let self else {
+                        return
+                    }
+                    self.timeZoneList = timeZoneList
+                    self.state?.updated(transition: .immediate)
+                })
+                self.keepTimezonesUpdatedDisposable = component.context.engine.accountData.keepCachedTimeZoneListUpdated().startStrict()
             }
             
             let environment = environment[EnvironmentType.self].value
@@ -508,11 +555,13 @@ final class BusinessHoursSetupScreenComponent: Component {
                             return
                         }
                         if dayIndex < self.daysState.days.count {
-                            if self.daysState.days[dayIndex].ranges == nil {
-                                self.daysState.days[dayIndex].ranges = []
+                            var days = self.daysState.days
+                            if days[dayIndex].ranges == nil {
+                                days[dayIndex].ranges = []
                             } else {
-                                self.daysState.days[dayIndex].ranges = nil
+                                days[dayIndex].ranges = nil
                             }
+                            self.daysState.update(days: days)
                         }
                         self.state?.updated(transition: .immediate)
                     })),
@@ -529,7 +578,9 @@ final class BusinessHoursSetupScreenComponent: Component {
                                     return
                                 }
                                 if self.daysState.days[dayIndex] != day {
-                                    self.daysState.days[dayIndex] = day
+                                    var days = self.daysState.days
+                                    days[dayIndex] = day
+                                    self.daysState.update(days: days)
                                     self.state?.updated(transition: .immediate)
                                 }
                             }
@@ -569,6 +620,18 @@ final class BusinessHoursSetupScreenComponent: Component {
             daysContentHeight += daysSectionSize.height
             daysContentHeight += sectionSpacing
             
+            let timezoneValueText: String
+            if let timeZoneList = self.timeZoneList {
+                if let item = timeZoneList.items.first(where: { $0.id == self.daysState.timezoneId }) {
+                    timezoneValueText = item.title
+                } else {
+                    timezoneValueText = TimeZone(identifier: self.daysState.timezoneId)?.localizedName(for: .shortStandard, locale: Locale.current) ?? " "
+                }
+            } else {
+                //TODO:localize
+                timezoneValueText = "Loading..."
+            }
+            
             let timezoneSectionSize = self.timezoneSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -588,7 +651,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                             )),
                             icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: TimeZone(identifier: self.daysState.timezoneId)?.localizedName(for: .shortStandard, locale: Locale.current) ?? self.daysState.timezoneId,
+                                    string: timezoneValueText,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemSecondaryTextColor
                                 )),

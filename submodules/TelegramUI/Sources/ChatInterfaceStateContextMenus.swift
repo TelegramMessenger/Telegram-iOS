@@ -271,6 +271,10 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
 }
 
 func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, accountPeerId: PeerId) -> Bool {
+    if case .customChatContents = chatPresentationInterfaceState.chatLocation {
+        return true
+    }
+    
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return false
     }
@@ -338,7 +342,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     case .replyThread:
         canReply = true
     case .customChatContents:
-        canReply = false
+        canReply = true
     }
     return canReply
 }
@@ -711,7 +715,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
-    if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
+    if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {

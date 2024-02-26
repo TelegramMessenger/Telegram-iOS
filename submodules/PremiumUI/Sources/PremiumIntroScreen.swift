@@ -2167,7 +2167,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 size.height += 8.0
     
                 let status = state.peer?.emojiStatus
-//                let statusColor = state.peer?.nameColor.flatMap { context.component.context.peerNameColors.get($0, dark: environment.theme.overallDarkAppearance).main } ?? .blue
                 
                 let accentColor = environment.theme.list.itemAccentColor
                 var perksItems: [AnyComponentWithIdentity<Empty>] = []
@@ -2346,7 +2345,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 } else {
                     layoutPerks()
-                
                 
                     let textPadding: CGFloat = 13.0
                     

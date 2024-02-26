@@ -239,9 +239,9 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             let iconSize = self.icon.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "🗺", font: Font.semibold(90.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
-                    horizontalAlignment: .center
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "MapEmoji"),
+                    loop: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)

@@ -94,11 +94,13 @@ public enum ChatListItemContent {
         public var commandPrefix: String?
         public var searchQuery: String?
         public var messageCount: Int?
+        public var hideSeparator: Bool
         
-        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?) {
+        public init(commandPrefix: String?, searchQuery: String?, messageCount: Int?, hideSeparator: Bool) {
             self.commandPrefix = commandPrefix
             self.searchQuery = searchQuery
             self.messageCount = messageCount
+            self.hideSeparator = hideSeparator
         }
     }
     
@@ -1166,6 +1168,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var currentItemHeight: CGFloat?
     let forwardedIconNode: ASImageNode
     let textNode: TextNodeWithEntities
+    var trailingTextBadgeNode: TextNode?
+    var trailingTextBadgeBackground: UIImageView?
     var dustNode: InvisibleInkDustNode?
     let inputActivitiesNode: ChatListInputActivitiesNode
     let dateNode: TextNode
@@ -1437,6 +1441,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.textNode = TextNodeWithEntities()
         self.textNode.textNode.isUserInteractionEnabled = false
         self.textNode.textNode.displaysAsynchronously = true
+        self.textNode.textNode.layer.anchorPoint = CGPoint()
         
         self.inputActivitiesNode = ChatListInputActivitiesNode()
         self.inputActivitiesNode.isUserInteractionEnabled = false
@@ -1823,6 +1828,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     func asyncLayout() -> (_ item: ChatListItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ nextIsPinned: Bool) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
+        let makeTrailingTextBadgeLayout = TextNode.asyncLayout(self.trailingTextBadgeNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
         let authorLayout = self.authorNode.asyncLayout()
         let makeMeasureLayout = TextNode.asyncLayout(self.measureNode)
@@ -2073,7 +2079,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
                 avatarDiameter = 40.0
-                avatarLeftInset = 18.0 + avatarDiameter
+                avatarLeftInset = 17.0 + avatarDiameter
             } else {
                 if item.interaction.isInlineMode {
                     avatarLeftInset = 12.0
@@ -2260,12 +2266,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         
-                        //TODO:localize
                         switch mediaDraftContentType {
                         case .audio:
-                            attributedText = NSAttributedString(string: "Voice Message", font: textFont, textColor: theme.messageTextColor)
+                            attributedText = NSAttributedString(string: item.presentationData.strings.Message_Audio, font: textFont, textColor: theme.messageTextColor)
                         case .video:
-                            attributedText = NSAttributedString(string: "Video Message", font: textFont, textColor: theme.messageTextColor)
+                            attributedText = NSAttributedString(string: item.presentationData.strings.Message_VideoMessage, font: textFont, textColor: theme.messageTextColor)
                         }
                     } else if inlineAuthorPrefix == nil, let draftState = draftState {
                         hasDraft = true
@@ -2667,7 +2672,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 topIndex = peerData.messages.first?.index
             }
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
-                if let messageCount = customMessageListData.messageCount {
+                if let messageCount = customMessageListData.messageCount, customMessageListData.commandPrefix == nil {
                     dateText = "\(messageCount)"
                 } else {
                     dateText = " "
@@ -2991,9 +2996,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let (authorLayout, authorApply) = authorLayout(item.context, rawContentWidth - badgeSize, item.presentationData.theme, effectiveAuthorTitle, forumThreads)
             
+            var textBottomRightCutout: CGFloat = 0.0
+            
+            let trailingTextBadgeInsets = UIEdgeInsets(top: 2.0 - UIScreenPixel, left: 5.0, bottom: 2.0 - UIScreenPixel, right: 5.0)
+            var trailingTextBadgeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil, let messageCount = customMessageListData.messageCount, messageCount > 1 {
+                let trailingText: String
+                //TODO:localize
+                trailingText = "+\(messageCount - 1) MORE"
+                let trailingAttributedText = NSAttributedString(string: trailingText, font: Font.regular(12.0), textColor: theme.messageTextColor)
+                let (layout, apply) = makeTrailingTextBadgeLayout(TextNodeLayoutArguments(attributedString: trailingAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                trailingTextBadgeLayoutAndApply = (layout, apply)
+                textBottomRightCutout += layout.size.width + 4.0 + trailingTextBadgeInsets.left + trailingTextBadgeInsets.right
+            }
+            
             var textCutout: TextNodeCutout?
-            if !textLeftCutout.isZero {
-                textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)
+            if !textLeftCutout.isZero || !textBottomRightCutout.isZero {
+                textCutout = TextNodeCutout(topLeft: textLeftCutout.isZero ? nil : CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: textBottomRightCutout.isZero ? nil : CGSize(width: textBottomRightCutout, height: 10.0))
             }
             
             var textMaxWidth = rawContentWidth - badgeSize
@@ -3553,6 +3572,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let _ = measureApply()
                     let _ = dateApply()
                     
+                    var currentTextSnapshotView: UIView?
+                    if transition.isAnimated, let currentItem, currentItem.editing != item.editing, strongSelf.textNode.textNode.cachedLayout?.linesRects() != textLayout.linesRects() {
+                        if let textSnapshotView = strongSelf.textNode.textNode.view.snapshotContentTree() {
+                            textSnapshotView.layer.anchorPoint = CGPoint()
+                            currentTextSnapshotView = textSnapshotView
+                            strongSelf.textNode.textNode.view.superview?.insertSubview(textSnapshotView, aboveSubview: strongSelf.textNode.textNode.view)
+                            textSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSnapshotView] _ in
+                                textSnapshotView?.removeFromSuperview()
+                            })
+                            strongSelf.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                        }
+                    }
+                    
                     let _ = textApply(TextNodeWithEntities.Arguments(
                         context: item.context,
                         cache: item.interaction.animationCache,
@@ -3573,7 +3605,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     var dateFrame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size)
                     
-                    if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.messageCount != nil {
+                    if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.messageCount != nil, customMessageListData.commandPrefix == nil {
                         dateFrame.origin.x -= 10.0
                         
                         let dateDisclosureIconView: UIImageView
@@ -3817,6 +3849,60 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.textNode.textNode.frame = textNodeFrame
                         
                         strongSelf.authorNode.assignParentNode(parentNode: nil)
+                    }
+                    
+                    if let currentTextSnapshotView {
+                        transition.updatePosition(layer: currentTextSnapshotView.layer, position: textNodeFrame.origin)
+                    }
+                    
+                    if let trailingTextBadgeLayoutAndApply {
+                        let badgeSize = CGSize(width: trailingTextBadgeLayoutAndApply.0.size.width + trailingTextBadgeInsets.left + trailingTextBadgeInsets.right, height: trailingTextBadgeLayoutAndApply.0.size.height + trailingTextBadgeInsets.top + trailingTextBadgeInsets.bottom - UIScreenPixel)
+                        
+                        var badgeFrame: CGRect
+                        if textLayout.numberOfLines > 1 {
+                            badgeFrame = CGRect(origin: CGPoint(x: textLayout.trailingLineWidth, y: textNodeFrame.height - 3.0 - badgeSize.height), size: badgeSize)
+                        } else {
+                            let firstLineFrame = textLayout.linesRects().first ?? CGRect(origin: CGPoint(), size: textNodeFrame.size)
+                            badgeFrame = CGRect(origin: CGPoint(x: 0.0, y: firstLineFrame.height + 5.0), size: badgeSize)
+                        }
+                            
+                        if badgeFrame.origin.x + badgeFrame.width >= textNodeFrame.width - 2.0 - 10.0 {
+                            badgeFrame.origin.x = textNodeFrame.width - 2.0 - badgeFrame.width
+                        }
+                        
+                        let trailingTextBadgeBackground: UIImageView
+                        if let current = strongSelf.trailingTextBadgeBackground {
+                            trailingTextBadgeBackground = current
+                        } else {
+                            trailingTextBadgeBackground = UIImageView(image: tagBackgroundImage)
+                            strongSelf.trailingTextBadgeBackground = trailingTextBadgeBackground
+                            strongSelf.textNode.textNode.view.addSubview(trailingTextBadgeBackground)
+                        }
+                        trailingTextBadgeBackground.tintColor = theme.pinnedItemBackgroundColor.mixedWith(theme.unreadBadgeInactiveBackgroundColor, alpha: 0.1)
+                        
+                        trailingTextBadgeBackground.frame = badgeFrame
+                        
+                        let trailingTextBadgeFrame = CGRect(origin: CGPoint(x: badgeFrame.minX + trailingTextBadgeInsets.left, y: badgeFrame.minY + trailingTextBadgeInsets.top), size: trailingTextBadgeLayoutAndApply.0.size)
+                        let trailingTextBadgeNode = trailingTextBadgeLayoutAndApply.1()
+                        if strongSelf.trailingTextBadgeNode !== trailingTextBadgeNode {
+                            strongSelf.trailingTextBadgeNode?.removeFromSupernode()
+                            strongSelf.trailingTextBadgeNode = trailingTextBadgeNode
+                            
+                            strongSelf.textNode.textNode.addSubnode(trailingTextBadgeNode)
+                            
+                            trailingTextBadgeNode.layer.anchorPoint = CGPoint()
+                        }
+                        
+                        trailingTextBadgeNode.frame = trailingTextBadgeFrame
+                    } else {
+                        if let trailingTextBadgeNode = strongSelf.trailingTextBadgeNode {
+                            strongSelf.trailingTextBadgeNode = nil
+                            trailingTextBadgeNode.removeFromSupernode()
+                        }
+                        if let trailingTextBadgeBackground = strongSelf.trailingTextBadgeBackground {
+                            strongSelf.trailingTextBadgeBackground = nil
+                            trailingTextBadgeBackground.removeFromSuperview()
+                        }
                     }
                     
                     if !itemTags.isEmpty {
@@ -4128,7 +4214,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
-                        if customMessageListData.messageCount != nil {
+                        if customMessageListData.hideSeparator {
                             strongSelf.separatorNode.isHidden = true
                         }
                     }

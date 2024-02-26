@@ -1082,7 +1082,7 @@ public extension TelegramEngine {
                 
                 transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: nil)
                 
-                _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allScheduled))
+                _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allNonRegular))
             }
             |> ignoreValues
         }
@@ -1094,7 +1094,7 @@ public extension TelegramEngine {
                     
                     transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: nil)
                     
-                    _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allScheduled))
+                    _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allNonRegular))
                 }
             }
             |> ignoreValues
@@ -1373,7 +1373,7 @@ public extension TelegramEngine {
                     return .single(false)
                 }
                 
-                return self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 44, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: [])
+                return self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: id, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 44, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allNonRegular), orderStatistics: [])
                 |> map { view -> Bool in
                     for entry in view.0.entries {
                         if entry.message.flags.contains(.Incoming) {

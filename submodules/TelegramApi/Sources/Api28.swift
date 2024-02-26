@@ -1290,14 +1290,14 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum QuickReplies: TypeConstructorDescription {
-        case quickReplies(quickReplies: [Api.messages.QuickReply], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case quickReplies(quickReplies: [Api.QuickReply], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case quickRepliesNotModified
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .quickReplies(let quickReplies, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(2094438528)
+                        buffer.appendInt32(-963811691)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(quickReplies.count))
@@ -1339,9 +1339,9 @@ public extension Api.messages {
     }
     
         public static func parse_quickReplies(_ reader: BufferReader) -> QuickReplies? {
-            var _1: [Api.messages.QuickReply]?
+            var _1: [Api.QuickReply]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.messages.QuickReply.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.QuickReply.self)
             }
             var _2: [Api.Message]?
             if let _ = reader.readInt32() {
@@ -1368,54 +1368,6 @@ public extension Api.messages {
         }
         public static func parse_quickRepliesNotModified(_ reader: BufferReader) -> QuickReplies? {
             return Api.messages.QuickReplies.quickRepliesNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum QuickReply: TypeConstructorDescription {
-        case quickReply(shortcutId: Int32, shortcut: String, topMessage: Int32, count: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .quickReply(let shortcutId, let shortcut, let topMessage, let count):
-                    if boxed {
-                        buffer.appendInt32(-1810973582)
-                    }
-                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
-                    serializeString(shortcut, buffer: buffer, boxed: false)
-                    serializeInt32(topMessage, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .quickReply(let shortcutId, let shortcut, let topMessage, let count):
-                return ("quickReply", [("shortcutId", shortcutId as Any), ("shortcut", shortcut as Any), ("topMessage", topMessage as Any), ("count", count as Any)])
-    }
-    }
-    
-        public static func parse_quickReply(_ reader: BufferReader) -> QuickReply? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.QuickReply.quickReply(shortcutId: _1!, shortcut: _2!, topMessage: _3!, count: _4!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

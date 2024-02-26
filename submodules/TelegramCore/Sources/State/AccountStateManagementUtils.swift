@@ -1658,10 +1658,24 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: peerIsForum, namespace: Namespaces.Message.ScheduledCloud) {
                     updatedState.addScheduledMessages([message])
                 }
+            case let .updateQuickReplyMessage(apiMessage):
+                var peerIsForum = false
+                if let peerId = apiMessage.peerId {
+                    peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                }
+                if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: peerIsForum, namespace: Namespaces.Message.QuickReplyCloud) {
+                    updatedState.addQuickReplyMessages([message])
+                }
             case let .updateDeleteScheduledMessages(peer, messages):
                 var messageIds: [MessageId] = []
                 for message in messages {
                     messageIds.append(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.ScheduledCloud, id: message))
+                }
+                updatedState.deleteMessages(messageIds)
+            case let .updateDeleteQuickReplyMessages(_, messages):
+                var messageIds: [MessageId] = []
+                for message in messages {
+                    messageIds.append(MessageId(peerId: accountPeerId, namespace: Namespaces.Message.QuickReplyCloud, id: message))
                 }
                 updatedState.deleteMessages(messageIds)
             case let .updateTheme(theme):
@@ -3250,6 +3264,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     
     var currentAddMessages: OptimizeAddMessagesState?
     var currentAddScheduledMessages: OptimizeAddMessagesState?
+    var currentAddQuickReplyMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
         case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper:
@@ -3258,6 +3273,9 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
                 }
                 if let currentAddScheduledMessages = currentAddScheduledMessages, !currentAddScheduledMessages.messages.isEmpty {
                     result.append(.AddScheduledMessages(currentAddScheduledMessages.messages))
+                }
+                if let currentAddQuickReplyMessages = currentAddQuickReplyMessages, !currentAddQuickReplyMessages.messages.isEmpty {
+                    result.append(.AddQuickReplyMessages(currentAddQuickReplyMessages.messages))
                 }
                 currentAddMessages = nil
                 result.append(operation)
@@ -3284,6 +3302,12 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
                 } else {
                     currentAddScheduledMessages = OptimizeAddMessagesState(messages: messages, location: .Random)
                 }
+            case let .AddQuickReplyMessages(messages):
+                if let currentAddQuickReplyMessages = currentAddQuickReplyMessages {
+                    currentAddQuickReplyMessages.messages.append(contentsOf: messages)
+                } else {
+                    currentAddQuickReplyMessages = OptimizeAddMessagesState(messages: messages, location: .Random)
+                }
         }
     }
     if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
@@ -3292,6 +3316,10 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     
     if let currentAddScheduledMessages = currentAddScheduledMessages, !currentAddScheduledMessages.messages.isEmpty {
         result.append(.AddScheduledMessages(currentAddScheduledMessages.messages))
+    }
+    
+    if let currentAddQuickReplyMessages = currentAddQuickReplyMessages, !currentAddQuickReplyMessages.messages.isEmpty {
+        result.append(.AddQuickReplyMessages(currentAddQuickReplyMessages.messages))
     }
     
     if let updatedState = updatedState {
@@ -3736,6 +3764,16 @@ func replayFinalState(
                     }
                 }
             case let .AddScheduledMessages(messages):
+                for message in messages {
+                    if case let .Id(id) = message.id, let _ = transaction.getMessage(id) {
+                        transaction.updateMessage(id) { _ -> PostboxUpdateMessage in
+                            return .update(message)
+                        }
+                    } else {
+                        let _ = transaction.addMessages(messages, location: .Random)
+                    }
+                }
+            case let .AddQuickReplyMessages(messages):
                 for message in messages {
                     if case let .Id(id) = message.id, let _ = transaction.getMessage(id) {
                         transaction.updateMessage(id) { _ -> PostboxUpdateMessage in

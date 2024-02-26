@@ -442,7 +442,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     let sideInset: CGFloat = params.leftInset + 10.0
                     let iconSize = CGSize(width: 32.0, height: 32.0)
                     
-                    let spacing = (params.width - sideInset * 2.0 - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1)
+                    let spacing = floorToScreenPixels((params.width - sideInset * 2.0 - iconSize.width * CGFloat(itemsPerRow)) / CGFloat(itemsPerRow - 1))
                     
                     var origin = CGPoint(x: sideInset, y: 10.0)
                     

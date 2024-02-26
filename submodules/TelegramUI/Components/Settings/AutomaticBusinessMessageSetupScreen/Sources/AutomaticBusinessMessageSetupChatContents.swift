@@ -6,173 +6,168 @@ import TelegramCore
 import AccountContext
 
 final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtocol {
+    private final class PendingMessageContext {
+        let disposable = MetaDisposable()
+        var message: Message?
+        
+        init() {
+        }
+    }
+    
     private final class Impl {
         let queue: Queue
         let context: AccountContext
         
-        private var messages: [Message] = []
-        private var nextMessageId: Int32 = 1000
-        let messagesPromise = Promise<[Message]>([])
+        private var shortcut: String
+        private var shortcutId: Int32?
         
-        private var nextGroupingId: UInt32 = 0
-        private var groupingKeyToGroupId: [Int64: UInt32] = [:]
+        private(set) var mergedHistoryView: MessageHistoryView?
+        private var sourceHistoryView: MessageHistoryView?
         
-        init(queue: Queue, context: AccountContext, messages: [EngineMessage]) {
+        private var pendingMessages: [PendingMessageContext] = []
+        private var historyViewDisposable: Disposable?
+        let historyViewStream = ValuePipe<(MessageHistoryView, ViewUpdateType)>()
+        private var nextUpdateIsHoleFill: Bool = false
+        
+        init(queue: Queue, context: AccountContext, shortcut: String, shortcutId: Int32?) {
             self.queue = queue
             self.context = context
-            self.messages = messages.map { $0._asMessage() }
-            self.notifyMessagesUpdated()
+            self.shortcut = shortcut
+            self.shortcutId = shortcutId
             
-            if let maxMessageId = messages.map(\.id).max() {
-                self.nextMessageId = maxMessageId.id + 1
-            }
-            if let maxGroupingId = messages.compactMap(\.groupInfo?.stableId).max() {
-                self.nextGroupingId = maxGroupingId + 1
-            }
+            self.updateHistoryViewRequest(reload: false)
         }
         
         deinit {
+            for context in self.pendingMessages {
+                context.disposable.dispose()
+            }
+            self.historyViewDisposable?.dispose()
         }
         
-        private func notifyMessagesUpdated() {
-            self.messages.sort(by: { $0.index > $1.index })
-            self.messagesPromise.set(.single(self.messages))
+        private func updateHistoryViewRequest(reload: Bool) {
+            if let shortcutId = self.shortcutId {
+                if self.historyViewDisposable == nil || reload {
+                    self.historyViewDisposable?.dispose()
+                    
+                    self.historyViewDisposable = (self.context.account.viewTracker.quickReplyMessagesViewForLocation(quickReplyId: shortcutId)
+                    |> deliverOn(self.queue)).start(next: { [weak self] view, update, _ in
+                        guard let self else {
+                            return
+                        }
+                        if update == .FillHole {
+                            self.nextUpdateIsHoleFill = true
+                            self.updateHistoryViewRequest(reload: true)
+                            return
+                        }
+                        
+                        let nextUpdateIsHoleFill = self.nextUpdateIsHoleFill
+                        self.nextUpdateIsHoleFill = false
+                        
+                        self.sourceHistoryView = view
+                        self.updateHistoryView(updateType: nextUpdateIsHoleFill ? .FillHole : .Generic)
+                    })
+                }
+            } else {
+                if self.sourceHistoryView == nil {
+                    let sourceHistoryView = MessageHistoryView(tag: nil, namespaces: .just(Namespaces.Message.allQuickReply), entries: [], holeEarlier: false, holeLater: false, isLoading: false)
+                    self.sourceHistoryView = sourceHistoryView
+                    self.updateHistoryView(updateType: .Initial)
+                }
+            }
+        }
+        
+        private func updateHistoryView(updateType: ViewUpdateType) {
+            var entries = self.sourceHistoryView?.entries ?? []
+            for pendingMessage in self.pendingMessages {
+                if let message = pendingMessage.message {
+                    if !entries.contains(where: { $0.message.stableId == message.stableId }) {
+                        entries.append(MessageHistoryEntry(
+                            message: message,
+                            isRead: true,
+                            location: nil,
+                            monthLocation: nil,
+                            attributes: MutableMessageHistoryEntryAttributes(
+                                authorIsContact: false
+                            )
+                        ))
+                    }
+                }
+            }
+            entries.sort(by: { $0.message.index < $1.message.index })
+            
+            let mergedHistoryView = MessageHistoryView(tag: nil, namespaces: .just(Namespaces.Message.allQuickReply), entries: entries, holeEarlier: false, holeLater: false, isLoading: false)
+            self.mergedHistoryView = mergedHistoryView
+            
+            self.historyViewStream.putNext((mergedHistoryView, updateType))
         }
         
         func enqueueMessages(messages: [EnqueueMessage]) {
-            for message in messages {
-                switch message {
-                case let .message(text, attributes, _, mediaReference, _, _, _, localGroupingKey, correlationId, _):
-                    let _ = attributes
-                    let _ = mediaReference
-                    let _ = correlationId
-                    
-                    let messageId = self.nextMessageId
-                    self.nextMessageId += 1
-                    
-                    var attributes: [MessageAttribute] = []
-                    attributes.append(OutgoingMessageInfoAttribute(
-                        uniqueId: Int64.random(in: Int64.min ... Int64.max),
-                        flags: [],
-                        acknowledged: true,
-                        correlationId: correlationId, 
-                        bubbleUpEmojiOrStickersets: []
-                    ))
-                    
-                    var media: [Media] = []
-                    if let mediaReference {
-                        media.append(mediaReference.media)
-                    }
-                    
-                    let mappedMessage = Message(
-                        stableId: UInt32(messageId),
-                        stableVersion: 0,
-                        id: MessageId(
-                            peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(0)),
-                            namespace: Namespaces.Message.Local,
-                            id: Int32(messageId)
-                        ),
-                        globallyUniqueId: nil,
-                        groupingKey: localGroupingKey,
-                        groupInfo: localGroupingKey.flatMap { value in
-                            if let current = self.groupingKeyToGroupId[value] {
-                                return MessageGroupInfo(stableId: current)
-                            } else {
-                                let groupId = self.nextGroupingId
-                                self.nextGroupingId += 1
-                                self.groupingKeyToGroupId[value] = groupId
-                                return MessageGroupInfo(stableId: groupId)
-                            }
-                        },
-                        threadId: nil,
-                        timestamp: messageId,
-                        flags: [],
-                        tags: [],
-                        globalTags: [],
-                        localTags: [],
-                        customTags: [],
-                        forwardInfo: nil,
-                        author: nil,
-                        text: text,
-                        attributes: attributes,
-                        media: media,
-                        peers: SimpleDictionary(),
-                        associatedMessages: SimpleDictionary(),
-                        associatedMessageIds: [],
-                        associatedMedia: [:],
-                        associatedThreadInfo: nil,
-                        associatedStories: [:]
-                    )
-                    self.messages.append(mappedMessage)
-                case .forward:
-                    break
+            let threadId = self.shortcutId.flatMap(Int64.init)
+            let _ = (TelegramCore.enqueueMessages(account: self.context.account, peerId: self.context.account.peerId, messages: messages.map { message in
+                return message.withUpdatedThreadId(threadId).withUpdatedAttributes { attributes in
+                    var attributes = attributes
+                    attributes.removeAll(where: { $0 is OutgoingQuickReplyMessageAttribute })
+                    attributes.append(OutgoingQuickReplyMessageAttribute(shortcut: self.shortcut))
+                    return attributes
                 }
-            }
-            self.notifyMessagesUpdated()
+            })
+            |> deliverOn(self.queue)).startStandalone(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                if self.shortcutId != nil {
+                    return
+                }
+                for id in result {
+                    if let id {
+                        let pendingMessage = PendingMessageContext()
+                        self.pendingMessages.append(pendingMessage)
+                        pendingMessage.disposable.set((
+                            self.context.account.postbox.messageView(id)
+                            |> deliverOn(self.queue)
+                        ).startStrict(next: { [weak self, weak pendingMessage] messageView in
+                            guard let self else {
+                                return
+                            }
+                            guard let pendingMessage else {
+                                return
+                            }
+                            pendingMessage.message = messageView.message
+                            if let message = pendingMessage.message, message.id.namespace == Namespaces.Message.QuickReplyCloud, let threadId = message.threadId {
+                                self.shortcutId = Int32(clamping: threadId)
+                                self.updateHistoryViewRequest(reload: true)
+                            } else {
+                                self.updateHistoryView(updateType: .Generic)
+                            }
+                        }))
+                    }
+                }
+            })
         }
 
         func deleteMessages(ids: [EngineMessage.Id]) {
-            self.messages = self.messages.filter({ !ids.contains($0.id) })
-            self.notifyMessagesUpdated()
+            let _ = self.context.engine.messages.deleteMessagesInteractively(messageIds: ids, type: .forEveryone).startStandalone()
         }
         
         func editMessage(id: EngineMessage.Id, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, webpagePreviewAttribute: WebpagePreviewMessageAttribute?, disableUrlPreview: Bool) {
-            guard let index = self.messages.firstIndex(where: { $0.id == id }) else {
-                return
+        }
+        
+        func quickReplyUpdateShortcut(value: String) {
+            if let shortcutId = self.shortcutId {
+                self.context.engine.accountData.editMessageShortcut(id: shortcutId, shortcut: value)
             }
-            let originalMessage = self.messages[index]
-            
-            var mappedMedia = originalMessage.media
-            switch media {
-            case .keep:
-                break
-            case let .update(value):
-                mappedMedia = [value.media]
-            }
-            
-            var mappedAtrributes = originalMessage.attributes
-            mappedAtrributes.removeAll(where: { $0 is TextEntitiesMessageAttribute })
-            if let entities {
-                mappedAtrributes.append(entities)
-            }
-            
-            let mappedMessage = Message(
-                stableId: originalMessage.stableId,
-                stableVersion: originalMessage.stableVersion + 1,
-                id: originalMessage.id,
-                globallyUniqueId: originalMessage.globallyUniqueId,
-                groupingKey: originalMessage.groupingKey,
-                groupInfo: originalMessage.groupInfo,
-                threadId: originalMessage.threadId,
-                timestamp: originalMessage.timestamp,
-                flags: originalMessage.flags,
-                tags: originalMessage.tags,
-                globalTags: originalMessage.globalTags,
-                localTags: originalMessage.localTags,
-                customTags: originalMessage.customTags,
-                forwardInfo: originalMessage.forwardInfo,
-                author: originalMessage.author,
-                text: text,
-                attributes: mappedAtrributes,
-                media: mappedMedia,
-                peers: originalMessage.peers,
-                associatedMessages: originalMessage.associatedMessages,
-                associatedMessageIds: originalMessage.associatedMessageIds,
-                associatedMedia: originalMessage.associatedMedia,
-                associatedThreadInfo: originalMessage.associatedThreadInfo,
-                associatedStories: originalMessage.associatedStories
-            )
-            
-            self.messages[index] = mappedMessage
-            self.notifyMessagesUpdated()
         }
     }
     
     var kind: ChatCustomContentsKind
 
-    var messages: Signal<[Message], NoError> {
+    var historyView: Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         return self.impl.signalWith({ impl, subscriber in
-            return impl.messagesPromise.get().start(next: subscriber.putNext)
+            if let mergedHistoryView = impl.mergedHistoryView {
+                subscriber.putNext((mergedHistoryView, .Initial))
+            }
+            return impl.historyViewStream.signal().start(next: subscriber.putNext)
         })
     }
     
@@ -183,13 +178,23 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    init(context: AccountContext, messages: [EngineMessage], kind: ChatCustomContentsKind) {
+    init(context: AccountContext, kind: ChatCustomContentsKind, shortcutId: Int32?) {
         self.kind = kind
+        
+        let initialShortcut: String
+        switch kind {
+        case .awayMessageInput:
+            initialShortcut = "_away"
+        case .greetingMessageInput:
+            initialShortcut = "_greeting"
+        case let .quickReplyMessageInput(shortcut):
+            initialShortcut = shortcut
+        }
         
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, context: context, messages: messages)
+            return Impl(queue: queue, context: context, shortcut: initialShortcut, shortcutId: shortcutId)
         })
     }
     
@@ -213,5 +218,8 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
     
     func quickReplyUpdateShortcut(value: String) {
         self.kind = .quickReplyMessageInput(shortcut: value)
+        self.impl.with { impl in
+            impl.quickReplyUpdateShortcut(value: value)
+        }
     }
 }

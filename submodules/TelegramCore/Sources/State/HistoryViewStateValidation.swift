@@ -28,78 +28,60 @@ private final class HistoryStateValidationContext {
 
 private enum HistoryState {
     case channel(PeerId, ChannelState)
-    //case group(PeerGroupId, TelegramPeerGroupState)
     case scheduledMessages(PeerId)
+    case quickReplyMessages(PeerId, Int32)
     
     var hasInvalidationIndex: Bool {
         switch self {
-            case let .channel(_, state):
-                return state.invalidatedPts != nil
-            /*case let .group(_, state):
-                return state.invalidatedStateIndex != nil*/
-            case .scheduledMessages:
-                return false
+        case let .channel(_, state):
+            return state.invalidatedPts != nil
+        case .scheduledMessages:
+            return false
+        case .quickReplyMessages:
+            return false
         }
     }
     
     func isMessageValid(_ message: Message) -> Bool {
         switch self {
-            case let .channel(_, state):
-                if let invalidatedPts = state.invalidatedPts {
-                    var messagePts: Int32?
-                    inner: for attribute in message.attributes {
-                        if let attribute = attribute as? ChannelMessageStateVersionAttribute {
-                            messagePts = attribute.pts
-                            break inner
-                        }
+        case let .channel(_, state):
+            if let invalidatedPts = state.invalidatedPts {
+                var messagePts: Int32?
+                inner: for attribute in message.attributes {
+                    if let attribute = attribute as? ChannelMessageStateVersionAttribute {
+                        messagePts = attribute.pts
+                        break inner
                     }
-                    var requiresValidation = false
-                    if let messagePts = messagePts {
-                        if messagePts < invalidatedPts {
-                            requiresValidation = true
-                        }
-                    } else {
-                        requiresValidation = true
-                    }
-                    
-                    return !requiresValidation
-                } else {
-                    return true
                 }
-            /*case let .group(_, state):
-                if let invalidatedStateIndex = state.invalidatedStateIndex {
-                    var messageStateIndex: Int32?
-                    inner: for attribute in message.attributes {
-                        if let attribute = attribute as? PeerGroupMessageStateVersionAttribute {
-                            messageStateIndex = attribute.stateIndex
-                            break inner
-                        }
-                    }
-                    var requiresValidation = false
-                    if let messageStateIndex = messageStateIndex {
-                        if messageStateIndex < invalidatedStateIndex {
-                            requiresValidation = true
-                        }
-                    } else {
+                
+                var requiresValidation = false
+                if let messagePts = messagePts {
+                    if messagePts < invalidatedPts {
                         requiresValidation = true
                     }
-                    return !requiresValidation
                 } else {
-                    return true
-                }*/
-            case .scheduledMessages:
-                return false
+                    requiresValidation = true
+                }
+            
+                return !requiresValidation
+            } else {
+                return true
+            }
+        case .scheduledMessages:
+            return false
+        case .quickReplyMessages:
+            return false
         }
     }
     
     func matchesPeerId(_ peerId: PeerId) -> Bool {
         switch self {
-            case let .channel(statePeerId, _):
-                return statePeerId == peerId
-            /*case .group:
-                return true*/
-            case let .scheduledMessages(statePeerId):
-                return statePeerId == peerId
+        case let .channel(statePeerId, _):
+            return statePeerId == peerId
+        case let .scheduledMessages(statePeerId):
+            return statePeerId == peerId
+        case let .quickReplyMessages(statePeerId, _):
+            return statePeerId == peerId
         }
     }
 }
@@ -411,6 +393,35 @@ final class HistoryViewStateValidationContexts {
                     }))
                 }
             }
+        } else if view.namespaces.contains(Namespaces.Message.QuickReplyCloud) {
+            if let _ = self.contexts[id] {
+            } else if let location = location, case let .peer(peerId, threadId) = location {
+                guard let threadId else {
+                    return
+                }
+                
+                let timestamp = self.network.context.globalTime()
+                if let previousTimestamp = self.previousPeerValidationTimestamps[peerId], timestamp < previousTimestamp + 60  {
+                } else {
+                    self.previousPeerValidationTimestamps[peerId] = timestamp
+                    
+                    let context = HistoryStateValidationContext()
+                    self.contexts[id] = context
+            
+                    let disposable = MetaDisposable()
+                    let batch = HistoryStateValidationBatch(disposable: disposable)
+                    context.batch = batch
+                    
+                    let messages: [Message] = view.entries.map { $0.message }.filter { $0.id.namespace == Namespaces.Message.QuickReplyCloud }
+                
+                    disposable.set((validateQuickReplyMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: peerId, tag: nil, messages: messages, historyState: .quickReplyMessages(peerId, Int32(clamping: threadId)))
+                    |> deliverOn(self.queue)).start(completed: { [weak self] in
+                        if let strongSelf = self, let context = strongSelf.contexts[id] {
+                            context.batch = nil
+                        }
+                    }))
+                }
+            }
         }
     }
 }
@@ -688,6 +699,53 @@ private func validateScheduledMessagesBatch(postbox: Postbox, network: Network, 
         }
         return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: previous, messageNamespace: Namespaces.Message.ScheduledCloud)
     } |> switchToLatest
+}
+
+private func validateQuickReplyMessagesBatch(postbox: Postbox, network: Network, accountPeerId: PeerId, tag: MessageTags?, messages: [Message], historyState: HistoryState) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        var signal: Signal<ValidatedMessages, MTRpcError>
+        switch historyState {
+            case let .quickReplyMessages(peerId, shortcutId):
+                if let peer = transaction.getPeer(peerId) {
+                    let hash = hashForScheduledMessages(messages)
+                    signal = network.request(Api.functions.messages.getQuickReplyMessages(flags: 0, shortcutId: shortcutId, id: nil, hash: hash))
+                    |> map { result -> ValidatedMessages in
+                        let messages: [Api.Message]
+                        let chats: [Api.Chat]
+                        let users: [Api.User]
+                        
+                        switch result {
+                            case let .messages(messages: apiMessages, chats: apiChats, users: apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .messagesSlice(_, _, _, _, messages: apiMessages, chats: apiChats, users: apiUsers):
+                                messages = apiMessages
+                                chats = apiChats
+                                users = apiUsers
+                            case let .channelMessages(_, _, _, _, apiMessages, apiTopics, apiChats, apiUsers):
+                                messages = apiMessages
+                                let _ = apiTopics
+                                chats = apiChats
+                                users = apiUsers
+                            case .messagesNotModified:
+                                return .notModified
+                        }
+                        return .messages(peer, messages, chats, users, nil)
+                    }
+                } else {
+                    signal = .complete()
+                }
+            default:
+                signal = .complete()
+        }
+        var previous: [MessageId: Message] = [:]
+        for message in messages {
+            previous[message.id] = message
+        }
+        return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: previous, messageNamespace: Namespaces.Message.QuickReplyCloud)
+    }
+    |> switchToLatest
 }
 
 private func validateBatch(postbox: Postbox, network: Network, transaction: Transaction, accountPeerId: PeerId, tag: MessageTags?, historyState: HistoryState, signal: Signal<ValidatedMessages, MTRpcError>, previous: [MessageId: Message], messageNamespace: MessageId.Namespace) -> Signal<Void, NoError> {

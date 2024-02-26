@@ -11376,3 +11376,7 @@ to respond to messages faster.";
 
 "ChannelBoost.Title" = "Boost Channel";
 "ChannelBoost.Info" = "Subscribers of your channel can **boost** it so that it **levels up** and gets **exclusive features**.";
+
+"Conversation.BoostToUnrestrictText" = "Boost this group to send messages";
+
+"Settings.Business" = "Telegram Business";

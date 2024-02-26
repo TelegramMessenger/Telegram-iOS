@@ -127,9 +127,13 @@ func managedCloudChatRemoveMessagesOperations(postbox: Postbox, network: Network
 
 private func removeMessages(postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatRemoveMessagesOperation) -> Signal<Void, NoError> {
     var isScheduled = false
+    var isQuickReply = false
     for id in operation.messageIds {
         if id.namespace == Namespaces.Message.ScheduledCloud {
             isScheduled = true
+            break
+        } else if id.namespace == Namespaces.Message.QuickReplyCloud {
+            isQuickReply = true
             break
         }
     }
@@ -140,6 +144,32 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
             for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
                 let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
                 let partSignal = network.request(Api.functions.messages.deleteScheduledMessages(peer: inputPeer, id: ids.map { $0.id }))
+                    |> map { result -> Api.Updates? in
+                        return result
+                    }
+                    |> `catch` { _ in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { updates -> Signal<Void, NoError> in
+                        if let updates = updates {
+                            stateManager.addUpdates(updates)
+                        }
+                        return .complete()
+                }
+                
+                signal = signal
+                    |> then(partSignal)
+            }
+            return signal
+        } else {
+            return .complete()
+        }
+    } else if isQuickReply {
+        if let threadId = operation.threadId {
+            var signal: Signal<Void, NoError> = .complete()
+            for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
+                let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
+                let partSignal = network.request(Api.functions.messages.deleteQuickReplyMessages(shortcutId: Int32(clamping: threadId), id: ids.map(\.id)))
                     |> map { result -> Api.Updates? in
                         return result
                     }
@@ -329,7 +359,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false, minTimestamp: nil, maxTimestamp: nil, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
             |> then(reportSignal)
             |> then(postbox.transaction { transaction -> Void in
-                _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, threadId: nil, namespaces: .not(Namespaces.Message.allScheduled))
+                _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, threadId: nil, namespaces: .not(Namespaces.Message.allNonRegular))
             })
         } else {
             return .complete()
@@ -386,6 +416,27 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
 
 private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, peer: Peer, operation: CloudChatClearHistoryOperation) -> Signal<Void, NoError> {
     if peer.id.namespace == Namespaces.Peer.CloudGroup || peer.id.namespace == Namespaces.Peer.CloudUser {
+        if case .quickReplyMessages = operation.type {
+            guard let threadId = operation.threadId else {
+                return .complete()
+            }
+            
+            let signal = network.request(Api.functions.messages.deleteQuickReplyShortcut(shortcutId: Int32(clamping: threadId)))
+            |> map { result -> Api.Bool? in
+                return result
+            }
+            |> `catch` { _ -> Signal<Api.Bool?, Bool> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<Void, Bool> in
+                return .fail(true)
+            }
+            return (signal |> restart)
+            |> `catch` { _ -> Signal<Void, NoError> in
+                return .complete()
+            }
+        }
+        
         if let inputPeer = apiInputPeer(peer) {
             if peer.id == stateManager.accountPeerId, let threadId = operation.threadId {
                 guard let inputSubPeer = transaction.getPeer(PeerId(threadId)).flatMap(apiInputPeer) else {
@@ -407,7 +458,7 @@ private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, 
                     return result
                 }
                 |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
-                    return .fail(true)
+                    return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<Void, Bool> in
                     if let result = result {

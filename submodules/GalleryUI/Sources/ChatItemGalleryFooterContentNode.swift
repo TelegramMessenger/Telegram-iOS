@@ -816,6 +816,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     func setMessage(_ message: Message, displayInfo: Bool = true, translateToLanguage: String? = nil, peerIsCopyProtected: Bool = false) {
         self.currentMessage = message
         
+        var displayInfo = displayInfo
+        if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+            displayInfo = false
+        }
+        
         var canDelete: Bool
         var canShare = !message.containsSecretMedia
 

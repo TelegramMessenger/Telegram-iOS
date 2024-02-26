@@ -678,41 +678,18 @@ public class ContactsController: ViewController {
                     return false
                 }
                 if value == .commit {
-                    let presentationData = self.presentationData
-                    
                     let deleteContactsFromDevice: Signal<Never, NoError>
                     if let contactDataManager = self.context.sharedContext.contactDataManager {
-                        deleteContactsFromDevice = contactDataManager.deleteContactWithAppSpecificReference(peerId: peerIds.first!)
+                        deleteContactsFromDevice = combineLatest(peerIds.map { contactDataManager.deleteContactWithAppSpecificReference(peerId: $0) }
+                        )
+                        |> ignoreValues
                     } else {
                         deleteContactsFromDevice = .complete()
                     }
                     
-                    var deleteSignal = self.context.engine.contacts.deleteContacts(peerIds: peerIds)
+                    let deleteSignal = self.context.engine.contacts.deleteContacts(peerIds: peerIds)
                     |> then(deleteContactsFromDevice)
                     
-                    let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                        guard let self else {
-                            return EmptyDisposable
-                        }
-                        let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                        self.present(statusController, in: .window(.root))
-                        return ActionDisposable { [weak statusController] in
-                            Queue.mainQueue().async() {
-                                statusController?.dismiss()
-                            }
-                        }
-                    }
-                    |> runOn(Queue.mainQueue())
-                    |> delay(0.15, queue: Queue.mainQueue())
-                    let progressDisposable = progressSignal.start()
-                    
-                    deleteSignal = deleteSignal
-                    |> afterDisposed {
-                        Queue.mainQueue().async {
-                            progressDisposable.dispose()
-                        }
-                    }
-                     
                     for peerId in peerIds {
                         deleteSendMessageIntents(peerId: peerId)
                     }
@@ -724,6 +701,9 @@ public class ContactsController: ViewController {
                         }
                         return state
                     }
+                    
+                    let _ = deleteSignal.start()
+                    
                     return true
                 } else if value == .undo {
                     self.contactsNode.contactListNode.updatePendingRemovalPeerIds { state in

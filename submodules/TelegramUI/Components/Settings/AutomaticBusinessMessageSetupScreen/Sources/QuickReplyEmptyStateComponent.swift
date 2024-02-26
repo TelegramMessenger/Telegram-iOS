@@ -7,6 +7,7 @@ import AppBundle
 import ButtonComponent
 import MultilineTextComponent
 import BalancedTextComponent
+import LottieComponent
 
 final class QuickReplyEmptyStateComponent: Component {
     let theme: PresentationTheme
@@ -63,72 +64,6 @@ final class QuickReplyEmptyStateComponent: Component {
             
             let _ = previousComponent
             
-            let iconTitleSpacing: CGFloat = 10.0
-            let titleTextSpacing: CGFloat = 8.0
-            
-            let iconSize = self.icon.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "📝", font: Font.semibold(90.0), textColor: component.theme.rootController.navigationBar.primaryTextColor)),
-                    horizontalAlignment: .center
-                )),
-                environment: {},
-                containerSize: CGSize(width: 100.0, height: 100.0)
-            )
-            
-            //TODO:localize
-            let titleSize = self.title.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "No Quick Replies", font: Font.semibold(17.0), textColor: component.theme.rootController.navigationBar.primaryTextColor)),
-                    horizontalAlignment: .center
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 100.0)
-            )
-            
-            let textSize = self.text.update(
-                transition: .immediate,
-                component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Set up shortcuts with rich text and media to respond to messages faster.", font: Font.regular(15.0), textColor: component.theme.rootController.navigationBar.secondaryTextColor)),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 20
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 100.0)
-            )
-            
-            let centralContentsHeight: CGFloat = iconSize.height + iconTitleSpacing + titleSize.height + titleTextSpacing
-            var centralContentsY: CGFloat = component.insets.top + floor((availableSize.height - component.insets.top - component.insets.bottom - centralContentsHeight) * 0.5)
-            
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: centralContentsY), size: iconSize)
-            if let iconView = self.icon.view {
-                if iconView.superview == nil {
-                    self.addSubview(iconView)
-                }
-                transition.setFrame(view: iconView, frame: iconFrame)
-            }
-            centralContentsY += iconSize.height + iconTitleSpacing
-            
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: centralContentsY), size: titleSize)
-            if let titleView = self.title.view {
-                if titleView.superview == nil {
-                    self.addSubview(titleView)
-                }
-                titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
-                transition.setPosition(view: titleView, position: titleFrame.center)
-            }
-            centralContentsY += titleSize.height + titleTextSpacing
-            
-            let textFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) * 0.5), y: centralContentsY), size: textSize)
-            if let textView = self.text.view {
-                if textView.superview == nil {
-                    self.addSubview(textView)
-                }
-                textView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
-                transition.setPosition(view: textView, position: textFrame.center)
-            }
-            
             let buttonSize = self.button.update(
                 transition: transition,
                 component: AnyComponent(ButtonComponent(
@@ -159,12 +94,81 @@ final class QuickReplyEmptyStateComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: min(availableSize.width - 16.0 * 2.0, 280.0), height: 50.0)
             )
-            let buttonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) * 0.5), y: availableSize.height - component.insets.bottom - 8.0 - buttonSize.height), size: buttonSize)
+            let buttonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) * 0.5), y: availableSize.height - component.insets.bottom - 14.0 - buttonSize.height), size: buttonSize)
             if let buttonView = self.button.view {
                 if buttonView.superview == nil {
                     self.addSubview(buttonView)
                 }
                 transition.setFrame(view: buttonView, frame: buttonFrame)
+            }
+            
+            let iconTitleSpacing: CGFloat = 13.0
+            let titleTextSpacing: CGFloat = 9.0
+            
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "WriteEmoji"),
+                    loop: true
+                )),
+                environment: {},
+                containerSize: CGSize(width: 120.0, height: 120.0)
+            )
+            
+            //TODO:localize
+            let titleSize = self.title.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: "No Quick Replies", font: Font.semibold(17.0), textColor: component.theme.rootController.navigationBar.primaryTextColor)),
+                    horizontalAlignment: .center
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 100.0)
+            )
+            
+            let textSize = self.text.update(
+                transition: .immediate,
+                component: AnyComponent(BalancedTextComponent(
+                    text: .plain(NSAttributedString(string: "Set up shortcuts with rich text and media to respond to messages faster.", font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 20,
+                    lineSpacing: 0.2
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 100.0)
+            )
+            
+            let topInset: CGFloat = component.insets.top
+            
+            let centralContentsHeight: CGFloat = iconSize.height + iconTitleSpacing + titleSize.height + titleTextSpacing
+            var centralContentsY: CGFloat = topInset + floor((buttonFrame.minY - topInset - centralContentsHeight) * 0.426)
+            
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: centralContentsY), size: iconSize)
+            if let iconView = self.icon.view {
+                if iconView.superview == nil {
+                    self.addSubview(iconView)
+                }
+                transition.setFrame(view: iconView, frame: iconFrame)
+            }
+            centralContentsY += iconSize.height + iconTitleSpacing
+            
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: centralContentsY), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                transition.setPosition(view: titleView, position: titleFrame.center)
+            }
+            centralContentsY += titleSize.height + titleTextSpacing
+            
+            let textFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) * 0.5), y: centralContentsY), size: textSize)
+            if let textView = self.text.view {
+                if textView.superview == nil {
+                    self.addSubview(textView)
+                }
+                textView.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
+                transition.setPosition(view: textView, position: textFrame.center)
             }
             
             return availableSize

@@ -546,7 +546,7 @@ final class BusinessPageComponent: CombinedComponent {
             state.isDisplaying = environment.isDisplaying
             
             let theme = context.component.theme
-//            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
+            let strings = context.component.context.sharedContext.currentPresentationData.with { $0 }.strings
             
             let topInset: CGFloat = 56.0
             
@@ -604,10 +604,9 @@ final class BusinessPageComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            //TODO:localize
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Telegram Business", font: Font.semibold(20.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Premium_Business, font: Font.semibold(20.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center,
                     truncationType: .end,
                     maximumNumberOfLines: 1

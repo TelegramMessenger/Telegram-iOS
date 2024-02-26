@@ -1,4 +1,60 @@
 public extension Api {
+    enum InputQuickReplyShortcut: TypeConstructorDescription {
+        case inputQuickReplyShortcut(shortcut: String)
+        case inputQuickReplyShortcutId(shortcutId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputQuickReplyShortcut(let shortcut):
+                    if boxed {
+                        buffer.appendInt32(609840449)
+                    }
+                    serializeString(shortcut, buffer: buffer, boxed: false)
+                    break
+                case .inputQuickReplyShortcutId(let shortcutId):
+                    if boxed {
+                        buffer.appendInt32(18418929)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputQuickReplyShortcut(let shortcut):
+                return ("inputQuickReplyShortcut", [("shortcut", shortcut as Any)])
+                case .inputQuickReplyShortcutId(let shortcutId):
+                return ("inputQuickReplyShortcutId", [("shortcutId", shortcutId as Any)])
+    }
+    }
+    
+        public static func parse_inputQuickReplyShortcut(_ reader: BufferReader) -> InputQuickReplyShortcut? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputQuickReplyShortcut.inputQuickReplyShortcut(shortcut: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputQuickReplyShortcutId(_ reader: BufferReader) -> InputQuickReplyShortcut? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputQuickReplyShortcut.inputQuickReplyShortcutId(shortcutId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum InputReplyTo: TypeConstructorDescription {
         case inputReplyToMessage(flags: Int32, replyToMsgId: Int32, topMsgId: Int32?, replyToPeerId: Api.InputPeer?, quoteText: String?, quoteEntities: [Api.MessageEntity]?, quoteOffset: Int32?)
         case inputReplyToStory(peer: Api.InputPeer, storyId: Int32)
@@ -1010,86 +1066,6 @@ public extension Api {
         }
         public static func parse_inputUserSelf(_ reader: BufferReader) -> InputUser? {
             return Api.InputUser.inputUserSelf
-        }
-    
-    }
-}
-public extension Api {
-    enum InputWallPaper: TypeConstructorDescription {
-        case inputWallPaper(id: Int64, accessHash: Int64)
-        case inputWallPaperNoFile(id: Int64)
-        case inputWallPaperSlug(slug: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputWallPaper(let id, let accessHash):
-                    if boxed {
-                        buffer.appendInt32(-433014407)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    break
-                case .inputWallPaperNoFile(let id):
-                    if boxed {
-                        buffer.appendInt32(-1770371538)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    break
-                case .inputWallPaperSlug(let slug):
-                    if boxed {
-                        buffer.appendInt32(1913199744)
-                    }
-                    serializeString(slug, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputWallPaper(let id, let accessHash):
-                return ("inputWallPaper", [("id", id as Any), ("accessHash", accessHash as Any)])
-                case .inputWallPaperNoFile(let id):
-                return ("inputWallPaperNoFile", [("id", id as Any)])
-                case .inputWallPaperSlug(let slug):
-                return ("inputWallPaperSlug", [("slug", slug as Any)])
-    }
-    }
-    
-        public static func parse_inputWallPaper(_ reader: BufferReader) -> InputWallPaper? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputWallPaper.inputWallPaper(id: _1!, accessHash: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputWallPaperNoFile(_ reader: BufferReader) -> InputWallPaper? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputWallPaper.inputWallPaperNoFile(id: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputWallPaperSlug(_ reader: BufferReader) -> InputWallPaper? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputWallPaper.inputWallPaperSlug(slug: _1!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

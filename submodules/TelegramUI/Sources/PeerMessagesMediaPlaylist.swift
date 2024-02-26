@@ -549,8 +549,10 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         let namespaces: MessageIdNamespaces
         if Namespaces.Message.allScheduled.contains(anchor.id.namespace) {
             namespaces = .just(Namespaces.Message.allScheduled)
+        } else if Namespaces.Message.allQuickReply.contains(anchor.id.namespace) {
+            namespaces = .just(Namespaces.Message.allQuickReply)
         } else {
-            namespaces = .not(Namespaces.Message.allScheduled)
+            namespaces = .not(Namespaces.Message.allNonRegular)
         }
         
         switch anchor {

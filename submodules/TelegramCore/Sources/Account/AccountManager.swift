@@ -208,6 +208,7 @@ private var declaredEncodables: Void = {
     declareEncodable(WebpagePreviewMessageAttribute.self, f: { WebpagePreviewMessageAttribute(decoder: $0) })
     declareEncodable(DerivedDataMessageAttribute.self, f: { DerivedDataMessageAttribute(decoder: $0) })
     declareEncodable(TelegramApplicationIcons.self, f: { TelegramApplicationIcons(decoder: $0) })
+    declareEncodable(OutgoingQuickReplyMessageAttribute.self, f: { OutgoingQuickReplyMessageAttribute(decoder: $0) })
     return
 }()
 

@@ -218,11 +218,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 )) })
             }
         
-            var shortcuts: Signal<[QuickReplyMessageShortcut], NoError> = .single([])
+            var shortcuts: Signal<[ShortcutMessageList.Item], NoError> = .single([])
             if peer is TelegramUser {
-                shortcuts = context.engine.accountData.shortcutMessages()
-                |> map { shortcuts -> [QuickReplyMessageShortcut] in
-                    return shortcuts.shortcuts.filter { item in
+                shortcuts = context.engine.accountData.shortcutMessageList()
+                |> map { shortcutMessageList -> [ShortcutMessageList.Item] in
+                    return shortcutMessageList.items.filter { item in
                         return item.shortcut.hasPrefix(normalizedQuery)
                     }
                 }

@@ -4,30 +4,30 @@ import Postbox
 import SwiftSignalKit
 
 final class ChatMessageThrottledProcessingManager {
-    private let queue = Queue()
+    private let queue = Queue.mainQueue()
     
     private let delay: Double
     private let submitInterval: Double?
     
-    var process: ((Set<MessageId>) -> Void)?
+    var process: ((Set<MessageAndThreadId>) -> Void)?
     
     private var timer: SwiftSignalKit.Timer?
-    private var processedList: [MessageId] = []
-    private var processed: [MessageId: Double] = [:]
-    private var buffer = Set<MessageId>()
+    private var processedList: [MessageAndThreadId] = []
+    private var processed: [MessageAndThreadId: Double] = [:]
+    private var buffer = Set<MessageAndThreadId>()
     
     init(delay: Double = 1.0, submitInterval: Double? = nil) {
         self.delay = delay
         self.submitInterval = submitInterval
     }
     
-    func setProcess(process: @escaping (Set<MessageId>) -> Void) {
+    func setProcess(process: @escaping (Set<MessageAndThreadId>) -> Void) {
         self.queue.async {
             self.process = process
         }
     }
     
-    func add(_ messageIds: [MessageId]) {
+    func add(_ messageIds: [MessageAndThreadId]) {
         self.queue.async {
             let timestamp = CFAbsoluteTimeGetCurrent()
             
@@ -76,13 +76,13 @@ final class ChatMessageThrottledProcessingManager {
 
 
 final class ChatMessageVisibleThrottledProcessingManager {
-    private let queue = Queue()
+    private let queue = Queue.mainQueue()
     
     private let interval: Double
     
-    private var currentIds = Set<MessageId>()
+    private var currentIds = Set<MessageAndThreadId>()
     
-    var process: ((Set<MessageId>) -> Void)?
+    var process: ((Set<MessageAndThreadId>) -> Void)?
     
     private let timer: SwiftSignalKit.Timer
     
@@ -107,13 +107,13 @@ final class ChatMessageVisibleThrottledProcessingManager {
         self.timer.invalidate()
     }
     
-    func setProcess(process: @escaping (Set<MessageId>) -> Void) {
+    func setProcess(process: @escaping (Set<MessageAndThreadId>) -> Void) {
         self.queue.async {
             self.process = process
         }
     }
     
-    func update(_ ids: Set<MessageId>) {
+    func update(_ ids: Set<MessageAndThreadId>) {
         self.queue.async {
             if self.currentIds != ids {
                 self.currentIds = ids
