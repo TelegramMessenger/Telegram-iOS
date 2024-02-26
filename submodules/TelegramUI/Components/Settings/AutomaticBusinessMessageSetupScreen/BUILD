@@ -46,6 +46,7 @@ swift_library(
         "//submodules/TelegramStringFormatting",
         "//submodules/TelegramUI/Components/TimeSelectionActionSheet",
         "//submodules/TelegramUI/Components/ChatListHeaderComponent",
+        "//submodules/AttachmentUI",
     ],
     visibility = [
         "//visibility:public",

@@ -20,6 +20,8 @@ import BundleIconComponent
 import LottieComponent
 import Markdown
 import LocationUI
+import CoreLocation
+import Geocoding
 
 final class BusinessLocationSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -74,7 +76,11 @@ final class BusinessLocationSetupScreenComponent: Component {
         private let textFieldTag = NSObject()
         private var resetAddressText: String?
         
+        private var isLoadingGeocodedAddress: Bool = false
+        private var geocodeAddressState: (address: String, disposable: Disposable)?
+        
         private var mapCoordinates: TelegramBusinessLocation.Coordinates?
+        private var mapCoordinatesManuallySet: Bool = false
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -102,6 +108,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         deinit {
+            self.geocodeAddressState?.disposable.dispose()
         }
 
         func scrollToTop() {
@@ -183,12 +190,18 @@ final class BusinessLocationSetupScreenComponent: Component {
                 return
             }
             
-            let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .pick, completion: { [weak self] location, _, _, address, _ in
+            var initialLocation: CLLocationCoordinate2D?
+            if let mapCoordinates = self.mapCoordinates {
+                initialLocation = CLLocationCoordinate2D(latitude: mapCoordinates.latitude, longitude: mapCoordinates.longitude)
+            }
+            
+            let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .pick, initialLocation: initialLocation, completion: { [weak self] location, _, _, address, _ in
                 guard let self else {
                     return
                 }
                 
                 self.mapCoordinates = TelegramBusinessLocation.Coordinates(latitude: location.latitude, longitude: location.longitude)
+                self.mapCoordinatesManuallySet = true
                 if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View, textView.currentText.isEmpty {
                     self.resetAddressText = address
                 }
@@ -196,6 +209,43 @@ final class BusinessLocationSetupScreenComponent: Component {
                 self.state?.updated(transition: .immediate)
             })
             self.environment?.controller()?.push(controller)
+        }
+        
+        private func updateGeocodedAddress(string: String) {
+            let addressValue: String?
+            if self.mapCoordinates != nil && self.mapCoordinatesManuallySet {
+                addressValue = nil
+            } else if string.count < 3 {
+                addressValue = nil
+            } else {
+                addressValue = string
+            }
+            
+            if let current = self.geocodeAddressState, current.address == addressValue {
+            } else {
+                self.geocodeAddressState?.disposable.dispose()
+                self.geocodeAddressState = nil
+                
+                if let addressValue {
+                    let disposable = MetaDisposable()
+                    self.geocodeAddressState = (string, disposable)
+                    
+                    disposable.set((
+                        geocodeLocation(address: addressValue, locale: Locale.current)
+                        |> delay(0.4, queue: .mainQueue())
+                        |> deliverOnMainQueue
+                    ).start(next: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let location = result?.first?.location, !self.mapCoordinatesManuallySet {
+                            self.mapCoordinates = TelegramBusinessLocation.Coordinates(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }))
+                }
+            }
         }
         
         func update(component: BusinessLocationSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -207,6 +257,9 @@ final class BusinessLocationSetupScreenComponent: Component {
             if self.component == nil {
                 if let initialValue = component.initialValue {
                     self.mapCoordinates = initialValue.coordinates
+                    if self.mapCoordinates != nil {
+                        self.mapCoordinatesManuallySet = true
+                    }
                     self.resetAddressText = initialValue.address
                 }
             }
@@ -333,12 +386,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 characterLimit: 64,
-                updated: { [weak self] value in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
-                    let _ = value
+                updated: { _ in
                 },
                 tag: self.textFieldTag
             ))))
@@ -390,6 +438,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                         self.openLocationPicker()
                     } else {
                         self.mapCoordinates = nil
+                        self.mapCoordinatesManuallySet = false
                         self.state?.updated(transition: .spring(duration: 0.4))
                     }
                 }

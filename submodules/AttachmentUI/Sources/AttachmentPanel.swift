@@ -217,6 +217,10 @@ private final class AttachButtonComponent: CombinedComponent {
                 name = ""
                 imageName = ""
                 imageFile = nil
+            case .quickReply:
+                //TODO:localize
+                name = "Reply"
+                imageName = "Chat/Attach Menu/Location"
             }
 
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
@@ -1183,6 +1187,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 accessibilityTitle = bot.shortName
             case .standalone:
                 accessibilityTitle = ""
+            case .quickReply:
+                //TODO:localize
+                accessibilityTitle = "Reply"
             }
             buttonView.isAccessibilityElement = true
             buttonView.accessibilityLabel = accessibilityTitle

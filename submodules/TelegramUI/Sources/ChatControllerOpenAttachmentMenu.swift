@@ -29,6 +29,7 @@ import ChatEntityKeyboardInputNode
 import PremiumUI
 import PremiumGiftAttachmentScreen
 import TelegramCallsUI
+import AutomaticBusinessMessageSetupScreen
 
 extension ChatControllerImpl {
     enum AttachMenuSubject {
@@ -131,8 +132,11 @@ extension ChatControllerImpl {
         
         let buttons: Signal<([AttachmentButtonType], [AttachmentButtonType], AttachmentButtonType?), NoError>
         if let peer = self.presentationInterfaceState.renderedPeer?.peer, !isScheduledMessages, !peer.isDeleted {
-            buttons = self.context.engine.messages.attachMenuBots()
-            |> map { attachMenuBots in
+            buttons = combineLatest(
+                self.context.engine.messages.attachMenuBots(),
+                self.context.engine.accountData.shortcutMessageList() |> take(1)
+            )
+            |> map { attachMenuBots, shortcutMessageList in
                 var buttons = availableButtons
                 var allButtons = availableButtons
                 var initialButton: AttachmentButtonType?
@@ -164,6 +168,19 @@ extension ChatControllerImpl {
                         }
                     }
                     allButtons.insert(button, at: 1)
+                }
+                
+                if let user = peer as? TelegramUser, user.botInfo == nil {
+                    if let index = buttons.firstIndex(where: { $0 == .location }) {
+                        buttons.insert(.quickReply, at: index + 1)
+                    } else {
+                        buttons.append(.quickReply)
+                    }
+                    if let index = allButtons.firstIndex(where: { $0 == .location }) {
+                        allButtons.insert(.quickReply, at: index + 1)
+                    } else {
+                        allButtons.append(.quickReply)
+                    }
                 }
                 
                 return (buttons, allButtons, initialButton)
@@ -602,6 +619,24 @@ extension ChatControllerImpl {
                             strongSelf.present(alertController, in: .window(.root))
                         }
                     }
+                case .quickReply:
+                    let _ = (strongSelf.context.sharedContext.makeQuickReplySetupScreenInitialData(context: strongSelf.context)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak strongSelf] initialData in
+                        guard let strongSelf else {
+                            return
+                        }
+                        
+                        let controller = QuickReplySetupScreen(context: strongSelf.context, initialData: initialData as! QuickReplySetupScreen.InitialData, mode: .select(completion: { [weak strongSelf] shortcutId in
+                            guard let strongSelf else {
+                                return
+                            }
+                            strongSelf.attachmentController?.dismiss(animated: true)
+                            strongSelf.interfaceInteraction?.sendShortcut(shortcutId)
+                        }))
+                        completion(controller, controller.mediaPickerContext)
+                        strongSelf.controllerNavigationDisposable.set(nil)
+                    })
                 default:
                     break
                 }

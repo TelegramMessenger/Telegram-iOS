@@ -31,6 +31,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/LocationUI",
         "//submodules/AppBundle",
+        "//submodules/Geocoding",
     ],
     visibility = [
         "//visibility:public",

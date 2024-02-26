@@ -2132,9 +2132,23 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext, initialData: initialData))
                                 })
                             case .greetings:
-                                push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: false))
+                                let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                    guard let accountContext else {
+                                        return
+                                    }
+                                    push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: false))
+                                })
                             case .awayMessages:
-                                push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: true))
+                                let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                    guard let accountContext else {
+                                        return
+                                    }
+                                    push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: true))
+                                })
                             case .chatbots:
                                 push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
                             }

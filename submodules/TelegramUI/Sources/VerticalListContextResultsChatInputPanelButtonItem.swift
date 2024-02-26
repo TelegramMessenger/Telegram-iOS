@@ -158,19 +158,23 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
                     strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                     strongSelf.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                     
+                    let titleOffsetY: CGFloat
                     switch item.style {
                     case .regular:
                         strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
+                        strongSelf.topSeparatorNode.isHidden = mergedTop
+                        strongSelf.separatorNode.isHidden = !mergedBottom
+                        titleOffsetY = 2.0
                     case .round:
                         strongSelf.backgroundColor = nil
+                        strongSelf.topSeparatorNode.isHidden = true
+                        strongSelf.separatorNode.isHidden = !mergedBottom
+                        titleOffsetY = 1.0
                     }
                     
                     let _ = titleApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0) + 2.0), size: titleLayout.size)
-                    
-                    strongSelf.topSeparatorNode.isHidden = mergedTop
-                    strongSelf.separatorNode.isHidden = !mergedBottom
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0) + titleOffsetY), size: titleLayout.size)
                     
                     strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: UIScreenPixel))
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width, height: UIScreenPixel))

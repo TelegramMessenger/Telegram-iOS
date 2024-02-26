@@ -1156,6 +1156,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var avatarIconComponent: EmojiStatusComponent?
     var avatarVideoNode: AvatarVideoNode?
     var avatarTapRecognizer: UITapGestureRecognizer?
+    var avatarMediaNode: AvatarVideoNode?
     
     private var inlineNavigationMarkLayer: SimpleLayer?
     
