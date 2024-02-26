@@ -109,19 +109,37 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            if let component = self.component {
-                var address = ""
-                if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
-                    address = textView.currentText
-                }
-                
-                var businessLocation: TelegramBusinessLocation?
-                if !address.isEmpty || self.mapCoordinates != nil {
-                    businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
-                }
-                
-                let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
+            guard let component = self.component else {
+                return true
             }
+            
+            var address = ""
+            if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
+                address = textView.currentText
+            }
+            
+            var businessLocation: TelegramBusinessLocation?
+            if !address.isEmpty || self.mapCoordinates != nil {
+                businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
+            }
+            
+            if businessLocation != nil && address.isEmpty {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                //TODO:localize
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Address can't be empty.", actions: [
+                    TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    }),
+                    TextAlertAction(type: .destructiveAction, title: "Delete", action: {
+                        let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
+                        
+                        complete()
+                    })
+                ]), in: .window(.root))
+                
+                return false
+            }
+            
+            let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
             
             return true
         }
@@ -228,10 +246,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 32.0
-            
-            let _ = bottomContentInset
-            let _ = sectionSpacing
+            let sectionSpacing: CGFloat = 24.0
             
             var contentHeight: CGFloat = 0.0
             
@@ -246,7 +261,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 2.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 11.0), size: iconSize)
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -304,6 +319,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += subtitleSize.height
             contentHeight += 27.0
             
+            //TODO:localize
             var addressSectionItems: [AnyComponentWithIdentity<Empty>] = []
             addressSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
                 context: component.context,

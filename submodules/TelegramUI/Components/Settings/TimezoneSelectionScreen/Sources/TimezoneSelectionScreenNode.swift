@@ -34,7 +34,22 @@ private struct TimezoneListEntry: Comparable, Identifiable {
     }
     
     func item(presentationData: PresentationData, searchMode: Bool, action: @escaping (String) -> Void) -> ListViewItem {
-        return ItemListActionItem(presentationData: ItemListPresentationData(presentationData), title: self.title, kind: .neutral, alignment: .natural, sectionId: 0, style: .plain, action: {
+        let hours = abs(self.offset / (60 * 60))
+        let minutes = abs(self.offset % (60 * 60)) / 60
+        let offsetString: String
+        if minutes == 0 {
+            offsetString = "UTC \(self.offset >= 0 ? "+" : "-")\(hours)"
+        } else {
+            let minutesString: String
+            if minutes < 10 {
+                minutesString = "0\(minutes)"
+            } else {
+                minutesString = "\(minutes)"
+            }
+            offsetString = "UTC \(self.offset >= 0 ? "+" : "-")\(hours):\(minutesString)"
+        }
+        
+        return ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), title: self.title, label: offsetString, sectionId: 0, style: .plain, disclosureStyle: .none, action: {
             action(self.id)
         })
     }

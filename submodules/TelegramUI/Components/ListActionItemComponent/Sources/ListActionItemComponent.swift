@@ -66,6 +66,7 @@ public final class ListActionItemComponent: Component {
     
     public let theme: PresentationTheme
     public let title: AnyComponent<Empty>
+    public let contentInsets: UIEdgeInsets
     public let leftIcon: AnyComponentWithIdentity<Empty>?
     public let icon: Icon?
     public let accessory: Accessory?
@@ -74,6 +75,7 @@ public final class ListActionItemComponent: Component {
     public init(
         theme: PresentationTheme,
         title: AnyComponent<Empty>,
+        contentInsets: UIEdgeInsets = UIEdgeInsets(top: 12.0, left: 0.0, bottom: 12.0, right: 0.0),
         leftIcon: AnyComponentWithIdentity<Empty>? = nil,
         icon: Icon? = nil,
         accessory: Accessory? = .arrow,
@@ -81,6 +83,7 @@ public final class ListActionItemComponent: Component {
     ) {
         self.theme = theme
         self.title = title
+        self.contentInsets = contentInsets
         self.leftIcon = leftIcon
         self.icon = icon
         self.accessory = accessory
@@ -92,6 +95,9 @@ public final class ListActionItemComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.contentInsets != rhs.contentInsets {
             return false
         }
         if lhs.leftIcon != rhs.leftIcon {
@@ -172,8 +178,6 @@ public final class ListActionItemComponent: Component {
             
             let themeUpdated = component.theme !== previousComponent?.theme
             
-            let verticalInset: CGFloat = 12.0
-            
             var contentLeftInset: CGFloat = 16.0
             let contentRightInset: CGFloat
             switch component.accessory {
@@ -186,7 +190,7 @@ public final class ListActionItemComponent: Component {
             }
             
             var contentHeight: CGFloat = 0.0
-            contentHeight += verticalInset
+            contentHeight += component.contentInsets.top
             
             if component.leftIcon != nil {
                 contentLeftInset += 46.0
@@ -198,7 +202,7 @@ public final class ListActionItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - contentLeftInset - contentRightInset, height: availableSize.height)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: verticalInset), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: contentHeight), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -208,7 +212,7 @@ public final class ListActionItemComponent: Component {
             }
             contentHeight += titleSize.height
             
-            contentHeight += verticalInset
+            contentHeight += component.contentInsets.bottom
             
             if let iconValue = component.icon {
                 if previousComponent?.icon?.component.id != iconValue.component.id, let icon = self.icon {

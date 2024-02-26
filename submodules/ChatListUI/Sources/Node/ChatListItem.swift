@@ -1441,7 +1441,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.textNode = TextNodeWithEntities()
         self.textNode.textNode.isUserInteractionEnabled = false
         self.textNode.textNode.displaysAsynchronously = true
-        self.textNode.textNode.layer.anchorPoint = CGPoint()
+        self.textNode.textNode.anchorPoint = CGPoint()
         
         self.inputActivitiesNode = ChatListInputActivitiesNode()
         self.inputActivitiesNode.isUserInteractionEnabled = false
