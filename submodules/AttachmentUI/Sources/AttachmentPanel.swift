@@ -220,7 +220,7 @@ private final class AttachButtonComponent: CombinedComponent {
             case .quickReply:
                 //TODO:localize
                 name = "Reply"
-                imageName = "Chat/Attach Menu/Location"
+                imageName = "Chat/Attach Menu/Reply"
             }
 
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor

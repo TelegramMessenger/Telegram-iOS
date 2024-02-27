@@ -721,12 +721,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if case let .customChatContents(customChatContents) = strongSelf.presentationInterfaceState.subject {
                 switch customChatContents.kind {
-                case .greetingMessageInput, .awayMessageInput:
-                    break
-                case .quickReplyMessageInput:
+                case let .quickReplyMessageInput(_, shortcutType):
                     if let historyView = strongSelf.chatDisplayNode.historyNode.originalHistoryView, historyView.entries.isEmpty {
                         //TODO:localize
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: "Remove Shortcut", text: "You didn't create a quick reply message. Exiting will remove the shortcut.", actions: [
+                        
+                        let titleString: String
+                        let textString: String
+                        switch shortcutType {
+                        case .generic:
+                            titleString = "Remove Shortcut"
+                            textString = "You didn't create a quick reply message. Exiting will remove the shortcut."
+                        case .greeting:
+                            titleString = "Remove Greeting Message"
+                            textString = "You didn't create a greeting message. Exiting will remove it."
+                        case .away:
+                            titleString = "Remove Away Message"
+                            textString = "You didn't create an away message. Exiting will remove it."
+                        }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: titleString, text: textString, actions: [
                             TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}),
                             TextAlertAction(type: .defaultAction, title: "Remove", action: { [weak strongSelf] in
                                 strongSelf?.dismiss()
@@ -6185,12 +6198,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 //TODO:localize
                 if case let .customChatContents(customChatContents) = self.subject {
                     switch customChatContents.kind {
-                    case .greetingMessageInput:
-                        self.chatTitleView?.titleContent = .custom("Greeting Message", nil, false)
-                    case .awayMessageInput:
-                        self.chatTitleView?.titleContent = .custom("Away Message", nil, false)
-                    case let .quickReplyMessageInput(shortcut):
-                        self.chatTitleView?.titleContent = .custom("\(shortcut)", nil, false)
+                    case let .quickReplyMessageInput(shortcut, shortcutType):
+                        switch shortcutType {
+                        case .generic:
+                            self.chatTitleView?.titleContent = .custom("\(shortcut)", nil, false)
+                        case .greeting:
+                            self.chatTitleView?.titleContent = .custom("Greeting Message", nil, false)
+                        case .away:
+                            self.chatTitleView?.titleContent = .custom("Away Message", nil, false)
+                        }
                     }
                 } else {
                     self.chatTitleView?.titleContent = .custom("Messages", nil, false)
@@ -9477,8 +9493,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let peerId = self.chatLocation.peerId else {
                 return
             }
-            let _ = self
-            let _ = shortcutId
+            
+            if !self.presentationInterfaceState.isPremium {
+                let controller = PremiumIntroScreen(context: self.context, source: .settings)
+                self.push(controller)
+                return
+            }
             
             self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }

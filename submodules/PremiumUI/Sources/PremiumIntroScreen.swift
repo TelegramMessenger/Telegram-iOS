@@ -2171,7 +2171,14 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: true))
                                     })
                                 case .chatbots:
-                                    push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
+                                    let _ = (accountContext.sharedContext.makeChatbotSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
+                                    })
                                 }
                             } else {
                                 var demoSubject: PremiumDemoScreen.Subject
@@ -3683,7 +3690,7 @@ private final class EmojiActionIconComponent: Component {
                     animationRenderer: component.context.animationRenderer,
                     content: component.fileId.flatMap { .animation(
                         content: .customEmoji(fileId: $0),
-                        size: size,
+                        size: CGSize(width: size.width * 2.0, height: size.height * 2.0),
                         placeholderColor: .lightGray,
                         themeColor: component.color,
                         loopMode: .forever

@@ -590,7 +590,7 @@ public final class StoryPeerListComponent: Component {
                 case .premium:
                     statusContent = .premium(color: component.theme.list.itemAccentColor)
                 case let .emoji(emoji):
-                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(2))
+                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 44.0, height: 44.0), placeholderColor: component.theme.list.mediaPlaceholderColor, themeColor: component.theme.list.itemAccentColor, loopMode: .count(2))
                 }
                 
                 var animateStatusTransition = false

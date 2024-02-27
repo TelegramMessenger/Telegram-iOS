@@ -22,6 +22,7 @@ import ChatListHeaderComponent
 import PlainButtonComponent
 import MultilineTextComponent
 import AttachmentUI
+import SearchBarNode
 
 final class QuickReplySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -453,6 +454,8 @@ final class QuickReplySetupScreenComponent: Component {
             var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
             if animated {
                 options.insert(.AnimateInsertion)
+            } else {
+                options.insert(.PreferSynchronousResourceLoading)
             }
             
             self.transaction(
@@ -476,6 +479,8 @@ final class QuickReplySetupScreenComponent: Component {
         private let navigationBarView = ComponentView<Empty>()
         private var navigationHeight: CGFloat?
         
+        private var searchBarNode: SearchBarNode?
+        
         private var selectionPanel: ComponentView<Empty>?
         
         private var isUpdating: Bool = false
@@ -492,10 +497,14 @@ final class QuickReplySetupScreenComponent: Component {
         
         private var isEditing: Bool = false
         private var isSearchDisplayControllerActive: Bool = false
+        private var searchQuery: String = ""
+        private let searchQueryComponentSeparationCharacterSet: CharacterSet
 
         private var accountPeer: EnginePeer?
         
         override init(frame: CGRect) {
+            self.searchQueryComponentSeparationCharacterSet = CharacterSet(charactersIn: " _.:/")
+            
             super.init(frame: frame)
         }
         
@@ -528,9 +537,18 @@ final class QuickReplySetupScreenComponent: Component {
             }
             
             if let shortcut {
+                let shortcutType: ChatQuickReplyShortcutType
+                if shortcut == "hello" {
+                    shortcutType = .greeting
+                } else if shortcut == "away" {
+                    shortcutType = .away
+                } else {
+                    shortcutType = .generic
+                }
+                
                 let contents = AutomaticBusinessMessageSetupChatContents(
                     context: component.context,
-                    kind: .quickReplyMessageInput(shortcut: shortcut),
+                    kind: .quickReplyMessageInput(shortcut: shortcut, shortcutType: shortcutType),
                     shortcutId: shortcutId
                 )
                 let chatController = component.context.sharedContext.makeChatController(
@@ -779,9 +797,8 @@ final class QuickReplySetupScreenComponent: Component {
                             return
                         }
                         
-                        let _ = self
-                        //self.isSearchDisplayControllerActive = true
-                        //self.state?.updated(transition: .spring(duration: 0.4))
+                        self.isSearchDisplayControllerActive = true
+                        self.state?.updated(transition: .spring(duration: 0.4))
                     },
                     openStatusSetup: { _ in
                     },
@@ -952,6 +969,84 @@ final class QuickReplySetupScreenComponent: Component {
             )
             self.navigationHeight = navigationHeight
             
+            var removedSearchBar: SearchBarNode?
+            if self.isSearchDisplayControllerActive {
+                let searchBarNode: SearchBarNode
+                var searchBarTransition = transition
+                if let current = self.searchBarNode {
+                    searchBarNode = current
+                } else {
+                    searchBarTransition = .immediate
+                    let searchBarTheme = SearchBarNodeTheme(theme: environment.theme, hasSeparator: false)
+                    searchBarNode = SearchBarNode(
+                        theme: searchBarTheme,
+                        strings: environment.strings,
+                        fieldStyle: .modern,
+                        displayBackground: false
+                    )
+                    searchBarNode.placeholderString = NSAttributedString(string: environment.strings.Common_Search, font: Font.regular(17.0), textColor: searchBarTheme.placeholder)
+                    self.searchBarNode = searchBarNode
+                    searchBarNode.cancel = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.isSearchDisplayControllerActive = false
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    }
+                    searchBarNode.textUpdated = { [weak self] query, _ in
+                        guard let self else {
+                            return
+                        }
+                        if self.searchQuery != query {
+                            self.searchQuery = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                    DispatchQueue.main.async { [weak self, weak searchBarNode] in
+                        guard let self, let searchBarNode, self.searchBarNode === searchBarNode else {
+                            return
+                        }
+                        searchBarNode.activate()
+                        
+                        if let controller = self.environment?.controller() as? QuickReplySetupScreen {
+                            controller.requestAttachmentMenuExpansion()
+                        }
+                    }
+                }
+                
+                var searchBarFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight - 54.0 + 2.0), size: CGSize(width: availableSize.width, height: 54.0))
+                if isModal {
+                    searchBarFrame.origin.y += 2.0
+                }
+                searchBarNode.updateLayout(boundingSize: searchBarFrame.size, leftInset: environment.safeInsets.left + 6.0, rightInset: environment.safeInsets.right, transition: searchBarTransition.containedViewLayoutTransition)
+                searchBarTransition.setFrame(view: searchBarNode.view, frame: searchBarFrame)
+                if searchBarNode.view.superview == nil {
+                    self.addSubview(searchBarNode.view)
+                    
+                    if case let .curve(duration, curve) = transition.animation, let navigationBarView = self.navigationBarView.view as? ChatListNavigationBar.View, let placeholderNode = navigationBarView.searchContentNode?.placeholderNode {
+                        let timingFunction: String
+                        switch curve {
+                        case .easeInOut:
+                            timingFunction = CAMediaTimingFunctionName.easeOut.rawValue
+                        case .linear:
+                            timingFunction = CAMediaTimingFunctionName.linear.rawValue
+                        case .spring:
+                            timingFunction = kCAMediaTimingFunctionSpring
+                        case .custom:
+                            timingFunction = kCAMediaTimingFunctionSpring
+                        }
+                        
+                        searchBarNode.animateIn(from: placeholderNode, duration: duration, timingFunction: timingFunction)
+                    }
+                }
+            } else {
+                self.searchQuery = ""
+                if let searchBarNode = self.searchBarNode {
+                    self.searchBarNode = nil
+                    removedSearchBar = searchBarNode
+                }
+            }
+            
             if !self.selectedIds.isEmpty {
                 let selectionPanel: ComponentView<Empty>
                 var selectionPanelTransition = transition
@@ -1058,11 +1153,25 @@ final class QuickReplySetupScreenComponent: Component {
             if let shortcutMessageList = self.shortcutMessageList, let accountPeer = self.accountPeer {
                 switch component.mode {
                 case .manage:
-                    entries.append(.add)
+                    if self.searchQuery.isEmpty {
+                        entries.append(.add)
+                    }
                 case .select:
                     break
                 }
                 for item in shortcutMessageList.items {
+                    if !self.searchQuery.isEmpty {
+                        var matches = false
+                        inner: for nameComponent in item.shortcut.lowercased().components(separatedBy: self.searchQueryComponentSeparationCharacterSet) {
+                            if nameComponent.lowercased().hasPrefix(self.searchQuery) {
+                                matches = true
+                                break inner
+                            }
+                        }
+                        if !matches {
+                            continue
+                        }
+                    }
                     entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing, isSelected: self.selectedIds.contains(item.id)))
                 }
             }
@@ -1079,6 +1188,17 @@ final class QuickReplySetupScreenComponent: Component {
             if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                 navigationBarComponentView.deferScrollApplication = false
                 navigationBarComponentView.applyCurrentScroll(transition: transition)
+            }
+            
+            if let removedSearchBar {
+                if !transition.animation.isImmediate, let navigationBarView = self.navigationBarView.view as? ChatListNavigationBar.View, let placeholderNode =
+                    navigationBarView.searchContentNode?.placeholderNode {
+                    removedSearchBar.transitionOut(to: placeholderNode, transition: transition.containedViewLayoutTransition, completion: { [weak removedSearchBar] in
+                        removedSearchBar?.view.removeFromSuperview()
+                    })
+                } else {
+                    removedSearchBar.view.removeFromSuperview()
+                }
             }
             
             return availableSize

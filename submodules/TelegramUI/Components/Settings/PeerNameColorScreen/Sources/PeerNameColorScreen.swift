@@ -215,7 +215,9 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
                 isProfile: isProfile,
                 currentColor: currentColor,
                 updated: { color in
-                    arguments.updateNameColor(color)
+                    if let color {
+                        arguments.updateNameColor(color)
+                    }
                 },
                 sectionId: self.section
             )

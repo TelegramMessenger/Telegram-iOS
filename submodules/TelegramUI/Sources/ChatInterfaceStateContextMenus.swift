@@ -1889,7 +1889,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             actions.removeAll()
             
             switch customChatContents.kind {
-            case .greetingMessageInput, .awayMessageInput, .quickReplyMessageInput:
+            case .quickReplyMessageInput:
                 if !messageText.isEmpty || (resourceAvailable && isImage) || diceEmoji != nil {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
@@ -1935,7 +1935,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             })
                         })))
                     }
-                    
+                }
+                
+                if message.id.id < Int32.max - 1000 {
                     if !actions.isEmpty {
                         actions.append(.separator)
                     }

@@ -4220,13 +4220,15 @@ func chatListItemTags(location: ChatListControllerLocation, accountPeerId: Engin
     
     var result: [ChatListItemContent.Tag] = []
     for case let .filter(id, title, _, data) in chatListFilters {
-        let predicate = chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
-        if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
-            result.append(ChatListItemContent.Tag(
-                id: id,
-                title: title,
-                colorId: data.color?.rawValue ?? PeerNameColor.blue.rawValue
-            ))
+        if data.color != nil {
+            let predicate = chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+            if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
+                result.append(ChatListItemContent.Tag(
+                    id: id,
+                    title: title,
+                    colorId: data.color?.rawValue ?? PeerNameColor.blue.rawValue
+                ))
+            }
         }
     }
     return result

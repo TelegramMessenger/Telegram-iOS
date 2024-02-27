@@ -1845,12 +1845,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 if case let .customChatContents(customChatContents) = interfaceState.subject {
                     //TODO:localize
                     switch customChatContents.kind {
-                    case .greetingMessageInput:
-                        placeholder = "Add greeting message..."
-                    case .awayMessageInput:
-                        placeholder = "Add away message..."
-                    case .quickReplyMessageInput:
-                        placeholder = "Add quick reply..."
+                    case let .quickReplyMessageInput(_, shortcutType):
+                        switch shortcutType {
+                        case .generic:
+                            placeholder = "Add quick reply..."
+                        case .greeting:
+                            placeholder = "Add greeting message..."
+                        case .away:
+                            placeholder = "Add away message..."
+                        }
                     }
                 }
 

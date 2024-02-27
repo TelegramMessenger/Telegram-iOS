@@ -446,15 +446,16 @@ final class BusinessHoursSetupScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "BusinessHoursEmoji"),
-                    loop: true
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 10.0), size: iconSize)
-            if let iconView = self.icon.view {
+            if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
+                    iconView.playOnce()
                 }
                 transition.setPosition(view: iconView, position: iconFrame.center)
                 iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)

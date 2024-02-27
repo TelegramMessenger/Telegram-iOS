@@ -13,33 +13,35 @@ import AccountContext
 import ListItemComponentAdaptor
 
 private class PeerNameColorIconItem {
-    let index: PeerNameColor
-    let colors: PeerNameColors.Colors
+    let index: PeerNameColor?
+    let colors: PeerNameColors.Colors?
     let isDark: Bool
     let selected: Bool
-    let action: (PeerNameColor) -> Void
+    let isLocked: Bool
+    let action: (PeerNameColor?) -> Void
     
-    public init(index: PeerNameColor, colors: PeerNameColors.Colors, isDark: Bool, selected: Bool, action: @escaping (PeerNameColor) -> Void) {
+    public init(index: PeerNameColor?, colors: PeerNameColors.Colors?, isDark: Bool, selected: Bool, isLocked: Bool, action: @escaping (PeerNameColor?) -> Void) {
         self.index = index
         self.colors = colors
         self.isDark = isDark
         self.selected = selected
+        self.isLocked = isLocked
         self.action = action
     }
 }
 
-private func generateRingImage(nameColor: PeerNameColors.Colors, size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
+private func generateRingImage(color: UIColor, size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
     return generateImage(size, rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
-        context.setStrokeColor(nameColor.main.cgColor)
+        context.setStrokeColor(color.cgColor)
         context.setLineWidth(2.0)
         context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
     })
 }
 
-public func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
+public func generatePeerNameColorImage(nameColor: PeerNameColors.Colors?, isDark: Bool, isLocked: Bool = false, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
     return generateImage(bounds, rotatedContext: { contextSize, context in
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
         context.clear(bounds)
@@ -48,7 +50,7 @@ public func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark:
         context.addEllipse(in: circleBounds)
         context.clip()
         
-        if let secondColor = nameColor.secondary {
+        if let nameColor, let secondColor = nameColor.secondary {
             var firstColor = nameColor.main
             var secondColor = secondColor
             if isDark, nameColor.tertiary == nil {
@@ -84,9 +86,32 @@ public func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark:
                 context.setFillColor(firstColor.cgColor)
                 context.fillPath()
             }
-        } else {
+        } else if let nameColor {
             context.setFillColor(nameColor.main.cgColor)
             context.fill(circleBounds)
+        } else {
+            context.setFillColor(UIColor(rgb: 0x798896).cgColor)
+            context.fill(circleBounds)
+        }
+        
+        if isLocked {
+            if let image = UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon") {
+                let scaleFactor: CGFloat = 1.58
+                let imageSize = CGSize(width: floor(image.size.width * scaleFactor), height: floor(image.size.height * scaleFactor))
+                var imageFrame = CGRect(origin: CGPoint(x: circleBounds.minX + floor((circleBounds.width - imageSize.width) * 0.5), y: circleBounds.minY + floor((circleBounds.height - imageSize.height) * 0.5)), size: imageSize)
+                imageFrame.origin.y += -0.5
+                
+                context.translateBy(x: imageFrame.midX, y: imageFrame.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -imageFrame.midX, y: -imageFrame.midY)
+                
+                if let cgImage = image.cgImage {
+                    context.clip(to: imageFrame, mask: cgImage)
+                    context.setFillColor(UIColor.clear.cgColor)
+                    context.setBlendMode(.copy)
+                    context.fill(imageFrame)
+                }
+            }
         }
     })
 }
@@ -187,8 +212,8 @@ private final class PeerNameColorIconItemNode : ASDisplayNode {
         self.item = item
         
         if updatedAccentColor {
-            self.fillNode.image = generatePeerNameColorImage(nameColor: item.colors, isDark: item.isDark, bounds: size, size: size)
-            self.ringNode.image = generateRingImage(nameColor: item.colors, size: size)
+            self.fillNode.image = generatePeerNameColorImage(nameColor: item.colors, isDark: item.isDark, isLocked: item.selected && item.isLocked, bounds: size, size: size)
+            self.ringNode.image = generateRingImage(color: item.colors?.main ?? UIColor(rgb: 0x798896), size: size)
         }
         
         let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
@@ -213,14 +238,18 @@ public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemCompon
     public let theme: PresentationTheme
     public let colors: PeerNameColors
     public let isProfile: Bool
+    public let displayEmptyColor: Bool
+    public let isLocked: Bool
     public let currentColor: PeerNameColor?
-    public let updated: (PeerNameColor) -> Void
+    public let updated: (PeerNameColor?) -> Void
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, colors: PeerNameColors, isProfile: Bool, currentColor: PeerNameColor?, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, colors: PeerNameColors, isProfile: Bool, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.colors = colors
         self.isProfile = isProfile
+        self.displayEmptyColor = displayEmptyColor
+        self.isLocked = isLocked
         self.currentColor = currentColor
         self.updated = updated
         self.tag = tag
@@ -341,8 +370,12 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                 displayOrder = item.colors.displayOrder
                 itemsPerRow = 7
             }
+            var numItems = displayOrder.count
+            if item.displayEmptyColor {
+                numItems += 1
+            }
             
-            let rowsCount = ceil(CGFloat(displayOrder.count) / CGFloat(itemsPerRow))
+            let rowsCount = ceil(CGFloat(numItems) / CGFloat(itemsPerRow))
             
             contentSize = CGSize(width: params.width, height: 48.0 * rowsCount)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -419,12 +452,17 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     
-                    let action: (PeerNameColor) -> Void = { color in
+                    let action: (PeerNameColor?) -> Void = { color in
                         item.updated(color)
                     }
                     
                     var items: [PeerNameColorIconItem] = []
                     var i: Int = 0
+                    if item.displayEmptyColor {
+                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, action: action))
+                        i += 1
+                    }
+                    
                     for index in displayOrder {
                         let color = PeerNameColor(rawValue: index)
                         let colors: PeerNameColors.Colors
@@ -434,7 +472,7 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                             colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
                         }
                         
-                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, action: action))
+                        items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, action: action))
                         i += 1
                     }
                     strongSelf.items = items
@@ -449,11 +487,17 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     i = 0
                     for item in items {
                         let iconItemNode: PeerNameColorIconItemNode
-                        if let current = strongSelf.itemNodes[item.index.rawValue] {
+                        let indexKey: Int32
+                        if let index = item.index {
+                            indexKey = index.rawValue
+                        } else {
+                            indexKey = Int32.min
+                        }
+                        if let current = strongSelf.itemNodes[indexKey] {
                             iconItemNode = current
                         } else {
                             iconItemNode = PeerNameColorIconItemNode()
-                            strongSelf.itemNodes[item.index.rawValue] = iconItemNode
+                            strongSelf.itemNodes[indexKey] = iconItemNode
                             strongSelf.containerNode.addSubnode(iconItemNode)
                         }
                         

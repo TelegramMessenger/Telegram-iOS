@@ -362,3 +362,486 @@ func _internal_applySentQuickReplyMessage(transaction: Transaction, shortcut: St
         transaction.setPreferencesEntry(key: PreferencesKeys.shortcutMessages(), value: PreferencesEntry(state))
     }
 }
+
+public final class TelegramBusinessRecipients: Codable, Equatable {
+    public struct Categories: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let existingChats = Categories(rawValue: 1 << 0)
+        public static let newChats = Categories(rawValue: 1 << 1)
+        public static let contacts = Categories(rawValue: 1 << 2)
+        public static let nonContacts = Categories(rawValue: 1 << 3)
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case categories
+        case additionalPeers
+        case exclude
+    }
+    
+    public let categories: Categories
+    public let additionalPeers: Set<PeerId>
+    public let exclude: Bool
+    
+    public init(categories: Categories, additionalPeers: Set<PeerId>, exclude: Bool) {
+        self.categories = categories
+        self.additionalPeers = additionalPeers
+        self.exclude = exclude
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.categories = Categories(rawValue: try container.decode(Int32.self, forKey: .categories))
+        self.additionalPeers = Set(try container.decode([PeerId].self, forKey: .additionalPeers))
+        self.exclude = try container.decode(Bool.self, forKey: .exclude)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.categories.rawValue, forKey: .categories)
+        try container.encode(Array(self.additionalPeers).sorted(), forKey: .additionalPeers)
+        try container.encode(self.exclude, forKey: .exclude)
+    }
+    
+    public static func ==(lhs: TelegramBusinessRecipients, rhs: TelegramBusinessRecipients) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        
+        if lhs.categories != rhs.categories {
+            return false
+        }
+        if lhs.additionalPeers != rhs.additionalPeers {
+            return false
+        }
+        if lhs.exclude != rhs.exclude {
+            return false
+        }
+        
+        return true
+    }
+}
+
+public final class TelegramBusinessGreetingMessage: Codable, Equatable {
+    private enum CodingKeys: String, CodingKey {
+        case shortcutId
+        case recipients
+        case inactivityDays
+    }
+    
+    public let shortcutId: Int32
+    public let recipients: TelegramBusinessRecipients
+    public let inactivityDays: Int
+    
+    public init(shortcutId: Int32, recipients: TelegramBusinessRecipients, inactivityDays: Int) {
+        self.shortcutId = shortcutId
+        self.recipients = recipients
+        self.inactivityDays = inactivityDays
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.shortcutId = try container.decode(Int32.self, forKey: .shortcutId)
+        self.recipients = try container.decode(TelegramBusinessRecipients.self, forKey: .recipients)
+        self.inactivityDays = Int(try container.decode(Int32.self, forKey: .inactivityDays))
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.shortcutId, forKey: .shortcutId)
+        try container.encode(self.recipients, forKey: .recipients)
+        try container.encode(Int32(clamping: self.inactivityDays), forKey: .inactivityDays)
+    }
+    
+    public static func ==(lhs: TelegramBusinessGreetingMessage, rhs: TelegramBusinessGreetingMessage) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        
+        if lhs.shortcutId != rhs.shortcutId {
+            return false
+        }
+        if lhs.recipients != rhs.recipients {
+            return false
+        }
+        if lhs.inactivityDays != rhs.inactivityDays {
+            return false
+        }
+        
+        return true
+    }
+}
+
+extension TelegramBusinessGreetingMessage {
+    convenience init(apiGreetingMessage: Api.BusinessGreetingMessage) {
+        switch apiGreetingMessage {
+        case let .businessGreetingMessage(shortcutId, recipients, noActivityDays):
+            self.init(
+                shortcutId: shortcutId,
+                recipients: TelegramBusinessRecipients(apiValue: recipients),
+                inactivityDays: Int(noActivityDays)
+            )
+        }
+    }
+}
+
+public final class TelegramBusinessAwayMessage: Codable, Equatable {
+    public enum Schedule: Codable, Equatable {
+        private enum CodingKeys: String, CodingKey {
+            case discriminator
+            case customBeginTimestamp
+            case customEndTimestamp
+        }
+        
+        case always
+        case outsideWorkingHours
+        case custom(beginTimestamp: Int32, endTimestamp: Int32)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            switch try container.decode(Int32.self, forKey: .discriminator) {
+            case 0:
+                self = .always
+            case 1:
+                self = .outsideWorkingHours
+            case 2:
+                self = .custom(beginTimestamp: try container.decode(Int32.self, forKey: .customBeginTimestamp), endTimestamp: try container.decode(Int32.self, forKey: .customEndTimestamp))
+            default:
+                self = .always
+            }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            switch self {
+            case .always:
+                try container.encode(0 as Int32, forKey: .discriminator)
+            case .outsideWorkingHours:
+                try container.encode(1 as Int32, forKey: .discriminator)
+            case let .custom(beginTimestamp, endTimestamp):
+                try container.encode(2 as Int32, forKey: .discriminator)
+                try container.encode(beginTimestamp, forKey: .customBeginTimestamp)
+                try container.encode(endTimestamp, forKey: .customEndTimestamp)
+            }
+        }
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case shortcutId
+        case recipients
+        case schedule
+    }
+    
+    public let shortcutId: Int32
+    public let recipients: TelegramBusinessRecipients
+    public let schedule: Schedule
+    
+    public init(shortcutId: Int32, recipients: TelegramBusinessRecipients, schedule: Schedule) {
+        self.shortcutId = shortcutId
+        self.recipients = recipients
+        self.schedule = schedule
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.shortcutId = try container.decode(Int32.self, forKey: .shortcutId)
+        self.recipients = try container.decode(TelegramBusinessRecipients.self, forKey: .recipients)
+        self.schedule = try container.decode(Schedule.self, forKey: .schedule)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.shortcutId, forKey: .shortcutId)
+        try container.encode(self.recipients, forKey: .recipients)
+        try container.encode(self.schedule, forKey: .schedule)
+    }
+    
+    public static func ==(lhs: TelegramBusinessAwayMessage, rhs: TelegramBusinessAwayMessage) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        
+        if lhs.shortcutId != rhs.shortcutId {
+            return false
+        }
+        if lhs.recipients != rhs.recipients {
+            return false
+        }
+        if lhs.schedule != rhs.schedule {
+            return false
+        }
+        
+        return true
+    }
+}
+
+extension TelegramBusinessAwayMessage {
+    convenience init(apiAwayMessage: Api.BusinessAwayMessage) {
+        switch apiAwayMessage {
+        case let .businessAwayMessage(shortcutId, schedule, recipients):
+            let mappedSchedule: Schedule
+            switch schedule {
+            case .businessAwayMessageScheduleAlways:
+                mappedSchedule = .always
+            case .businessAwayMessageScheduleOutsideWorkHours:
+                mappedSchedule = .outsideWorkingHours
+            case let .businessAwayMessageScheduleCustom(startDate, endDate):
+                mappedSchedule = .custom(beginTimestamp: startDate, endTimestamp: endDate)
+            }
+            
+            self.init(
+                shortcutId: shortcutId,
+                recipients: TelegramBusinessRecipients(apiValue: recipients),
+                schedule: mappedSchedule
+            )
+        }
+    }
+}
+
+extension TelegramBusinessRecipients {
+    convenience init(apiValue: Api.BusinessRecipients) {
+        switch apiValue {
+        case let .businessRecipients(flags, users):
+            var categories: Categories = []
+            if (flags & (1 << 0)) != 0 {
+                categories.insert(.existingChats)
+            }
+            if (flags & (1 << 1)) != 0 {
+                categories.insert(.newChats)
+            }
+            if (flags & (1 << 2)) != 0 {
+                categories.insert(.contacts)
+            }
+            if (flags & (1 << 3)) != 0 {
+                categories.insert(.nonContacts)
+            }
+            
+            self.init(
+                categories: categories,
+                additionalPeers:  Set((users ?? []).map(PeerId.init)),
+                exclude: (flags & (1 << 5)) != 0
+            )
+        }
+    }
+    
+    func apiInputValue(additionalPeers: [Peer]) -> Api.InputBusinessRecipients {
+        var users: [Api.InputUser]?
+        if !additionalPeers.isEmpty {
+            users = additionalPeers.compactMap(apiInputUser)
+        }
+        
+        var flags: Int32 = 0
+        
+        if self.categories.contains(.existingChats) {
+            flags |= 1 << 0
+        }
+        if self.categories.contains(.newChats) {
+            flags |= 1 << 1
+        }
+        if self.categories.contains(.contacts) {
+            flags |= 1 << 2
+        }
+        if self.categories.contains(.nonContacts) {
+            flags |= 1 << 3
+        }
+        if self.exclude {
+            flags |= 1 << 5
+        }
+        if users != nil {
+            flags |= 1 << 4
+        }
+        
+        return .inputBusinessRecipients(flags: flags, users: users)
+    }
+}
+
+func _internal_updateBusinessGreetingMessage(account: Account, greetingMessage: TelegramBusinessGreetingMessage?) -> Signal<Never, NoError> {
+    let remoteApply = account.postbox.transaction { transaction -> [Peer] in
+        guard let greetingMessage else {
+            return []
+        }
+        return greetingMessage.recipients.additionalPeers.compactMap(transaction.getPeer)
+    }
+    |> mapToSignal { additionalPeers in
+        var mappedMessage: Api.InputBusinessGreetingMessage?
+        if let greetingMessage {
+            mappedMessage = .inputBusinessGreetingMessage(
+                shortcutId: greetingMessage.shortcutId,
+                recipients: greetingMessage.recipients.apiInputValue(additionalPeers: additionalPeers),
+                noActivityDays: Int32(clamping: greetingMessage.inactivityDays)
+            )
+        }
+        
+        var flags: Int32 = 0
+        if mappedMessage != nil {
+            flags |= 1 << 0
+        }
+        
+        return account.network.request(Api.functions.account.updateBusinessGreetingMessage(flags: flags, message: mappedMessage))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+    
+    return account.postbox.transaction { transaction in
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            var current = (current as? CachedUserData) ?? CachedUserData()
+            current = current.withUpdatedGreetingMessage(greetingMessage)
+            return current
+        })
+    }
+    |> ignoreValues
+    |> then(remoteApply)
+}
+
+func _internal_updateBusinessAwayMessage(account: Account, awayMessage: TelegramBusinessAwayMessage?) -> Signal<Never, NoError> {
+    let remoteApply = account.postbox.transaction { transaction -> [Peer] in
+        guard let awayMessage else {
+            return []
+        }
+        return awayMessage.recipients.additionalPeers.compactMap(transaction.getPeer)
+    }
+    |> mapToSignal { additionalPeers in
+        var mappedMessage: Api.InputBusinessAwayMessage?
+        if let awayMessage {
+            let mappedSchedule: Api.BusinessAwayMessageSchedule
+            switch awayMessage.schedule {
+            case .always:
+                mappedSchedule = .businessAwayMessageScheduleAlways
+            case .outsideWorkingHours:
+                mappedSchedule = .businessAwayMessageScheduleOutsideWorkHours
+            case let .custom(beginTimestamp, endTimestamp):
+                mappedSchedule = .businessAwayMessageScheduleCustom(startDate: beginTimestamp, endDate: endTimestamp)
+            }
+            
+            mappedMessage = .inputBusinessAwayMessage(
+                shortcutId: awayMessage.shortcutId,
+                schedule: mappedSchedule,
+                recipients: awayMessage.recipients.apiInputValue(additionalPeers: additionalPeers)
+            )
+        }
+        
+        var flags: Int32 = 0
+        if mappedMessage != nil {
+            flags |= 1 << 0
+        }
+        
+        return account.network.request(Api.functions.account.updateBusinessAwayMessage(flags: flags, message: mappedMessage))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Never, NoError> in
+            return .complete()
+        }
+    }
+    
+    return account.postbox.transaction { transaction in
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            var current = (current as? CachedUserData) ?? CachedUserData()
+            current = current.withUpdatedAwayMessage(awayMessage)
+            return current
+        })
+    }
+    |> ignoreValues
+    |> then(remoteApply)
+}
+
+/*
+ connectedBot flags:# can_reply:flags.0?true bot_id:long recipients:BusinessRecipients = ConnectedBot;
+
+ account.connectedBots connected_bots:Vector<ConnectedBot> users:Vector<User> = account.ConnectedBots;
+
+ ---functions---
+
+ account.setConnectedBot flags:# can_reply:flags.0?true deleted:flags.1?true bot:InputUser recipients:InputBusinessRecipients = Updates;
+
+ account.getConnectedBots = account.ConnectedBots;
+
+ */
+
+public final class TelegramAccountConnectedBot: Codable, Equatable {
+    public let id: PeerId
+    public let recipients: TelegramBusinessRecipients
+    public let canReply: Bool
+    
+    public init(id: PeerId, recipients: TelegramBusinessRecipients, canReply: Bool) {
+        self.id = id
+        self.recipients = recipients
+        self.canReply = canReply
+    }
+    
+    public static func ==(lhs: TelegramAccountConnectedBot, rhs: TelegramAccountConnectedBot) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.recipients != rhs.recipients {
+            return false
+        }
+        if lhs.canReply != rhs.canReply {
+            return false
+        }
+        return true
+    }
+}
+
+public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAccountConnectedBot?) -> Signal<Never, NoError> {
+    let remoteApply = account.postbox.transaction { transaction -> (Peer?, [Peer]) in
+        guard let bot else {
+            return (nil, [])
+        }
+        return (transaction.getPeer(bot.id), bot.recipients.additionalPeers.compactMap(transaction.getPeer))
+    }
+    |> mapToSignal { botUser, additionalPeers in
+        var flags: Int32 = 0
+        var mappedBot: Api.InputUser = .inputUserEmpty
+        var mappedRecipients: Api.InputBusinessRecipients = .inputBusinessRecipients(flags: 0, users: nil)
+        
+        if let bot, let inputBotUser = botUser.flatMap(apiInputUser) {
+            mappedBot = inputBotUser
+            if bot.canReply {
+                flags |= 1 << 0
+            }
+            mappedRecipients = bot.recipients.apiInputValue(additionalPeers: additionalPeers)
+        }
+        
+        return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, bot: mappedBot, recipients: mappedRecipients))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<Never, NoError> in
+            if let result {
+                account.stateManager.addUpdates(result)
+            }
+            return .complete()
+        }
+    }
+    
+    return account.postbox.transaction { transaction in
+        transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, current in
+            var current = (current as? CachedUserData) ?? CachedUserData()
+            current = current.withUpdatedConnectedBot(bot)
+            return current
+        })
+    }
+    |> ignoreValues
+    |> then(remoteApply)
+}

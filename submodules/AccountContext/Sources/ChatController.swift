@@ -1080,10 +1080,14 @@ public enum ChatHistoryListSource {
     case customView(historyView: Signal<(MessageHistoryView, ViewUpdateType), NoError>)
 }
 
+public enum ChatQuickReplyShortcutType {
+    case generic
+    case greeting
+    case away
+}
+
 public enum ChatCustomContentsKind: Equatable {
-    case greetingMessageInput
-    case awayMessageInput
-    case quickReplyMessageInput(shortcut: String)
+    case quickReplyMessageInput(shortcut: String, shortcutType: ChatQuickReplyShortcutType)
 }
 
 public protocol ChatCustomContentsProtocol: AnyObject {

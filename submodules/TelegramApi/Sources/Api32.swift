@@ -329,6 +329,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func getBotBusinessConnection(connectionId: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1990746736)
+                    serializeString(connectionId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getBotBusinessConnection", parameters: [("connectionId", String(describing: connectionId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func getChannelDefaultEmojiStatuses(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1999087573)
@@ -368,6 +383,21 @@ public extension Api.functions.account {
                         var result: Api.account.Themes?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.Themes
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func getConnectedBots() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ConnectedBots>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1319421967)
+                    
+                    return (FunctionDescription(name: "account.getConnectedBots", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.ConnectedBots? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.ConnectedBots?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.ConnectedBots
                         }
                         return result
                     })
@@ -1338,6 +1368,23 @@ public extension Api.functions.account {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func updateConnectedBot(flags: Int32, bot: Api.InputUser, recipients: Api.InputBusinessRecipients) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1674751363)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    bot.serialize(buffer, true)
+                    recipients.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.updateConnectedBot", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("recipients", String(describing: recipients))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

@@ -44,6 +44,7 @@ private final class ChatListFilterPresetControllerArguments {
     let linkContextAction: (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void
     let peerContextAction: (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     let updateTagColor: (PeerNameColor?) -> Void
+    let openTagColorPremium: () -> Void
     
     init(
         context: AccountContext,
@@ -63,7 +64,8 @@ private final class ChatListFilterPresetControllerArguments {
         removeLink: @escaping (ExportedChatFolderLink) -> Void,
         linkContextAction: @escaping (ExportedChatFolderLink?, ASDisplayNode, ContextGesture?) -> Void,
         peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void,
-        updateTagColor: @escaping (PeerNameColor?) -> Void
+        updateTagColor: @escaping (PeerNameColor?) -> Void,
+        openTagColorPremium: @escaping () -> Void
     ) {
         self.context = context
         self.updateState = updateState
@@ -83,6 +85,7 @@ private final class ChatListFilterPresetControllerArguments {
         self.linkContextAction = linkContextAction
         self.peerContextAction = peerContextAction
         self.updateTagColor = updateTagColor
+        self.openTagColorPremium = openTagColorPremium
     }
 }
 
@@ -231,8 +234,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case inviteLinkCreate(hasLinks: Bool)
     case inviteLink(Int, ExportedChatFolderLink)
     case inviteLinkInfo(text: String)
-    case tagColorHeader(name: String, color: PeerNameColors.Colors)
-    case tagColor(colors: PeerNameColors, currentColor: PeerNameColor?)
+    case tagColorHeader(name: String, color: PeerNameColors.Colors?, isPremium: Bool)
+    case tagColor(colors: PeerNameColors, currentColor: PeerNameColor?, isPremium: Bool)
     case tagColorFooter
     
     var section: ItemListSectionId {
@@ -458,20 +461,35 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(presentationData.theme), title: text, sectionId: self.section, editing: false, action: {
                 arguments.expandSection(.exclude)
             })
-        case let .tagColorHeader(name, color):
+        case let .tagColorHeader(name, color, isPremium):
             //TODO:localize
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: "FOLDER COLOR", badge: name.uppercased(), badgeStyle: ItemListSectionHeaderItem.BadgeStyle(
-                background: color.main.withMultipliedAlpha(0.1),
-                foreground: color.main
-            ), sectionId: self.section)
-        case let .tagColor(colors, color):
+            var badge: String?
+            var badgeStyle: ItemListSectionHeaderItem.BadgeStyle?
+            var accessoryText: ItemListSectionHeaderAccessoryText?
+            if isPremium, let color {
+                badge = name.uppercased()
+                badgeStyle = ItemListSectionHeaderItem.BadgeStyle(
+                    background: color.main.withMultipliedAlpha(0.1),
+                    foreground: color.main
+                )
+            } else if color != nil {
+                accessoryText = ItemListSectionHeaderAccessoryText(value: "PREMIUM EXPIRED", color: .generic)
+            }
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: "FOLDER COLOR", badge: badge, badgeStyle: badgeStyle, accessoryText: accessoryText, sectionId: self.section)
+        case let .tagColor(colors, color, isPremium):
             return PeerNameColorItem(
                 theme: presentationData.theme,
                 colors: colors,
                 isProfile: true,
-                currentColor: color,
+                displayEmptyColor: true,
+                currentColor: isPremium ? color : nil,
+                isLocked: !isPremium,
                 updated: { color in
-                    arguments.updateTagColor(color)
+                    if isPremium {
+                        arguments.updateTagColor(color)
+                    } else {
+                        arguments.openTagColorPremium()
+                    }
                 },
                 sectionId: self.section
             )
@@ -502,6 +520,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     var name: String
     var changedName: Bool
     var color: PeerNameColor?
+    var colorUpdated: Bool = false
     var includeCategories: ChatListFilterPeerCategories
     var excludeMuted: Bool
     var excludeRead: Bool
@@ -616,11 +635,19 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
         entries.append(.excludePeerInfo(presentationData.strings.ChatListFolder_ExcludeSectionInfo))
     }
     
-    let tagColor = state.color ?? .blue
-    let resolvedColor = context.peerNameColors.getProfile(tagColor, dark: presentationData.theme.overallDarkAppearance, subject: .palette)
+    let tagColor: PeerNameColor?
+    if state.colorUpdated {
+        tagColor = state.color
+    } else {
+        tagColor = state.color ?? .blue
+    }
+    var resolvedColor: PeerNameColors.Colors?
+    if let tagColor {
+        resolvedColor = context.peerNameColors.getProfile(tagColor, dark: presentationData.theme.overallDarkAppearance, subject: .palette)
+    }
     
-    entries.append(.tagColorHeader(name: state.name, color: resolvedColor))
-    entries.append(.tagColor(colors: context.peerNameColors, currentColor: tagColor))
+    entries.append(.tagColorHeader(name: state.name, color: resolvedColor, isPremium: isPremium))
+    entries.append(.tagColor(colors: context.peerNameColors, currentColor: tagColor, isPremium: isPremium))
     entries.append(.tagColorFooter)
     
     var hasLinks = false
@@ -1018,7 +1045,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
     } else {
         initialName = ""
     }
-    let initialState = ChatListFilterPresetControllerState(name: initialName, changedName: initialPreset != nil, color: initialPreset?.data?.color, includeCategories: initialPreset?.data?.categories ?? [], excludeMuted: initialPreset?.data?.excludeMuted ?? false, excludeRead: initialPreset?.data?.excludeRead ?? false, excludeArchived: initialPreset?.data?.excludeArchived ?? false, additionallyIncludePeers: initialPreset?.data?.includePeers.peers ?? [], additionallyExcludePeers: initialPreset?.data?.excludePeers ?? [], expandedSections: [])
+    var initialState = ChatListFilterPresetControllerState(name: initialName, changedName: initialPreset != nil, color: initialPreset?.data?.color, includeCategories: initialPreset?.data?.categories ?? [], excludeMuted: initialPreset?.data?.excludeMuted ?? false, excludeRead: initialPreset?.data?.excludeRead ?? false, excludeArchived: initialPreset?.data?.excludeArchived ?? false, additionallyIncludePeers: initialPreset?.data?.includePeers.peers ?? [], additionallyExcludePeers: initialPreset?.data?.excludePeers ?? [], expandedSections: [])
+    initialState.colorUpdated = true
     
     let updatedCurrentPreset: Signal<ChatListFilter?, NoError>
     if let initialPreset {
@@ -1543,8 +1571,19 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             updateState { state in
                 var state = state
                 state.color = color
+                state.colorUpdated = true
                 return state
             }
+        },
+        openTagColorPremium: {
+            //TODO:localize
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: "Subscribe to **Telegram Premium** to select folder color.", customUndoText: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                if case .undo = action {
+                    pushControllerImpl?(PremiumIntroScreen(context: context, source: .folders))
+                }
+                return false
+            }), nil)
         }
     )
         
