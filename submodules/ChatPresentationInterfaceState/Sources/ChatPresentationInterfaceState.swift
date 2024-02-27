@@ -1202,6 +1202,8 @@ public func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bo
         } else {
             return false
         }
+    } else if case .customChatContents = state.chatLocation {
+        return true
     } else {
         return false
     }

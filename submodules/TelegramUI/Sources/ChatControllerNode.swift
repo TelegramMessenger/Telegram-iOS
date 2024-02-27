@@ -1883,7 +1883,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             overlayNavigationBar.updateLayout(size: barFrame.size, transition: transition)
         }
         
-        var listInsets = UIEdgeInsets(top: containerInsets.bottom + contentBottomInset, left: containerInsets.right, bottom: containerInsets.top, right: containerInsets.left)
+        var listInsets = UIEdgeInsets(top: containerInsets.bottom + contentBottomInset, left: containerInsets.right, bottom: containerInsets.top + 6.0, right: containerInsets.left)
         let listScrollIndicatorInsets = UIEdgeInsets(top: containerInsets.bottom + inputPanelsHeight, left: containerInsets.right, bottom: containerInsets.top, right: containerInsets.left)
         
         var childContentInsets: UIEdgeInsets = containerInsets

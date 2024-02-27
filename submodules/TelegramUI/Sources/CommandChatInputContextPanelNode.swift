@@ -220,7 +220,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                         customMessageListData: ChatListItemContent.CustomMessageListData(
                             commandPrefix: "/\(shortcut.shortcut)",
                             searchQuery: command.searchQuery.flatMap { "/\($0)"},
-                            messageCount: nil
+                            messageCount: shortcut.totalCount,
+                            hideSeparator: false
                         )
                     )),
                     editing: false,
@@ -404,8 +405,9 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             var options = ListViewDeleteAndInsertOptions()
             options.insert(.Synchronous)
             options.insert(.LowLatency)
+            options.insert(.PreferSynchronousResourceLoading)
             if firstTime {
-                self.contentOffsetChangeTransition = .spring(duration: 0.4)
+                self.contentOffsetChangeTransition = .immediate
                 
                 self.listBackgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.listView.bounds.height), size: CGSize(width: self.listView.bounds.width, height: self.listView.bounds.height + 1000.0))
             } else {
@@ -418,7 +420,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: validLayout.0, hasShortcuts: transition.hasShortcuts)
+            insets.top = topInsetForLayout(size: validLayout.0)
             insets.left = validLayout.1
             insets.right = validLayout.2
             
@@ -436,12 +438,8 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                     if let topItemOffset = topItemOffset {
                         let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                         
-                        let position = strongSelf.listView.layer.position
-                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
-                        transition.animateView {
-                            strongSelf.listView.position = position
-                        }
-                        //transition.animatePositionAdditive(layer: strongSelf.listBackgroundView.layer, offset: CGPoint(x: 0.0, y: strongSelf.listView.bounds.size.height - topItemOffset))
+                        transition.animatePositionAdditive(layer: strongSelf.listView.layer, offset: CGPoint(x: 0.0, y: strongSelf.listView.bounds.size.height - topItemOffset))
+                        transition.animatePositionAdditive(layer: strongSelf.listBackgroundView.layer, offset: CGPoint(x: 0.0, y: strongSelf.listView.bounds.size.height - topItemOffset))
                     }
                 }
             })
@@ -450,10 +448,31 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
-    private func topInsetForLayout(size: CGSize, hasShortcuts: Bool) -> CGFloat {
-        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
-        if hasShortcuts {
-            minimumItemHeights += VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight(style: .round)
+    private func topInsetForLayout(size: CGSize) -> CGFloat {
+        var minimumItemHeights: CGFloat = 0.0
+        if let currentEntries = self.currentEntries, !currentEntries.isEmpty {
+            let indexLimit = min(4, currentEntries.count - 1)
+            for i in 0 ... indexLimit {
+                var itemHeight: CGFloat
+                switch currentEntries[i].content {
+                case .editShortcuts:
+                    itemHeight = VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight(style: .round)
+                case let .command(command):
+                    switch command.command {
+                    case .command:
+                        itemHeight = MentionChatInputPanelItemNode.itemHeight
+                    case .shortcut:
+                        itemHeight = 58.0
+                    }
+                }
+                if indexLimit >= 4 && i == indexLimit {
+                    minimumItemHeights += floor(itemHeight * 0.5)
+                } else {
+                    minimumItemHeights += itemHeight
+                }
+            }
+        } else {
+            minimumItemHeights = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
         }
         
         return max(size.height - minimumItemHeights, 0.0)
@@ -464,16 +483,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         var insets = UIEdgeInsets()
-        var hasShortcuts = false
-        if let currentEntries = self.currentEntries {
-            hasShortcuts = currentEntries.contains(where: { entry in
-                if case .editShortcuts = entry.content {
-                    return true
-                }
-                return false
-            })
-        }
-        insets.top = self.topInsetForLayout(size: size, hasShortcuts: hasShortcuts)
+        insets.top = self.topInsetForLayout(size: size)
         insets.left = leftInset
         insets.right = rightInset
         

@@ -850,6 +850,9 @@ public protocol TelegramRootControllerInterface: NavigationController {
 public protocol QuickReplySetupScreenInitialData: AnyObject {
 }
 
+public protocol AutomaticBusinessMessageSetupScreenInitialData: AnyObject {
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -940,7 +943,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatbotSetupScreen(context: AccountContext) -> ViewController
     func makeBusinessLocationSetupScreen(context: AccountContext, initialValue: TelegramBusinessLocation?, completion: @escaping (TelegramBusinessLocation?) -> Void) -> ViewController
     func makeBusinessHoursSetupScreen(context: AccountContext, initialValue: TelegramBusinessHours?, completion: @escaping (TelegramBusinessHours?) -> Void) -> ViewController
-    func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController
+    func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, initialData: AutomaticBusinessMessageSetupScreenInitialData, isAwayMode: Bool) -> ViewController
+    func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError>
     func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController
     func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError>
     func navigateToChatController(_ params: NavigateToChatControllerParams)

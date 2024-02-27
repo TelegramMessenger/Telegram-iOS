@@ -2127,7 +2127,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     let _ = (accountContext.engine.data.get(
                                         TelegramEngine.EngineData.Item.Peer.BusinessLocation(id: accountContext.account.peerId)
                                     )
-                                             |> deliverOnMainQueue).start(next: { [weak accountContext] businessLocation in
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] businessLocation in
                                         guard let accountContext else {
                                             return
                                         }
@@ -2137,7 +2137,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     let _ = (accountContext.engine.data.get(
                                         TelegramEngine.EngineData.Item.Peer.BusinessHours(id: accountContext.account.peerId)
                                     )
-                                             |> deliverOnMainQueue).start(next: { [weak accountContext] businessHours in
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] businessHours in
                                         guard let accountContext else {
                                             return
                                         }
@@ -2145,17 +2145,31 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     })
                                 case .quickReplies:
                                     let _ = (accountContext.sharedContext.makeQuickReplySetupScreenInitialData(context: accountContext)
-                                             |> take(1)
-                                             |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
                                         guard let accountContext else {
                                             return
                                         }
                                         push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext, initialData: initialData))
                                     })
                                 case .greetings:
-                                    push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: false))
+                                    let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: false))
+                                    })
                                 case .awayMessages:
-                                    push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: true))
+                                    let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: true))
+                                    })
                                 case .chatbots:
                                     push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
                                 }

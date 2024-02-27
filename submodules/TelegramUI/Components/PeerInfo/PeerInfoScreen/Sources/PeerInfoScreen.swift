@@ -1166,8 +1166,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             if let businessHours = cachedData.businessHours {
                 //TODO:localize
-                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: {
-                    interaction.requestLayout(true)
+                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             }
             

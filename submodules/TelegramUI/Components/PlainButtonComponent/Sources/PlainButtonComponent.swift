@@ -227,7 +227,12 @@ public final class PlainButtonComponent: Component {
                 }
                 let contentFrame = CGRect(origin: CGPoint(x: component.contentInsets.left + floor((size.width - component.contentInsets.left - component.contentInsets.right - contentSize.width) * 0.5), y: component.contentInsets.top + floor((size.height - component.contentInsets.top - component.contentInsets.bottom - contentSize.height) * 0.5)), size: contentSize)
                 
-                contentTransition.setPosition(view: contentView, position: CGPoint(x: contentFrame.minX + contentFrame.width * contentView.layer.anchorPoint.x, y: contentFrame.minY + contentFrame.height * contentView.layer.anchorPoint.y))
+                let contentPosition = CGPoint(x: contentFrame.minX + contentFrame.width * contentView.layer.anchorPoint.x, y: contentFrame.minY + contentFrame.height * contentView.layer.anchorPoint.y)
+                if !component.animateContents && (abs(contentView.center.x - contentPosition.x) <= 2.0 && abs(contentView.center.y - contentPosition.y) <= 2.0){
+                    contentView.center = contentPosition
+                } else {
+                    contentTransition.setPosition(view: contentView, position: contentPosition)
+                }
                 
                 if component.animateContents {
                     contentTransition.setBounds(view: contentView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))

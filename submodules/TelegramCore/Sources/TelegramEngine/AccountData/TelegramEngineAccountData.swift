@@ -185,5 +185,13 @@ public extension TelegramEngine {
         public func sendMessageShortcut(peerId: EnginePeer.Id, id: Int32) {
             let _ = _internal_sendMessageShortcut(account: self.account, peerId: peerId, id: id).startStandalone()
         }
+        
+        public func cachedTimeZoneList() -> Signal<TimeZoneList?, NoError> {
+            return _internal_cachedTimeZoneList(account: self.account)
+        }
+
+        public func keepCachedTimeZoneListUpdated() -> Signal<Never, NoError> {
+            return _internal_keepCachedTimeZoneListUpdated(account: self.account)
+        }
     }
 }

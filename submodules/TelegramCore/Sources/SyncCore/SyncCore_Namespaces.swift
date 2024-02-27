@@ -285,6 +285,7 @@ private enum PreferencesKeyValues: Int32 {
     case didCacheSavedMessageTagsPrefix = 34
     case displaySavedChatsAsTopics = 35
     case shortcutMessages = 37
+    case timezoneList = 38
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -472,6 +473,12 @@ public struct PreferencesKeys {
     public static func shortcutMessages() -> ValueBoxKey {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.shortcutMessages.rawValue)
+        return key
+    }
+    
+    public static func timezoneList() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.timezoneList.rawValue)
         return key
     }
 }

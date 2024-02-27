@@ -1903,12 +1903,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return BusinessHoursSetupScreen(context: context, initialValue: initialValue, completion: completion)
     }
     
-    public func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController {
-        return AutomaticBusinessMessageSetupScreen(context: context, mode: isAwayMode ? .away : .greeting)
+    public func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, initialData: AutomaticBusinessMessageSetupScreenInitialData, isAwayMode: Bool) -> ViewController {
+        return AutomaticBusinessMessageSetupScreen(context: context, initialData: initialData as! AutomaticBusinessMessageSetupScreen.InitialData, mode: isAwayMode ? .away : .greeting)
+    }
+    
+    public func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> {
+        return AutomaticBusinessMessageSetupScreen.initialData(context: context)
     }
     
     public func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController {
-        return QuickReplySetupScreen(context: context, initialData: initialData as! QuickReplySetupScreen.InitialData)
+        return QuickReplySetupScreen(context: context, initialData: initialData as! QuickReplySetupScreen.InitialData, mode: .manage)
     }
     
     public func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {

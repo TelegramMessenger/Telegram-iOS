@@ -229,7 +229,7 @@ func _internal_shortcutMessageList(account: Account) -> Signal<ShortcutMessageLi
             historyViewKeys[shortcut.id] = historyViewKey
             keys.append(historyViewKey)
             
-            let summaryKey: PostboxViewKey = .historyTagSummaryView(tag: [], peerId: account.peerId, threadId: Int64(shortcut.id), namespace: Namespaces.Message.ScheduledCloud, customTag: nil)
+            let summaryKey: PostboxViewKey = .historyTagSummaryView(tag: [], peerId: account.peerId, threadId: Int64(shortcut.id), namespace: Namespaces.Message.QuickReplyCloud, customTag: nil)
             summaryKeys[shortcut.id] = summaryKey
             keys.append(summaryKey)
         }

@@ -238,7 +238,8 @@ final class GreetingMessageListItemComponent: Component {
                     customMessageListData: ChatListItemContent.CustomMessageListData(
                         commandPrefix: nil,
                         searchQuery: nil,
-                        messageCount: component.count
+                        messageCount: component.count,
+                        hideSeparator: true
                     )
                 )),
                 editing: false,

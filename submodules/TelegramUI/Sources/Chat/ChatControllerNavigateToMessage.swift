@@ -104,6 +104,9 @@ extension ChatControllerImpl {
         if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId, !isPinnedMessages, !isScheduledMessages {
             forceInCurrentChat = true
         }
+        if case .customChatContents = self.chatLocation {
+            forceInCurrentChat = true
+        }
         
         if isPinnedMessages, let messageId = messageLocation.messageId {
             let _ = (combineLatest(
@@ -205,6 +208,7 @@ extension ChatControllerImpl {
                     if case let .id(_, params) = messageLocation {
                         quote = params.quote.flatMap { quote in (string: quote.string, offset: quote.offset) }
                     }
+                    
                     self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition)
                     
                     if delayCompletion {

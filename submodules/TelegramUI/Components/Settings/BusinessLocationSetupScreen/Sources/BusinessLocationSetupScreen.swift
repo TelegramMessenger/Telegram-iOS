@@ -20,6 +20,8 @@ import BundleIconComponent
 import LottieComponent
 import Markdown
 import LocationUI
+import CoreLocation
+import Geocoding
 
 final class BusinessLocationSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -74,7 +76,11 @@ final class BusinessLocationSetupScreenComponent: Component {
         private let textFieldTag = NSObject()
         private var resetAddressText: String?
         
+        private var isLoadingGeocodedAddress: Bool = false
+        private var geocodeAddressState: (address: String, disposable: Disposable)?
+        
         private var mapCoordinates: TelegramBusinessLocation.Coordinates?
+        private var mapCoordinatesManuallySet: Bool = false
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -102,6 +108,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         deinit {
+            self.geocodeAddressState?.disposable.dispose()
         }
 
         func scrollToTop() {
@@ -109,19 +116,37 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            if let component = self.component {
-                var address = ""
-                if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
-                    address = textView.currentText
-                }
-                
-                var businessLocation: TelegramBusinessLocation?
-                if !address.isEmpty || self.mapCoordinates != nil {
-                    businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
-                }
-                
-                let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
+            guard let component = self.component else {
+                return true
             }
+            
+            var address = ""
+            if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View {
+                address = textView.currentText
+            }
+            
+            var businessLocation: TelegramBusinessLocation?
+            if !address.isEmpty || self.mapCoordinates != nil {
+                businessLocation = TelegramBusinessLocation(address: address, coordinates: self.mapCoordinates)
+            }
+            
+            if businessLocation != nil && address.isEmpty {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                //TODO:localize
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Address can't be empty.", actions: [
+                    TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    }),
+                    TextAlertAction(type: .destructiveAction, title: "Delete", action: {
+                        let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
+                        
+                        complete()
+                    })
+                ]), in: .window(.root))
+                
+                return false
+            }
+            
+            let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: businessLocation).startStandalone()
             
             return true
         }
@@ -165,12 +190,18 @@ final class BusinessLocationSetupScreenComponent: Component {
                 return
             }
             
-            let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .pick, completion: { [weak self] location, _, _, address, _ in
+            var initialLocation: CLLocationCoordinate2D?
+            if let mapCoordinates = self.mapCoordinates {
+                initialLocation = CLLocationCoordinate2D(latitude: mapCoordinates.latitude, longitude: mapCoordinates.longitude)
+            }
+            
+            let controller = LocationPickerController(context: component.context, updatedPresentationData: nil, mode: .pick, initialLocation: initialLocation, completion: { [weak self] location, _, _, address, _ in
                 guard let self else {
                     return
                 }
                 
                 self.mapCoordinates = TelegramBusinessLocation.Coordinates(latitude: location.latitude, longitude: location.longitude)
+                self.mapCoordinatesManuallySet = true
                 if let textView = self.addressSection.findTaggedView(tag: self.textFieldTag) as? ListMultilineTextFieldItemComponent.View, textView.currentText.isEmpty {
                     self.resetAddressText = address
                 }
@@ -178,6 +209,43 @@ final class BusinessLocationSetupScreenComponent: Component {
                 self.state?.updated(transition: .immediate)
             })
             self.environment?.controller()?.push(controller)
+        }
+        
+        private func updateGeocodedAddress(string: String) {
+            let addressValue: String?
+            if self.mapCoordinates != nil && self.mapCoordinatesManuallySet {
+                addressValue = nil
+            } else if string.count < 3 {
+                addressValue = nil
+            } else {
+                addressValue = string
+            }
+            
+            if let current = self.geocodeAddressState, current.address == addressValue {
+            } else {
+                self.geocodeAddressState?.disposable.dispose()
+                self.geocodeAddressState = nil
+                
+                if let addressValue {
+                    let disposable = MetaDisposable()
+                    self.geocodeAddressState = (string, disposable)
+                    
+                    disposable.set((
+                        geocodeLocation(address: addressValue, locale: Locale.current)
+                        |> delay(0.4, queue: .mainQueue())
+                        |> deliverOnMainQueue
+                    ).start(next: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let location = result?.first?.location, !self.mapCoordinatesManuallySet {
+                            self.mapCoordinates = TelegramBusinessLocation.Coordinates(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }))
+                }
+            }
         }
         
         func update(component: BusinessLocationSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -189,6 +257,9 @@ final class BusinessLocationSetupScreenComponent: Component {
             if self.component == nil {
                 if let initialValue = component.initialValue {
                     self.mapCoordinates = initialValue.coordinates
+                    if self.mapCoordinates != nil {
+                        self.mapCoordinatesManuallySet = true
+                    }
                     self.resetAddressText = initialValue.address
                 }
             }
@@ -228,10 +299,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 32.0
-            
-            let _ = bottomContentInset
-            let _ = sectionSpacing
+            let sectionSpacing: CGFloat = 24.0
             
             var contentHeight: CGFloat = 0.0
             
@@ -246,7 +314,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 2.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 11.0), size: iconSize)
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -304,6 +372,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += subtitleSize.height
             contentHeight += 27.0
             
+            //TODO:localize
             var addressSectionItems: [AnyComponentWithIdentity<Empty>] = []
             addressSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
                 context: component.context,
@@ -317,12 +386,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 characterLimit: 64,
-                updated: { [weak self] value in
-                    guard let self else {
-                        return
-                    }
-                    let _ = self
-                    let _ = value
+                updated: { _ in
                 },
                 tag: self.textFieldTag
             ))))
@@ -374,6 +438,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                         self.openLocationPicker()
                     } else {
                         self.mapCoordinates = nil
+                        self.mapCoordinatesManuallySet = false
                         self.state?.updated(transition: .spring(duration: 0.4))
                     }
                 }

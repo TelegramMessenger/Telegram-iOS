@@ -19,6 +19,7 @@ public enum AttachmentButtonType: Equatable {
     case gallery
     case file
     case location
+    case quickReply
     case contact
     case poll
     case app(AttachMenuBot)
@@ -27,54 +28,60 @@ public enum AttachmentButtonType: Equatable {
     
     public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
         switch lhs {
-            case .gallery:
-                if case .gallery = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .file:
-                if case .file = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .location:
-                if case .location = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .contact:
-                if case .contact = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .poll:
-                if case .poll = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .app(lhsBot):
-                if case let .app(rhsBot) = rhs, lhsBot.peer.id == rhsBot.peer.id {
-                    return true
-                } else {
-                    return false
-                }
-            case .gift:
-                if case .gift = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .standalone:
-                if case .standalone = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case .gallery:
+            if case .gallery = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .file:
+            if case .file = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .location:
+            if case .location = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .quickReply:
+            if case .quickReply = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .contact:
+            if case .contact = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .poll:
+            if case .poll = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .app(lhsBot):
+            if case let .app(rhsBot) = rhs, lhsBot.peer.id == rhsBot.peer.id {
+                return true
+            } else {
+                return false
+            }
+        case .gift:
+            if case .gift = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .standalone:
+            if case .standalone = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }

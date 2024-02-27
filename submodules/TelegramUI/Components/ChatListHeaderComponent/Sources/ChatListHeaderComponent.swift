@@ -267,7 +267,9 @@ public final class ChatListHeaderComponent: Component {
         }
         
         func update(title: String, theme: PresentationTheme, availableSize: CGSize, transition: Transition) -> CGSize {
-            self.titleView.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
+            let titleText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
+            let titleTextUpdated = self.titleView.attributedText != titleText
+            self.titleView.attributedText = titleText
             let titleSize = self.titleView.updateLayout(CGSize(width: 100.0, height: 44.0))
             
             self.accessibilityLabel = title
@@ -287,7 +289,12 @@ public final class ChatListHeaderComponent: Component {
             transition.setPosition(view: self.arrowView, position: arrowFrame.center)
             transition.setBounds(view: self.arrowView, bounds: CGRect(origin: CGPoint(), size: arrowFrame.size))
             
-            transition.setFrame(view: self.titleView, frame: CGRect(origin: CGPoint(x: iconOffset - 3.0 + arrowSize.width + iconSpacing, y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize))
+            let titleFrame = CGRect(origin: CGPoint(x: iconOffset - 3.0 + arrowSize.width + iconSpacing, y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
+            if titleTextUpdated {
+                self.titleView.frame = titleFrame
+            } else {
+                transition.setFrame(view: self.titleView, frame: titleFrame)
+            }
             
             return CGSize(width: iconOffset + arrowSize.width + iconSpacing + titleSize.width, height: availableSize.height)
         }
@@ -479,7 +486,9 @@ public final class ChatListHeaderComponent: Component {
             transition.setPosition(view: self.titleScaleContainer, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
             transition.setBounds(view: self.titleScaleContainer, bounds: CGRect(origin: self.titleScaleContainer.bounds.origin, size: size))
             
-            self.titleTextView.attributedText = NSAttributedString(string: content.title, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
+            let titleText = NSAttributedString(string: content.title, font: Font.semibold(17.0), textColor: theme.rootController.navigationBar.primaryTextColor)
+            let titleTextUpdated = self.titleTextView.attributedText != titleText
+            self.titleTextView.attributedText = titleText
             
             let buttonSpacing: CGFloat = 8.0
             
@@ -616,7 +625,11 @@ public final class ChatListHeaderComponent: Component {
             let titleTextSize = self.titleTextView.updateLayout(CGSize(width: remainingWidth, height: size.height))
             
             let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleTextSize.width) / 2.0) + sideContentWidth, y: floor((size.height - titleTextSize.height) / 2.0)), size: titleTextSize)
-            transition.setFrame(view: self.titleTextView, frame: titleFrame)
+            if titleTextUpdated {
+                self.titleTextView.frame = titleFrame
+            } else {
+                transition.setFrame(view: self.titleTextView, frame: titleFrame)
+            }
             
             if let titleComponent = content.titleComponent {
                 var titleContentTransition = transition

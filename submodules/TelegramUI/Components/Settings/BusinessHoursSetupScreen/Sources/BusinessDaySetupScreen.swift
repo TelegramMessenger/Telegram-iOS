@@ -81,6 +81,7 @@ final class BusinessDaySetupScreenComponent: Component {
         
         private(set) var isOpen: Bool = false
         private(set) var ranges: [BusinessHoursSetupScreenComponent.WorkingHourRange] = []
+        private var intersectingRanges = Set<Int>()
         private var nextRangeId: Int = 0
         
         override init(frame: CGRect) {
@@ -116,7 +117,25 @@ final class BusinessDaySetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            return true
+            guard let component = self.component else {
+                return true
+            }
+            
+            if self.intersectingRanges.isEmpty {
+                return true
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            //TODO:localize
+            self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Business hours are intersecting. Reset?", actions: [
+                TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                }),
+                TextAlertAction(type: .defaultAction, title: "Reset", action: {
+                    complete()
+                })
+            ]), in: .window(.root))
+            
+            return false
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -191,6 +210,26 @@ final class BusinessDaySetupScreenComponent: Component {
         
         private func validateRanges() {
             self.ranges.sort(by: { $0.startMinute < $1.startMinute })
+            
+            self.intersectingRanges.removeAll()
+            for i in 0 ..< self.ranges.count {
+                var minuteSet = IndexSet()
+                inner: for j in 0 ..< self.ranges.count {
+                    if i == j {
+                        continue inner
+                    }
+                    let range = self.ranges[j]
+                    let rangeMinutes = range.startMinute ..< range.endMinute
+                    minuteSet.insert(integersIn: rangeMinutes)
+                }
+                
+                let range = self.ranges[i]
+                let rangeMinutes = range.startMinute ..< range.endMinute
+                
+                if minuteSet.intersects(integersIn: rangeMinutes) {
+                    self.intersectingRanges.insert(range.id)
+                }
+            }
         }
         
         func update(component: BusinessDaySetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -260,7 +299,7 @@ final class BusinessDaySetupScreenComponent: Component {
             
             let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 32.0
+            let sectionSpacing: CGFloat = 24.0
             
             let _ = bottomContentInset
             let _ = sectionSpacing
@@ -335,80 +374,47 @@ final class BusinessDaySetupScreenComponent: Component {
                 let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
                 
                 var rangeSectionItems: [AnyComponentWithIdentity<Empty>] = []
-                rangeSectionItems.append(AnyComponentWithIdentity(id: rangeSectionItems.count, component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
-                    title: AnyComponent(VStack([
-                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: "Opening time",
-                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: environment.theme.list.itemPrimaryTextColor
+                for i in 0 ..< 2 {
+                    let isOpenTime = i == 0
+                    rangeSectionItems.append(AnyComponentWithIdentity(id: rangeSectionItems.count, component: AnyComponent(ListActionItemComponent(
+                        theme: environment.theme,
+                        title: AnyComponent(VStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(
+                                    string: isOpenTime ? "Opening time" : "Closing Time",
+                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                    textColor: environment.theme.list.itemPrimaryTextColor
+                                )),
+                                maximumNumberOfLines: 1
+                            ))),
+                        ], alignment: .left, spacing: 2.0)),
+                        icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(PlainButtonComponent(
+                            content: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: isOpenTime ? startText : endText, font: Font.regular(17.0), textColor: self.intersectingRanges.contains(range.id) ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemPrimaryTextColor))
                             )),
-                            maximumNumberOfLines: 1
-                        ))),
-                    ], alignment: .left, spacing: 2.0)),
-                    icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: startText, font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
-                        )),
-                        background: AnyComponent(RoundedRectangle(color: environment.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1), cornerRadius: 6.0)),
-                        effectAlignment: .center,
-                        minSize: nil,
-                        contentInsets: UIEdgeInsets(top: 7.0, left: 8.0, bottom: 7.0, right: 8.0),
-                        action: { [weak self] in
+                            background: AnyComponent(RoundedRectangle(color: environment.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1), cornerRadius: 6.0)),
+                            effectAlignment: .center,
+                            minSize: nil,
+                            contentInsets: UIEdgeInsets(top: 7.0, left: 8.0, bottom: 7.0, right: 8.0),
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.openRangeDateSetup(rangeId: rangeId, isStartTime: isOpenTime)
+                            },
+                            animateAlpha: true,
+                            animateScale: false
+                        ))), insets: .custom(UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), allowUserInteraction: true),
+                        accessory: nil,
+                        action: { [weak self] _ in
                             guard let self else {
                                 return
                             }
-                            self.openRangeDateSetup(rangeId: rangeId, isStartTime: true)
-                        },
-                        animateAlpha: true,
-                        animateScale: false
-                    ))), insets: .custom(UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), allowUserInteraction: true),
-                    accessory: nil,
-                    action: { [weak self] _ in
-                        guard let self else {
-                            return
+                            self.openRangeDateSetup(rangeId: rangeId, isStartTime: isOpenTime)
                         }
-                        self.openRangeDateSetup(rangeId: rangeId, isStartTime: true)
-                    }
-                ))))
-                rangeSectionItems.append(AnyComponentWithIdentity(id: rangeSectionItems.count, component: AnyComponent(ListActionItemComponent(
-                    theme: environment.theme,
-                    title: AnyComponent(VStack([
-                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: "Closing time",
-                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                textColor: environment.theme.list.itemPrimaryTextColor
-                            )),
-                            maximumNumberOfLines: 1
-                        ))),
-                    ], alignment: .left, spacing: 2.0)),
-                    icon: ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 0, component: AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: endText, font: Font.regular(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
-                        )),
-                        background: AnyComponent(RoundedRectangle(color: environment.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.1), cornerRadius: 6.0)),
-                        effectAlignment: .center,
-                        minSize: nil,
-                        contentInsets: UIEdgeInsets(top: 7.0, left: 8.0, bottom: 7.0, right: 8.0),
-                        action: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            self.openRangeDateSetup(rangeId: rangeId, isStartTime: false)
-                        },
-                        animateAlpha: true,
-                        animateScale: false
-                    ))), insets: .custom(UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), allowUserInteraction: true),
-                    accessory: nil,
-                    action: { [weak self] _ in
-                        guard let self else {
-                            return
-                        }
-                        self.openRangeDateSetup(rangeId: rangeId, isStartTime: false)
-                    }
-                ))))
+                    ))))
+                }
+                
                 rangeSectionItems.append(AnyComponentWithIdentity(id: rangeSectionItems.count, component: AnyComponent(ListActionItemComponent(
                     theme: environment.theme,
                     title: AnyComponent(VStack([
@@ -519,13 +525,13 @@ final class BusinessDaySetupScreenComponent: Component {
                                     text: .plain(NSAttributedString(
                                         string: "Add a Set of Hours",
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                        textColor: environment.theme.list.itemPrimaryTextColor
+                                        textColor: environment.theme.list.itemAccentColor
                                     )),
                                     maximumNumberOfLines: 1
                                 ))),
                             ], alignment: .left, spacing: 2.0)),
                             leftIcon: AnyComponentWithIdentity(id: 0, component: AnyComponent(BundleIconComponent(
-                                name: "Chat List/AddIcon",
+                                name: "Item List/AddTimeIcon",
                                 tintColor: environment.theme.list.itemAccentColor
                             ))),
                             accessory: nil,
@@ -619,7 +625,7 @@ final class BusinessDaySetupScreenComponent: Component {
 
 final class BusinessDaySetupScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let updateDay: (BusinessHoursSetupScreenComponent.Day) -> Void
+    fileprivate let updateDay: (BusinessHoursSetupScreenComponent.Day) -> Void
     
     init(context: AccountContext, dayIndex: Int, day: BusinessHoursSetupScreenComponent.Day, updateDay: @escaping (BusinessHoursSetupScreenComponent.Day) -> Void) {
         self.context = context
@@ -647,9 +653,12 @@ final class BusinessDaySetupScreen: ViewControllerComponentContainer {
                 return true
             }
             
-            self.updateDay(BusinessHoursSetupScreenComponent.Day(ranges: componentView.isOpen ? componentView.ranges : nil))
-            
-            return componentView.attemptNavigation(complete: complete)
+            if componentView.attemptNavigation(complete: complete) {
+                self.updateDay(BusinessHoursSetupScreenComponent.Day(ranges: componentView.isOpen ? componentView.ranges : nil))
+                return true
+            } else {
+                return false
+            }
         }
     }
     

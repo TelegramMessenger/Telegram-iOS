@@ -314,19 +314,37 @@ public final class TelegramBusinessHours: Equatable, Codable {
     public func splitIntoWeekDays() -> [WeekDay] {
         var mappedDays: [[WorkingTimeInterval]] = Array(repeating: [], count: 7)
         
+        var weekMinutes = IndexSet()
         for interval in self.weeklyTimeIntervals {
-            let startDayIndex = interval.startMinute / (24 * 60)
-            if startDayIndex < 0 || startDayIndex >= 7 {
-                continue
+            weekMinutes.insert(integersIn: interval.startMinute ..< interval.endMinute)
+        }
+        
+        for i in 0 ..< mappedDays.count {
+            let dayRange = i * 24 * 60 ..< (i + 1) * 24 * 60
+            var removeMinutes = IndexSet()
+            inner: for range in weekMinutes.rangeView {
+                if range.lowerBound >= dayRange.upperBound {
+                    break inner
+                } else {
+                    let clippedRange: Range<Int>
+                    if range.lowerBound == dayRange.lowerBound {
+                        clippedRange = range.lowerBound ..< min(range.upperBound, dayRange.upperBound)
+                    } else {
+                        clippedRange = range.lowerBound ..< min(range.upperBound, dayRange.upperBound + 12 * 60)
+                    }
+                    
+                    let startTimeInsideDay = clippedRange.lowerBound - i * (24 * 60)
+                    let endTimeInsideDay = clippedRange.upperBound - i * (24 * 60)
+                    
+                    mappedDays[i].append(WorkingTimeInterval(
+                        startMinute: startTimeInsideDay,
+                        endMinute: endTimeInsideDay
+                    ))
+                    removeMinutes.insert(integersIn: clippedRange)
+                }
             }
             
-            let startTimeInsideDay = interval.startMinute - startDayIndex * (24 * 60)
-            let endTimeInsideDay = interval.endMinute - startDayIndex * (24 * 60)
-            
-            mappedDays[startDayIndex].append(WorkingTimeInterval(
-                startMinute: startTimeInsideDay,
-                endMinute: endTimeInsideDay
-            ))
+            weekMinutes.subtract(removeMinutes)
         }
         
         return mappedDays.map { day -> WeekDay in
