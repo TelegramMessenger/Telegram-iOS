@@ -21,19 +21,23 @@ import QuickReplyNameAlertController
 import ChatListHeaderComponent
 import PlainButtonComponent
 import MultilineTextComponent
+import AttachmentUI
 
 final class QuickReplySetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
     let initialData: QuickReplySetupScreen.InitialData
-
+    let mode: QuickReplySetupScreen.Mode
+    
     init(
         context: AccountContext,
-        initialData: QuickReplySetupScreen.InitialData
+        initialData: QuickReplySetupScreen.InitialData,
+        mode: QuickReplySetupScreen.Mode
     ) {
         self.context = context
         self.initialData = initialData
+        self.mode = mode
     }
 
     static func ==(lhs: QuickReplySetupScreenComponent, rhs: QuickReplySetupScreenComponent) -> Bool {
@@ -516,6 +520,13 @@ final class QuickReplySetupScreenComponent: Component {
                 return
             }
             
+            if case let .select(completion) = component.mode {
+                if let shortcutId {
+                    completion(shortcutId)
+                }
+                return
+            }
+            
             if let shortcut {
                 let contents = AutomaticBusinessMessageSetupChatContents(
                     context: component.context,
@@ -635,7 +646,7 @@ final class QuickReplySetupScreenComponent: Component {
             var items: [ActionSheetItem] = []
             
             //TODO:localize
-            items.append(ActionSheetButtonItem(title: ids.count == 1 ? "Delete Shortcut" : "Delete Shortcuts", color: .destructive, action: { [weak self, weak actionSheet] in
+            items.append(ActionSheetButtonItem(title: ids.count == 1 ? "Delete Quick Reply" : "Delete Quick Replies", color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 guard let self, let component = self.component else {
                     return
@@ -667,6 +678,7 @@ final class QuickReplySetupScreenComponent: Component {
             size: CGSize,
             insets: UIEdgeInsets,
             statusBarHeight: CGFloat,
+            isModal: Bool,
             transition: Transition,
             deferScrollApplication: Bool
         ) -> CGFloat {
@@ -706,14 +718,31 @@ final class QuickReplySetupScreenComponent: Component {
                 titleText = "Quick Replies"
             }
             
+            let closeTitle: String
+            switch component.mode {
+            case .manage:
+                closeTitle = strings.Common_Close
+            case .select:
+                closeTitle = strings.Common_Cancel
+            }
             let headerContent: ChatListHeaderComponent.Content? = ChatListHeaderComponent.Content(
                 title: titleText,
                 navigationBackTitle: nil,
                 titleComponent: nil,
                 chatListTitle: nil,
-                leftButton: nil,
+                leftButton: isModal ? AnyComponentWithIdentity(id: "close", component: AnyComponent(NavigationButtonComponent(
+                    content: .text(title: closeTitle, isBold: false),
+                    pressed: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        if self.attemptNavigation(complete: {}) {
+                            self.environment?.controller()?.dismiss()
+                        }
+                    }
+                ))) : nil,
                 rightButtons: rightButtons,
-                backTitle: "Back",
+                backTitle: isModal ? nil : "Back",
                 backPressed: { [weak self] in
                     guard let self else {
                         return
@@ -896,6 +925,19 @@ final class QuickReplySetupScreenComponent: Component {
                 }
             }
             
+            var isModal = false
+            if let controller = environment.controller(), controller.navigationPresentation == .modal {
+                isModal = true
+            }
+            if case .select = component.mode {
+                isModal = true
+            }
+            
+            var statusBarHeight = environment.statusBarHeight
+            if isModal {
+                statusBarHeight = max(statusBarHeight, 1.0)
+            }
+            
             var listBottomInset = environment.safeInsets.bottom
             let navigationHeight = self.updateNavigationBar(
                 component: component,
@@ -903,7 +945,8 @@ final class QuickReplySetupScreenComponent: Component {
                 strings: environment.strings,
                 size: availableSize,
                 insets: environment.safeInsets,
-                statusBarHeight: environment.statusBarHeight,
+                statusBarHeight: statusBarHeight,
+                isModal: isModal,
                 transition: transition,
                 deferScrollApplication: true
             )
@@ -1013,7 +1056,12 @@ final class QuickReplySetupScreenComponent: Component {
             
             var entries: [ContentEntry] = []
             if let shortcutMessageList = self.shortcutMessageList, let accountPeer = self.accountPeer {
-                entries.append(.add)
+                switch component.mode {
+                case .manage:
+                    entries.append(.add)
+                case .select:
+                    break
+                }
                 for item in shortcutMessageList.items {
                     entries.append(.item(item: item, accountPeer: accountPeer, sortIndex: entries.count, isEditing: self.isEditing, isSelected: self.selectedIds.contains(item.id)))
                 }
@@ -1046,7 +1094,7 @@ final class QuickReplySetupScreenComponent: Component {
     }
 }
 
-public final class QuickReplySetupScreen: ViewControllerComponentContainer {
+public final class QuickReplySetupScreen: ViewControllerComponentContainer, AttachmentContainable {
     public final class InitialData: QuickReplySetupScreenInitialData {
         let accountPeer: EnginePeer?
         let shortcutMessageList: ShortcutMessageList
@@ -1060,14 +1108,36 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer {
         }
     }
     
+    public enum Mode {
+        case manage
+        case select(completion: (Int32) -> Void)
+    }
+    
     private let context: AccountContext
     
-    public init(context: AccountContext, initialData: InitialData) {
+    public var requestAttachmentMenuExpansion: () -> Void = {
+    }
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in
+    }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in
+    }
+    public var cancelPanGesture: () -> Void = {
+    }
+    public var isContainerPanning: () -> Bool = {
+        return false
+    }
+    public var isContainerExpanded: () -> Bool = {
+        return false
+    }
+    public var mediaPickerContext: AttachmentMediaPickerContext?
+    
+    public init(context: AccountContext, initialData: InitialData, mode: Mode) {
         self.context = context
         
         super.init(context: context, component: QuickReplySetupScreenComponent(
             context: context,
-            initialData: initialData
+            initialData: initialData,
+            mode: mode
         ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)
         
         self.scrollToTop = { [weak self] in
@@ -1115,5 +1185,22 @@ public final class QuickReplySetupScreen: ViewControllerComponentContainer {
                 shortcutMessageList: shortcutMessageList
             )
         }
+    }
+    
+    public func isContainerPanningUpdated(_ panning: Bool) {
+    }
+    
+    public func resetForReuse() {
+    }
+    
+    public func prepareForReuse() {
+    }
+    
+    public func requestDismiss(completion: @escaping () -> Void) {
+        completion()
+    }
+    
+    public func shouldDismissImmediately() -> Bool {
+        return true
     }
 }

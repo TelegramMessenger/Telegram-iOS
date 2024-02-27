@@ -13,8 +13,8 @@ final class BadgeStarsView: UIView, PhoneDemoDecorationView {
     override init(frame: CGRect) {
         self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
         self.sceneView.backgroundColor = .clear
-        if let url = getAppBundle().url(forResource: "badge", withExtension: "scn") {
-            self.sceneView.scene = try? SCNScene(url: url, options: nil)
+        if let scene = loadCompressedScene(name: "badge", version: 1) {
+            self.sceneView.scene = scene
         }
         self.sceneView.isUserInteractionEnabled = false
         self.sceneView.preferredFramesPerSecond = 60
@@ -67,8 +67,8 @@ final class EmojiStarsView: UIView, PhoneDemoDecorationView {
     override init(frame: CGRect) {
         self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
         self.sceneView.backgroundColor = .clear
-        if let url = getAppBundle().url(forResource: "emoji", withExtension: "scn") {
-            self.sceneView.scene = try? SCNScene(url: url, options: nil)
+        if let scene = loadCompressedScene(name: "emoji", version: 1) {
+            self.sceneView.scene = scene
         }
         self.sceneView.isUserInteractionEnabled = false
         self.sceneView.preferredFramesPerSecond = 60
@@ -121,8 +121,8 @@ final class TagStarsView: UIView, PhoneDemoDecorationView {
     override init(frame: CGRect) {
         self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
         self.sceneView.backgroundColor = .clear
-        if let url = getAppBundle().url(forResource: "tag", withExtension: "scn") {
-            self.sceneView.scene = try? SCNScene(url: url, options: nil)
+        if let scene = loadCompressedScene(name: "tag", version: 1) {
+            self.sceneView.scene = scene
         }
         self.sceneView.isUserInteractionEnabled = false
         self.sceneView.preferredFramesPerSecond = 60

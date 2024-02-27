@@ -990,7 +990,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 }
                 
                 var selectedMedia: EngineMedia
-                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, !slice.additionalPeerData.preferHighQualityStories {
+                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
                     selectedMedia = alternativeMedia
                 } else {
                     selectedMedia = item.media
@@ -1642,7 +1642,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                             }
                             
                             var selectedMedia: EngineMedia
-                            if let alternativeMedia = item.alternativeMedia, !preferHighQualityStories {
+                            if let alternativeMedia = item.alternativeMedia, (!preferHighQualityStories && !item.isMy) {
                                 selectedMedia = alternativeMedia
                             } else {
                                 selectedMedia = item.media
@@ -2880,7 +2880,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                 }
                 
                 var selectedMedia: EngineMedia
-                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, !slice.additionalPeerData.preferHighQualityStories {
+                if let slice = stateValue.slice, let alternativeMedia = item.alternativeMedia, (!slice.additionalPeerData.preferHighQualityStories && !item.isMy) {
                     selectedMedia = alternativeMedia
                 } else {
                     selectedMedia = item.media

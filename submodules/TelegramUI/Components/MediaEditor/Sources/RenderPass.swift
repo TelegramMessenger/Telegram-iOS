@@ -165,6 +165,7 @@ final class OutputRenderPass: DefaultRenderPass {
             renderPassDescriptor.colorAttachments[0].texture = (drawable as? CAMetalDrawable)?.texture
             renderPassDescriptor.colorAttachments[0].loadAction = .clear
             renderPassDescriptor.colorAttachments[0].storeAction = .store
+            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
             
             let drawableSize = renderTarget.drawableSize
             

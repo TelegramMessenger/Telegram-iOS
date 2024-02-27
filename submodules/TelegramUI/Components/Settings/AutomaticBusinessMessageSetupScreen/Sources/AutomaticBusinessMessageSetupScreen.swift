@@ -46,13 +46,16 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let initialData: AutomaticBusinessMessageSetupScreen.InitialData
     let mode: AutomaticBusinessMessageSetupScreen.Mode
 
     init(
         context: AccountContext,
+        initialData: AutomaticBusinessMessageSetupScreen.InitialData,
         mode: AutomaticBusinessMessageSetupScreen.Mode
     ) {
         self.context = context
+        self.initialData = initialData
         self.mode = mode
     }
 
@@ -130,7 +133,8 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         
         private var isOn: Bool = false
         private var accountPeer: EnginePeer?
-        private var messages: [EngineMessage] = []
+        private var currentShortcut: ShortcutMessageList.Item?
+        private var currentShortcutDisposable: Disposable?
         
         private var schedule: Schedule = .always
         private var customScheduleStart: Date?
@@ -143,8 +147,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         )
         
         private var replyToMessages: Bool = true
-        
-        private var messagesDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -172,7 +174,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         }
         
         deinit {
-            self.messagesDisposable?.dispose()
+            self.currentShortcutDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -350,10 +352,19 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             guard let component = self.component else {
                 return
             }
+            
+            let shortcutName: String
+            switch component.mode {
+            case .greeting:
+                shortcutName = "hello"
+            case .away:
+                shortcutName = "away"
+            }
+            
             let contents = AutomaticBusinessMessageSetupChatContents(
                 context: component.context,
-                kind: component.mode == .away ? .awayMessageInput : .greetingMessageInput,
-                shortcutId: nil
+                kind: .quickReplyMessageInput(shortcut: shortcutName),
+                shortcutId: self.currentShortcut?.id
             )
             let chatController = component.context.sharedContext.makeChatController(
                 context: component.context,
@@ -364,7 +375,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             )
             chatController.navigationPresentation = .modal
             self.environment?.controller()?.push(chatController)
-            self.messagesDisposable?.dispose()
         }
         
         private func openCustomScheduleDateSetup(isStartTime: Bool, isDate: Bool) {
@@ -459,14 +469,27 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             }
             
             if self.component == nil {
-                let _ = (component.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
-                )
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                self.accountPeer = component.initialData.accountPeer
+                
+                let shortcutName: String
+                switch component.mode {
+                case .greeting:
+                    shortcutName = "hello"
+                case .away:
+                    shortcutName = "away"
+                }
+                self.currentShortcut = component.initialData.shortcutMessageList.items.first(where: { $0.shortcut == shortcutName })
+                
+                self.currentShortcutDisposable = (component.context.engine.accountData.shortcutMessageList()
+                |> deliverOnMainQueue).start(next: { [weak self] shortcutMessageList in
                     guard let self else {
                         return
                     }
-                    self.accountPeer = peer
+                    let shortcut = shortcutMessageList.items.first(where: { $0.shortcut == shortcutName })
+                    if shortcut != self.currentShortcut {
+                        self.currentShortcut = shortcut
+                        self.state?.updated(transition: .immediate)
+                    }
                 })
             }
             
@@ -632,15 +655,15 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             
             //TODO:localize
             var messagesSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            if let topMessage = self.messages.first {
+            if let currentShortcut = self.currentShortcut {
                 if let accountPeer = self.accountPeer {
                     messagesSectionItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(GreetingMessageListItemComponent(
                         context: component.context,
                         theme: environment.theme,
                         strings: environment.strings,
                         accountPeer: accountPeer,
-                        message: topMessage,
-                        count: self.messages.count,
+                        message: currentShortcut.topMessage,
+                        count: currentShortcut.totalCount,
                         action: { [weak self] in
                             guard let self else {
                                 return
@@ -681,7 +704,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: component.mode == .greeting ? (self.messages.count > 1 ? "GREETING MESSAGES" : "GREETING MESSAGE") : (self.messages.count > 1 ? "AWAY MESSAGES" : "AWAY MESSAGE"),
+                            string: component.mode == .greeting ? "GREETING MESSAGE" : "AWAY MESSAGE",
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1244,6 +1267,19 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
 }
 
 public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentContainer {
+    public final class InitialData: AutomaticBusinessMessageSetupScreenInitialData {
+        let accountPeer: EnginePeer?
+        let shortcutMessageList: ShortcutMessageList
+        
+        init(
+            accountPeer: EnginePeer?,
+            shortcutMessageList: ShortcutMessageList
+        ) {
+            self.accountPeer = accountPeer
+            self.shortcutMessageList = shortcutMessageList
+        }
+    }
+    
     public enum Mode {
         case greeting
         case away
@@ -1251,11 +1287,12 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
     
     private let context: AccountContext
     
-    public init(context: AccountContext, mode: Mode) {
+    public init(context: AccountContext, initialData: InitialData, mode: Mode) {
         self.context = context
         
         super.init(context: context, component: AutomaticBusinessMessageSetupScreenComponent(
             context: context,
+            initialData: initialData,
             mode: mode
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
@@ -1292,5 +1329,21 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public static func initialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> {
+        return combineLatest(
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+            ),
+            context.engine.accountData.shortcutMessageList()
+            |> take(1)
+        )
+        |> map { accountPeer, shortcutMessageList -> AutomaticBusinessMessageSetupScreenInitialData in
+            return InitialData(
+                accountPeer: accountPeer,
+                shortcutMessageList: shortcutMessageList
+            )
+        }
     }
 }

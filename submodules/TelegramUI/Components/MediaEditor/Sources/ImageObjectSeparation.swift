@@ -8,7 +8,7 @@ import VideoToolbox
 
 private let queue = Queue()
 
-public func cutoutStickerImage(from image: UIImage) -> Signal<UIImage?, NoError> {
+public func cutoutStickerImage(from image: UIImage, onlyCheck: Bool = false) -> Signal<UIImage?, NoError> {
     if #available(iOS 17.0, *) {
         guard let cgImage = image.cgImage else {
             return .single(nil)
@@ -23,21 +23,26 @@ public func cutoutStickerImage(from image: UIImage) -> Signal<UIImage?, NoError>
                     subscriber.putCompletion()
                     return
                 }
-                let instances = instances(atPoint: nil, inObservation: result)
-                if let mask = try? result.generateScaledMaskForImage(forInstances: instances, from: handler) {
-                    let filter = CIFilter.blendWithMask()
-                    filter.inputImage = inputImage
-                    filter.backgroundImage = CIImage(color: .clear)
-                    filter.maskImage = CIImage(cvPixelBuffer: mask)
-                    if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
-                        let image = UIImage(cgImage: cgImage)
-                        subscriber.putNext(image)
-                        subscriber.putCompletion()
-                        return
+                if onlyCheck {
+                    subscriber.putNext(UIImage())
+                    subscriber.putCompletion()
+                } else {
+                    let instances = instances(atPoint: nil, inObservation: result)
+                    if let mask = try? result.generateScaledMaskForImage(forInstances: instances, from: handler) {
+                        let filter = CIFilter.blendWithMask()
+                        filter.inputImage = inputImage
+                        filter.backgroundImage = CIImage(color: .clear)
+                        filter.maskImage = CIImage(cvPixelBuffer: mask)
+                        if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
+                            let image = UIImage(cgImage: cgImage)
+                            subscriber.putNext(image)
+                            subscriber.putCompletion()
+                            return
+                        }
                     }
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
                 }
-                subscriber.putNext(nil)
-                subscriber.putCompletion()
             }
             try? handler.perform([request])
             return ActionDisposable {

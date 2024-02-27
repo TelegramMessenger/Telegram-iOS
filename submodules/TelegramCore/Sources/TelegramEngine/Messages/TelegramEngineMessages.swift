@@ -1191,7 +1191,7 @@ public extension TelegramEngine {
                         }
                         
                         var selectedMedia: EngineMedia
-                        if let alternativeMedia = itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init), !preferHighQuality {
+                        if let alternativeMedia = itemAndPeer.item.alternativeMedia.flatMap(EngineMedia.init), (!preferHighQuality && !itemAndPeer.item.isMy) {
                             selectedMedia = alternativeMedia
                         } else {
                             selectedMedia = EngineMedia(media)

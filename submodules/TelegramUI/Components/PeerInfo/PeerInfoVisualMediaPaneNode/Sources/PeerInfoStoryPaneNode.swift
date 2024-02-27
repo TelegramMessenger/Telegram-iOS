@@ -948,6 +948,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
     }
     
+    public var isEmptyUpdated: (Bool) -> Void = { _ in }
+    
     public private(set) var isSelectionModeActive: Bool
     
     private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData)?
@@ -985,6 +987,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
     public var emptyAction: (() -> Void)?
+    public var additionalEmptyAction: (() -> Void)?
     
     public var ensureRectVisible: ((UIView, CGRect) -> Void)?
 
@@ -1729,6 +1732,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     
     private func updateHistory(items: SparseItemGrid.Items, synchronous: Bool, reloadAtTop: Bool) {
         self.items = items
+        self.isEmptyUpdated(self.isEmpty)
 
         if let (size, topInset, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, navigationHeight, presentationData) = self.currentParams {
             var gridSnapshot: UIView?
@@ -2027,14 +2031,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     context: self.context,
                     theme: presentationData.theme,
                     animationName: "StoryListEmpty",
-                    title: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Title : presentationData.strings.StoryList_SavedEmptyState_Title,
-                    text: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Text : presentationData.strings.StoryList_SavedEmptyState_Text,
-                    actionTitle: self.isArchive ? nil : presentationData.strings.StoryList_SavedEmptyAction,
+                    title: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Title : presentationData.strings.StoryList_SavedEmptyPosts_Title,
+                    text: self.isArchive ? presentationData.strings.StoryList_ArchivedEmptyState_Text : presentationData.strings.StoryList_SavedEmptyPosts_Text,
+                    actionTitle: self.isArchive ? nil : presentationData.strings.StoryList_SavedAddAction,
                     action: { [weak self] in
                         guard let self else {
                             return
                         }
                         self.emptyAction?()
+                    },
+                    additionalActionTitle: self.isArchive ? nil : presentationData.strings.StoryList_SavedEmptyAction,
+                    additionalAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.additionalEmptyAction?()
                     }
                 )),
                 environment: {},

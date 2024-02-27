@@ -11,8 +11,9 @@ import TelegramCore
 import ComponentFlow
 import MultilineTextComponent
 import BundleIconComponent
+import PlainButtonComponent
 
-private func dayBusinessHoursText(_ day: TelegramBusinessHours.WeekDay) -> String {
+private func dayBusinessHoursText(_ day: TelegramBusinessHours.WeekDay, offsetMinutes: Int) -> String {
     var businessHoursText: String = ""
     switch day {
     case .open:
@@ -26,6 +27,8 @@ private func dayBusinessHoursText(_ day: TelegramBusinessHours.WeekDay) -> Strin
         
         var resultText: String = ""
         for range in intervals {
+            let range = TelegramBusinessHours.WorkingTimeInterval(startMinute: range.startMinute + offsetMinutes, endMinute: range.endMinute + offsetMinutes)
+            
             if !resultText.isEmpty {
                 resultText.append("\n")
             }
@@ -47,13 +50,13 @@ final class PeerInfoScreenBusinessHoursItem: PeerInfoScreenItem {
     let id: AnyHashable
     let label: String
     let businessHours: TelegramBusinessHours
-    let requestLayout: () -> Void
+    let requestLayout: (Bool) -> Void
     
     init(
         id: AnyHashable,
         label: String,
         businessHours: TelegramBusinessHours,
-        requestLayout: @escaping () -> Void
+        requestLayout: @escaping (Bool) -> Void
     ) {
         self.id = id
         self.label = label
@@ -79,6 +82,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
     private let labelNode: ImmediateTextNode
     private let currentStatusText = ComponentView<Empty>()
     private let currentDayText = ComponentView<Empty>()
+    private var timezoneSwitchButton: ComponentView<Empty>?
     private var dayTitles: [ComponentView<Empty>] = []
     private var dayValues: [ComponentView<Empty>] = []
     private let arrowIcon = ComponentView<Empty>()
@@ -90,6 +94,8 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
     private var item: PeerInfoScreenBusinessHoursItem?
     private var theme: PresentationTheme?
     
+    private var currentTimezone: TimeZone
+    private var displayLocalTimezone: Bool = false
     private var cachedDays: [TelegramBusinessHours.WeekDay] = []
     private var cachedWeekMinuteSet = IndexSet()
     
@@ -114,6 +120,8 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         self.bottomSeparatorNode.isLayerBacked = true
         
         self.activateArea = AccessibilityAreaNode()
+        
+        self.currentTimezone = TimeZone.current
         
         super.init()
         
@@ -179,7 +187,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                 switch gesture {
                 case .tap, .longTap:
                     self.isExpanded = !self.isExpanded
-                    self.item?.requestLayout()
+                    self.item?.requestLayout(true)
                 default:
                     break
                 }
@@ -255,11 +263,16 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         let currentHour = currentCalendar.component(.hour, from: currentDate)
         let currentWeekMinute = currentDayIndex * 24 * 60 + currentHour * 60 + currentMinute
         
+        var timezoneOffsetMinutes: Int = 0
+        if self.displayLocalTimezone {
+            timezoneOffsetMinutes = (self.currentTimezone.secondsFromGMT() - currentCalendar.timeZone.secondsFromGMT()) / 60
+        }
+        
         let isOpen = self.cachedWeekMinuteSet.contains(currentWeekMinute)
         //TODO:localize
         let openStatusText = isOpen ? "Open" : "Closed"
         
-        var currentDayStatusText = currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(businessDays[currentDayIndex]) : " "
+        var currentDayStatusText = currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(businessDays[currentDayIndex], offsetMinutes: timezoneOffsetMinutes) : " "
         
         if !isOpen {
             for range in self.cachedWeekMinuteSet.rangeView {
@@ -325,6 +338,61 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             environment: {},
             containerSize: CGSize(width: width - sideInset - dayRightInset, height: 100.0)
         )
+        
+        var timezoneSwitchButtonSize: CGSize?
+        if item.businessHours.timezoneId != self.currentTimezone.identifier {
+            let timezoneSwitchButton: ComponentView<Empty>
+            if let current = self.timezoneSwitchButton {
+                timezoneSwitchButton = current
+            } else {
+                timezoneSwitchButton = ComponentView()
+                self.timezoneSwitchButton = timezoneSwitchButton
+            }
+            let timezoneSwitchTitle: String
+            //TODO:localize
+            if self.displayLocalTimezone {
+                timezoneSwitchTitle = "my time"
+            } else {
+                timezoneSwitchTitle = "local time"
+            }
+            timezoneSwitchButtonSize = timezoneSwitchButton.update(
+                transition: .immediate,
+                component: AnyComponent(PlainButtonComponent(
+                    content: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: timezoneSwitchTitle, font: Font.regular(12.0), textColor: presentationData.theme.list.itemAccentColor))
+                    )),
+                    background: AnyComponent(RoundedRectangle(
+                        color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.1),
+                        cornerRadius: nil
+                    )),
+                    effectAlignment: .center,
+                    contentInsets: UIEdgeInsets(top: 1.0, left: 7.0, bottom: 2.0, right: 7.0),
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.displayLocalTimezone = !self.displayLocalTimezone
+                        self.item?.requestLayout(false)
+                    },
+                    animateAlpha: true,
+                    animateScale: false,
+                    animateContents: false
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+        } else {
+            if let timezoneSwitchButton = self.timezoneSwitchButton {
+                self.timezoneSwitchButton = nil
+                timezoneSwitchButton.view?.removeFromSuperview()
+            }
+        }
+        
+        let timezoneSwitchButtonSpacing: CGFloat = 3.0
+        if timezoneSwitchButtonSize != nil {
+            topOffset -= 20.0
+        }
+        
         let currentDayTextFrame = CGRect(origin: CGPoint(x: width - dayRightInset - currentDayTextSize.width, y: topOffset), size: currentDayTextSize)
         if let currentDayTextView = self.currentDayText.view {
             if currentDayTextView.superview == nil {
@@ -336,6 +404,20 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         }
         
         topOffset += max(currentStatusTextSize.height, currentDayTextSize.height)
+        
+        if let timezoneSwitchButtonView = self.timezoneSwitchButton?.view, let timezoneSwitchButtonSize {
+            topOffset += timezoneSwitchButtonSpacing
+            
+            var timezoneSwitchButtonTransition = transition
+            if timezoneSwitchButtonView.superview == nil {
+                timezoneSwitchButtonTransition = .immediate
+                self.contextSourceNode.contentNode.view.addSubview(timezoneSwitchButtonView)
+            }
+            let timezoneSwitchButtonFrame = CGRect(origin: CGPoint(x: width - dayRightInset - timezoneSwitchButtonSize.width, y: topOffset), size: timezoneSwitchButtonSize)
+            timezoneSwitchButtonTransition.updateFrame(view: timezoneSwitchButtonView, frame: timezoneSwitchButtonFrame)
+            
+            topOffset += timezoneSwitchButtonSize.height
+        }
         
         let daySpacing: CGFloat = 15.0
         
@@ -383,7 +465,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                 dayTitleValue = " "
             }
             
-            let businessHoursText = dayBusinessHoursText(businessDays[i])
+            let businessHoursText = dayBusinessHoursText(businessDays[i], offsetMinutes: timezoneOffsetMinutes)
             
             let dayTitleSize = dayTitle.update(
                 transition: .immediate,

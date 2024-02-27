@@ -1125,7 +1125,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 chatFilterTag = value
             }
             
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
+            var standalone = false
+            if case .customChatContents = strongSelf.chatLocation {
+                standalone = true
+            }
+            
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -4566,6 +4571,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.push(boostController)
             })
+        }, openStickerEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openStickerEditor()
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -9519,7 +9529,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
-                self.push(self.context.sharedContext.makeQuickReplySetupScreen(context: self.context, initialData: initialData))
+                let controller = self.context.sharedContext.makeQuickReplySetupScreen(context: self.context, initialData: initialData)
+                controller.navigationPresentation = .modal
+                self.push(controller)
             })
         }, sendBotStart: { [weak self] payload in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
@@ -9542,9 +9554,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                return
-            }
             
             strongSelf.dismissAllTooltips()
             
@@ -9554,32 +9563,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             var bannedMediaInput = false
-            if let channel = peer as? TelegramChannel {
-                if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
-                    bannedMediaInput = true
-                } else if channel.hasBannedPermission(.banSendVoice) != nil {
-                    if !isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
-                        return
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if let channel = peer as? TelegramChannel {
+                    if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                        bannedMediaInput = true
+                    } else if channel.hasBannedPermission(.banSendVoice) != nil {
+                        if !isVideo {
+                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
+                            return
+                        }
+                    } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                        if isVideo {
+                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
+                            return
+                        }
                     }
-                } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
-                    if isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
-                        return
-                    }
-                }
-            } else if let group = peer as? TelegramGroup {
-                if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
-                    bannedMediaInput = true
-                } else if group.hasBannedPermission(.banSendVoice) {
-                    if !isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
-                        return
-                    }
-                } else if group.hasBannedPermission(.banSendInstantVideos) {
-                    if isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
-                        return
+                } else if let group = peer as? TelegramGroup {
+                    if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
+                        bannedMediaInput = true
+                    } else if group.hasBannedPermission(.banSendVoice) {
+                        if !isVideo {
+                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
+                            return
+                        }
+                    } else if group.hasBannedPermission(.banSendInstantVideos) {
+                        if isVideo {
+                            strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
+                            return
+                        }
                     }
                 }
             }
@@ -16835,6 +16846,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let controller = MediaEditorScreen(
             context: context,
+            mode: .storyEditor,
             subject: subject,
             transitionIn: nil,
             transitionOut: { _, _ in

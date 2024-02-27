@@ -22,6 +22,32 @@ import LocationUI
 import TelegramStringFormatting
 import TimezoneSelectionScreen
 
+private func wrappedMinuteRange(range: Range<Int>, dayIndexOffset: Int = 0) -> IndexSet {
+    let mappedRange = (range.lowerBound + dayIndexOffset * 24 * 60) ..< (range.upperBound + dayIndexOffset * 24 * 60)
+    
+    var result = IndexSet()
+    if mappedRange.upperBound > 7 * 24 * 60 {
+        result.insert(integersIn: mappedRange.lowerBound ..< 7 * 24 * 60)
+        result.insert(integersIn: 0 ..< (mappedRange.upperBound - 7 * 24 * 60))
+    } else {
+        result.insert(integersIn: mappedRange)
+    }
+    return result
+}
+
+private func getDayRanges(days: [BusinessHoursSetupScreenComponent.Day], index: Int) -> [BusinessHoursSetupScreenComponent.WorkingHourRange] {
+    let day = days[index]
+    if let ranges = day.ranges {
+        if ranges.isEmpty {
+            return [BusinessHoursSetupScreenComponent.WorkingHourRange(id: 0, startMinute: 0, endMinute: 24 * 60)]
+        } else {
+            return ranges
+        }
+    } else {
+        return []
+    }
+}
+
 final class BusinessHoursSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -68,6 +94,16 @@ final class BusinessHoursSetupScreenComponent: Component {
         }
     }
     
+    struct DayRangeIndex: Hashable {
+        var day: Int
+        var id: Int
+        
+        init(day: Int, id: Int) {
+            self.day = day
+            self.id = id
+        }
+    }
+    
     struct Day: Equatable {
         var ranges: [WorkingHourRange]?
         
@@ -83,7 +119,7 @@ final class BusinessHoursSetupScreenComponent: Component {
         
         var timezoneId: String
         private(set) var days: [Day]
-        private(set) var intersectingDays = Set<Int>()
+        private(set) var intersectingRanges = Set<DayRangeIndex>()
         
         init(timezoneId: String, days: [Day]) {
             self.timezoneId = timezoneId
@@ -111,13 +147,45 @@ final class BusinessHoursSetupScreenComponent: Component {
                 }
             }
             
+            if let value = try? self.asBusinessHours() {
+                if value != businessHours {
+                    assertionFailure("Inconsistent representation")
+                }
+            }
+            
             self.validate()
         }
         
         mutating func validate() {
-            self.intersectingDays.removeAll()
+            self.intersectingRanges.removeAll()
             
-            
+            for dayIndex in 0 ..< self.days.count {
+                var otherDaysMinutes = IndexSet()
+                inner: for otherDayIndex in 0 ..< self.days.count {
+                    if dayIndex == otherDayIndex {
+                        continue inner
+                    }
+                    for range in getDayRanges(days: self.days, index: otherDayIndex) {
+                        otherDaysMinutes.formUnion(wrappedMinuteRange(range: range.startMinute ..< range.endMinute, dayIndexOffset: otherDayIndex))
+                    }
+                }
+                
+                let dayRanges = getDayRanges(days: self.days, index: dayIndex)
+                for i in 0 ..< dayRanges.count {
+                    var currentDayOtherMinutes = IndexSet()
+                    inner: for j in 0 ..< dayRanges.count {
+                        if i == j {
+                            continue inner
+                        }
+                        currentDayOtherMinutes.formUnion(wrappedMinuteRange(range: dayRanges[j].startMinute ..< dayRanges[j].endMinute, dayIndexOffset: dayIndex))
+                    }
+                    
+                    let currentDayIndices = wrappedMinuteRange(range: dayRanges[i].startMinute ..< dayRanges[i].endMinute, dayIndexOffset: dayIndex)
+                    if !otherDaysMinutes.intersection(currentDayIndices).isEmpty || !currentDayOtherMinutes.intersection(currentDayIndices).isEmpty {
+                        self.intersectingRanges.insert(DayRangeIndex(day: dayIndex, id: dayRanges[i].id))
+                    }
+                }
+            }
         }
         
         mutating func update(days: [Day]) {
@@ -140,13 +208,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                 for range in effectiveRanges {
                     let minuteRange: Range<Int> = (dayStartMinute + range.startMinute) ..< (dayStartMinute + range.endMinute)
                     
-                    var wrappedMinutes = IndexSet()
-                    if minuteRange.upperBound > 7 * 24 * 60 {
-                        wrappedMinutes.insert(integersIn: minuteRange.lowerBound ..< 7 * 24 * 60)
-                        wrappedMinutes.insert(integersIn: 0 ..< (7 * 24 * 60 - minuteRange.upperBound))
-                    } else {
-                        wrappedMinutes.insert(integersIn: minuteRange)
-                    }
+                    let wrappedMinutes = wrappedMinuteRange(range: minuteRange)
                     
                     if !filledMinutes.intersection(wrappedMinutes).isEmpty {
                         throw ValidationError.intersectingRanges
@@ -156,7 +218,20 @@ final class BusinessHoursSetupScreenComponent: Component {
                 }
             }
             
-            return TelegramBusinessHours(timezoneId: self.timezoneId, weeklyTimeIntervals: mappedIntervals)
+            var mergedIntervals: [TelegramBusinessHours.WorkingTimeInterval] = []
+            for interval in mappedIntervals {
+                if mergedIntervals.isEmpty {
+                    mergedIntervals.append(interval)
+                } else {
+                    if mergedIntervals[mergedIntervals.count - 1].endMinute >= interval.startMinute {
+                        mergedIntervals[mergedIntervals.count - 1] = TelegramBusinessHours.WorkingTimeInterval(startMinute: mergedIntervals[mergedIntervals.count - 1].startMinute, endMinute: interval.endMinute)
+                    } else {
+                        mergedIntervals.append(interval)
+                    }
+                }
+            }
+            
+            return TelegramBusinessHours(timezoneId: self.timezoneId, weeklyTimeIntervals: mergedIntervals)
         }
     }
     
@@ -231,7 +306,6 @@ final class BusinessHoursSetupScreenComponent: Component {
                     return true
                 } catch let error {
                     let _ = error
-                    //TODO:localize
                     
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                     //TODO:localize
@@ -359,7 +433,7 @@ final class BusinessHoursSetupScreenComponent: Component {
             
             let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let sectionSpacing: CGFloat = 32.0
+            let sectionSpacing: CGFloat = 30.0
             
             let _ = bottomContentInset
             let _ = sectionSpacing
@@ -370,14 +444,14 @@ final class BusinessHoursSetupScreenComponent: Component {
             
             let iconSize = self.icon.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "⏰", font: Font.semibold(90.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
-                    horizontalAlignment: .center
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "BusinessHoursEmoji"),
+                    loop: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 2.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 10.0), size: iconSize)
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -386,7 +460,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                 iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
             }
             
-            contentHeight += 129.0
+            contentHeight += 126.0
             
             //TODO:localize
             let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Turn this on to show your opening hours schedule to your customers.", attributes: MarkdownAttributes(
@@ -506,28 +580,42 @@ final class BusinessHoursSetupScreenComponent: Component {
                     title = " "
                 }
                 
-                let subtitle: String
+                let subtitle = NSMutableAttributedString()
+                
+                var invalidIndices: [Int] = []
+                let effectiveDayRanges = getDayRanges(days: self.daysState.days, index: dayIndex)
+                for range in effectiveDayRanges {
+                    if self.daysState.intersectingRanges.contains(DayRangeIndex(day: dayIndex, id: range.id)) {
+                        invalidIndices.append(range.id)
+                    }
+                }
+                
+                let subtitleFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0))
+                
                 if let ranges = self.daysState.days[dayIndex].ranges {
                     if ranges.isEmpty {
-                        subtitle = "Open 24 Hours"
+                        subtitle.append(NSAttributedString(string: "Open 24 Hours", font: subtitleFont, textColor: invalidIndices.contains(0) ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemAccentColor))
                     } else {
-                        var resultText: String = ""
-                        for range in ranges {
-                            if !resultText.isEmpty {
-                                resultText.append(", ")
-                            }
+                        for i in 0 ..< ranges.count {
+                            let range = ranges[i]
+                            
                             let startHours = clipMinutes(range.startMinute) / 60
                             let startMinutes = clipMinutes(range.startMinute) % 60
                             let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
                             let endHours = clipMinutes(range.endMinute) / 60
                             let endMinutes = clipMinutes(range.endMinute) % 60
                             let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
-                            resultText.append("\(startText)\u{00a0}- \(endText)")
+                            
+                            var rangeString = "\(startText)\u{00a0}- \(endText)"
+                            if i != ranges.count - 1 {
+                                rangeString.append(", ")
+                            }
+                            
+                            subtitle.append(NSAttributedString(string: rangeString, font: subtitleFont, textColor: invalidIndices.contains(range.id) ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemAccentColor))
                         }
-                        subtitle = resultText
                     }
                 } else {
-                    subtitle = "Closed"
+                    subtitle.append(NSAttributedString(string: "Closed", font: subtitleFont, textColor: environment.theme.list.itemAccentColor))
                 }
                 
                 daysSectionItems.append(AnyComponentWithIdentity(id: dayIndex, component: AnyComponent(ListActionItemComponent(
@@ -542,14 +630,11 @@ final class BusinessHoursSetupScreenComponent: Component {
                             maximumNumberOfLines: 1
                         ))),
                         AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(
-                                string: subtitle,
-                                font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0)),
-                                textColor: environment.theme.list.itemAccentColor
-                            )),
-                            maximumNumberOfLines: 5
+                            text: .plain(subtitle),
+                            maximumNumberOfLines: 20
                         )))
-                    ], alignment: .left, spacing: 2.0)),
+                    ], alignment: .left, spacing: 3.0)),
+                    contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 10.0, right: 0.0),
                     accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: day.ranges != nil, action: { [weak self] _ in
                         guard let self else {
                             return

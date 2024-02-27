@@ -876,7 +876,7 @@ public final class PendingMessageManager {
                     
                     var quickReplyShortcut: Api.InputQuickReplyShortcut?
                     if let quickReply {
-                        if let threadId = messages[0].0.threadId, !"".isEmpty {
+                        if let threadId = messages[0].0.threadId {
                             quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
                         } else {
                             quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
@@ -1008,7 +1008,7 @@ public final class PendingMessageManager {
                     
                     var quickReplyShortcut: Api.InputQuickReplyShortcut?
                     if let quickReply {
-                        if let threadId = messages[0].0.threadId, !"".isEmpty {
+                        if let threadId = messages[0].0.threadId {
                             quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
                         } else {
                             quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
@@ -1319,7 +1319,7 @@ public final class PendingMessageManager {
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
-                            if let threadId = message.threadId, !"".isEmpty {
+                            if let threadId = message.threadId {
                                 quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
                             } else {
                                 quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
@@ -1394,7 +1394,7 @@ public final class PendingMessageManager {
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
-                            if let threadId = message.threadId, !"".isEmpty {
+                            if let threadId = message.threadId {
                                 quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
                             } else {
                                 quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
@@ -1413,7 +1413,7 @@ public final class PendingMessageManager {
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
-                            if let threadId = message.threadId, !"".isEmpty {
+                            if let threadId = message.threadId {
                                 quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
                             } else {
                                 quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
@@ -1487,7 +1487,7 @@ public final class PendingMessageManager {
                     
                         var quickReplyShortcut: Api.InputQuickReplyShortcut?
                         if let quickReply {
-                            if let threadId = message.threadId, !"".isEmpty {
+                            if let threadId = message.threadId {
                                 quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
                             } else {
                                 quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)

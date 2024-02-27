@@ -5,6 +5,8 @@ import Display
 import AppBundle
 import LegacyComponents
 
+private let sceneVersion: Int = 1
+
 final class FasterStarsView: UIView, PhoneDemoDecorationView {
     private let sceneView: SCNView
     
@@ -13,8 +15,8 @@ final class FasterStarsView: UIView, PhoneDemoDecorationView {
     override init(frame: CGRect) {
         self.sceneView = SCNView(frame: CGRect(origin: .zero, size: frame.size))
         self.sceneView.backgroundColor = .clear
-        if let url = getAppBundle().url(forResource: "lightspeed", withExtension: "scn") {
-            self.sceneView.scene = try? SCNScene(url: url, options: nil)
+        if let scene = loadCompressedScene(name: "lightspeed", version: sceneVersion) {
+            self.sceneView.scene = scene
         }
         self.sceneView.isUserInteractionEnabled = false
         self.sceneView.preferredFramesPerSecond = 60

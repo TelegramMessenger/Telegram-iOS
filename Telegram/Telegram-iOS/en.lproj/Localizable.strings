@@ -11218,6 +11218,7 @@ Sorry for the inconvenience.";
 
 "GroupBoost.AdditionalFeatures" = "Additional Features";
 "GroupBoost.AdditionalFeaturesText" = "By gaining **boosts**, your group reaches higher levels and unlocks more features.";
+"ChannelBoost.AdditionalFeaturesText" = "By gaining **boosts**, your channel reaches higher levels and unlocks more features.";
 
 "Stats.Boosts.Group.NoBoostersYet" = "No users currently boost your group";
 "Stats.Boosts.Group.BoostersInfo" = "Your group is currently boosted by these members.";

@@ -16,6 +16,8 @@ public final class EmptyStateIndicatorComponent: Component {
     public let text: String
     public let actionTitle: String?
     public let action: () -> Void
+    public let additionalActionTitle: String?
+    public let additionalAction: () -> Void
     
     public init(
         context: AccountContext,
@@ -24,7 +26,9 @@ public final class EmptyStateIndicatorComponent: Component {
         title: String,
         text: String,
         actionTitle: String?,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        additionalActionTitle: String?,
+        additionalAction: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
@@ -33,6 +37,8 @@ public final class EmptyStateIndicatorComponent: Component {
         self.text = text
         self.actionTitle = actionTitle
         self.action = action
+        self.additionalActionTitle = additionalActionTitle
+        self.additionalAction = additionalAction
     }
 
     public static func ==(lhs: EmptyStateIndicatorComponent, rhs: EmptyStateIndicatorComponent) -> Bool {
@@ -54,6 +60,9 @@ public final class EmptyStateIndicatorComponent: Component {
         if lhs.actionTitle != rhs.actionTitle {
             return false
         }
+        if lhs.additionalActionTitle != rhs.additionalActionTitle {
+            return false
+        }
         return true
     }
 
@@ -65,6 +74,7 @@ public final class EmptyStateIndicatorComponent: Component {
         private let title = ComponentView<Empty>()
         private let text = ComponentView<Empty>()
         private var button: ComponentView<Empty>?
+        private var additionalButton: ComponentView<Empty>?
         
         override public init(frame: CGRect) {
             super.init(frame: frame)
@@ -139,7 +149,7 @@ public final class EmptyStateIndicatorComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 240.0, height: 50.0)
+                    containerSize: CGSize(width: 260.0, height: 50.0)
                 )
             } else {
                 if let button = self.button {
@@ -148,13 +158,51 @@ public final class EmptyStateIndicatorComponent: Component {
                 }
             }
             
+            var additionalButtonSize: CGSize?
+            if let additionalActionTitle = component.additionalActionTitle {
+                let additionalButton: ComponentView<Empty>
+                if let current = self.additionalButton {
+                    additionalButton = current
+                } else {
+                    additionalButton = ComponentView()
+                    self.additionalButton = additionalButton
+                }
+                
+                additionalButtonSize = additionalButton.update(
+                    transition: transition,
+                    component: AnyComponent(Button(
+                        content: AnyComponent(Text(
+                            text: additionalActionTitle, font:
+                                Font.regular(17.0),
+                            color: component.theme.list.itemAccentColor)
+                        ), 
+                        action: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.additionalAction()
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 262.0, height: 50.0)
+                )
+            } else {
+                if let additionalButton = self.additionalButton {
+                    self.additionalButton = nil
+                    additionalButton.view?.removeFromSuperview()
+                }
+            }
+            
             let animationSpacing: CGFloat = 11.0
             let titleSpacing: CGFloat = 17.0
-            let buttonSpacing: CGFloat = 17.0
+            let buttonSpacing: CGFloat = 21.0
             
             var totalHeight: CGFloat = animationSize.height + animationSpacing + titleSize.height + titleSpacing + textSize.height
             if let buttonSize {
                 totalHeight += buttonSpacing + buttonSize.height
+            }
+            if let additionalButtonSize {
+                totalHeight += buttonSpacing + additionalButtonSize.height
             }
             
             var contentY = floor((availableSize.height - totalHeight) * 0.5)
@@ -185,7 +233,14 @@ public final class EmptyStateIndicatorComponent: Component {
                     self.addSubview(buttonView)
                 }
                 transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - buttonSize.width) * 0.5), y: contentY), size: buttonSize))
-                contentY += buttonSize.height
+                contentY += buttonSize.height + buttonSpacing
+            }
+            if let additionalButtonSize, let additionalButtonView = self.additionalButton?.view {
+                if additionalButtonView.superview == nil {
+                    self.addSubview(additionalButtonView)
+                }
+                transition.setFrame(view: additionalButtonView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - additionalButtonSize.width) * 0.5), y: contentY), size: additionalButtonSize))
+                contentY += additionalButtonSize.height
             }
             
             return availableSize

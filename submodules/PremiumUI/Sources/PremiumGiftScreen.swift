@@ -533,6 +533,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .messagePrivacy
                         case .business:
                             demoSubject = .business
+                        default:
+                            demoSubject = .doubleLimits
                         }
                         
                         let buttonText: String

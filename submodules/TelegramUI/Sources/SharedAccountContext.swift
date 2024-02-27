@@ -1754,6 +1754,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
+        }, openStickerEditor: {
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1882,8 +1883,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return archiveSettingsController(context: context)
     }
     
-    public func makeFilterSettingsController(context: AccountContext, modal: Bool, dismissed: (() -> Void)?) -> ViewController {
-        return chatListFilterPresetListController(context: context, mode: modal ? .modal : .default, dismissed: dismissed)
+    public func makeFilterSettingsController(context: AccountContext, modal: Bool, scrollToTags: Bool, dismissed: (() -> Void)?) -> ViewController {
+        return chatListFilterPresetListController(context: context, mode: modal ? .modal : .default, scrollToTags: scrollToTags, dismissed: dismissed)
     }
     
     public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
@@ -1902,12 +1903,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return BusinessHoursSetupScreen(context: context, initialValue: initialValue, completion: completion)
     }
     
-    public func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, isAwayMode: Bool) -> ViewController {
-        return AutomaticBusinessMessageSetupScreen(context: context, mode: isAwayMode ? .away : .greeting)
+    public func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, initialData: AutomaticBusinessMessageSetupScreenInitialData, isAwayMode: Bool) -> ViewController {
+        return AutomaticBusinessMessageSetupScreen(context: context, initialData: initialData as! AutomaticBusinessMessageSetupScreen.InitialData, mode: isAwayMode ? .away : .greeting)
+    }
+    
+    public func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> {
+        return AutomaticBusinessMessageSetupScreen.initialData(context: context)
     }
     
     public func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController {
-        return QuickReplySetupScreen(context: context, initialData: initialData as! QuickReplySetupScreen.InitialData)
+        return QuickReplySetupScreen(context: context, initialData: initialData as! QuickReplySetupScreen.InitialData, mode: .manage)
     }
     
     public func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {
@@ -2040,6 +2045,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .lastSeen
         case .messagePrivacy:
             mappedSubject = .messagePrivacy
+        default:
+            mappedSubject = .doubleLimits
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }

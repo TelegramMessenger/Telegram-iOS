@@ -1166,8 +1166,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             if let businessHours = cachedData.businessHours {
                 //TODO:localize
-                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: {
-                    interaction.requestLayout(true)
+                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: { animated in
+                    interaction.requestLayout(animated)
                 }))
             }
             
@@ -3074,6 +3074,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
+        }, openStickerEditor: {   
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -8795,7 +8796,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })
         case .chatFolders:
-            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: false, dismissed: nil)
+            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: false, scrollToTags: false, dismissed: nil)
             push(controller)
         case .notificationsAndSounds:
             if let settings = self.data?.globalSettings {

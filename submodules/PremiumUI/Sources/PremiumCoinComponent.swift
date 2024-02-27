@@ -8,7 +8,7 @@ import GZip
 import AppBundle
 import LegacyComponents
 
-private let sceneVersion: Int = 1
+private let sceneVersion: Int = 2
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -223,24 +223,7 @@ class PremiumCoinComponent: Component {
         }
         
         private func setup() {
-            let resourceUrl: URL
-            if let url = getAppBundle().url(forResource: "coin", withExtension: "scn") {
-                resourceUrl = url
-            } else {
-                let fileName = "coin_\(sceneVersion).scn"
-                let tmpUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
-                if !FileManager.default.fileExists(atPath: tmpUrl.path) {
-                    guard let url = getAppBundle().url(forResource: "coin", withExtension: ""),
-                          let compressedData = try? Data(contentsOf: url),
-                          let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
-                        return
-                    }
-                    try? decompressedData.write(to: tmpUrl)
-                }
-                resourceUrl = tmpUrl
-            }
-            
-            guard let scene = try? SCNScene(url: resourceUrl, options: nil) else {
+            guard let scene = loadCompressedScene(name: "coin", version: sceneVersion) else {
                 return
             }
             
@@ -316,8 +299,8 @@ class PremiumCoinComponent: Component {
                 return
             }
 
-            let fromScale: Float = 0.85
-            let toScale: Float = 0.9
+            let fromScale: Float = 0.9
+            let toScale: Float = 1.0
             
             let animation = CABasicAnimation(keyPath: "scale")
             animation.duration = 2.0

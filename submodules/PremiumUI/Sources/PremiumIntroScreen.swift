@@ -439,6 +439,15 @@ public enum PremiumPerk: CaseIterable {
     case lastSeen
     case messagePrivacy
     case business
+    case folderTags
+    
+    case businessLocation
+    case businessHours
+    case businessGreetingMessage
+    case businessQuickReplies
+    case businessAwayMessage
+    case businessChatBots
+    
     
     public static var allCases: [PremiumPerk] {
         return [
@@ -520,6 +529,8 @@ public enum PremiumPerk: CaseIterable {
             return "message_privacy"
         case .business:
             return "business"
+        default:
+            return ""
         }
     }
     
@@ -567,6 +578,8 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_MessagePrivacy
         case .business:
             return strings.Premium_Business
+        default:
+            return ""
         }
     }
     
@@ -614,6 +627,8 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_MessagePrivacyInfo
         case .business:
             return strings.Premium_BusinessInfo
+        default:
+            return ""
         }
     }
     
@@ -661,6 +676,8 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/Perk/MessagePrivacy"
         case .business:
             return "Premium/Perk/Business"
+        default:
+            return ""
         }
     }
 }
@@ -1948,75 +1965,77 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         ))),
                         action: { [weak state] _ in
                             var demoSubject: PremiumDemoScreen.Subject
-                                switch perk {
-                                case .doubleLimits:
-                                    demoSubject = .doubleLimits
-                                case .moreUpload:
-                                    demoSubject = .moreUpload
-                                case .fasterDownload:
-                                    demoSubject = .fasterDownload
-                                case .voiceToText:
-                                    demoSubject = .voiceToText
-                                case .noAds:
-                                    demoSubject = .noAds
-                                case .uniqueReactions:
-                                    demoSubject = .uniqueReactions
-                                case .premiumStickers:
-                                    demoSubject = .premiumStickers
-                                case .advancedChatManagement:
-                                    demoSubject = .advancedChatManagement
-                                case .profileBadge:
-                                    demoSubject = .profileBadge
-                                case .animatedUserpics:
-                                    demoSubject = .animatedUserpics
-                                case .appIcons:
-                                    demoSubject = .appIcons
-                                case .animatedEmoji:
-                                    demoSubject = .animatedEmoji
-                                case .emojiStatus:
-                                    demoSubject = .emojiStatus
-                                case .translation:
-                                    demoSubject = .translation
-                                case .stories:
-                                    demoSubject = .stories
-                                case .colors:
-                                    demoSubject = .colors
-                                    let _ = ApplicationSpecificNotice.setDismissedPremiumColorsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
-                                case .wallpapers:
-                                    demoSubject = .wallpapers
-                                    let _ = ApplicationSpecificNotice.setDismissedPremiumWallpapersBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
-                                case .messageTags:
-                                    demoSubject = .messageTags
-                                    let _ = ApplicationSpecificNotice.setDismissedMessageTagsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
-                                case .lastSeen:
-                                    demoSubject = .lastSeen
-                                    let _ = ApplicationSpecificNotice.setDismissedLastSeenBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
-                                case .messagePrivacy:
-                                    demoSubject = .messagePrivacy
-                                    let _ = ApplicationSpecificNotice.setDismissedMessagePrivacyBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
-                                case .business:
-                                    demoSubject = .business
+                            switch perk {
+                            case .doubleLimits:
+                                demoSubject = .doubleLimits
+                            case .moreUpload:
+                                demoSubject = .moreUpload
+                            case .fasterDownload:
+                                demoSubject = .fasterDownload
+                            case .voiceToText:
+                                demoSubject = .voiceToText
+                            case .noAds:
+                                demoSubject = .noAds
+                            case .uniqueReactions:
+                                demoSubject = .uniqueReactions
+                            case .premiumStickers:
+                                demoSubject = .premiumStickers
+                            case .advancedChatManagement:
+                                demoSubject = .advancedChatManagement
+                            case .profileBadge:
+                                demoSubject = .profileBadge
+                            case .animatedUserpics:
+                                demoSubject = .animatedUserpics
+                            case .appIcons:
+                                demoSubject = .appIcons
+                            case .animatedEmoji:
+                                demoSubject = .animatedEmoji
+                            case .emojiStatus:
+                                demoSubject = .emojiStatus
+                            case .translation:
+                                demoSubject = .translation
+                            case .stories:
+                                demoSubject = .stories
+                            case .colors:
+                                demoSubject = .colors
+                                let _ = ApplicationSpecificNotice.setDismissedPremiumColorsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .wallpapers:
+                                demoSubject = .wallpapers
+                                let _ = ApplicationSpecificNotice.setDismissedPremiumWallpapersBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .messageTags:
+                                demoSubject = .messageTags
+                                let _ = ApplicationSpecificNotice.setDismissedMessageTagsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .lastSeen:
+                                demoSubject = .lastSeen
+                                let _ = ApplicationSpecificNotice.setDismissedLastSeenBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .messagePrivacy:
+                                demoSubject = .messagePrivacy
+                                let _ = ApplicationSpecificNotice.setDismissedMessagePrivacyBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+                            case .business:
+                                demoSubject = .business
+                            default:
+                                demoSubject = .doubleLimits
+                            }
+
+                            let isPremium = state?.isPremium == true
+                            var dismissImpl: (() -> Void)?
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
+                            controller.action = { [weak state] in
+                                dismissImpl?()
+                                if state?.isPremium == false {
+                                    buy()
                                 }
-    
-                                let isPremium = state?.isPremium == true
-                                var dismissImpl: (() -> Void)?
-                                let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
-                                controller.action = { [weak state] in
-                                    dismissImpl?()
-                                    if state?.isPremium == false {
-                                        buy()
-                                    }
-                                }
-                                controller.disposed = {
-                                    updateIsFocused(false)
-                                }
-                                present(controller)
-                                dismissImpl = { [weak controller] in
-                                    controller?.dismiss(animated: true, completion: nil)
-                                }
-                                updateIsFocused(true)
-    
-                                addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
+                            }
+                            controller.disposed = {
+                                updateIsFocused(false)
+                            }
+                            present(controller)
+                            dismissImpl = { [weak controller] in
+                                controller?.dismiss(animated: true, completion: nil)
+                            }
+                            updateIsFocused(true)
+
+                            addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
                         }
                     ))))
                     i += 1
@@ -2100,43 +2119,92 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             foregroundColor: .white,
                             iconName: perk.iconName
                         ))),
-                        action: { _ in
-                            switch perk {
-                            case .location:
-                                let _ = (accountContext.engine.data.get(
-                                    TelegramEngine.EngineData.Item.Peer.BusinessLocation(id: accountContext.account.peerId)
-                                )
-                                |> deliverOnMainQueue).start(next: { [weak accountContext] businessLocation in
-                                    guard let accountContext else {
-                                        return
+                        action: { [weak state] _ in
+                            let isPremium = state?.isPremium == true
+                            if isPremium {
+                                switch perk {
+                                case .location:
+                                    let _ = (accountContext.engine.data.get(
+                                        TelegramEngine.EngineData.Item.Peer.BusinessLocation(id: accountContext.account.peerId)
+                                    )
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] businessLocation in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeBusinessLocationSetupScreen(context: accountContext, initialValue: businessLocation, completion: { _ in }))
+                                    })
+                                case .hours:
+                                    let _ = (accountContext.engine.data.get(
+                                        TelegramEngine.EngineData.Item.Peer.BusinessHours(id: accountContext.account.peerId)
+                                    )
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] businessHours in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeBusinessHoursSetupScreen(context: accountContext, initialValue: businessHours, completion: { _ in }))
+                                    })
+                                case .quickReplies:
+                                    let _ = (accountContext.sharedContext.makeQuickReplySetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext, initialData: initialData))
+                                    })
+                                case .greetings:
+                                    let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: false))
+                                    })
+                                case .awayMessages:
+                                    let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
+                                        guard let accountContext else {
+                                            return
+                                        }
+                                        push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: true))
+                                    })
+                                case .chatbots:
+                                    push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
+                                }
+                            } else {
+                                var demoSubject: PremiumDemoScreen.Subject
+                                switch perk {
+                                case .location:
+                                    demoSubject = .businessLocation
+                                case .hours:
+                                    demoSubject = .businessHours
+                                case .quickReplies:
+                                    demoSubject = .businessQuickReplies
+                                case .greetings:
+                                    demoSubject = .businessGreetingMessage
+                                case .awayMessages:
+                                    demoSubject = .businessAwayMessage
+                                case .chatbots:
+                                    demoSubject = .businessChatBots
+                                }
+                                var dismissImpl: (() -> Void)?
+                                let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: [.businessLocation, .businessHours, .businessQuickReplies, .businessGreetingMessage, .businessAwayMessage, .businessChatBots], buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
+                                controller.action = { [weak state] in
+                                    dismissImpl?()
+                                    if state?.isPremium == false {
+                                        buy()
                                     }
-                                    push(accountContext.sharedContext.makeBusinessLocationSetupScreen(context: accountContext, initialValue: businessLocation, completion: { _ in }))
-                                })
-                            case .hours:
-                                let _ = (accountContext.engine.data.get(
-                                    TelegramEngine.EngineData.Item.Peer.BusinessHours(id: accountContext.account.peerId)
-                                )
-                                |> deliverOnMainQueue).start(next: { [weak accountContext] businessHours in
-                                    guard let accountContext else {
-                                        return
-                                    }
-                                    push(accountContext.sharedContext.makeBusinessHoursSetupScreen(context: accountContext, initialValue: businessHours, completion: { _ in }))
-                                })
-                            case .quickReplies:
-                                let _ = (accountContext.sharedContext.makeQuickReplySetupScreenInitialData(context: accountContext)
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
-                                    guard let accountContext else {
-                                        return
-                                    }
-                                    push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext, initialData: initialData))
-                                })
-                            case .greetings:
-                                push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: false))
-                            case .awayMessages:
-                                push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, isAwayMode: true))
-                            case .chatbots:
-                                push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext))
+                                }
+                                controller.disposed = {
+                                    updateIsFocused(false)
+                                }
+                                present(controller)
+                                dismissImpl = { [weak controller] in
+                                    controller?.dismiss(animated: true, completion: nil)
+                                }
+                                updateIsFocused(true)
                             }
                         }
                     ))))
@@ -2238,7 +2306,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         iconName: "Premium/BusinessPerk/Tag"
                     ))),
                     action: { _ in
-                        push(accountContext.sharedContext.makeFilterSettingsController(context: accountContext, modal: false, dismissed: nil))
+                        push(accountContext.sharedContext.makeFilterSettingsController(context: accountContext, modal: false, scrollToTags: true, dismissed: nil))
                     }
                 ))))
                 

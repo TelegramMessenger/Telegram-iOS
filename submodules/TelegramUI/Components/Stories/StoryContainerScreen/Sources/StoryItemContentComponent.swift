@@ -593,7 +593,7 @@ final class StoryItemContentComponent: Component {
             
             let selectedMedia: EngineMedia
             var messageMedia: EngineMedia?
-            if !component.preferHighQuality, let alternativeMedia = component.item.alternativeMedia {
+            if !component.preferHighQuality, !component.item.isMy, let alternativeMedia = component.item.alternativeMedia {
                 selectedMedia = alternativeMedia
                 
                 switch alternativeMedia {

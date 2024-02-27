@@ -208,7 +208,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
                 containerSize: availableSize
             )
             
-            let size = textFieldSize
+            let size = CGSize(width: textFieldSize.width, height: textFieldSize.height - 1.0)
             let textFieldFrame = CGRect(origin: CGPoint(), size: textFieldSize)
             
             if let textFieldView = self.textField.view {
