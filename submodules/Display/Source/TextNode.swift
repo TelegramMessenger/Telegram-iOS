@@ -2019,7 +2019,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                 }
@@ -2134,7 +2134,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                     

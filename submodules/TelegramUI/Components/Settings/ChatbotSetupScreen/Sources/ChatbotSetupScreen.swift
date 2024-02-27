@@ -533,7 +533,7 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += 129.0
             
             //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More]() >", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More >]()", attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -568,7 +568,8 @@ final class ChatbotSetupScreenComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
-                        let _ = component
+                        //TODO:localize
+                        component.context.sharedContext.applicationBindings.openUrl("https://telegram.org")
                     }
                 )),
                 environment: {},

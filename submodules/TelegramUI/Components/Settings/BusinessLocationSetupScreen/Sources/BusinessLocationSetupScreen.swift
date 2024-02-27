@@ -66,6 +66,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         private let subtitle = ComponentView<Empty>()
         private let addressSection = ComponentView<Empty>()
         private let mapSection = ComponentView<Empty>()
+        private let deleteSection = ComponentView<Empty>()
         
         private var isUpdating: Bool = false
         
@@ -73,6 +74,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
+        private let addressTextInputState = ListMultilineTextFieldItemComponent.ExternalState()
         private let textFieldTag = NSObject()
         private var resetAddressText: String?
         
@@ -271,6 +273,13 @@ final class BusinessLocationSetupScreenComponent: Component {
             self.component = component
             self.state = state
             
+            let alphaTransition: Transition
+            if !transition.animation.isImmediate {
+                alphaTransition = .easeInOut(duration: 0.25)
+            } else {
+                alphaTransition = .immediate
+            }
+            
             if themeUpdated {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
@@ -376,6 +385,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             //TODO:localize
             var addressSectionItems: [AnyComponentWithIdentity<Empty>] = []
             addressSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
+                externalState: self.addressTextInputState,
                 context: component.context,
                 theme: environment.theme,
                 strings: environment.strings,
@@ -389,6 +399,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 characterLimit: 64,
                 updated: { _ in
                 },
+                textUpdateTransition: .spring(duration: 0.4),
                 tag: self.textFieldTag
             ))))
             self.resetAddressText = nil
@@ -481,6 +492,66 @@ final class BusinessLocationSetupScreenComponent: Component {
                 transition.setFrame(view: mapSectionView, frame: mapSectionFrame)
             }
             contentHeight += mapSectionSize.height
+            
+            var deleteSectionHeight: CGFloat = 0.0
+            
+            deleteSectionHeight += sectionSpacing
+            //TODO:localize
+            let deleteSectionSize = self.deleteSection.update(
+                transition: transition,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    header: nil,
+                    footer: nil,
+                    items: [
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                            theme: environment.theme,
+                            title: AnyComponent(VStack([
+                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(
+                                        string: "Delete Location",
+                                        font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                        textColor: environment.theme.list.itemDestructiveColor
+                                    )),
+                                    maximumNumberOfLines: 1
+                                ))),
+                            ], alignment: .left, spacing: 2.0)),
+                            accessory: nil,
+                            action: { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.resetAddressText = ""
+                                self.mapCoordinates = nil
+                                self.mapCoordinatesManuallySet = false
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        )))
+                    ],
+                    displaySeparators: false
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+            )
+            let deleteSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + deleteSectionHeight), size: deleteSectionSize)
+            if let deleteSectionView = self.deleteSection.view {
+                if deleteSectionView.superview == nil {
+                    self.scrollView.addSubview(deleteSectionView)
+                }
+                transition.setFrame(view: deleteSectionView, frame: deleteSectionFrame)
+                
+                if self.mapCoordinates != nil || self.addressTextInputState.hasText {
+                    alphaTransition.setAlpha(view: deleteSectionView, alpha: 1.0)
+                } else {
+                    alphaTransition.setAlpha(view: deleteSectionView, alpha: 0.0)
+                }
+            }
+            deleteSectionHeight += deleteSectionSize.height
+            
+            if self.mapCoordinates != nil || self.addressTextInputState.hasText {
+                contentHeight += deleteSectionHeight
+            }
             
             contentHeight += bottomContentInset
             contentHeight += environment.safeInsets.bottom
