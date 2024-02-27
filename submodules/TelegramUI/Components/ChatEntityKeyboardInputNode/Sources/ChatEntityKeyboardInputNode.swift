@@ -56,6 +56,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         let dismissTextInput: () -> Void
         let insertText: (NSAttributedString) -> Void
         let backwardsDeleteText: () -> Void
+        let openStickerEditor: () -> Void
         let presentController: (ViewController, Any?) -> Void
         let presentGlobalOverlayController: (ViewController, Any?) -> Void
         let getNavigationController: () -> NavigationController?
@@ -72,6 +73,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             dismissTextInput: @escaping () -> Void,
             insertText: @escaping (NSAttributedString) -> Void,
             backwardsDeleteText: @escaping () -> Void,
+            openStickerEditor: @escaping () -> Void,
             presentController: @escaping (ViewController, Any?) -> Void,
             presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
             getNavigationController: @escaping () -> NavigationController?,
@@ -86,6 +88,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             self.dismissTextInput = dismissTextInput
             self.insertText = insertText
             self.backwardsDeleteText = backwardsDeleteText
+            self.openStickerEditor = openStickerEditor
             self.presentController = presentController
             self.presentGlobalOverlayController = presentGlobalOverlayController
             self.getNavigationController = getNavigationController
@@ -106,6 +109,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             self.dismissTextInput = chatControllerInteraction.dismissTextInput
             self.insertText = panelInteraction.insertText
             self.backwardsDeleteText = panelInteraction.backwardsDeleteText
+            self.openStickerEditor = chatControllerInteraction.openStickerEditor
             self.presentController = chatControllerInteraction.presentController
             self.presentGlobalOverlayController = chatControllerInteraction.presentGlobalOverlayController
             self.getNavigationController = chatControllerInteraction.navigationController
@@ -1140,6 +1144,9 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         return
                     }
                     guard let file = item.itemFile else {
+                        if groupId == AnyHashable("recent"), case .icon(.add) = item.content {
+                            interaction.openStickerEditor()
+                        }
                         return
                     }
                     

@@ -233,7 +233,7 @@ final class VideoFinishPass: RenderPass {
     }
     
     private let canvasSize = CGSize(width: 1080.0, height: 1920.0)
-    private var gradientColors = GradientColors(topColor: simd_float3(0.0, 0.0, 0.0), bottomColor: simd_float3(0.0, 0.0, 0.0))
+    private var gradientColors = GradientColors(topColor: simd_float4(0.0, 0.0, 0.0, 0.0), bottomColor: simd_float4(0.0, 0.0, 0.0, 0.0))
     func update(values: MediaEditorValues, videoDuration: Double?, additionalVideoDuration: Double?) {
         let position = CGPoint(
             x: canvasSize.width / 2.0 + values.cropOffset.x,
@@ -241,6 +241,7 @@ final class VideoFinishPass: RenderPass {
         )
         
         self.isStory = values.isStory
+        self.isSticker = values.gradientColors?.first?.alpha == 0.0
         self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, baseScale: self.mainPosition.baseScale)
             
         if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
@@ -262,12 +263,12 @@ final class VideoFinishPass: RenderPass {
         }
         
         if let gradientColors = values.gradientColors, let top = gradientColors.first, let bottom = gradientColors.last {
-            let (topRed, topGreen, topBlue, _) = top.components
-            let (bottomRed, bottomGreen, bottomBlue, _) = bottom.components
+            let (topRed, topGreen, topBlue, topAlpha) = top.components
+            let (bottomRed, bottomGreen, bottomBlue, bottomAlpha) = bottom.components
             
             self.gradientColors = GradientColors(
-                topColor: simd_float3(Float(topRed), Float(topGreen), Float(topBlue)),
-                bottomColor: simd_float3(Float(bottomRed), Float(bottomGreen), Float(bottomBlue))
+                topColor: simd_float4(Float(topRed), Float(topGreen), Float(topBlue), Float(topAlpha)),
+                bottomColor: simd_float4(Float(bottomRed), Float(bottomGreen), Float(bottomBlue), Float(bottomAlpha))
             )
         }
     }
@@ -289,6 +290,7 @@ final class VideoFinishPass: RenderPass {
     )
     
     private var isStory = true
+    private var isSticker = true
     private var videoPositionChanges: [VideoPositionChange] = []
     private var videoDuration: Double?
     private var additionalVideoDuration: Double?
@@ -482,10 +484,18 @@ final class VideoFinishPass: RenderPass {
         }
         
         let baseScale: CGFloat
-        if input.height > input.width {
-            baseScale = max(canvasSize.width / CGFloat(input.width), canvasSize.height / CGFloat(input.height))
+        if !self.isSticker {
+            if input.height > input.width {
+                baseScale = max(canvasSize.width / CGFloat(input.width), canvasSize.height / CGFloat(input.height))
+            } else {
+                baseScale = canvasSize.width / CGFloat(input.width)
+            }
         } else {
-            baseScale = canvasSize.width / CGFloat(input.width)
+            if input.height > input.width {
+                baseScale = canvasSize.width / CGFloat(input.width)
+            } else {
+                baseScale = canvasSize.width / CGFloat(input.height)
+            }
         }
         self.mainPosition = self.mainPosition.with(size: CGSize(width: input.width, height: input.height), baseScale: baseScale)
         
@@ -508,9 +518,13 @@ final class VideoFinishPass: RenderPass {
         
         let renderPassDescriptor = MTLRenderPassDescriptor()
         renderPassDescriptor.colorAttachments[0].texture = self.cachedTexture!
-        renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
+        if self.gradientColors.topColor.w > 0.0 {
+            renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
+        } else {
+            renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        }
         renderPassDescriptor.colorAttachments[0].storeAction = .store
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
         guard let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
             return input
         }
@@ -521,12 +535,14 @@ final class VideoFinishPass: RenderPass {
             znear: -1.0, zfar: 1.0)
         )
         
-        renderCommandEncoder.setRenderPipelineState(self.gradientPipelineState!)
-        self.encodeGradient(
-            using: renderCommandEncoder,
-            containerSize: containerSize,
-            device: device
-        )
+        if self.gradientColors.topColor.w > 0.0 {
+            renderCommandEncoder.setRenderPipelineState(self.gradientPipelineState!)
+            self.encodeGradient(
+                using: renderCommandEncoder,
+                containerSize: containerSize,
+                device: device
+            )
+        }
         
         renderCommandEncoder.setRenderPipelineState(self.mainPipelineState!)
         
@@ -578,8 +594,8 @@ final class VideoFinishPass: RenderPass {
     }
     
     struct GradientColors {
-        var topColor: simd_float3
-        var bottomColor: simd_float3
+        var topColor: simd_float4
+        var bottomColor: simd_float4
     }
     
     func encodeGradient(

@@ -155,6 +155,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             case wallpaper
             case story
             case addImage
+            case createSticker
         }
         
         case assets(PHAssetCollection?, AssetsMode)
@@ -273,7 +274,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.presentationData = controller.presentationData
             
             var assetType: PHAssetMediaType?
-            if case let .assets(_, mode) = controller.subject, [.wallpaper, .addImage].contains(mode) {
+            if case let .assets(_, mode) = controller.subject, [.wallpaper, .addImage, .createSticker].contains(mode) {
                 assetType = .image
             }
             let mediaAssetsContext = MediaAssetsContext(assetType: assetType)
@@ -432,7 +433,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.gridNode.scrollView.alwaysBounceVertical = true
             self.gridNode.scrollView.showsVerticalScrollIndicator = false
             
-            if case let .assets(_, mode) = controller.subject, [.wallpaper, .story, .addImage].contains(mode) {
+            if case let .assets(_, mode) = controller.subject, [.wallpaper, .story, .addImage, .createSticker].contains(mode) {
                 
             } else {
                 let selectionGesture = MediaPickerGridSelectionGesture<TGMediaSelectableItem>()
@@ -1566,7 +1567,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.titleView.title = collection.localizedTitle ?? presentationData.strings.Attachment_Gallery
             } else {
                 switch mode {
-                case .default:
+                case .default, .createSticker:
                     self.titleView.title = presentationData.strings.MediaPicker_Recents
                     self.titleView.isEnabled = true
                 case .story:
@@ -2258,15 +2259,15 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         return self.controllerNode.defaultTransitionView()
     }
     
-    fileprivate func transitionView(for identifier: String, snapshot: Bool, hideSource: Bool = false) -> UIView? {
+    public func transitionView(for identifier: String, snapshot: Bool, hideSource: Bool = false) -> UIView? {
         return self.controllerNode.transitionView(for: identifier, snapshot: snapshot, hideSource: hideSource)
     }
     
-    fileprivate func transitionImage(for identifier: String) -> UIImage? {
+    public func transitionImage(for identifier: String) -> UIImage? {
         return self.controllerNode.transitionImage(for: identifier)
     }
     
-    func updateHiddenMediaId(_ id: String?) {
+    public func updateHiddenMediaId(_ id: String?) {
         self.controllerNode.hiddenMediaId.set(.single(id))
     }
     

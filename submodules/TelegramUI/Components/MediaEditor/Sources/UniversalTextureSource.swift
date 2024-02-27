@@ -128,15 +128,6 @@ final class UniversalTextureSource: TextureSource {
             self.update()
         }
     }
-//    
-//    private func setupDisplayLink(frameRate: Int) {
-//        self.displayLink?.invalidate()
-//        self.displayLink = nil
-//        
-//        if self.playerItemOutput != nil {
-
-//        }
-//    }
 }
 
 private protocol InputContext {
