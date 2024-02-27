@@ -5420,6 +5420,7 @@ public final class StoryItemSetContainerComponent: Component {
             var updateProgressImpl: ((Float) -> Void)?
             let controller = MediaEditorScreen(
                 context: context,
+                mode: .storyEditor,
                 subject: subject,
                 isEditing: !repost,
                 forwardSource: repost ? (component.slice.peer, item) : nil,

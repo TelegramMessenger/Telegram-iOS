@@ -43,6 +43,19 @@ private enum ChatListFilterPresetListSection: Int32 {
     case tags
 }
 
+public enum ChatListFilterPresetListEntryTag: ItemListItemTag {
+    case displayTags
+    
+    public func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? ChatListFilterPresetListEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+
 private func stringForUserCount(_ peers: [EnginePeer.Id: SelectivePrivacyPeer], strings: PresentationStrings) -> String {
     if peers.isEmpty {
         return strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder
@@ -208,7 +221,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
                 }
             }, activatedWhileDisabled: {
                 arguments.updateDisplayTagsLocked()
-            })
+            }, tag: ChatListFilterPresetListEntryTag.displayTags)
         case .displayTagsFooter:
             //TODO:localize
             return ItemListTextItem(presentationData: presentationData, text: .plain("Display folder names for each chat in the chat list."), sectionId: self.section)
@@ -306,7 +319,7 @@ public enum ChatListFilterPresetListControllerMode {
     case modal
 }
 
-public func chatListFilterPresetListController(context: AccountContext, mode: ChatListFilterPresetListControllerMode, dismissed: (() -> Void)? = nil) -> ViewController {
+public func chatListFilterPresetListController(context: AccountContext, mode: ChatListFilterPresetListControllerMode, scrollToTags: Bool = false, dismissed: (() -> Void)? = nil) -> ViewController {
     let initialState = ChatListFilterPresetListControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -657,7 +670,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, displayTags: displayTags, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits), style: .blocks, animateChanges: true)
+        let entries = chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, displayTags: displayTags, isPremium: isPremium, limits: limits, premiumLimits: premiumLimits)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, initialScrollToItem: scrollToTags ? ListViewScrollToItem(index: entries.count - 1, position: .center(.bottom), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down) : nil, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }

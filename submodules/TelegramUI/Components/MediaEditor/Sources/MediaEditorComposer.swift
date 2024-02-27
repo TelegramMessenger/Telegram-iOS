@@ -178,7 +178,7 @@ final class MediaEditorComposer {
     }
 }
 
-public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inputImage: UIImage, dimensions: CGSize, values: MediaEditorValues, time: CMTime, textScale: CGFloat, completion: @escaping (UIImage?) -> Void) {
+public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inputImage: UIImage, dimensions: CGSize, outputDimensions: CGSize? = nil, values: MediaEditorValues, time: CMTime, textScale: CGFloat, completion: @escaping (UIImage?) -> Void) {
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let inputImage = CIImage(image: inputImage, options: [.colorSpace: colorSpace])!
     var drawingImage: CIImage?
@@ -192,7 +192,7 @@ public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inp
         entities.append(contentsOf: composerEntitiesForDrawingEntity(postbox: postbox, textScale: textScale, entity: entity.entity, colorSpace: colorSpace))
     }
     
-    makeEditorImageFrameComposition(context: context, inputImage: inputImage, drawingImage: drawingImage, dimensions: dimensions, outputDimensions: dimensions, values: values, entities: entities, time: time, textScale: textScale, completion: { ciImage in
+    makeEditorImageFrameComposition(context: context, inputImage: inputImage, drawingImage: drawingImage, dimensions: dimensions, outputDimensions: outputDimensions ?? dimensions, values: values, entities: entities, time: time, textScale: textScale, completion: { ciImage in
         if let ciImage {
             if let cgImage = context.createCGImage(ciImage, from: CGRect(origin: .zero, size: ciImage.extent.size)) {
                 Queue.mainQueue().async {
@@ -206,20 +206,19 @@ public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inp
 }
 
 private func makeEditorImageFrameComposition(context: CIContext, inputImage: CIImage, drawingImage: CIImage?, dimensions: CGSize, outputDimensions: CGSize, values: MediaEditorValues, entities: [MediaEditorComposerEntity], time: CMTime, textScale: CGFloat = 1.0, completion: @escaping (CIImage?) -> Void) {
-    var resultImage = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: dimensions)).transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
+    var isClear = false
+    if let gradientColor = values.gradientColors?.first, gradientColor.alpha.isZero {
+        isClear = true
+    }
+    
+    var resultImage = CIImage(color: isClear ? .clear : .black).cropped(to: CGRect(origin: .zero, size: dimensions)).transformed(by: CGAffineTransform(translationX: -dimensions.width / 2.0, y: -dimensions.height / 2.0))
     
     var mediaImage = inputImage.samplingLinear().transformed(by: CGAffineTransform(translationX: -inputImage.extent.midX, y: -inputImage.extent.midY))
-    
-    var initialScale: CGFloat
-    if mediaImage.extent.height > mediaImage.extent.width && values.isStory {
-        initialScale = max(dimensions.width / mediaImage.extent.width, dimensions.height / mediaImage.extent.height)
-    } else {
-        initialScale = dimensions.width / mediaImage.extent.width
-    }
     
     if values.isStory {
         resultImage = mediaImage.samplingLinear().composited(over: resultImage)
     } else {
+        let initialScale = dimensions.width / mediaImage.extent.width
         var horizontalScale = initialScale
         if values.cropMirroring {
             horizontalScale *= -1.0

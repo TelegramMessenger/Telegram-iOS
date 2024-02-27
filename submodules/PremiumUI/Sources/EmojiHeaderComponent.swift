@@ -13,8 +13,6 @@ import AnimationCache
 import MultiAnimationRenderer
 import EmojiStatusComponent
 
-private let sceneVersion: Int = 3
-
 class EmojiHeaderComponent: Component {
     let context: AccountContext
     let animationCache: AnimationCache

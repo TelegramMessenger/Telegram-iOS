@@ -833,6 +833,129 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
+                
+                
+                availableItems[.businessLocation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessLocation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["business_location"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_Location,
+                                text: strings.Business_LocationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessHours] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessHours,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["business_hours"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_OpeningHours,
+                                text: strings.Business_OpeningHoursInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessQuickReplies] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessQuickReplies,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["greeting_message"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_QuickReplies,
+                                text: strings.Business_QuickRepliesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessGreetingMessage] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessGreetingMessage,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["greeting_message"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_GreetingMessages,
+                                text: strings.Business_GreetingMessagesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessAwayMessage] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessAwayMessage,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["away_message"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_AwayMessages,
+                                text: strings.Business_AwayMessagesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessChatBots] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessChatBots,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["business_bots"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_Chatbots,
+                                text: strings.Business_ChatbotsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+
             
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }

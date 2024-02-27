@@ -94,6 +94,11 @@ public final class MediaEditor {
         }
     }
     
+    public enum Mode {
+        case `default`
+        case sticker
+    }
+    
     public enum Subject {
         case image(UIImage, PixelDimensions)
         case video(String, UIImage?, Bool, String?, PixelDimensions, Double)
@@ -116,6 +121,7 @@ public final class MediaEditor {
     }
 
     private let context: AccountContext
+    private let mode: Mode
     private let subject: Subject
     
     private let clock = CMClockGetHostTimeClock()
@@ -181,6 +187,9 @@ public final class MediaEditor {
             }
         }
     }
+    
+    public private(set) var canCutout: Bool = false
+    public var canCutoutUpdated: (Bool) -> Void = { _ in }
     
     private var textureCache: CVMetalTextureCache!
     
@@ -391,8 +400,9 @@ public final class MediaEditor {
         }
     }
     
-    public init(context: AccountContext, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
+    public init(context: AccountContext, mode: Mode, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
         self.context = context
+        self.mode = mode
         self.subject = subject
         if let values {
             self.values = values
@@ -668,6 +678,19 @@ public final class MediaEditor {
                     } else {
                         textureSource.setMainInput(.image(image))
                     }
+                    
+                    
+                    if case .sticker = self.mode {
+                        let _ = (cutoutStickerImage(from: image, onlyCheck: true)
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let self, result != nil else {
+                                return
+                            }
+                            self.canCutout = true
+                            self.canCutoutUpdated(true)
+                        })
+                    }
+                    
                 }
                 if let player, let playerItem = player.currentItem, !textureSourceResult.playerIsReference {
                     textureSource.setMainInput(.video(playerItem))
@@ -677,7 +700,12 @@ public final class MediaEditor {
                 }
                 self.renderer.textureSource = textureSource
                 
-                self.setGradientColors(textureSourceResult.gradientColors)
+                switch self.mode {
+                case .default:
+                    self.setGradientColors(textureSourceResult.gradientColors)
+                case .sticker:
+                    self.setGradientColors(GradientColors(top: .clear, bottom: .clear))
+                }
                 
                 if let _ = textureSourceResult.player {
                     self.updateRenderChain()
@@ -1615,7 +1643,7 @@ public final class MediaEditor {
     
     public func setGradientColors(_ gradientColors: GradientColors) {
         self.gradientColorsPromise.set(.single(gradientColors))
-        self.updateValues(mode: .skipRendering) { values in
+        self.updateValues(mode: self.sourceIsVideo ? .skipRendering : .generic) { values in
             return values.withUpdatedGradientColors(gradientColors: gradientColors.array)
         }
     }

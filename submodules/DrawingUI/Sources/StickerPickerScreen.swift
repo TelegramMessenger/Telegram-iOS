@@ -192,6 +192,7 @@ private final class StickerSelectionComponent: Component {
                 insertText: { _ in
                 },
                 backwardsDeleteText: {},
+                openStickerEditor: {},
                 presentController: { [weak self] c, a in
                     if let self, let controller = self.component?.getController() {
                         controller.present(c, in: .window(.root), with: a)

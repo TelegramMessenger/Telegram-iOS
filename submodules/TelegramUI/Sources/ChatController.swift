@@ -4584,6 +4584,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.push(boostController)
             })
+        }, openStickerEditor: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openStickerEditor()
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -16857,6 +16862,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let controller = MediaEditorScreen(
             context: context,
+            mode: .storyEditor,
             subject: subject,
             transitionIn: nil,
             transitionOut: { _, _ in

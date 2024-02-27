@@ -5617,7 +5617,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func openFilterSettings() {
         self.chatListDisplayNode.mainContainerNode.updateEnableAdjacentFilterLoading(false)
         if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
-            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: true, dismissed: { [weak self] in
+            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: true, scrollToTags: false, dismissed: { [weak self] in
                 self?.chatListDisplayNode.mainContainerNode.updateEnableAdjacentFilterLoading(true)
             })
             navigationController.pushViewController(controller)

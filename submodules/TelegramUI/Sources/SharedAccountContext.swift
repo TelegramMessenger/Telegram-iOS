@@ -1754,6 +1754,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
+        }, openStickerEditor: {
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1882,8 +1883,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return archiveSettingsController(context: context)
     }
     
-    public func makeFilterSettingsController(context: AccountContext, modal: Bool, dismissed: (() -> Void)?) -> ViewController {
-        return chatListFilterPresetListController(context: context, mode: modal ? .modal : .default, dismissed: dismissed)
+    public func makeFilterSettingsController(context: AccountContext, modal: Bool, scrollToTags: Bool, dismissed: (() -> Void)?) -> ViewController {
+        return chatListFilterPresetListController(context: context, mode: modal ? .modal : .default, scrollToTags: scrollToTags, dismissed: dismissed)
     }
     
     public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
@@ -2048,6 +2049,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .lastSeen
         case .messagePrivacy:
             mappedSubject = .messagePrivacy
+        default:
+            mappedSubject = .doubleLimits
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }

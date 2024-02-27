@@ -182,7 +182,11 @@ public final class ListActionItemComponent: Component {
             let contentRightInset: CGFloat
             switch component.accessory {
             case .none:
-                contentRightInset = 16.0
+                if let _ = component.icon {
+                    contentRightInset = 42.0
+                } else {
+                    contentRightInset = 16.0
+                }
             case .arrow:
                 contentRightInset = 30.0
             case .toggle:
@@ -193,7 +197,7 @@ public final class ListActionItemComponent: Component {
             contentHeight += component.contentInsets.top
             
             if component.leftIcon != nil {
-                contentLeftInset += 46.0
+                contentLeftInset += 52.0
             }
 
             let titleSize = self.title.update(
@@ -243,7 +247,7 @@ public final class ListActionItemComponent: Component {
                 
                 var iconOffset: CGFloat = 0.0
                 if case .none = component.accessory {
-                    iconOffset = 6.0
+                    iconOffset = 26.0
                 }
                 
                 let iconFrame = CGRect(origin: CGPoint(x: availableSize.width - contentRightInset - iconSize.width + iconOffset, y: floor((contentHeight - iconSize.height) * 0.5)), size: iconSize)

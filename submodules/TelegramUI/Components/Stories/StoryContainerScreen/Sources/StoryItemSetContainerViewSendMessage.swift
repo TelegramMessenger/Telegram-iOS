@@ -179,6 +179,7 @@ final class StoryItemSetContainerSendMessage {
                     self.inputPanelExternalState?.deleteBackward()
                 }
             },
+            openStickerEditor: {},
             presentController: { [weak self] c, a in
                 if let self {
                     self.view?.component?.controller()?.present(c, in: .window(.root), with: a)
