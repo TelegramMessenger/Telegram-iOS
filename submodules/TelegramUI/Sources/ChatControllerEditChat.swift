@@ -12,7 +12,7 @@ import QuickReplyNameAlertController
 extension ChatControllerImpl {
     func editChat() {
         //TODO:localize
-        if case let .customChatContents(customChatContents) = self.subject, case let .quickReplyMessageInput(currentValue) = customChatContents.kind {
+        if case let .customChatContents(customChatContents) = self.subject, case let .quickReplyMessageInput(currentValue, shortcutType) = customChatContents.kind, case .generic = shortcutType {
             var completion: ((String?) -> Void)?
             let alertController = quickReplyNameAlertController(
                 context: self.context,

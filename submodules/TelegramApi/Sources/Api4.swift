@@ -663,6 +663,52 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ConnectedBot: TypeConstructorDescription {
+        case connectedBot(flags: Int32, botId: Int64, recipients: Api.BusinessRecipients)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .connectedBot(let flags, let botId, let recipients):
+                    if boxed {
+                        buffer.appendInt32(-404121113)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    recipients.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .connectedBot(let flags, let botId, let recipients):
+                return ("connectedBot", [("flags", flags as Any), ("botId", botId as Any), ("recipients", recipients as Any)])
+    }
+    }
+    
+        public static func parse_connectedBot(_ reader: BufferReader) -> ConnectedBot? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.BusinessRecipients?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ConnectedBot.connectedBot(flags: _1!, botId: _2!, recipients: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Contact: TypeConstructorDescription {
         case contact(userId: Int64, mutual: Api.Bool)
     

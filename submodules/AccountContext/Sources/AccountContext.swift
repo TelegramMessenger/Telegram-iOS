@@ -853,6 +853,9 @@ public protocol QuickReplySetupScreenInitialData: AnyObject {
 public protocol AutomaticBusinessMessageSetupScreenInitialData: AnyObject {
 }
 
+public protocol ChatbotSetupScreenInitialData: AnyObject {
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -940,7 +943,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeArchiveSettingsController(context: AccountContext) -> ViewController
     func makeFilterSettingsController(context: AccountContext, modal: Bool, dismissed: (() -> Void)?) -> ViewController
     func makeBusinessSetupScreen(context: AccountContext) -> ViewController
-    func makeChatbotSetupScreen(context: AccountContext) -> ViewController
+    func makeChatbotSetupScreen(context: AccountContext, initialData: ChatbotSetupScreenInitialData) -> ViewController
+    func makeChatbotSetupScreenInitialData(context: AccountContext) -> Signal<ChatbotSetupScreenInitialData, NoError>
     func makeBusinessLocationSetupScreen(context: AccountContext, initialValue: TelegramBusinessLocation?, completion: @escaping (TelegramBusinessLocation?) -> Void) -> ViewController
     func makeBusinessHoursSetupScreen(context: AccountContext, initialValue: TelegramBusinessHours?, completion: @escaping (TelegramBusinessHours?) -> Void) -> ViewController
     func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, initialData: AutomaticBusinessMessageSetupScreenInitialData, isAwayMode: Bool) -> ViewController

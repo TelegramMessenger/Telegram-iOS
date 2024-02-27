@@ -76,7 +76,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         }
     }
     
-    private struct AdditionalPeerList {
+    struct AdditionalPeerList {
         enum Category: Int {
             case newChats = 0
             case existingChats = 1
@@ -148,6 +148,8 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         
         private var replyToMessages: Bool = true
         
+        private var inactivityDays: Int = 7
+        
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -182,6 +184,66 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            
+            var mappedCategories: TelegramBusinessRecipients.Categories = []
+            if self.additionalPeerList.categories.contains(.existingChats) {
+                mappedCategories.insert(.existingChats)
+            }
+            if self.additionalPeerList.categories.contains(.newChats) {
+                mappedCategories.insert(.newChats)
+            }
+            if self.additionalPeerList.categories.contains(.contacts) {
+                mappedCategories.insert(.contacts)
+            }
+            if self.additionalPeerList.categories.contains(.nonContacts) {
+                mappedCategories.insert(.nonContacts)
+            }
+            let recipients = TelegramBusinessRecipients(
+                categories: mappedCategories,
+                additionalPeers: Set(self.additionalPeerList.peers.map(\.peer.id)),
+                exclude: self.hasAccessToAllChatsByDefault
+            )
+            
+            switch component.mode {
+            case .greeting:
+                var greetingMessage: TelegramBusinessGreetingMessage?
+                if self.isOn, let currentShortcut = self.currentShortcut {
+                    greetingMessage = TelegramBusinessGreetingMessage(
+                        shortcutId: currentShortcut.id,
+                        recipients: recipients,
+                        inactivityDays: self.inactivityDays
+                    )
+                }
+                let _ = component.context.engine.accountData.updateBusinessGreetingMessage(greetingMessage: greetingMessage).startStandalone()
+            case .away:
+                var awayMessage: TelegramBusinessAwayMessage?
+                if self.isOn, let currentShortcut = self.currentShortcut {
+                    let mappedSchedule: TelegramBusinessAwayMessage.Schedule
+                    switch self.schedule {
+                    case .always:
+                        mappedSchedule = .always
+                    case .outsideBusinessHours:
+                        mappedSchedule = .outsideWorkingHours
+                    case .custom:
+                        if let customScheduleStart = self.customScheduleStart, let customScheduleEnd = self.customScheduleEnd {
+                            mappedSchedule = .custom(beginTimestamp: Int32(customScheduleStart.timeIntervalSince1970), endTimestamp: Int32(customScheduleEnd.timeIntervalSince1970))
+                        } else {
+                            //TODO:localize
+                            return false
+                        }
+                    }
+                    awayMessage = TelegramBusinessAwayMessage(
+                        shortcutId: currentShortcut.id,
+                        recipients: recipients,
+                        schedule: mappedSchedule
+                    )
+                }
+                let _ = component.context.engine.accountData.updateBusinessAwayMessage(awayMessage: awayMessage).startStandalone()
+            }
+            
             return true
         }
         
@@ -236,14 +298,14 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             let additionalCategories: [ChatListNodeAdditionalCategory] = [
                 ChatListNodeAdditionalCategory(
                     id: self.hasAccessToAllChatsByDefault ? AdditionalCategoryId.existingChats.rawValue : AdditionalCategoryId.newChats.rawValue,
-                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .purple),
-                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
+                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), cornerRadius: 12.0, color: .purple),
+                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
                     title: self.hasAccessToAllChatsByDefault ? "Existing Chats" : "New Chats"
                 ),
                 ChatListNodeAdditionalCategory(
                     id: AdditionalCategoryId.contacts.rawValue,
-                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .blue),
-                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
+                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
+                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
                     title: "Contacts"
                 ),
                 ChatListNodeAdditionalCategory(
@@ -354,16 +416,19 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             }
             
             let shortcutName: String
+            let shortcutType: ChatQuickReplyShortcutType
             switch component.mode {
             case .greeting:
                 shortcutName = "hello"
+                shortcutType = .greeting
             case .away:
                 shortcutName = "away"
+                shortcutType = .away
             }
             
             let contents = AutomaticBusinessMessageSetupChatContents(
                 context: component.context,
-                kind: .quickReplyMessageInput(shortcut: shortcutName),
+                kind: .quickReplyMessageInput(shortcut: shortcutName, shortcutType: shortcutType),
                 shortcutId: self.currentShortcut?.id
             )
             let chatController = component.context.sharedContext.makeChatController(
@@ -471,13 +536,58 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             if self.component == nil {
                 self.accountPeer = component.initialData.accountPeer
                 
+                var initialRecipients: TelegramBusinessRecipients?
+                
                 let shortcutName: String
                 switch component.mode {
                 case .greeting:
                     shortcutName = "hello"
+                    
+                    if let greetingMessage = component.initialData.greetingMessage {
+                        self.isOn = true
+                        initialRecipients = greetingMessage.recipients
+                        
+                        self.inactivityDays = greetingMessage.inactivityDays
+                    }
                 case .away:
                     shortcutName = "away"
+                    
+                    if let awayMessage = component.initialData.awayMessage {
+                        self.isOn = true
+                        initialRecipients = awayMessage.recipients
+                    }
                 }
+                
+                if let initialRecipients {
+                    var mappedCategories = Set<AdditionalPeerList.Category>()
+                    if initialRecipients.categories.contains(.existingChats) {
+                        mappedCategories.insert(.existingChats)
+                    }
+                    if initialRecipients.categories.contains(.newChats) {
+                        mappedCategories.insert(.newChats)
+                    }
+                    if initialRecipients.categories.contains(.contacts) {
+                        mappedCategories.insert(.contacts)
+                    }
+                    if initialRecipients.categories.contains(.nonContacts) {
+                        mappedCategories.insert(.nonContacts)
+                    }
+                    
+                    var additionalPeers: [AdditionalPeerList.Peer] = []
+                    for peerId in initialRecipients.additionalPeers {
+                        if let peer = component.initialData.additionalPeers[peerId] {
+                            additionalPeers.append(peer)
+                        }
+                    }
+                    
+                    self.additionalPeerList = AdditionalPeerList(
+                        categories: mappedCategories,
+                        peers: additionalPeers
+                    )
+                    
+                    self.hasAccessToAllChatsByDefault = initialRecipients.exclude
+                }
+                
                 self.currentShortcut = component.initialData.shortcutMessageList.items.first(where: { $0.shortcut == shortcutName })
                 
                 self.currentShortcutDisposable = (component.context.engine.accountData.shortcutMessageList()
@@ -532,9 +642,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let sectionSpacing: CGFloat = 32.0
             
-            let _ = bottomContentInset
-            let _ = sectionSpacing
-            
             var contentHeight: CGFloat = 0.0
             
             contentHeight += environment.navigationHeight
@@ -548,7 +655,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 2.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 8.0), size: iconSize)
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -557,7 +664,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
             }
             
-            contentHeight += 129.0
+            contentHeight += 124.0
             
             //TODO:localize
             let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(component.mode == .greeting ? "Greet customers when they message you the first time or after a period of no activity." : "Automatically reply with a message when you are away.", attributes: MarkdownAttributes(
@@ -1163,6 +1270,19 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             otherSectionsHeight += sectionSpacing
             
             if case .greeting = component.mode {
+                var selectedInactivityIndex = 0
+                let valueList: [Int] = [
+                    7,
+                    14,
+                    21,
+                    28
+                ]
+                for i in 0 ..< valueList.count {
+                    if valueList[i] <= self.inactivityDays {
+                        selectedInactivityIndex = i
+                    }
+                }
+                
                 let periodSectionSize = self.periodSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(
@@ -1192,12 +1312,14 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                                     "21 days",
                                     "28 days"
                                 ],
-                                selectedIndex: 0,
+                                selectedIndex: selectedInactivityIndex,
                                 selectedIndexUpdated: { [weak self] index in
                                     guard let self else {
                                         return
                                     }
-                                    let _ = self
+                                    let index = max(0, min(valueList.count - 1, index))
+                                    self.inactivityDays = valueList[index]
+                                    self.state?.updated(transition: .immediate)
                                 }
                             )))
                         ]
@@ -1268,15 +1390,24 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
 
 public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentContainer {
     public final class InitialData: AutomaticBusinessMessageSetupScreenInitialData {
-        let accountPeer: EnginePeer?
-        let shortcutMessageList: ShortcutMessageList
+        fileprivate let accountPeer: EnginePeer?
+        fileprivate let shortcutMessageList: ShortcutMessageList
+        fileprivate let greetingMessage: TelegramBusinessGreetingMessage?
+        fileprivate let awayMessage: TelegramBusinessAwayMessage?
+        fileprivate let additionalPeers: [EnginePeer.Id: AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer]
         
-        init(
+        fileprivate init(
             accountPeer: EnginePeer?,
-            shortcutMessageList: ShortcutMessageList
+            shortcutMessageList: ShortcutMessageList,
+            greetingMessage: TelegramBusinessGreetingMessage?,
+            awayMessage: TelegramBusinessAwayMessage?,
+            additionalPeers: [EnginePeer.Id: AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer]
         ) {
             self.accountPeer = accountPeer
             self.shortcutMessageList = shortcutMessageList
+            self.greetingMessage = greetingMessage
+            self.awayMessage = awayMessage
+            self.additionalPeers = additionalPeers
         }
     }
     
@@ -1334,16 +1465,48 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
     public static func initialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> {
         return combineLatest(
             context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Peer.BusinessGreetingMessage(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Peer.BusinessAwayMessage(id: context.account.peerId)
             ),
             context.engine.accountData.shortcutMessageList()
             |> take(1)
         )
-        |> map { accountPeer, shortcutMessageList -> AutomaticBusinessMessageSetupScreenInitialData in
-            return InitialData(
-                accountPeer: accountPeer,
-                shortcutMessageList: shortcutMessageList
+        |> mapToSignal { data, shortcutMessageList -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> in
+            let (accountPeer, greetingMessage, awayMessage) = data
+            
+            var additionalPeerIds = Set<EnginePeer.Id>()
+            if let greetingMessage {
+                additionalPeerIds.formUnion(greetingMessage.recipients.additionalPeers)
+            }
+            if let awayMessage {
+                additionalPeerIds.formUnion(awayMessage.recipients.additionalPeers)
+            }
+            
+            return context.engine.data.get(
+                EngineDataMap(additionalPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
+                EngineDataMap(additionalPeerIds.map(TelegramEngine.EngineData.Item.Peer.IsContact.init(id:)))
             )
+            |> map { peers, isContacts -> AutomaticBusinessMessageSetupScreenInitialData in
+                var additionalPeers: [EnginePeer.Id: AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer] = [:]
+                for id in additionalPeerIds {
+                    guard let peer = peers[id], let peer else {
+                        continue
+                    }
+                    additionalPeers[id] = AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer(
+                        peer: peer,
+                        isContact: isContacts[id] ?? false
+                    )
+                }
+                
+                return InitialData(
+                    accountPeer: accountPeer,
+                    shortcutMessageList: shortcutMessageList,
+                    greetingMessage: greetingMessage,
+                    awayMessage: awayMessage,
+                    additionalPeers: additionalPeers
+                )
+            }
         }
     }
 }

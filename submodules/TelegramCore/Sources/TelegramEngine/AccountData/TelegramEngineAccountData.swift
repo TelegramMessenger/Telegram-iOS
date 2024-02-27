@@ -193,5 +193,17 @@ public extension TelegramEngine {
         public func keepCachedTimeZoneListUpdated() -> Signal<Never, NoError> {
             return _internal_keepCachedTimeZoneListUpdated(account: self.account)
         }
+        
+        public func updateBusinessGreetingMessage(greetingMessage: TelegramBusinessGreetingMessage?) -> Signal<Never, NoError> {
+            return _internal_updateBusinessGreetingMessage(account: self.account, greetingMessage: greetingMessage)
+        }
+        
+        public func updateBusinessAwayMessage(awayMessage: TelegramBusinessAwayMessage?) -> Signal<Never, NoError> {
+            return _internal_updateBusinessAwayMessage(account: self.account, awayMessage: awayMessage)
+        }
+        
+        public func setAccountConnectedBot(bot: TelegramAccountConnectedBot?) -> Signal<Never, NoError> {
+            return _internal_setAccountConnectedBot(account: self.account, bot: bot)
+        }
     }
 }

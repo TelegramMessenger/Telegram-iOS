@@ -1890,8 +1890,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, forceDark: false)
     }
     
-    public func makeChatbotSetupScreen(context: AccountContext) -> ViewController {
-        return ChatbotSetupScreen(context: context)
+    public func makeChatbotSetupScreen(context: AccountContext, initialData: ChatbotSetupScreenInitialData) -> ViewController {
+        return ChatbotSetupScreen(context: context, initialData: initialData as! ChatbotSetupScreen.InitialData)
+    }
+    
+    public func makeChatbotSetupScreenInitialData(context: AccountContext) -> Signal<ChatbotSetupScreenInitialData, NoError> {
+        return ChatbotSetupScreen.initialData(context: context)
     }
     
     public func makeBusinessLocationSetupScreen(context: AccountContext, initialValue: TelegramBusinessLocation?, completion: @escaping (TelegramBusinessLocation?) -> Void) -> ViewController {

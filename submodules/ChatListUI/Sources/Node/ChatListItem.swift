@@ -2151,11 +2151,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 useInlineAuthorPrefix = true
             }
             if !itemTags.isEmpty {
-                if case let .chat(peer) = contentPeer, peer.peerId == item.context.account.peerId {
-                } else {
-                    useInlineAuthorPrefix = true
-                }
-                
                 forumTopicData = nil
                 topForumTopicItems = []
             }
@@ -3909,10 +3904,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if !itemTags.isEmpty {
                         let itemTagListFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.maxY - 12.0), size: CGSize(width: contentRect.width, height: 20.0))
                         
+                        var itemTagListTransition = transition
                         let itemTagList: ComponentView<Empty>
                         if let current = strongSelf.itemTagList {
                             itemTagList = current
                         } else {
+                            itemTagListTransition = .immediate
                             itemTagList = ComponentView()
                             strongSelf.itemTagList = itemTagList
                         }
@@ -3931,7 +3928,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 itemTagListView.isUserInteractionEnabled = false
                                 strongSelf.mainContentContainerNode.view.addSubview(itemTagListView)
                             }
-                            itemTagListView.frame = itemTagListFrame
+                            
+                            itemTagListTransition.updateFrame(view: itemTagListView, frame: itemTagListFrame)
                         }
                     } else {
                         if let itemTagList = strongSelf.itemTagList {

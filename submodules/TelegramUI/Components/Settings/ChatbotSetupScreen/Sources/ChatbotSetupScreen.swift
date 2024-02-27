@@ -41,11 +41,14 @@ final class ChatbotSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let initialData: ChatbotSetupScreen.InitialData
 
     init(
-        context: AccountContext
+        context: AccountContext,
+        initialData: ChatbotSetupScreen.InitialData
     ) {
         self.context = context
+        self.initialData = initialData
     }
 
     static func ==(lhs: ChatbotSetupScreenComponent, rhs: ChatbotSetupScreenComponent) -> Bool {
@@ -78,7 +81,7 @@ final class ChatbotSetupScreenComponent: Component {
         }
     }
     
-    private struct AdditionalPeerList {
+    struct AdditionalPeerList {
         enum Category: Int {
             case newChats = 0
             case existingChats = 1
@@ -128,6 +131,7 @@ final class ChatbotSetupScreenComponent: Component {
         
         private var botResolutionState: BotResolutionState?
         private var botResolutionDisposable: Disposable?
+        private var resetQueryText: String?
         
         private var hasAccessToAllChatsByDefault: Bool = true
         private var additionalPeerList = AdditionalPeerList(
@@ -170,6 +174,39 @@ final class ChatbotSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            
+            var mappedCategories: TelegramBusinessRecipients.Categories = []
+            if self.additionalPeerList.categories.contains(.existingChats) {
+                mappedCategories.insert(.existingChats)
+            }
+            if self.additionalPeerList.categories.contains(.newChats) {
+                mappedCategories.insert(.newChats)
+            }
+            if self.additionalPeerList.categories.contains(.contacts) {
+                mappedCategories.insert(.contacts)
+            }
+            if self.additionalPeerList.categories.contains(.nonContacts) {
+                mappedCategories.insert(.nonContacts)
+            }
+            let recipients = TelegramBusinessRecipients(
+                categories: mappedCategories,
+                additionalPeers: Set(self.additionalPeerList.peers.map(\.peer.id)),
+                exclude: self.hasAccessToAllChatsByDefault
+            )
+            
+            if let botResolutionState = self.botResolutionState, case let .found(peer, isInstalled) = botResolutionState.state, isInstalled {
+                let _ = component.context.engine.accountData.setAccountConnectedBot(bot: TelegramAccountConnectedBot(
+                    id: peer.id,
+                    recipients: recipients,
+                    canReply: self.replyToMessages
+                )).startStandalone()
+            } else {
+                let _ = component.context.engine.accountData.setAccountConnectedBot(bot: nil).startStandalone()
+            }
+            
             return true
         }
         
@@ -273,14 +310,14 @@ final class ChatbotSetupScreenComponent: Component {
             let additionalCategories: [ChatListNodeAdditionalCategory] = [
                 ChatListNodeAdditionalCategory(
                     id: self.hasAccessToAllChatsByDefault ? AdditionalCategoryId.existingChats.rawValue : AdditionalCategoryId.newChats.rawValue,
-                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .purple),
-                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
+                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), cornerRadius: 12.0, color: .purple),
+                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
                     title: self.hasAccessToAllChatsByDefault ? "Existing Chats" : "New Chats"
                 ),
                 ChatListNodeAdditionalCategory(
                     id: AdditionalCategoryId.contacts.rawValue,
-                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .blue),
-                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
+                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
+                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
                     title: "Contacts"
                 ),
                 ChatListNodeAdditionalCategory(
@@ -391,6 +428,45 @@ final class ChatbotSetupScreenComponent: Component {
                 self.isUpdating = false
             }
             
+            if self.component == nil {
+                if let bot = component.initialData.bot, let botPeer = component.initialData.botPeer, let addressName = botPeer.addressName {
+                    self.botResolutionState = BotResolutionState(query: addressName, state: .found(peer: botPeer, isInstalled: true))
+                    self.resetQueryText = addressName.lowercased()
+                    
+                    self.replyToMessages = bot.canReply
+                    
+                    let initialRecipients = bot.recipients
+                    
+                    var mappedCategories = Set<AdditionalPeerList.Category>()
+                    if initialRecipients.categories.contains(.existingChats) {
+                        mappedCategories.insert(.existingChats)
+                    }
+                    if initialRecipients.categories.contains(.newChats) {
+                        mappedCategories.insert(.newChats)
+                    }
+                    if initialRecipients.categories.contains(.contacts) {
+                        mappedCategories.insert(.contacts)
+                    }
+                    if initialRecipients.categories.contains(.nonContacts) {
+                        mappedCategories.insert(.nonContacts)
+                    }
+                    
+                    var additionalPeers: [AdditionalPeerList.Peer] = []
+                    for peerId in initialRecipients.additionalPeers {
+                        if let peer = component.initialData.additionalPeers[peerId] {
+                            additionalPeers.append(peer)
+                        }
+                    }
+                    
+                    self.additionalPeerList = AdditionalPeerList(
+                        categories: mappedCategories,
+                        peers: additionalPeers
+                    )
+                    
+                    self.hasAccessToAllChatsByDefault = initialRecipients.exclude
+                }
+            }
+            
             let environment = environment[EnvironmentType.self].value
             let themeUpdated = self.environment?.theme !== environment.theme
             self.environment = environment
@@ -439,12 +515,12 @@ final class ChatbotSetupScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "BotEmoji"),
-                    loop: true
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
-            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 2.0), size: iconSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 8.0), size: iconSize)
             if let iconView = self.icon.view {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
@@ -508,10 +584,13 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += subtitleSize.height
             contentHeight += 27.0
             
+            let resetQueryText = self.resetQueryText
+            self.resetQueryText = nil
             var nameSectionItems: [AnyComponentWithIdentity<Empty>] = []
             nameSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListTextFieldItemComponent(
                 theme: environment.theme,
                 initialText: "",
+                resetText: resetQueryText.flatMap { ListTextFieldItemComponent.ResetText(value: $0) },
                 placeholder: "Bot Username",
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
@@ -918,13 +997,30 @@ final class ChatbotSetupScreenComponent: Component {
 }
 
 public final class ChatbotSetupScreen: ViewControllerComponentContainer {
+    public final class InitialData: ChatbotSetupScreenInitialData {
+        fileprivate let bot: TelegramAccountConnectedBot?
+        fileprivate let botPeer: EnginePeer?
+        fileprivate let additionalPeers: [EnginePeer.Id: ChatbotSetupScreenComponent.AdditionalPeerList.Peer]
+        
+        fileprivate init(
+            bot: TelegramAccountConnectedBot?,
+            botPeer: EnginePeer?,
+            additionalPeers: [EnginePeer.Id: ChatbotSetupScreenComponent.AdditionalPeerList.Peer]
+        ) {
+            self.bot = bot
+            self.botPeer = botPeer
+            self.additionalPeers = additionalPeers
+        }
+    }
+    
     private let context: AccountContext
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, initialData: InitialData) {
         self.context = context
         
         super.init(context: context, component: ChatbotSetupScreenComponent(
-            context: context
+            context: context,
+            initialData: initialData
         ), navigationBarAppearance: .default, theme: .default, updatedPresentationData: nil)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -960,5 +1056,49 @@ public final class ChatbotSetupScreen: ViewControllerComponentContainer {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public static func initialData(context: AccountContext) -> Signal<ChatbotSetupScreenInitialData, NoError> {
+        return context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.BusinessConnectedBot(id: context.account.peerId)
+        )
+        |> mapToSignal { connectedBot -> Signal<ChatbotSetupScreenInitialData, NoError> in
+            guard let connectedBot else {
+                return .single(
+                    InitialData(
+                        bot: nil,
+                        botPeer: nil,
+                        additionalPeers: [:]
+                    )
+                )
+            }
+            
+            var additionalPeerIds = Set<EnginePeer.Id>()
+            additionalPeerIds.formUnion(connectedBot.recipients.additionalPeers)
+            
+            return context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: connectedBot.id),
+                EngineDataMap(additionalPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))),
+                EngineDataMap(additionalPeerIds.map(TelegramEngine.EngineData.Item.Peer.IsContact.init(id:)))
+            )
+            |> map { botPeer, peers, isContacts -> ChatbotSetupScreenInitialData in
+                var additionalPeers: [EnginePeer.Id: ChatbotSetupScreenComponent.AdditionalPeerList.Peer] = [:]
+                for id in additionalPeerIds {
+                    guard let peer = peers[id], let peer else {
+                        continue
+                    }
+                    additionalPeers[id] = ChatbotSetupScreenComponent.AdditionalPeerList.Peer(
+                        peer: peer,
+                        isContact: isContacts[id] ?? false
+                    )
+                }
+                
+                return InitialData(
+                    bot: connectedBot,
+                    botPeer: botPeer,
+                    additionalPeers: additionalPeers
+                )
+            }
+        }
     }
 }

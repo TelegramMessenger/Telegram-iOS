@@ -712,8 +712,6 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             maxWidth = min(240.0, maxWidth)
             
             switch customChatContents.kind {
-            case .greetingMessageInput, .awayMessageInput:
-                break
             case .quickReplyMessageInput:
                 insets.top = 10.0
                 imageSpacing = 5.0
@@ -734,29 +732,34 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
             
             if case let .customChatContents(customChatContents) = interfaceState.subject {
                 switch customChatContents.kind {
-                case .greetingMessageInput:
-                    //TODO:localize
-                    centerText = true
-                    titleString = "New Greeting Message"
-                    strings = [
-                        "Create greetings that will be automatically sent to new customers"
-                    ]
-                case .awayMessageInput:
-                    //TODO:localize
-                    centerText = true
-                    titleString = "New Away Message"
-                    strings = [
-                        "Add messages that are automatically sent when you are off."
-                    ]
-                case let .quickReplyMessageInput(shortcut):
-                    iconName = "Chat/Empty Chat/QuickReplies"
-                    //TODO:localize
-                    centerText = false
-                    titleString = "New Quick Reply"
-                    strings = [
-                        "· Enter a message below that will be sent in chats when you type \"**/\(shortcut)\"**.",
-                        "· You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu."
-                    ]
+                case let .quickReplyMessageInput(shortcut, shortcutType):
+                    switch shortcutType {
+                    case .generic:
+                        iconName = "Chat/Empty Chat/QuickReplies"
+                        //TODO:localize
+                        centerText = false
+                        titleString = "New Quick Reply"
+                        strings = [
+                            "· Enter a message below that will be sent in chats when you type \"**/\(shortcut)\"**.",
+                            "· You can access Quick Replies in any chat by typing \"/\" or using the Attachment menu."
+                        ]
+                    case .greeting:
+                        iconName = "Chat/Empty Chat/GreetingShortcut"
+                        //TODO:localize
+                        centerText = true
+                        titleString = "New Greeting Message"
+                        strings = [
+                            "Create greetings that will be automatically sent to new customers"
+                        ]
+                    case .away:
+                        iconName = "Chat/Empty Chat/AwayShortcut"
+                        //TODO:localize
+                        centerText = true
+                        titleString = "New Away Message"
+                        strings = [
+                            "Add messages that are automatically sent when you are off."
+                        ]
+                    }
                 }
             } else {
                 titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title

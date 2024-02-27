@@ -508,15 +508,19 @@ public extension Api {
     indirect enum Update: TypeConstructorDescription {
         case updateAttachMenuBots
         case updateAutoSaveSettings
+        case updateBotBusinessConnect(connection: Api.BotBusinessConnection, qts: Int32)
         case updateBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, peer: Api.Peer, msgId: Int32, chatInstance: Int64, data: Buffer?, gameShortName: String?)
         case updateBotChatBoost(peer: Api.Peer, boost: Api.Boost, qts: Int32)
         case updateBotChatInviteRequester(peer: Api.Peer, date: Int32, userId: Int64, about: String, invite: Api.ExportedChatInvite, qts: Int32)
         case updateBotCommands(peer: Api.Peer, botId: Int64, commands: [Api.BotCommand])
+        case updateBotDeleteBusinessMessage(connectionId: String, messages: [Int32], qts: Int32)
+        case updateBotEditBusinessMessage(connectionId: String, message: Api.Message, qts: Int32)
         case updateBotInlineQuery(flags: Int32, queryId: Int64, userId: Int64, query: String, geo: Api.GeoPoint?, peerType: Api.InlineQueryPeerType?, offset: String)
         case updateBotInlineSend(flags: Int32, userId: Int64, query: String, geo: Api.GeoPoint?, id: String, msgId: Api.InputBotInlineMessageID?)
         case updateBotMenuButton(botId: Int64, button: Api.BotMenuButton)
         case updateBotMessageReaction(peer: Api.Peer, msgId: Int32, date: Int32, actor: Api.Peer, oldReactions: [Api.Reaction], newReactions: [Api.Reaction], qts: Int32)
         case updateBotMessageReactions(peer: Api.Peer, msgId: Int32, date: Int32, reactions: [Api.ReactionCount], qts: Int32)
+        case updateBotNewBusinessMessage(connectionId: String, message: Api.Message, qts: Int32)
         case updateBotPrecheckoutQuery(flags: Int32, queryId: Int64, userId: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, currency: String, totalAmount: Int64)
         case updateBotShippingQuery(queryId: Int64, userId: Int64, payload: Buffer, shippingAddress: Api.PostAddress)
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
@@ -652,6 +656,13 @@ public extension Api {
                     }
                     
                     break
+                case .updateBotBusinessConnect(let connection, let qts):
+                    if boxed {
+                        buffer.appendInt32(-1964652166)
+                    }
+                    connection.serialize(buffer, true)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
                 case .updateBotCallbackQuery(let flags, let queryId, let userId, let peer, let msgId, let chatInstance, let data, let gameShortName):
                     if boxed {
                         buffer.appendInt32(-1177566067)
@@ -695,6 +706,26 @@ public extension Api {
                     for item in commands {
                         item.serialize(buffer, true)
                     }
+                    break
+                case .updateBotDeleteBusinessMessage(let connectionId, let messages, let qts):
+                    if boxed {
+                        buffer.appendInt32(-1590796039)
+                    }
+                    serializeString(connectionId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
+                case .updateBotEditBusinessMessage(let connectionId, let message, let qts):
+                    if boxed {
+                        buffer.appendInt32(1420915171)
+                    }
+                    serializeString(connectionId, buffer: buffer, boxed: false)
+                    message.serialize(buffer, true)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
                     break
                 case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let peerType, let offset):
                     if boxed {
@@ -758,6 +789,14 @@ public extension Api {
                     for item in reactions {
                         item.serialize(buffer, true)
                     }
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
+                case .updateBotNewBusinessMessage(let connectionId, let message, let qts):
+                    if boxed {
+                        buffer.appendInt32(-2142069794)
+                    }
+                    serializeString(connectionId, buffer: buffer, boxed: false)
+                    message.serialize(buffer, true)
                     serializeInt32(qts, buffer: buffer, boxed: false)
                     break
                 case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
@@ -1778,6 +1817,8 @@ public extension Api {
                 return ("updateAttachMenuBots", [])
                 case .updateAutoSaveSettings:
                 return ("updateAutoSaveSettings", [])
+                case .updateBotBusinessConnect(let connection, let qts):
+                return ("updateBotBusinessConnect", [("connection", connection as Any), ("qts", qts as Any)])
                 case .updateBotCallbackQuery(let flags, let queryId, let userId, let peer, let msgId, let chatInstance, let data, let gameShortName):
                 return ("updateBotCallbackQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("peer", peer as Any), ("msgId", msgId as Any), ("chatInstance", chatInstance as Any), ("data", data as Any), ("gameShortName", gameShortName as Any)])
                 case .updateBotChatBoost(let peer, let boost, let qts):
@@ -1786,6 +1827,10 @@ public extension Api {
                 return ("updateBotChatInviteRequester", [("peer", peer as Any), ("date", date as Any), ("userId", userId as Any), ("about", about as Any), ("invite", invite as Any), ("qts", qts as Any)])
                 case .updateBotCommands(let peer, let botId, let commands):
                 return ("updateBotCommands", [("peer", peer as Any), ("botId", botId as Any), ("commands", commands as Any)])
+                case .updateBotDeleteBusinessMessage(let connectionId, let messages, let qts):
+                return ("updateBotDeleteBusinessMessage", [("connectionId", connectionId as Any), ("messages", messages as Any), ("qts", qts as Any)])
+                case .updateBotEditBusinessMessage(let connectionId, let message, let qts):
+                return ("updateBotEditBusinessMessage", [("connectionId", connectionId as Any), ("message", message as Any), ("qts", qts as Any)])
                 case .updateBotInlineQuery(let flags, let queryId, let userId, let query, let geo, let peerType, let offset):
                 return ("updateBotInlineQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("query", query as Any), ("geo", geo as Any), ("peerType", peerType as Any), ("offset", offset as Any)])
                 case .updateBotInlineSend(let flags, let userId, let query, let geo, let id, let msgId):
@@ -1796,6 +1841,8 @@ public extension Api {
                 return ("updateBotMessageReaction", [("peer", peer as Any), ("msgId", msgId as Any), ("date", date as Any), ("actor", actor as Any), ("oldReactions", oldReactions as Any), ("newReactions", newReactions as Any), ("qts", qts as Any)])
                 case .updateBotMessageReactions(let peer, let msgId, let date, let reactions, let qts):
                 return ("updateBotMessageReactions", [("peer", peer as Any), ("msgId", msgId as Any), ("date", date as Any), ("reactions", reactions as Any), ("qts", qts as Any)])
+                case .updateBotNewBusinessMessage(let connectionId, let message, let qts):
+                return ("updateBotNewBusinessMessage", [("connectionId", connectionId as Any), ("message", message as Any), ("qts", qts as Any)])
                 case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
                 return ("updateBotPrecheckoutQuery", [("flags", flags as Any), ("queryId", queryId as Any), ("userId", userId as Any), ("payload", payload as Any), ("info", info as Any), ("shippingOptionId", shippingOptionId as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any)])
                 case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
@@ -2045,6 +2092,22 @@ public extension Api {
         public static func parse_updateAutoSaveSettings(_ reader: BufferReader) -> Update? {
             return Api.Update.updateAutoSaveSettings
         }
+        public static func parse_updateBotBusinessConnect(_ reader: BufferReader) -> Update? {
+            var _1: Api.BotBusinessConnection?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.BotBusinessConnection
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateBotBusinessConnect(connection: _1!, qts: _2!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateBotCallbackQuery(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -2146,6 +2209,44 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateBotCommands(peer: _1!, botId: _2!, commands: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotDeleteBusinessMessage(_ reader: BufferReader) -> Update? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotDeleteBusinessMessage(connectionId: _1!, messages: _2!, qts: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotEditBusinessMessage(_ reader: BufferReader) -> Update? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.Message?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotEditBusinessMessage(connectionId: _1!, message: _2!, qts: _3!)
             }
             else {
                 return nil
@@ -2289,6 +2390,25 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.Update.updateBotMessageReactions(peer: _1!, msgId: _2!, date: _3!, reactions: _4!, qts: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotNewBusinessMessage(_ reader: BufferReader) -> Update? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.Message?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateBotNewBusinessMessage(connectionId: _1!, message: _2!, qts: _3!)
             }
             else {
                 return nil

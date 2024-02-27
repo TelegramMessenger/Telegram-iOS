@@ -57,12 +57,6 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
     
     if case let .customChatContents(customChatContents) = presentationInterfaceState.subject {
         switch customChatContents.kind {
-        case .greetingMessageInput, .awayMessageInput:
-            if case .spacer = currentButton?.action {
-                return currentButton
-            } else {
-                return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: " ", style: .plain, target: nil, action: nil))
-            }
         case .quickReplyMessageInput:
             if let currentButton = currentButton, currentButton.action == .dismiss {
                 return currentButton
@@ -130,21 +124,18 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     
     if case let .customChatContents(customChatContents) = presentationInterfaceState.subject {
         switch customChatContents.kind {
-        case .greetingMessageInput, .awayMessageInput:
-            if let currentButton = currentButton, currentButton.action == .dismiss {
-                return currentButton
-            } else {
-                let buttonItem = UIBarButtonItem(title: strings.Common_Done, style: .done, target: target, action: selector)
-                buttonItem.accessibilityLabel = strings.Common_Done
-                return ChatNavigationButton(action: .dismiss, buttonItem: buttonItem)
-            }
-        case .quickReplyMessageInput:
-            if let currentButton = currentButton, currentButton.action == .edit {
-                return currentButton
-            } else {
-                let buttonItem = UIBarButtonItem(title: strings.Common_Edit, style: .plain, target: target, action: selector)
-                buttonItem.accessibilityLabel = strings.Common_Done
-                return ChatNavigationButton(action: .edit, buttonItem: buttonItem)
+        case let .quickReplyMessageInput(_, shortcutType):
+            switch shortcutType {
+            case .generic:
+                if let currentButton = currentButton, currentButton.action == .edit {
+                    return currentButton
+                } else {
+                    let buttonItem = UIBarButtonItem(title: strings.Common_Edit, style: .plain, target: target, action: selector)
+                    buttonItem.accessibilityLabel = strings.Common_Done
+                    return ChatNavigationButton(action: .edit, buttonItem: buttonItem)
+                }
+            case .greeting, .away:
+                return nil
             }
         }
     }
