@@ -521,9 +521,10 @@ final class ChatbotSetupScreenComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: contentHeight + 8.0), size: iconSize)
-            if let iconView = self.icon.view {
+            if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.scrollView.addSubview(iconView)
+                    iconView.playOnce()
                 }
                 transition.setPosition(view: iconView, position: iconFrame.center)
                 iconView.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
@@ -532,7 +533,7 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += 129.0
             
             //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More]()", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More]() >", attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
