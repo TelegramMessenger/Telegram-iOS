@@ -70,6 +70,14 @@ public enum PremiumDemoSubject {
     case messageTags
     case lastSeen
     case messagePrivacy
+    case folderTags
+    
+    case businessLocation
+    case businessHours
+    case businessGreetingMessage
+    case businessQuickReplies
+    case businessAwayMessage
+    case businessChatBots
 }
 
 public enum PremiumLimitSubject {

@@ -8,7 +8,7 @@ import GZip
 import AppBundle
 import LegacyComponents
 
-private let sceneVersion: Int = 6
+private let sceneVersion: Int = 7
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -45,7 +45,31 @@ private func generateDiffuseTexture() -> UIImage {
     })!
 }
 
-class PremiumStarComponent: Component {
+func loadCompressedScene(name: String, version: Int) -> SCNScene? {
+    let resourceUrl: URL
+    if let url = getAppBundle().url(forResource: name, withExtension: "scn") {
+        resourceUrl = url
+    } else {
+        let fileName = "\(name)_\(version).scn"
+        let tmpUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
+        if !FileManager.default.fileExists(atPath: tmpUrl.path) {
+            guard let url = getAppBundle().url(forResource: name, withExtension: ""),
+                  let compressedData = try? Data(contentsOf: url),
+                  let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
+                return nil
+            }
+            try? decompressedData.write(to: tmpUrl)
+        }
+        resourceUrl = tmpUrl
+    }
+    
+    guard let scene = try? SCNScene(url: resourceUrl, options: nil) else {
+        return nil
+    }
+    return scene
+}
+
+final class PremiumStarComponent: Component {
     let isIntro: Bool
     let isVisible: Bool
     let hasIdleAnimations: Bool
@@ -251,24 +275,7 @@ class PremiumStarComponent: Component {
         }
         
         private func setup() {
-            let resourceUrl: URL
-            if let url = getAppBundle().url(forResource: "star", withExtension: "scn") {
-                resourceUrl = url
-            } else {
-                let fileName = "star_\(sceneVersion).scn"
-                let tmpUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
-                if !FileManager.default.fileExists(atPath: tmpUrl.path) {
-                    guard let url = getAppBundle().url(forResource: "star", withExtension: ""),
-                          let compressedData = try? Data(contentsOf: url),
-                          let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
-                        return
-                    }
-                    try? decompressedData.write(to: tmpUrl)
-                }
-                resourceUrl = tmpUrl
-            }
-            
-            guard let scene = try? SCNScene(url: resourceUrl, options: nil) else {
+            guard let scene = loadCompressedScene(name: "star", version: sceneVersion) else {
                 return
             }
             

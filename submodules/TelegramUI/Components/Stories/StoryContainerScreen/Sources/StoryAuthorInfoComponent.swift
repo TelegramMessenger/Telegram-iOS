@@ -134,6 +134,9 @@ final class StoryAuthorInfoComponent: Component {
                 if timeString.count < 6 {
                     combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
                 }
+                if component.isEdited {
+                    combinedString.append(NSAttributedString(string: " • \(component.strings.Story_HeaderEdited)", font: Font.regular(11.0), textColor: subtitleColor))
+                }
                 subtitle = combinedString
                 subtitleTruncationType = .middle
             } else {

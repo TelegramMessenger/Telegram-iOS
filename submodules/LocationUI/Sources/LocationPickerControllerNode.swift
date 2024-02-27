@@ -889,10 +889,14 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             }
         })
         
-        if case let .share(_, selfPeer, _) = self.mode {
+        switch self.mode {
+        case let .share(_, selfPeer, _):
             if let selfPeer {
                 self.headerNode.mapNode.userLocationAnnotation = LocationPinAnnotation(context: context, theme: self.presentationData.theme, peer: selfPeer)
             }
+            self.headerNode.mapNode.hasPickerAnnotation = true
+        case .pick:
+            self.headerNode.mapNode.userLocationAnnotation = LocationPinAnnotation(context: context, theme: self.presentationData.theme, location: TelegramMediaMap(coordinate: CLLocationCoordinate2DMake(0, 0)), queryId: nil, resultId: nil, forcedSelection: true)
             self.headerNode.mapNode.hasPickerAnnotation = true
         }
         
