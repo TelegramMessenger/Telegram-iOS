@@ -590,52 +590,44 @@ public extension Api {
 }
 public extension Api {
     enum BusinessAwayMessage: TypeConstructorDescription {
-        case businessAwayMessage(flags: Int32, shortcutId: Int32, schedule: Api.BusinessAwayMessageSchedule, users: [Int64]?)
+        case businessAwayMessage(shortcutId: Int32, schedule: Api.BusinessAwayMessageSchedule, recipients: Api.BusinessRecipients)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .businessAwayMessage(let flags, let shortcutId, let schedule, let users):
+                case .businessAwayMessage(let shortcutId, let schedule, let recipients):
                     if boxed {
-                        buffer.appendInt32(-1697809899)
+                        buffer.appendInt32(467254972)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(shortcutId, buffer: buffer, boxed: false)
                     schedule.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users!.count))
-                    for item in users! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }}
+                    recipients.serialize(buffer, true)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .businessAwayMessage(let flags, let shortcutId, let schedule, let users):
-                return ("businessAwayMessage", [("flags", flags as Any), ("shortcutId", shortcutId as Any), ("schedule", schedule as Any), ("users", users as Any)])
+                case .businessAwayMessage(let shortcutId, let schedule, let recipients):
+                return ("businessAwayMessage", [("shortcutId", shortcutId as Any), ("schedule", schedule as Any), ("recipients", recipients as Any)])
     }
     }
     
         public static func parse_businessAwayMessage(_ reader: BufferReader) -> BusinessAwayMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.BusinessAwayMessageSchedule?
+            var _2: Api.BusinessAwayMessageSchedule?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.BusinessAwayMessageSchedule
+                _2 = Api.parse(reader, signature: signature) as? Api.BusinessAwayMessageSchedule
             }
-            var _4: [Int64]?
-            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            } }
+            var _3: Api.BusinessRecipients?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BusinessAwayMessage.businessAwayMessage(flags: _1!, shortcutId: _2!, schedule: _3!, users: _4)
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessAwayMessage.businessAwayMessage(shortcutId: _1!, schedule: _2!, recipients: _3!)
             }
             else {
                 return nil
@@ -710,21 +702,16 @@ public extension Api {
 }
 public extension Api {
     enum BusinessGreetingMessage: TypeConstructorDescription {
-        case businessGreetingMessage(flags: Int32, shortcutId: Int32, users: [Int64]?, noActivityDays: Int32)
+        case businessGreetingMessage(shortcutId: Int32, recipients: Api.BusinessRecipients, noActivityDays: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .businessGreetingMessage(let flags, let shortcutId, let users, let noActivityDays):
+                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
                     if boxed {
-                        buffer.appendInt32(-1600596660)
+                        buffer.appendInt32(-451302485)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(shortcutId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users!.count))
-                    for item in users! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }}
+                    recipients.serialize(buffer, true)
                     serializeInt32(noActivityDays, buffer: buffer, boxed: false)
                     break
     }
@@ -732,28 +719,25 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .businessGreetingMessage(let flags, let shortcutId, let users, let noActivityDays):
-                return ("businessGreetingMessage", [("flags", flags as Any), ("shortcutId", shortcutId as Any), ("users", users as Any), ("noActivityDays", noActivityDays as Any)])
+                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
+                return ("businessGreetingMessage", [("shortcutId", shortcutId as Any), ("recipients", recipients as Any), ("noActivityDays", noActivityDays as Any)])
     }
     }
     
         public static func parse_businessGreetingMessage(_ reader: BufferReader) -> BusinessGreetingMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Int64]?
-            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            } }
-            var _4: Int32?
-            _4 = reader.readInt32()
+            var _2: Api.BusinessRecipients?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 4) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BusinessGreetingMessage.businessGreetingMessage(flags: _1!, shortcutId: _2!, users: _3, noActivityDays: _4!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
             }
             else {
                 return nil
@@ -800,6 +784,52 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.BusinessLocation.businessLocation(flags: _1!, geoPoint: _2, address: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum BusinessRecipients: TypeConstructorDescription {
+        case businessRecipients(flags: Int32, users: [Int64]?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessRecipients(let flags, let users):
+                    if boxed {
+                        buffer.appendInt32(554733559)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users!.count))
+                    for item in users! {
+                        serializeInt64(item, buffer: buffer, boxed: false)
+                    }}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessRecipients(let flags, let users):
+                return ("businessRecipients", [("flags", flags as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_businessRecipients(_ reader: BufferReader) -> BusinessRecipients? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Int64]?
+            if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.BusinessRecipients.businessRecipients(flags: _1!, users: _2)
             }
             else {
                 return nil

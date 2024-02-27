@@ -80,6 +80,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[706514033] = { return Api.Boost.parse_boost($0) }
     dict[-1778593322] = { return Api.BotApp.parse_botApp($0) }
     dict[1571189943] = { return Api.BotApp.parse_botAppNotModified($0) }
+    dict[-1989921868] = { return Api.BotBusinessConnection.parse_botBusinessConnection($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
     dict[-1180016534] = { return Api.BotCommandScope.parse_botCommandScopeChatAdmins($0) }
     dict[1877059713] = { return Api.BotCommandScope.parse_botCommandScopeChats($0) }
@@ -101,12 +102,13 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-944407322] = { return Api.BotMenuButton.parse_botMenuButton($0) }
     dict[1113113093] = { return Api.BotMenuButton.parse_botMenuButtonCommands($0) }
     dict[1966318984] = { return Api.BotMenuButton.parse_botMenuButtonDefault($0) }
-    dict[-1697809899] = { return Api.BusinessAwayMessage.parse_businessAwayMessage($0) }
+    dict[467254972] = { return Api.BusinessAwayMessage.parse_businessAwayMessage($0) }
     dict[-910564679] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleAlways($0) }
     dict[-867328308] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleCustom($0) }
     dict[-1007487743] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleOutsideWorkHours($0) }
-    dict[-1600596660] = { return Api.BusinessGreetingMessage.parse_businessGreetingMessage($0) }
+    dict[-451302485] = { return Api.BusinessGreetingMessage.parse_businessGreetingMessage($0) }
     dict[-1403249929] = { return Api.BusinessLocation.parse_businessLocation($0) }
+    dict[554733559] = { return Api.BusinessRecipients.parse_businessRecipients($0) }
     dict[302717625] = { return Api.BusinessWeeklyOpen.parse_businessWeeklyOpen($0) }
     dict[-1936543592] = { return Api.BusinessWorkHours.parse_businessWorkHours($0) }
     dict[1462101002] = { return Api.CdnConfig.parse_cdnConfig($0) }
@@ -206,6 +208,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1713193015] = { return Api.ChatReactions.parse_chatReactionsSome($0) }
     dict[-1390068360] = { return Api.CodeSettings.parse_codeSettings($0) }
     dict[-870702050] = { return Api.Config.parse_config($0) }
+    dict[-404121113] = { return Api.ConnectedBot.parse_connectedBot($0) }
     dict[341499403] = { return Api.Contact.parse_contact($0) }
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
@@ -305,8 +308,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
-    dict[-831530424] = { return Api.InputBusinessAwayMessage.parse_inputBusinessAwayMessage($0) }
-    dict[2102015497] = { return Api.InputBusinessGreetingMessage.parse_inputBusinessGreetingMessage($0) }
+    dict[-307493900] = { return Api.InputBusinessAwayMessage.parse_inputBusinessAwayMessage($0) }
+    dict[26528571] = { return Api.InputBusinessGreetingMessage.parse_inputBusinessGreetingMessage($0) }
+    dict[1871393450] = { return Api.InputBusinessRecipients.parse_inputBusinessRecipients($0) }
     dict[-212145112] = { return Api.InputChannel.parse_inputChannel($0) }
     dict[-292807034] = { return Api.InputChannel.parse_inputChannelEmpty($0) }
     dict[1536380829] = { return Api.InputChannel.parse_inputChannelFromMessage($0) }
@@ -875,15 +879,19 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[397910539] = { return Api.Update.parse_updateAttachMenuBots($0) }
     dict[-335171433] = { return Api.Update.parse_updateAutoSaveSettings($0) }
+    dict[-1964652166] = { return Api.Update.parse_updateBotBusinessConnect($0) }
     dict[-1177566067] = { return Api.Update.parse_updateBotCallbackQuery($0) }
     dict[-1873947492] = { return Api.Update.parse_updateBotChatBoost($0) }
     dict[299870598] = { return Api.Update.parse_updateBotChatInviteRequester($0) }
     dict[1299263278] = { return Api.Update.parse_updateBotCommands($0) }
+    dict[-1590796039] = { return Api.Update.parse_updateBotDeleteBusinessMessage($0) }
+    dict[1420915171] = { return Api.Update.parse_updateBotEditBusinessMessage($0) }
     dict[1232025500] = { return Api.Update.parse_updateBotInlineQuery($0) }
     dict[317794823] = { return Api.Update.parse_updateBotInlineSend($0) }
     dict[347625491] = { return Api.Update.parse_updateBotMenuButton($0) }
     dict[-1407069234] = { return Api.Update.parse_updateBotMessageReaction($0) }
     dict[164329305] = { return Api.Update.parse_updateBotMessageReactions($0) }
+    dict[-2142069794] = { return Api.Update.parse_updateBotNewBusinessMessage($0) }
     dict[-1934976362] = { return Api.Update.parse_updateBotPrecheckoutQuery($0) }
     dict[-1246823043] = { return Api.Update.parse_updateBotShippingQuery($0) }
     dict[-997782967] = { return Api.Update.parse_updateBotStopped($0) }
@@ -1047,6 +1055,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1275039392] = { return Api.account.Authorizations.parse_authorizations($0) }
     dict[1674235686] = { return Api.account.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[1279133341] = { return Api.account.AutoSaveSettings.parse_autoSaveSettings($0) }
+    dict[400029819] = { return Api.account.ConnectedBots.parse_connectedBots($0) }
     dict[1474462241] = { return Api.account.ContentSettings.parse_contentSettings($0) }
     dict[731303195] = { return Api.account.EmailVerified.parse_emailVerified($0) }
     dict[-507835039] = { return Api.account.EmailVerified.parse_emailVerifiedLogin($0) }
@@ -1383,6 +1392,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotApp:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.BotBusinessConnection:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.BotCommand:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotCommandScope:
@@ -1402,6 +1413,8 @@ public extension Api {
             case let _1 as Api.BusinessGreetingMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessLocation:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BusinessRecipients:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessWeeklyOpen:
                 _1.serialize(buffer, boxed)
@@ -1452,6 +1465,8 @@ public extension Api {
             case let _1 as Api.CodeSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Config:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ConnectedBot:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Contact:
                 _1.serialize(buffer, boxed)
@@ -1558,6 +1573,8 @@ public extension Api {
             case let _1 as Api.InputBusinessAwayMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputBusinessGreetingMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputBusinessRecipients:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputChannel:
                 _1.serialize(buffer, boxed)
@@ -1944,6 +1961,8 @@ public extension Api {
             case let _1 as Api.account.AutoDownloadSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.AutoSaveSettings:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.ConnectedBots:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.ContentSettings:
                 _1.serialize(buffer, boxed)

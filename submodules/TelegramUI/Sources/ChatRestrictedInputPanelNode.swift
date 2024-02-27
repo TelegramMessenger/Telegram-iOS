@@ -103,7 +103,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         } else if case let .customChatContents(customChatContents) = interfaceState.subject {
             let displayCount: Int
             switch customChatContents.kind {
-            case .greetingMessageInput, .awayMessageInput, .quickReplyMessageInput:
+            case .quickReplyMessageInput:
                 displayCount = 20
             }
             //TODO:localize

@@ -183,11 +183,7 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
         
         let initialShortcut: String
         switch kind {
-        case .awayMessageInput:
-            initialShortcut = "_away"
-        case .greetingMessageInput:
-            initialShortcut = "_greeting"
-        case let .quickReplyMessageInput(shortcut):
+        case let .quickReplyMessageInput(shortcut, _):
             initialShortcut = shortcut
         }
         
@@ -217,9 +213,12 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
     }
     
     func quickReplyUpdateShortcut(value: String) {
-        self.kind = .quickReplyMessageInput(shortcut: value)
-        self.impl.with { impl in
-            impl.quickReplyUpdateShortcut(value: value)
+        switch self.kind {
+        case let .quickReplyMessageInput(_, shortcutType):
+            self.kind = .quickReplyMessageInput(shortcut: value, shortcutType: shortcutType)
+            self.impl.with { impl in
+                impl.quickReplyUpdateShortcut(value: value)
+            }
         }
     }
 }

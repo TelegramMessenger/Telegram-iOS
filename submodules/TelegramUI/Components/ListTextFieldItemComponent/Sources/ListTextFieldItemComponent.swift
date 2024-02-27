@@ -9,8 +9,21 @@ import PlainButtonComponent
 import BundleIconComponent
 
 public final class ListTextFieldItemComponent: Component {
+    public final class ResetText: Equatable {
+        public let value: String
+        
+        public init(value: String) {
+            self.value = value
+        }
+        
+        public static func ==(lhs: ResetText, rhs: ResetText) -> Bool {
+            return lhs === rhs
+        }
+    }
+    
     public let theme: PresentationTheme
     public let initialText: String
+    public let resetText: ResetText?
     public let placeholder: String
     public let autocapitalizationType: UITextAutocapitalizationType
     public let autocorrectionType: UITextAutocorrectionType
@@ -20,6 +33,7 @@ public final class ListTextFieldItemComponent: Component {
     public init(
         theme: PresentationTheme,
         initialText: String,
+        resetText: ResetText? = nil,
         placeholder: String,
         autocapitalizationType: UITextAutocapitalizationType = .sentences,
         autocorrectionType: UITextAutocorrectionType = .default,
@@ -28,6 +42,7 @@ public final class ListTextFieldItemComponent: Component {
     ) {
         self.theme = theme
         self.initialText = initialText
+        self.resetText = resetText
         self.placeholder = placeholder
         self.autocapitalizationType = autocapitalizationType
         self.autocorrectionType = autocorrectionType
@@ -40,6 +55,9 @@ public final class ListTextFieldItemComponent: Component {
             return false
         }
         if lhs.initialText != rhs.initialText {
+            return false
+        }
+        if lhs.resetText !== rhs.resetText {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
@@ -143,6 +161,9 @@ public final class ListTextFieldItemComponent: Component {
                 self.addSubview(self.textField)
                 self.textField.delegate = self
                 self.textField.addTarget(self, action: #selector(self.textDidChange), for: .editingChanged)
+            }
+            if let resetText = component.resetText, previousComponent?.resetText !== component.resetText {
+                self.textField.text = resetText.value
             }
             
             if self.textField.autocapitalizationType != component.autocapitalizationType {

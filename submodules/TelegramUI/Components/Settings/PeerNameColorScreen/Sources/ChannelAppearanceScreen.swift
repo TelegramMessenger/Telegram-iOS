@@ -1264,7 +1264,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                 isProfile: true,
                                 currentColor: profileColor,
                                 updated: { [weak self] value in
-                                    guard let self else {
+                                    guard let self, let value else {
                                         return
                                     }
                                     self.updatedPeerProfileColor = value
@@ -1581,7 +1581,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                     isProfile: false,
                                     currentColor: resolvedState.nameColor,
                                     updated: { [weak self] value in
-                                        guard let self else {
+                                        guard let self, let value else {
                                             return
                                         }
                                         self.updatedPeerNameColor = value

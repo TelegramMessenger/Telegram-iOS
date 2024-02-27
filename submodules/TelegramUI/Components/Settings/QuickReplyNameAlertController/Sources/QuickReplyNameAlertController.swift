@@ -28,6 +28,8 @@ private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDeleg
     private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 16.0, bottom: 15.0, right: 16.0)
     private let inputInsets: UIEdgeInsets
     
+    private let validCharacterSets: [CharacterSet]
+    
     var text: String {
         get {
             return self.textInputNode.attributedText?.string ?? ""
@@ -72,6 +74,11 @@ private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDeleg
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.displaysAsynchronously = false
         self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(13.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        
+        self.validCharacterSets = [
+            CharacterSet.alphanumerics,
+            CharacterSet(charactersIn: "0123456789_"),
+        ]
         
         super.init()
         
@@ -156,6 +163,13 @@ private final class PromptInputFieldNode: ASDisplayNode, ASEditableTextNodeDeleg
     func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         if text == "\n" {
             self.complete?()
+            return false
+        }
+        if text.unicodeScalars.contains(where: { c in
+            return !self.validCharacterSets.contains(where: { set in
+                return set.contains(c)
+            })
+        }) {
             return false
         }
         return true
