@@ -884,7 +884,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["greeting_message"],
+                                    videoFile: configuration.videos["quick_replies"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_QuickReplies,

@@ -2561,6 +2561,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             }
             
             size.height += scrollEnvironment.insets.bottom
+            if case .business = context.component.mode, state.isPremium == false {
+                size.height += 123.0
+            }
             
             if context.component.source != .settings {
                 size.height += 44.0
