@@ -1531,8 +1531,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedMessageTagsBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedLastSeenBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedMessagePrivacyBadge(accountManager: context.sharedContext.accountManager)
-            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge, dismissedLastSeenBadge, dismissedMessagePrivacyBadge in
+                ApplicationSpecificNotice.dismissedMessagePrivacyBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedBusinessBadge(accountManager: context.sharedContext.accountManager)
+            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge, dismissedLastSeenBadge, dismissedMessagePrivacyBadge, dismissedBusinessBadge in
                 guard let self else {
                     return
                 }
@@ -1552,8 +1553,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 if !dismissedMessagePrivacyBadge {
                     newPerks.append(PremiumPerk.messagePrivacy.identifier)
                 }
-                //TODO:
-                newPerks.append(PremiumPerk.business.identifier)
+                if !dismissedBusinessBadge {
+                    newPerks.append(PremiumPerk.business.identifier)
+                }
                 self.newPerks = newPerks
                 self.updated()
             })
@@ -1937,17 +1939,31 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     if case .business = context.component.mode, case .business = perk {
                         continue
                     }
+                    
+                    let isNew = state.newPerks.contains(perk.identifier)
+                    let titleComponent = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: perk.title(strings: strings),
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    ))
+                    
+                    let titleCombinedComponent: AnyComponent<Empty>
+                    if isNew {
+                        titleCombinedComponent = AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(BadgeComponent(color: gradientColors[i], text: strings.Premium_New)))
+                        ], spacing: 5.0))
+                    } else {
+                        titleCombinedComponent = AnyComponent(HStack([AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent)], spacing: 0.0))
+                    }
+                    
                     perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
                         title: AnyComponent(VStack([
-                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(
-                                    string: perk.title(strings: strings),
-                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                    textColor: environment.theme.list.itemPrimaryTextColor
-                                )),
-                                maximumNumberOfLines: 0
-                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: titleCombinedComponent),
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: perk.subtitle(strings: strings),
@@ -2013,6 +2029,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 let _ = ApplicationSpecificNotice.setDismissedMessagePrivacyBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .business:
                                 demoSubject = .business
+                                let _ = ApplicationSpecificNotice.setDismissedBusinessBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             default:
                                 demoSubject = .doubleLimits
                             }
@@ -3719,5 +3736,63 @@ private final class EmojiActionIconComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class BadgeComponent: CombinedComponent {
+    let color: UIColor
+    let text: String
+    
+    init(
+        color: UIColor,
+        text: String
+    ) {
+        self.color = color
+        self.text = text
+    }
+    
+    static func ==(lhs: BadgeComponent, rhs: BadgeComponent) -> Bool {
+        if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let badgeBackground = Child(RoundedRectangle.self)
+        let badgeText = Child(MultilineTextComponent.self)
+
+        return { context in
+            let component = context.component
+            
+            let badgeText = badgeText.update(
+                component: MultilineTextComponent(text: .plain(NSAttributedString(string: component.text, font: Font.semibold(11.0), textColor: .white))),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            let badgeSize = CGSize(width: badgeText.size.width + 7.0, height: 16.0)
+            let badgeBackground = badgeBackground.update(
+                component: RoundedRectangle(
+                    color: component.color,
+                    cornerRadius: 5.0
+                ),
+                availableSize: badgeSize,
+                transition: context.transition
+            )
+            
+            context.add(badgeBackground
+                .position(CGPoint(x: badgeSize.width / 2.0, y: badgeSize.height / 2.0))
+            )
+            
+            context.add(badgeText
+                .position(CGPoint(x: badgeSize.width / 2.0, y: badgeSize.height / 2.0))
+            )
+                    
+            return badgeSize
+        }
     }
 }
