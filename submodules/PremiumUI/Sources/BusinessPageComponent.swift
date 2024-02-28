@@ -14,10 +14,12 @@ import BundleIconComponent
 private final class HeaderComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
 
-    init(context: AccountContext, theme: PresentationTheme) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
+        self.strings = strings
     }
 
     static func ==(lhs: HeaderComponent, rhs: HeaderComponent) -> Bool {
@@ -61,14 +63,14 @@ private final class HeaderComponent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - coinSize.width) / 2.0), y: -90.0), size: coinSize)
+                view.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - coinSize.width) / 2.0), y: -84.0), size: coinSize)
             }
             
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Turn your account to a business page with these additional features.", font: Font.regular(15.0), textColor: .black)),
+                        text: .plain(NSAttributedString(string: component.strings.Premium_Business_Description, font: Font.regular(15.0), textColor: .black)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
@@ -77,14 +79,14 @@ private final class HeaderComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 32.0, height: 1000.0)
             )
-            if let view = text.view {
+            if let view = self.text.view {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) / 2.0), y: 118.0), size: textSize)
+                view.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - textSize.width) / 2.0), y: 139.0), size: textSize)
             }
             
-            return CGSize(width: availableSize.width, height: 189.0)
+            return CGSize(width: availableSize.width, height: 210.0)
         }
     }
 
@@ -319,7 +321,8 @@ private final class BusinessListComponent: CombinedComponent {
                     id: "header",
                     component: AnyComponent(HeaderComponent(
                         context: context.component.context,
-                        theme: theme
+                        theme: theme,
+                        strings: strings
                     ))
                 )
             )
@@ -414,7 +417,7 @@ private final class BusinessListComponent: CombinedComponent {
                 transition: context.transition
             )
                         
-            let contentHeight = context.component.topInset + list.size.height + context.component.bottomInset
+            let contentHeight = context.component.topInset - 56.0 + list.size.height + context.component.bottomInset
             context.add(list
                 .position(CGPoint(x: list.size.width / 2.0, y: context.component.topInset + list.size.height / 2.0))
             )
@@ -631,7 +634,7 @@ final class BusinessPageComponent: CombinedComponent {
             )
             
             let titleTopOriginY = topPanel.size.height / 2.0
-            let titleBottomOriginY: CGFloat = 155.0
+            let titleBottomOriginY: CGFloat = 176.0
             let titleOriginDelta = titleTopOriginY - titleBottomOriginY
             
             let fraction = min(1.0, state.topContentOffset / abs(titleOriginDelta))

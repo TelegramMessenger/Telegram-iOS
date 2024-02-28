@@ -29,6 +29,7 @@ public class PremiumLimitsListScreen: ViewController {
         let backgroundView: ComponentHostView<Empty>
         let pagerView: ComponentHostView<Empty>
         let closeView: ComponentHostView<Empty>
+        let closeDarkIconView = UIImageView()
         
         fileprivate let footerNode: FooterNode
         
@@ -380,11 +381,12 @@ public class PremiumLimitsListScreen: ViewController {
                 isStandalone = true
             }
             
+            let theme = self.presentationData.theme
+            let strings = self.presentationData.strings
+            
             if let stickers = self.stickers, let appIcons = self.appIcons, let configuration = self.promoConfiguration {
                 let context = controller.context
-                let theme = self.presentationData.theme
-                let strings = self.presentationData.strings
-                                
+                    
                 let textColor = theme.actionSheet.primaryTextColor
                 
                 var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
@@ -398,8 +400,8 @@ public class PremiumLimitsListScreen: ViewController {
                 if let order = controller.order {
                     storiesIndex = order.firstIndex(where: { $0 == .stories })
                     limitsIndex = order.firstIndex(where: { $0 == .doubleLimits })
-                    businessIndex = order.firstIndex(where: { $0 == .doubleLimits })
-                    if let limitsIndex, let storiesIndex, let _ = businessIndex {
+                    businessIndex = order.firstIndex(where: { $0 == .business })
+                    if let limitsIndex, let storiesIndex {
                         if limitsIndex == storiesIndex + 1 {
                             storiesNeighbors.rightIsList = true
                             limitsNeighbors.leftIsList = true
@@ -823,7 +825,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 },
                                 updatedIsDisplaying: { [weak self] isDisplaying in
                                     if let self, self.isExpanded && !isDisplaying {
-                                        if let limitsIndex, let indexPosition = self.indexPosition, abs(CGFloat(limitsIndex) - indexPosition) < 0.1 {
+                                        if let businessIndex, let indexPosition = self.indexPosition, abs(CGFloat(businessIndex) - indexPosition) < 0.1 {
                                         } else {
                                             self.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
                                         }
@@ -955,8 +957,6 @@ public class PremiumLimitsListScreen: ViewController {
                     )
                 )
                 
-
-            
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }
                     let initialIndex: Int
@@ -979,8 +979,42 @@ public class PremiumLimitsListScreen: ViewController {
                                 nextAction: nextAction,
                                 updated: { [weak self] position, count in
                                     if let self {
-                                        self.indexPosition = position * CGFloat(count)
+                                        let indexPosition = position * CGFloat(count - 1)
+                                        self.indexPosition = indexPosition
                                         self.footerNode.updatePosition(position, count: count)
+                                        
+                                        var distance: CGFloat?
+                                        if let storiesIndex {
+                                            let value = indexPosition - CGFloat(storiesIndex)
+                                            if abs(value) < 1.0 {
+                                                distance = value
+                                            }
+                                        }
+                                        if let limitsIndex {
+                                            let value = indexPosition - CGFloat(limitsIndex)
+                                            if abs(value) < 1.0 {
+                                                distance = value
+                                            }
+                                        }
+                                        if let businessIndex {
+                                            let value = indexPosition - CGFloat(businessIndex)
+                                            if abs(value) < 1.0 {
+                                                distance = value
+                                            }
+                                        }
+                                        var distanceToPage: CGFloat = 1.0
+                                        if let distance {
+                                            if distance >= 0.0 && distance < 0.1 {
+                                                distanceToPage = distance / 0.1
+                                            } else if distance < 0.0 {
+                                                if distance >= -1.0 && distance < -0.9 {
+                                                    distanceToPage = ((distance * -1.0) - 0.9) / 0.1
+                                                } else {
+                                                    distanceToPage = 0.0
+                                                }
+                                            }
+                                        }
+                                        self.closeDarkIconView.alpha = 1.0 - max(0.0, min(1.0, distanceToPage))
                                     }
                                 }
                             )
@@ -1031,6 +1065,12 @@ public class PremiumLimitsListScreen: ViewController {
             self.closeView.clipsToBounds = true
             self.closeView.layer.cornerRadius = 15.0
             self.closeView.frame = CGRect(origin: CGPoint(x: contentSize.width - closeSize.width * 1.5, y: 28.0 - closeSize.height / 2.0), size: closeSize)
+            
+            if self.closeDarkIconView.image == nil {
+                self.closeDarkIconView.image = generateCloseButtonImage(backgroundColor: .clear, foregroundColor: theme.list.itemSecondaryTextColor)!
+                self.closeDarkIconView.frame = CGRect(origin: .zero, size: closeSize)
+                self.closeView.addSubview(self.closeDarkIconView)
+            }
         }
         private var cachedCloseImage: UIImage?
         
