@@ -11381,3 +11381,7 @@ to respond to messages faster.";
 "Conversation.BoostToUnrestrictText" = "Boost this group to send messages";
 
 "Settings.Business" = "Telegram Business";
+
+"Story.Editor.DiscardText" = "If you go back now, you will lose any changes you made.";
+
+"Premium.Business.Description" = "Turn your account to a business page with these additional features.";
