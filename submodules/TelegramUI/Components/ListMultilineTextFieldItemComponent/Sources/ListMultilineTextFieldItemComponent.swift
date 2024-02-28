@@ -9,6 +9,13 @@ import TextFieldComponent
 import AccountContext
 
 public final class ListMultilineTextFieldItemComponent: Component {
+    public final class ExternalState {
+        public fileprivate(set) var hasText: Bool = false
+        
+        public init() {
+        }
+    }
+    
     public final class ResetText: Equatable {
         public let value: String
         
@@ -21,6 +28,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         }
     }
     
+    public let externalState: ExternalState?
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
@@ -31,9 +39,11 @@ public final class ListMultilineTextFieldItemComponent: Component {
     public let autocorrectionType: UITextAutocorrectionType
     public let characterLimit: Int?
     public let updated: ((String) -> Void)?
+    public let textUpdateTransition: Transition
     public let tag: AnyObject?
     
     public init(
+        externalState: ExternalState? = nil,
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
@@ -44,8 +54,10 @@ public final class ListMultilineTextFieldItemComponent: Component {
         autocorrectionType: UITextAutocorrectionType = .default,
         characterLimit: Int? = nil,
         updated: ((String) -> Void)?,
+        textUpdateTransition: Transition = .immediate,
         tag: AnyObject? = nil
     ) {
+        self.externalState = externalState
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -56,10 +68,14 @@ public final class ListMultilineTextFieldItemComponent: Component {
         self.autocorrectionType = autocorrectionType
         self.characterLimit = characterLimit
         self.updated = updated
+        self.textUpdateTransition = textUpdateTransition
         self.tag = tag
     }
     
     public static func ==(lhs: ListMultilineTextFieldItemComponent, rhs: ListMultilineTextFieldItemComponent) -> Bool {
+        if lhs.externalState !== rhs.externalState {
+            return false
+        }
         if lhs.context !== rhs.context {
             return false
         }
@@ -140,7 +156,7 @@ public final class ListMultilineTextFieldItemComponent: Component {
         
         @objc private func textDidChange() {
             if !self.isUpdating {
-                self.state?.updated(transition: .immediate)
+                self.state?.updated(transition: self.component?.textUpdateTransition ?? .immediate)
             }
             self.component?.updated?(self.currentText)
         }
@@ -241,6 +257,8 @@ public final class ListMultilineTextFieldItemComponent: Component {
             }
             
             self.separatorInset = 16.0
+            
+            component.externalState?.hasText = self.textFieldExternalState.hasText
             
             return size
         }

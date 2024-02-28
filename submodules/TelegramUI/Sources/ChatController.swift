@@ -9493,8 +9493,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let peerId = self.chatLocation.peerId else {
                 return
             }
-            let _ = self
-            let _ = shortcutId
+            
+            if !self.presentationInterfaceState.isPremium {
+                let controller = PremiumIntroScreen(context: self.context, source: .settings)
+                self.push(controller)
+                return
+            }
             
             self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                 $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }

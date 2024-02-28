@@ -1937,7 +1937,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }
                 
-                if message.timestamp >= 0 {
+                if message.id.id < Int32.max - 1000 {
                     if !actions.isEmpty {
                         actions.append(.separator)
                     }

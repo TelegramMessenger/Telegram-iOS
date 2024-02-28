@@ -321,15 +321,16 @@ public final class ListActionItemComponent: Component {
                 var arrowTransition = transition
                 if let current = self.arrowView {
                     arrowView = current
+                    if themeUpdated {
+                        arrowView.image = PresentationResourcesItemList.disclosureArrowImage(component.theme)
+                    }
                 } else {
                     arrowTransition = arrowTransition.withAnimation(.none)
-                    arrowView = UIImageView(image: PresentationResourcesItemList.disclosureArrowImage(component.theme)?.withRenderingMode(.alwaysTemplate))
+                    arrowView = UIImageView(image: PresentationResourcesItemList.disclosureArrowImage(component.theme))
                     self.arrowView = arrowView
                     self.addSubview(arrowView)
                 }
-                
-                arrowView.tintColor = component.theme.list.disclosureArrowColor
-                
+                                
                 if let image = arrowView.image {
                     let arrowFrame = CGRect(origin: CGPoint(x: availableSize.width - 7.0 - image.size.width, y: floor((contentHeight - image.size.height) * 0.5)), size: image.size)
                     arrowTransition.setFrame(view: arrowView, frame: arrowFrame)
