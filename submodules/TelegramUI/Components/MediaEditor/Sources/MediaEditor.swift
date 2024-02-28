@@ -190,6 +190,7 @@ public final class MediaEditor {
     
     public private(set) var canCutout: Bool = false
     public var canCutoutUpdated: (Bool) -> Void = { _ in }
+    public var isCutoutUpdated: (Bool) -> Void = { _ in }
     
     private var textureCache: CVMetalTextureCache!
     
@@ -1680,6 +1681,51 @@ public final class MediaEditor {
     public func requestRenderFrame() {
         self.renderer.willRenderFrame()
         self.renderer.renderFrame()
+    }
+    
+    public func getSeparatedImage(point: CGPoint?) -> Signal<UIImage?, NoError> {
+        guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {
+            return .single(nil)
+        }
+        return cutoutImage(from: image, atPoint: point, asImage: true)
+        |> map { result in
+            if let result, case let .image(image) = result {
+                return image
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public func removeSeparationMask() {
+        self.isCutoutUpdated(false)
+        
+        self.renderer.currentMainInputMask = nil
+        if !self.skipRendering {
+            self.updateRenderChain()
+        }
+    }
+    
+    public func setSeparationMask(point: CGPoint?) {
+        guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice else {
+            return
+        }
+        guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {
+            return
+        }
+        self.isCutoutUpdated(true)
+        
+        let _ = (cutoutImage(from: image, atPoint: point, asImage: false)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let self, let result, case let .image(image) = result else {
+                return
+            }
+            //TODO:replace with pixelbuffer
+            self.renderer.currentMainInputMask = loadTexture(image: image, device: device)
+            if !self.skipRendering {
+                self.updateRenderChain()
+            }
+        })
     }
     
     private func maybeGeneratePersonSegmentation(_ image: UIImage?) {
