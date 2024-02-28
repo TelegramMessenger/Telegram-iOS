@@ -590,14 +590,15 @@ public extension Api {
 }
 public extension Api {
     enum BusinessAwayMessage: TypeConstructorDescription {
-        case businessAwayMessage(shortcutId: Int32, schedule: Api.BusinessAwayMessageSchedule, recipients: Api.BusinessRecipients)
+        case businessAwayMessage(flags: Int32, shortcutId: Int32, schedule: Api.BusinessAwayMessageSchedule, recipients: Api.BusinessRecipients)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .businessAwayMessage(let shortcutId, let schedule, let recipients):
+                case .businessAwayMessage(let flags, let shortcutId, let schedule, let recipients):
                     if boxed {
-                        buffer.appendInt32(467254972)
+                        buffer.appendInt32(-283809188)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(shortcutId, buffer: buffer, boxed: false)
                     schedule.serialize(buffer, true)
                     recipients.serialize(buffer, true)
@@ -607,27 +608,30 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .businessAwayMessage(let shortcutId, let schedule, let recipients):
-                return ("businessAwayMessage", [("shortcutId", shortcutId as Any), ("schedule", schedule as Any), ("recipients", recipients as Any)])
+                case .businessAwayMessage(let flags, let shortcutId, let schedule, let recipients):
+                return ("businessAwayMessage", [("flags", flags as Any), ("shortcutId", shortcutId as Any), ("schedule", schedule as Any), ("recipients", recipients as Any)])
     }
     }
     
         public static func parse_businessAwayMessage(_ reader: BufferReader) -> BusinessAwayMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.BusinessAwayMessageSchedule?
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.BusinessAwayMessageSchedule?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.BusinessAwayMessageSchedule
+                _3 = Api.parse(reader, signature: signature) as? Api.BusinessAwayMessageSchedule
             }
-            var _3: Api.BusinessRecipients?
+            var _4: Api.BusinessRecipients?
             if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+                _4 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BusinessAwayMessage.businessAwayMessage(shortcutId: _1!, schedule: _2!, recipients: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.BusinessAwayMessage.businessAwayMessage(flags: _1!, shortcutId: _2!, schedule: _3!, recipients: _4!)
             }
             else {
                 return nil

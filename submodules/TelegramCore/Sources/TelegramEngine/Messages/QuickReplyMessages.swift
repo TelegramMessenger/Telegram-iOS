@@ -590,7 +590,8 @@ public final class TelegramBusinessAwayMessage: Codable, Equatable {
 extension TelegramBusinessAwayMessage {
     convenience init(apiAwayMessage: Api.BusinessAwayMessage) {
         switch apiAwayMessage {
-        case let .businessAwayMessage(shortcutId, schedule, recipients):
+        case let .businessAwayMessage(flags, shortcutId, schedule, recipients):
+            let _ = flags
             let mappedSchedule: Schedule
             switch schedule {
             case .businessAwayMessageScheduleAlways:
@@ -730,6 +731,7 @@ func _internal_updateBusinessAwayMessage(account: Account, awayMessage: Telegram
             }
             
             mappedMessage = .inputBusinessAwayMessage(
+                flags: 0,
                 shortcutId: awayMessage.shortcutId,
                 schedule: mappedSchedule,
                 recipients: awayMessage.recipients.apiInputValue(additionalPeers: additionalPeers)
