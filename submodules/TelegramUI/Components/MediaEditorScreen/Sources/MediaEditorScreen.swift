@@ -4009,6 +4009,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     bottom: bottomInset,
                     right: layout.safeInsets.right
                 ),
+                additionalInsets: layout.additionalInsets,
                 inputHeight: layoutInputHeight,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,

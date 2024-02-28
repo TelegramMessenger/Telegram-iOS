@@ -49,6 +49,7 @@ extension ChatControllerImpl {
                             }
                         } else {
                             self.chatTitleView?.titleContent = .custom("\(value)", nil, false)
+                            alertController?.view.endEditing(true)
                             alertController?.dismissAnimated()
                             
                             if case let .customChatContents(customChatContents) = self.subject {

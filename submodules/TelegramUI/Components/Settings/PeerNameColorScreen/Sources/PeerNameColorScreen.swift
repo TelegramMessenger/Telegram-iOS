@@ -212,7 +212,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             return PeerNameColorItem(
                 theme: presentationData.theme,
                 colors: colors,
-                isProfile: isProfile,
+                mode: isProfile ? .profile : .name,
                 currentColor: currentColor,
                 updated: { color in
                     if let color {

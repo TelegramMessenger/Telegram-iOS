@@ -480,7 +480,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return PeerNameColorItem(
                 theme: presentationData.theme,
                 colors: colors,
-                isProfile: true,
+                mode: .folderTag,
                 displayEmptyColor: true,
                 currentColor: isPremium ? color : nil,
                 isLocked: !isPremium,
@@ -643,7 +643,7 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
     }
     var resolvedColor: PeerNameColors.Colors?
     if let tagColor {
-        resolvedColor = context.peerNameColors.getProfile(tagColor, dark: presentationData.theme.overallDarkAppearance, subject: .palette)
+        resolvedColor = context.peerNameColors.getChatFolderTag(tagColor, dark: presentationData.theme.overallDarkAppearance)
     }
     
     entries.append(.tagColorHeader(name: state.name, color: resolvedColor, isPremium: isPremium))

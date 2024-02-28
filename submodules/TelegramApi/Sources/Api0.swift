@@ -216,8 +216,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1135897376] = { return Api.DefaultHistoryTTL.parse_defaultHistoryTTL($0) }
     dict[-712374074] = { return Api.Dialog.parse_dialog($0) }
     dict[1908216652] = { return Api.Dialog.parse_dialogFolder($0) }
-    dict[1949890536] = { return Api.DialogFilter.parse_dialogFilter($0) }
-    dict[-699792216] = { return Api.DialogFilter.parse_dialogFilterChatlist($0) }
+    dict[1605718587] = { return Api.DialogFilter.parse_dialogFilter($0) }
+    dict[-1612542300] = { return Api.DialogFilter.parse_dialogFilterChatlist($0) }
     dict[909284270] = { return Api.DialogFilter.parse_dialogFilterDefault($0) }
     dict[2004110666] = { return Api.DialogFilterSuggested.parse_dialogFilterSuggested($0) }
     dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
@@ -1175,6 +1175,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1571952873] = { return Api.messages.CheckedHistoryImportPeer.parse_checkedHistoryImportPeer($0) }
     dict[740433629] = { return Api.messages.DhConfig.parse_dhConfig($0) }
     dict[-1058912715] = { return Api.messages.DhConfig.parse_dhConfigNotModified($0) }
+    dict[718878489] = { return Api.messages.DialogFilters.parse_dialogFilters($0) }
     dict[364538944] = { return Api.messages.Dialogs.parse_dialogs($0) }
     dict[-253500010] = { return Api.messages.Dialogs.parse_dialogsNotModified($0) }
     dict[1910543603] = { return Api.messages.Dialogs.parse_dialogsSlice($0) }
@@ -2111,6 +2112,8 @@ public extension Api {
             case let _1 as Api.messages.CheckedHistoryImportPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.DhConfig:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.DialogFilters:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Dialogs:
                 _1.serialize(buffer, boxed)

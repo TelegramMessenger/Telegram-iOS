@@ -188,6 +188,53 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 return true
             }
             
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            
+            if self.isOn {
+                if self.hasAccessToAllChatsByDefault && self.additionalPeerList.categories.isEmpty && self.additionalPeerList.peers.isEmpty {
+                    //TODO:localize
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "No recipients selected. Reset?", actions: [
+                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "Reset", action: {
+                            complete()
+                        })
+                    ]), in: .window(.root))
+                    
+                    return false
+                }
+            
+                if case .away = component.mode, case .custom = self.schedule {
+                    //TODO:localize
+                    var errorText: String?
+                    if let customScheduleStart = self.customScheduleStart, let customScheduleEnd = self.customScheduleEnd {
+                        if customScheduleStart >= customScheduleEnd {
+                            errorText = "Custom schedule end time must be larger than start time."
+                        }
+                    } else {
+                        if self.customScheduleStart == nil && self.customScheduleEnd == nil {
+                            errorText = "Custom schedule time is missing."
+                        } else if self.customScheduleStart == nil {
+                            errorText = "Custom schedule start time is missing."
+                        } else {
+                            errorText = "Custom schedule end time is missing."
+                        }
+                    }
+                    
+                    if let errorText {
+                        //TODO:localize
+                        self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
+                            TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                            }),
+                            TextAlertAction(type: .defaultAction, title: "Reset", action: {
+                                complete()
+                            })
+                        ]), in: .window(.root))
+                        return false
+                    }
+                }
+            }
+            
             var mappedCategories: TelegramBusinessRecipients.Categories = []
             if self.additionalPeerList.categories.contains(.existingChats) {
                 mappedCategories.insert(.existingChats)
@@ -555,6 +602,21 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     if let awayMessage = component.initialData.awayMessage {
                         self.isOn = true
                         initialRecipients = awayMessage.recipients
+                        
+                        switch awayMessage.schedule {
+                        case .always:
+                            self.schedule = .always
+                        case let .custom(beginTimestamp, endTimestamp):
+                            self.schedule = .custom
+                            self.customScheduleStart = Date(timeIntervalSince1970: Double(beginTimestamp))
+                            self.customScheduleEnd = Date(timeIntervalSince1970: Double(endTimestamp))
+                        case .outsideWorkingHours:
+                            if component.initialData.businessHours != nil {
+                                self.schedule = .outsideBusinessHours
+                            } else {
+                                self.schedule = .always
+                            }
+                        }
                     }
                 }
                 
@@ -839,7 +901,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             if case .away = component.mode {
                 //TODO:localize
                 var scheduleSectionItems: [AnyComponentWithIdentity<Empty>] = []
-                for i in 0 ..< 3 {
+                optionLoop: for i in 0 ..< 3 {
                     let title: String
                     let schedule: Schedule
                     switch i {
@@ -847,6 +909,10 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         title = "Always Send"
                         schedule = .always
                     case 1:
+                        if component.initialData.businessHours == nil {
+                            continue optionLoop
+                        }
+                        
                         title = "Outside of Business Hours"
                         schedule = .outsideBusinessHours
                     default:
@@ -1396,19 +1462,22 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
         fileprivate let greetingMessage: TelegramBusinessGreetingMessage?
         fileprivate let awayMessage: TelegramBusinessAwayMessage?
         fileprivate let additionalPeers: [EnginePeer.Id: AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer]
+        fileprivate let businessHours: TelegramBusinessHours?
         
         fileprivate init(
             accountPeer: EnginePeer?,
             shortcutMessageList: ShortcutMessageList,
             greetingMessage: TelegramBusinessGreetingMessage?,
             awayMessage: TelegramBusinessAwayMessage?,
-            additionalPeers: [EnginePeer.Id: AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer]
+            additionalPeers: [EnginePeer.Id: AutomaticBusinessMessageSetupScreenComponent.AdditionalPeerList.Peer],
+            businessHours: TelegramBusinessHours?
         ) {
             self.accountPeer = accountPeer
             self.shortcutMessageList = shortcutMessageList
             self.greetingMessage = greetingMessage
             self.awayMessage = awayMessage
             self.additionalPeers = additionalPeers
+            self.businessHours = businessHours
         }
     }
     
@@ -1468,13 +1537,14 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
                 TelegramEngine.EngineData.Item.Peer.BusinessGreetingMessage(id: context.account.peerId),
-                TelegramEngine.EngineData.Item.Peer.BusinessAwayMessage(id: context.account.peerId)
+                TelegramEngine.EngineData.Item.Peer.BusinessAwayMessage(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Peer.BusinessHours(id: context.account.peerId)
             ),
             context.engine.accountData.shortcutMessageList()
             |> take(1)
         )
         |> mapToSignal { data, shortcutMessageList -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> in
-            let (accountPeer, greetingMessage, awayMessage) = data
+            let (accountPeer, greetingMessage, awayMessage, businessHours) = data
             
             var additionalPeerIds = Set<EnginePeer.Id>()
             if let greetingMessage {
@@ -1505,7 +1575,8 @@ public final class AutomaticBusinessMessageSetupScreen: ViewControllerComponentC
                     shortcutMessageList: shortcutMessageList,
                     greetingMessage: greetingMessage,
                     awayMessage: awayMessage,
-                    additionalPeers: additionalPeers
+                    additionalPeers: additionalPeers,
+                    businessHours: businessHours
                 )
             }
         }

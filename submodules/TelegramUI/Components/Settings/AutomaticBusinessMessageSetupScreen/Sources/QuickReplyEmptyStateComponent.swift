@@ -109,7 +109,7 @@ final class QuickReplyEmptyStateComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(LottieComponent(
                     content: LottieComponent.AppBundleContent(name: "WriteEmoji"),
-                    loop: true
+                    loop: false
                 )),
                 environment: {},
                 containerSize: CGSize(width: 120.0, height: 120.0)
@@ -144,9 +144,11 @@ final class QuickReplyEmptyStateComponent: Component {
             var centralContentsY: CGFloat = topInset + floor((buttonFrame.minY - topInset - centralContentsHeight) * 0.426)
             
             let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) * 0.5), y: centralContentsY), size: iconSize)
-            if let iconView = self.icon.view {
+            
+            if let iconView = self.icon.view as? LottieComponent.View {
                 if iconView.superview == nil {
                     self.addSubview(iconView)
+                    iconView.playOnce()
                 }
                 transition.setFrame(view: iconView, frame: iconFrame)
             }

@@ -224,7 +224,7 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
             })
         }
     }
-    if !isScheduledMessages {
+    if !isScheduledMessages && peer != nil {
         model.interfaceView.doneLongPressed = { [weak selectionContext, weak editingContext, weak legacyController, weak model] item in
             if let legacyController = legacyController, let item = item as? TGMediaPickerGalleryItem, let model = model, let selectionContext = selectionContext {
                 var effectiveHasSchedule = hasSchedule
@@ -269,8 +269,8 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                 }
                 
                 let _ = (sendWhenOnlineAvailable
-                         |> take(1)
-                         |> deliverOnMainQueue).start(next: { sendWhenOnlineAvailable in
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { sendWhenOnlineAvailable in
                     let legacySheetController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
                     let sheetController = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSendWhenOnline: sendWhenOnlineAvailable && effectiveHasSchedule, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
                     let dismissImpl = { [weak model] in

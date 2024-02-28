@@ -190,7 +190,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             if displayTags, case let .filter(_, _, _, data) = preset {
                 let tagColor = data.color
                 if let tagColor {
-                    resolvedColor = arguments.context.peerNameColors.getProfile(tagColor, dark: presentationData.theme.overallDarkAppearance, subject: .palette).main
+                    resolvedColor = arguments.context.peerNameColors.getChatFolderTag(tagColor, dark: presentationData.theme.overallDarkAppearance).main
                 }
             }
             
