@@ -328,7 +328,7 @@ private final class ChatListItemTagListComponent: Component {
                     itemId = tag.id
                     
                     let tagColor = PeerNameColor(rawValue: tag.colorId)
-                    let resolvedColor = component.context.peerNameColors.getProfile(tagColor, dark: component.theme.overallDarkAppearance, subject: .palette)
+                    let resolvedColor = component.context.peerNameColors.getChatFolderTag(tagColor, dark: component.theme.overallDarkAppearance)
                     
                     itemTitle = tag.title.uppercased()
                     itemBackgroundColor = resolvedColor.main.withMultipliedAlpha(0.1)

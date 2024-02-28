@@ -1261,7 +1261,7 @@ final class ChannelAppearanceScreenComponent: Component {
                             itemGenerator: PeerNameColorItem(
                                 theme: environment.theme,
                                 colors: component.context.peerNameColors,
-                                isProfile: true,
+                                mode: .profile,
                                 currentColor: profileColor,
                                 updated: { [weak self] value in
                                     guard let self, let value else {
@@ -1578,7 +1578,7 @@ final class ChannelAppearanceScreenComponent: Component {
                                 itemGenerator: PeerNameColorItem(
                                     theme: environment.theme,
                                     colors: component.context.peerNameColors,
-                                    isProfile: false,
+                                    mode: .name,
                                     currentColor: resolvedState.nameColor,
                                     updated: { [weak self] value in
                                         guard let self, let value else {

@@ -80,6 +80,7 @@ public class PeerNameColors: Equatable {
             colors: defaultSingleColors,
             darkColors: [:],
             displayOrder: [5, 3, 1, 0, 2, 4, 6],
+            chatFolderTagDisplayOrder: [5, 3, 1, 0, 2, 4, 6],
             profileColors: [:],
             profileDarkColors: [:],
             profilePaletteColors: [:],
@@ -97,6 +98,8 @@ public class PeerNameColors: Equatable {
     public let darkColors: [Int32: Colors]
     public let displayOrder: [Int32]
     
+    public let chatFolderTagDisplayOrder: [Int32]
+    
     public let profileColors: [Int32: Colors]
     public let profileDarkColors: [Int32: Colors]
     public let profilePaletteColors: [Int32: Colors]
@@ -110,6 +113,16 @@ public class PeerNameColors: Equatable {
     public let profileColorsGroupMinRequiredBoostLevel: [Int32: Int32]
     
     public func get(_ color: PeerNameColor, dark: Bool = false) -> Colors {
+        if dark, let colors = self.darkColors[color.rawValue] {
+            return colors
+        } else if let colors = self.colors[color.rawValue] {
+            return colors
+        } else {
+            return PeerNameColors.defaultSingleColors[5]!
+        }
+    }
+    
+    public func getChatFolderTag(_ color: PeerNameColor, dark: Bool = false) -> Colors {
         if dark, let colors = self.darkColors[color.rawValue] {
             return colors
         } else if let colors = self.colors[color.rawValue] {
@@ -152,6 +165,7 @@ public class PeerNameColors: Equatable {
         colors: [Int32: Colors],
         darkColors: [Int32: Colors],
         displayOrder: [Int32],
+        chatFolderTagDisplayOrder: [Int32],
         profileColors: [Int32: Colors],
         profileDarkColors: [Int32: Colors],
         profilePaletteColors: [Int32: Colors],
@@ -166,6 +180,7 @@ public class PeerNameColors: Equatable {
         self.colors = colors
         self.darkColors = darkColors
         self.displayOrder = displayOrder
+        self.chatFolderTagDisplayOrder = chatFolderTagDisplayOrder
         self.profileColors = profileColors
         self.profileDarkColors = profileDarkColors
         self.profilePaletteColors = profilePaletteColors
@@ -257,6 +272,7 @@ public class PeerNameColors: Equatable {
             colors: colors,
             darkColors: darkColors,
             displayOrder: displayOrder,
+            chatFolderTagDisplayOrder: PeerNameColors.defaultValue.chatFolderTagDisplayOrder,
             profileColors: profileColors,
             profileDarkColors: profileDarkColors,
             profilePaletteColors: profilePaletteColors,
@@ -278,6 +294,9 @@ public class PeerNameColors: Equatable {
             return false
         }
         if lhs.displayOrder != rhs.displayOrder {
+            return false
+        }
+        if lhs.chatFolderTagDisplayOrder != rhs.chatFolderTagDisplayOrder {
             return false
         }
         if lhs.profileColors != rhs.profileColors {

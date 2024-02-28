@@ -5325,15 +5325,15 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getDialogFilters() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.DialogFilter]>) {
+                static func getDialogFilters() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.DialogFilters>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-241247891)
+                    buffer.appendInt32(-271283063)
                     
-                    return (FunctionDescription(name: "messages.getDialogFilters", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.DialogFilter]? in
+                    return (FunctionDescription(name: "messages.getDialogFilters", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.DialogFilters? in
                         let reader = BufferReader(buffer)
-                        var result: [Api.DialogFilter]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogFilter.self)
+                        var result: Api.messages.DialogFilters?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.DialogFilters
                         }
                         return result
                     })
@@ -7807,6 +7807,21 @@ public extension Api.functions.messages {
                     bot.serialize(buffer, true)
                     enabled.serialize(buffer, true)
                     return (FunctionDescription(name: "messages.toggleBotInAttachMenu", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func toggleDialogFilterTags(enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-47326647)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.toggleDialogFilterTags", parameters: [("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
