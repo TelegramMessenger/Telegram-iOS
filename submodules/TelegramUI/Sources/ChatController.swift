@@ -6144,6 +6144,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             
+                            var appliedBoosts: Int32?
+                            var boostsToUnrestrict: Int32?
+                            if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                                appliedBoosts = cachedChannelData.appliedBoosts
+                                boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                            }
+                            
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in
                                     return renderedPeer
@@ -6152,6 +6159,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedHasSearchTags(hasSearchTags)
                                     .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                     .updatedHasSavedChats(hasSavedChats)
+                                    .updatedAppliedBoosts(appliedBoosts)
+                                    .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         
