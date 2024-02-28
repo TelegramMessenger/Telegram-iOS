@@ -2270,11 +2270,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     } else if inlineAuthorPrefix == nil, let draftState = draftState {
                         hasDraft = true
-                        authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
-                        
                         let draftText = stringWithAppliedEntities(draftState.text, entities: draftState.entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, message: nil)
                         
-                        attributedText = foldLineBreaks(draftText)
+                        if !itemTags.isEmpty {
+                            let tempAttributedText = foldLineBreaks(draftText)
+                            let attributedTextWithDraft = NSMutableAttributedString()
+                            attributedTextWithDraft.append(NSAttributedString(string: item.presentationData.strings.DialogList_Draft + ": ", font: textFont, textColor: theme.messageDraftTextColor))
+                            attributedTextWithDraft.append(tempAttributedText)
+                            attributedText = attributedTextWithDraft
+                        } else {
+                            authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
+                            
+                            attributedText = foldLineBreaks(draftText)
+                        }
                     } else if let message = messages.first {
                         var composedString: NSMutableAttributedString
                         
@@ -3856,7 +3864,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         var badgeFrame: CGRect
                         if textLayout.numberOfLines > 1 {
-                            badgeFrame = CGRect(origin: CGPoint(x: textLayout.trailingLineWidth, y: textNodeFrame.height - 3.0 - badgeSize.height), size: badgeSize)
+                            badgeFrame = CGRect(origin: CGPoint(x: textLayout.trailingLineWidth + 4.0, y: textNodeFrame.height - 3.0 - badgeSize.height), size: badgeSize)
                         } else {
                             let firstLineFrame = textLayout.linesRects().first ?? CGRect(origin: CGPoint(), size: textNodeFrame.size)
                             badgeFrame = CGRect(origin: CGPoint(x: 0.0, y: firstLineFrame.height + 5.0), size: badgeSize)

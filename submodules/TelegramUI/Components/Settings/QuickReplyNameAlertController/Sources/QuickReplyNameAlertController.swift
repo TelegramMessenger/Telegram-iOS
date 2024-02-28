@@ -225,11 +225,7 @@ public final class QuickReplyNameAlertContentNode: AlertContentNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    var complete: (() -> Void)? {
-        didSet {
-            self.inputFieldNode.complete = self.complete
-        }
-    }
+    var complete: (() -> Void)?
     
     override public var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
@@ -295,6 +291,15 @@ public final class QuickReplyNameAlertContentNode: AlertContentNode {
         }
         
         self.updateTheme(theme)
+        
+        self.inputFieldNode.complete = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let lastNode = self.actionNodes.last, lastNode.actionEnabled {
+                self.complete?()
+            }
+        }
     }
     
     deinit {

@@ -236,6 +236,11 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     }*/
                 }
                 
+                var source = source
+                if standalone {
+                    source = .standaloneMessage(message)
+                }
+                
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
                     let gallery = GalleryController(context: context, source: source ?? .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? .peer(id: message.id.peerId), customTag: chatFilterTag, chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)

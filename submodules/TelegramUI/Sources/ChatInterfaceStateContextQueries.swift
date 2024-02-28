@@ -243,8 +243,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     return false
                 }
                 var sortedCommands = filteredCommands.map(ChatInputTextCommand.command)
-                for shortcut in shortcuts {
-                    sortedCommands.append(.shortcut(shortcut))
+                if !shortcuts.isEmpty {
+                    sortedCommands.removeAll()
+                    for shortcut in shortcuts {
+                        sortedCommands.append(.shortcut(shortcut))
+                    }
                 }
                 return { _ in return .commands(ChatInputQueryCommandsResult(
                     commands: sortedCommands,

@@ -590,6 +590,7 @@ final class QuickReplySetupScreenComponent: Component {
                             return
                         }
                         
+                        alertController?.view.endEditing(true)
                         alertController?.dismissAnimated()
                         self.openQuickReplyChat(shortcut: value, shortcutId: nil)
                     }
@@ -638,6 +639,7 @@ final class QuickReplySetupScreenComponent: Component {
                     } else {
                         component.context.engine.accountData.editMessageShortcut(id: id, shortcut: value)
                         
+                        alertController?.view.endEditing(true)
                         alertController?.dismissAnimated()
                     }
                 }
@@ -923,7 +925,7 @@ final class QuickReplySetupScreenComponent: Component {
                     component: AnyComponent(QuickReplyEmptyStateComponent(
                         theme: environment.theme,
                         strings: environment.strings,
-                        insets: UIEdgeInsets(top: environment.navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+                        insets: UIEdgeInsets(top: environment.navigationHeight, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom + environment.additionalInsets.bottom, right: environment.safeInsets.right),
                         action: { [weak self] in
                             guard let self else {
                                 return
@@ -955,7 +957,7 @@ final class QuickReplySetupScreenComponent: Component {
                 statusBarHeight = max(statusBarHeight, 1.0)
             }
             
-            var listBottomInset = environment.safeInsets.bottom
+            var listBottomInset = environment.safeInsets.bottom + environment.additionalInsets.bottom
             let navigationHeight = self.updateNavigationBar(
                 component: component,
                 theme: environment.theme,
@@ -1090,12 +1092,13 @@ final class QuickReplySetupScreenComponent: Component {
                             animateScale: false,
                             animateContents: false
                         ))),
-                        insets: UIEdgeInsets(top: 4.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right)
+                        insets: UIEdgeInsets(top: 4.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom + environment.additionalInsets.bottom, right: environment.safeInsets.right)
                     )),
                     environment: {},
                     containerSize: availableSize
                 )
                 let selectionPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - selectionPanelSize.height), size: selectionPanelSize)
+                print("selectionPanelFrame: \(selectionPanelFrame.minY)")
                 listBottomInset = selectionPanelSize.height
                 if let selectionPanelView = selectionPanel.view {
                     var animateIn = false

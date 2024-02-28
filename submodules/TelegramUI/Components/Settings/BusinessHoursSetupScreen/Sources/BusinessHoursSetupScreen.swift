@@ -304,9 +304,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                     let businessHours = try self.daysState.asBusinessHours()
                     let _ = component.context.engine.accountData.updateAccountBusinessHours(businessHours: businessHours).startStandalone()
                     return true
-                } catch let error {
-                    let _ = error
-                    
+                } catch _ {
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                     //TODO:localize
                     self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Business hours are intersecting. Reset?", actions: [

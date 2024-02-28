@@ -481,6 +481,8 @@ private enum PeerInfoContextSubject {
     case bio
     case phone(String)
     case link(customLink: String?)
+    case businessHours(String)
+    case businessLocation(String)
 }
 
 private enum PeerInfoSettingsSection {
@@ -1168,6 +1170,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 //TODO:localize
                 items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: "business hours", businessHours: businessHours, requestLayout: { animated in
                     interaction.requestLayout(animated)
+                }, longTapAction: { sourceNode, text in
+                    if !text.isEmpty {
+                        interaction.openPeerInfoContextMenu(.businessHours(text), sourceNode, nil)
+                    }
                 }))
             }
             
@@ -1182,6 +1188,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         imageSignal: imageSignal,
                         action: {
                             interaction.openLocation()
+                        },
+                        longTapAction: { sourceNode, text in
+                            if !text.isEmpty {
+                                interaction.openPeerInfoContextMenu(.businessLocation(text), sourceNode, nil)
+                            }
                         }
                     ))
                 } else {
@@ -1190,7 +1201,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         label: "location",
                         text: businessLocation.address,
                         imageSignal: nil,
-                        action: nil
+                        action: nil,
+                        longTapAction: { sourceNode, text in
+                            if !text.isEmpty {
+                                interaction.openPeerInfoContextMenu(.businessLocation(text), sourceNode, nil)
+                            }
+                        }
                     ))
                 }
             }
@@ -7868,6 +7884,27 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             })])
+            controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
+                if let controller = self?.controller, let sourceNode = sourceNode {
+                    var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
+                    if let sourceRect = sourceRect {
+                        rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
+                    }
+                    return (sourceNode, rect, controller.displayNode, controller.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
+        case .businessHours(let text), .businessLocation(let text):
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+            let actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                UIPasteboard.general.string = text
+                
+                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            })]
+            
+            let contextMenuController = makeContextMenuController(actions: actions)
             controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                 if let controller = self?.controller, let sourceNode = sourceNode {
                     var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)

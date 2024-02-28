@@ -13,7 +13,7 @@ import MultilineTextComponent
 import BundleIconComponent
 import PlainButtonComponent
 
-private func dayBusinessHoursText(_ day: TelegramBusinessHours.WeekDay, offsetMinutes: Int) -> String {
+private func dayBusinessHoursText(presentationData: PresentationData, day: TelegramBusinessHours.WeekDay, offsetMinutes: Int, formatAsPlainText: Bool = false) -> String {
     var businessHoursText: String = ""
     switch day {
     case .open:
@@ -30,14 +30,18 @@ private func dayBusinessHoursText(_ day: TelegramBusinessHours.WeekDay, offsetMi
             let range = TelegramBusinessHours.WorkingTimeInterval(startMinute: range.startMinute + offsetMinutes, endMinute: range.endMinute + offsetMinutes)
             
             if !resultText.isEmpty {
-                resultText.append("\n")
+                if formatAsPlainText {
+                    resultText.append(", ")
+                } else {
+                    resultText.append("\n")
+                }
             }
             let startHours = clipMinutes(range.startMinute) / 60
             let startMinutes = clipMinutes(range.startMinute) % 60
-            let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
+            let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: presentationData.dateTimeFormat, formatAsPlainText: formatAsPlainText)
             let endHours = clipMinutes(range.endMinute) / 60
             let endMinutes = clipMinutes(range.endMinute) % 60
-            let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
+            let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: presentationData.dateTimeFormat, formatAsPlainText: formatAsPlainText)
             resultText.append("\(startText) - \(endText)")
         }
         businessHoursText += resultText
@@ -51,17 +55,20 @@ final class PeerInfoScreenBusinessHoursItem: PeerInfoScreenItem {
     let label: String
     let businessHours: TelegramBusinessHours
     let requestLayout: (Bool) -> Void
+    let longTapAction: (ASDisplayNode, String) -> Void
     
     init(
         id: AnyHashable,
         label: String,
         businessHours: TelegramBusinessHours,
-        requestLayout: @escaping (Bool) -> Void
+        requestLayout: @escaping (Bool) -> Void,
+        longTapAction: @escaping (ASDisplayNode, String) -> Void
     ) {
         self.id = id
         self.label = label
         self.businessHours = businessHours
         self.requestLayout = requestLayout
+        self.longTapAction = longTapAction
     }
     
     func node() -> PeerInfoScreenItemNode {
@@ -92,6 +99,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
     private let activateArea: AccessibilityAreaNode
     
     private var item: PeerInfoScreenBusinessHoursItem?
+    private var presentationData: PresentationData?
     private var theme: PresentationTheme?
     
     private var currentTimezone: TimeZone
@@ -168,8 +176,8 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { point in
-            return .keepWithSingleTap
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
         }
         recognizer.highlight = { [weak self] point in
             guard let strongSelf = self else {
@@ -185,9 +193,55 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         case .ended:
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
-                case .tap, .longTap:
+                case .tap:
                     self.isExpanded = !self.isExpanded
                     self.item?.requestLayout(true)
+                case .longTap:
+                    if let item = self.item, let presentationData = self.presentationData {
+                        var text = ""
+                        
+                        var timezoneOffsetMinutes: Int = 0
+                        if self.displayLocalTimezone {
+                            var currentCalendar = Calendar(identifier: .gregorian)
+                            currentCalendar.timeZone = TimeZone(identifier: item.businessHours.timezoneId) ?? TimeZone.current
+                            
+                            timezoneOffsetMinutes = (self.currentTimezone.secondsFromGMT() - currentCalendar.timeZone.secondsFromGMT()) / 60
+                        }
+                        
+                        let businessDays: [TelegramBusinessHours.WeekDay] = self.cachedDays
+                        
+                        for i in 0 ..< businessDays.count {
+                            let dayTitleValue: String
+                            //TODO:localize
+                            switch i {
+                            case 0:
+                                dayTitleValue = "Monday"
+                            case 1:
+                                dayTitleValue = "Tuesday"
+                            case 2:
+                                dayTitleValue = "Wednesday"
+                            case 3:
+                                dayTitleValue = "Thursday"
+                            case 4:
+                                dayTitleValue = "Friday"
+                            case 5:
+                                dayTitleValue = "Saturday"
+                            case 6:
+                                dayTitleValue = "Sunday"
+                            default:
+                                dayTitleValue = " "
+                            }
+                            
+                            let businessHoursText = dayBusinessHoursText(presentationData: presentationData, day: businessDays[i], offsetMinutes: timezoneOffsetMinutes, formatAsPlainText: true)
+                            
+                            if !text.isEmpty {
+                                text.append("\n")
+                            }
+                            text.append("\(dayTitleValue): \(businessHoursText)")
+                        }
+                        
+                        item.longTapAction(self, text)
+                    }
                 default:
                     break
                 }
@@ -212,6 +266,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         }
         
         self.item = item
+        self.presentationData = presentationData
         self.theme = presentationData.theme
                 
         let sideInset: CGFloat = 16.0 + safeInsets.left
@@ -272,7 +327,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         //TODO:localize
         let openStatusText = isOpen ? "Open" : "Closed"
         
-        var currentDayStatusText = currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(businessDays[currentDayIndex], offsetMinutes: timezoneOffsetMinutes) : " "
+        var currentDayStatusText = currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(presentationData: presentationData, day: businessDays[currentDayIndex], offsetMinutes: timezoneOffsetMinutes) : " "
         
         if !isOpen {
             for range in self.cachedWeekMinuteSet.rangeView {
@@ -465,7 +520,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                 dayTitleValue = " "
             }
             
-            let businessHoursText = dayBusinessHoursText(businessDays[i], offsetMinutes: timezoneOffsetMinutes)
+            let businessHoursText = dayBusinessHoursText(presentationData: presentationData, day: businessDays[i], offsetMinutes: timezoneOffsetMinutes)
             
             let dayTitleSize = dayTitle.update(
                 transition: .immediate,

@@ -822,7 +822,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         var canDelete: Bool
-        var canShare = !message.containsSecretMedia
+        var canShare = !message.containsSecretMedia && !Namespaces.Message.allNonRegular.contains(message.id.namespace)
 
         var canFullscreen = false
         
