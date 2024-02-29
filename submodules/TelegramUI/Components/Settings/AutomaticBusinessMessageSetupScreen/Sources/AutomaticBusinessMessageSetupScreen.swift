@@ -120,6 +120,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         private let messagesSection = ComponentView<Empty>()
         private let scheduleSection = ComponentView<Empty>()
         private let customScheduleSection = ComponentView<Empty>()
+        private let sendWhenOfflineSection = ComponentView<Empty>()
         private let accessSection = ComponentView<Empty>()
         private let excludedSection = ComponentView<Empty>()
         private let periodSection = ComponentView<Empty>()
@@ -139,6 +140,8 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         private var schedule: Schedule = .always
         private var customScheduleStart: Date?
         private var customScheduleEnd: Date?
+        
+        private var sendWhenOffline: Bool = false
         
         private var hasAccessToAllChatsByDefault: Bool = true
         private var additionalPeerList = AdditionalPeerList(
@@ -191,7 +194,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
             if self.isOn {
-                if self.hasAccessToAllChatsByDefault && self.additionalPeerList.categories.isEmpty && self.additionalPeerList.peers.isEmpty {
+                if !self.hasAccessToAllChatsByDefault && self.additionalPeerList.categories.isEmpty && self.additionalPeerList.peers.isEmpty {
                     //TODO:localize
                     self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "No recipients selected. Reset?", actions: [
                         TextAlertAction(type: .genericAction, title: "Cancel", action: {
@@ -285,7 +288,8 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     awayMessage = TelegramBusinessAwayMessage(
                         shortcutId: currentShortcut.id,
                         recipients: recipients,
-                        schedule: mappedSchedule
+                        schedule: mappedSchedule,
+                        sendWhenOffline: self.sendWhenOffline
                     )
                 }
                 let _ = component.context.engine.accountData.updateBusinessAwayMessage(awayMessage: awayMessage).startStandalone()
@@ -601,6 +605,9 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     
                     if let awayMessage = component.initialData.awayMessage {
                         self.isOn = true
+                        
+                        self.sendWhenOffline = awayMessage.sendWhenOffline
+                        
                         initialRecipients = awayMessage.recipients
                         
                         switch awayMessage.schedule {
@@ -1109,6 +1116,71 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 if self.schedule == .custom {
                     otherSectionsHeight += customScheduleSectionsHeight
                 }
+            }
+            
+            if case .away = component.mode {
+                let sendWhenOfflineSectionSize = self.sendWhenOfflineSection.update(
+                    transition: transition,
+                    component: AnyComponent(ListSectionComponent(
+                        theme: environment.theme,
+                        header: nil,
+                        footer: AnyComponent(MultilineTextComponent(
+                            text: .markdown(
+                                text: "Don't send the away message if you've recently been online.",
+                                attributes: MarkdownAttributes(
+                                    body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
+                                    bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
+                                    link: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.itemAccentColor),
+                                    linkAttribute: { _ in
+                                        return nil
+                                    }
+                                )
+                            ),
+                            maximumNumberOfLines: 0
+                        )),
+                        items: [
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                theme: environment.theme,
+                                title: AnyComponent(VStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: "Only if Offline",
+                                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                            textColor: environment.theme.list.itemPrimaryTextColor
+                                        )),
+                                        maximumNumberOfLines: 1
+                                    ))),
+                                ], alignment: .left, spacing: 2.0)),
+                                leftIcon: nil,
+                                accessory: .toggle(ListActionItemComponent.Toggle(
+                                    style: .regular,
+                                    isOn: self.sendWhenOffline,
+                                    action: { [weak self] value in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.sendWhenOffline = value
+                                        self.state?.updated(transition: .spring(duration: 0.4))
+                                    }
+                                )),
+                                action: nil
+                            )))
+                        ]
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                let sendWhenOfflineSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + otherSectionsHeight), size: sendWhenOfflineSectionSize)
+                if let sendWhenOfflineSectionView = self.sendWhenOfflineSection.view {
+                    if sendWhenOfflineSectionView.superview == nil {
+                        sendWhenOfflineSectionView.layer.allowsGroupOpacity = true
+                        self.scrollView.addSubview(sendWhenOfflineSectionView)
+                    }
+                    transition.setFrame(view: sendWhenOfflineSectionView, frame: sendWhenOfflineSectionFrame)
+                    alphaTransition.setAlpha(view: sendWhenOfflineSectionView, alpha: self.isOn ? 1.0 : 0.0)
+                }
+                otherSectionsHeight += sendWhenOfflineSectionSize.height
+                otherSectionsHeight += sectionSpacing
             }
                 
             //TODO:localize
