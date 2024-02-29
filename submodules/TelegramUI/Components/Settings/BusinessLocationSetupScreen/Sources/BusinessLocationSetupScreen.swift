@@ -118,7 +118,7 @@ final class BusinessLocationSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return true
             }
             
@@ -134,11 +134,10 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             if businessLocation != nil && address.isEmpty {
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                //TODO:localize
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Address can't be empty.", actions: [
-                    TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_Text, actions: [
+                    TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
                     }),
-                    TextAlertAction(type: .destructiveAction, title: "Delete", action: {
+                    TextAlertAction(type: .destructiveAction, title: environment.strings.BusinessLocationSetup_ErrorAddressEmpty_ResetAction, action: {
                         let _ = component.context.engine.accountData.updateAccountBusinessLocation(businessLocation: nil).startStandalone()
                         
                         complete()
@@ -286,11 +285,10 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Location", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.BusinessLocationSetup_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -335,8 +333,7 @@ final class BusinessLocationSetupScreenComponent: Component {
             
             contentHeight += 129.0
             
-            //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Display the location of your business on your account.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.BusinessLocationSetup_Text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -345,7 +342,6 @@ final class BusinessLocationSetupScreenComponent: Component {
                 }), textAlignment: .center
             ))
             
-            //TODO:localize
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
@@ -382,7 +378,6 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += subtitleSize.height
             contentHeight += 27.0
             
-            //TODO:localize
             var addressSectionItems: [AnyComponentWithIdentity<Empty>] = []
             addressSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListMultilineTextFieldItemComponent(
                 externalState: self.addressTextInputState,
@@ -393,7 +388,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                 resetText: self.resetAddressText.flatMap { resetAddressText in
                     return ListMultilineTextFieldItemComponent.ResetText(value: resetAddressText)
                 },
-                placeholder: "Enter Address",
+                placeholder: environment.strings.BusinessLocationSetup_AddressPlaceholder,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 characterLimit: 64,
@@ -404,7 +399,6 @@ final class BusinessLocationSetupScreenComponent: Component {
             ))))
             self.resetAddressText = nil
             
-            //TODO:localize
             let addressSectionSize = self.addressSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -428,13 +422,12 @@ final class BusinessLocationSetupScreenComponent: Component {
             contentHeight += sectionSpacing
             
             var mapSectionItems: [AnyComponentWithIdentity<Empty>] = []
-            //TODO:localize
             mapSectionItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                 theme: environment.theme,
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Set Location on Map",
+                            string: environment.strings.BusinessLocationSetup_SetLocationOnMap,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -471,7 +464,6 @@ final class BusinessLocationSetupScreenComponent: Component {
                 ))))
             }
             
-            //TODO:localize
             let mapSectionSize = self.mapSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -496,7 +488,6 @@ final class BusinessLocationSetupScreenComponent: Component {
             var deleteSectionHeight: CGFloat = 0.0
             
             deleteSectionHeight += sectionSpacing
-            //TODO:localize
             let deleteSectionSize = self.deleteSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -509,7 +500,7 @@ final class BusinessLocationSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Delete Location",
+                                        string: environment.strings.BusinessLocationSetup_DeleteLocation,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemDestructiveColor
                                     )),

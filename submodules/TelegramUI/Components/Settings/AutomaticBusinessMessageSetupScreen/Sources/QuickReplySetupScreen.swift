@@ -87,12 +87,11 @@ final class QuickReplySetupScreenComponent: Component {
         func item(listNode: ContentListNode) -> ListViewItem {
             switch self {
             case .add:
-                //TODO:localize
                 return ItemListPeerActionItem(
                     presentationData: ItemListPresentationData(listNode.presentationData),
                     icon: PresentationResourcesItemList.plusIconImage(listNode.presentationData.theme),
                     iconSignal: nil,
-                    title: "New Quick Reply",
+                    title: listNode.presentationData.strings.QuickReply_InlineCreateAction,
                     additionalBadgeIcon: nil,
                     alwaysPlain: true,
                     hasSeparator: true,
@@ -525,7 +524,7 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         func openQuickReplyChat(shortcut: String?, shortcutId: Int32?) {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
             
@@ -564,8 +563,8 @@ final class QuickReplySetupScreenComponent: Component {
                 var completion: ((String?) -> Void)?
                 let alertController = quickReplyNameAlertController(
                     context: component.context,
-                    text: "New Quick Reply",
-                    subtext: "Add a shortcut for your quick reply.",
+                    text: environment.strings.QuickReply_CreateShortcutTitle,
+                    subtext: environment.strings.QuickReply_CreateShortcutText,
                     value: "",
                     characterLimit: 32,
                     apply: { value in
@@ -573,7 +572,7 @@ final class QuickReplySetupScreenComponent: Component {
                     }
                 )
                 completion = { [weak self, weak alertController] value in
-                    guard let self else {
+                    guard let self, let environment = self.environment else {
                         alertController?.dismissAnimated()
                         return
                     }
@@ -585,7 +584,7 @@ final class QuickReplySetupScreenComponent: Component {
                         
                         if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
                             if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
-                                contentNode.setErrorText(errorText: "Shortcut with that name already exists")
+                                contentNode.setErrorText(errorText: environment.strings.QuickReply_ShortcutExistsInlineError)
                             }
                             return
                         }
@@ -602,15 +601,15 @@ final class QuickReplySetupScreenComponent: Component {
         }
         
         func openEditShortcut(id: Int32, currentValue: String) {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
             
             var completion: ((String?) -> Void)?
             let alertController = quickReplyNameAlertController(
                 context: component.context,
-                text: "Edit Shortcut",
-                subtext: "Add a new name for your shortcut.",
+                text: environment.strings.QuickReply_EditShortcutTitle,
+                subtext: environment.strings.QuickReply_EditShortcutText,
                 value: currentValue,
                 characterLimit: 32,
                 apply: { value in
@@ -618,7 +617,7 @@ final class QuickReplySetupScreenComponent: Component {
                 }
             )
             completion = { [weak self, weak alertController] value in
-                guard let self, let component = self.component else {
+                guard let self, let component = self.component, let environment = self.environment else {
                     alertController?.dismissAnimated()
                     return
                 }
@@ -634,7 +633,7 @@ final class QuickReplySetupScreenComponent: Component {
                     
                     if shortcutMessageList.items.contains(where: { $0.shortcut.lowercased() == value.lowercased() }) {
                         if let contentNode = alertController?.contentNode as? QuickReplyNameAlertContentNode {
-                            contentNode.setErrorText(errorText: "Shortcut with that name already exists")
+                            contentNode.setErrorText(errorText: environment.strings.QuickReply_ShortcutExistsInlineError)
                         }
                     } else {
                         component.context.engine.accountData.editMessageShortcut(id: id, shortcut: value)
@@ -665,8 +664,7 @@ final class QuickReplySetupScreenComponent: Component {
             let actionSheet = ActionSheetController(presentationData: presentationData)
             var items: [ActionSheetItem] = []
             
-            //TODO:localize
-            items.append(ActionSheetButtonItem(title: ids.count == 1 ? "Delete Quick Reply" : "Delete Quick Replies", color: .destructive, action: { [weak self, weak actionSheet] in
+            items.append(ActionSheetButtonItem(title: ids.count == 1 ? presentationData.strings.QuickReply_DeleteConfirmationSingle : presentationData.strings.QuickReply_DeleteConfirmationMultiple, color: .destructive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 guard let self, let component = self.component else {
                     return
@@ -732,10 +730,9 @@ final class QuickReplySetupScreenComponent: Component {
             
             let titleText: String
             if !self.selectedIds.isEmpty {
-                //TODO:localize
-                titleText = "\(self.selectedIds.count) Selected"
+                titleText = strings.QuickReply_SelectedTitle(Int32(self.selectedIds.count))
             } else {
-                titleText = "Quick Replies"
+                titleText = strings.QuickReply_Title
             }
             
             let closeTitle: String
@@ -762,7 +759,7 @@ final class QuickReplySetupScreenComponent: Component {
                     }
                 ))) : nil,
                 rightButtons: rightButtons,
-                backTitle: isModal ? nil : "Back",
+                backTitle: isModal ? nil : strings.Common_Back,
                 backPressed: { [weak self] in
                     guard let self else {
                         return
@@ -1060,12 +1057,7 @@ final class QuickReplySetupScreenComponent: Component {
                     self.selectionPanel = selectionPanel
                 }
                 
-                let buttonTitle: String
-                if self.selectedIds.count == 1 {
-                    buttonTitle = "Delete 1 Quick Reply"
-                } else {
-                    buttonTitle = "Delete \(self.selectedIds.count) Quick Replies"
-                }
+                let buttonTitle: String = environment.strings.QuickReply_DeleteAction(Int32(self.selectedIds.count))
                 
                 let selectionPanelSize = selectionPanel.update(
                     transition: selectionPanelTransition,
@@ -1098,7 +1090,6 @@ final class QuickReplySetupScreenComponent: Component {
                     containerSize: availableSize
                 )
                 let selectionPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - selectionPanelSize.height), size: selectionPanelSize)
-                print("selectionPanelFrame: \(selectionPanelFrame.minY)")
                 listBottomInset = selectionPanelSize.height
                 if let selectionPanelView = selectionPanel.view {
                     var animateIn = false

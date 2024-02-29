@@ -295,7 +295,7 @@ final class BusinessHoursSetupScreenComponent: Component {
         }
         
         func attemptNavigation(complete: @escaping () -> Void) -> Bool {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return true
             }
             
@@ -306,11 +306,10 @@ final class BusinessHoursSetupScreenComponent: Component {
                     return true
                 } catch _ {
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Business hours are intersecting. Reset?", actions: [
-                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: environment.strings.BusinessHoursSetup_ErrorIntersectingDays_Text, actions: [
+                        TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {
                         }),
-                        TextAlertAction(type: .defaultAction, title: "Reset", action: { [weak self] in
+                        TextAlertAction(type: .defaultAction, title: environment.strings.BusinessHoursSetup_ErrorIntersectingDays_ResetAction, action: { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -409,11 +408,10 @@ final class BusinessHoursSetupScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Business Hours", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.BusinessHoursSetup_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -461,8 +459,7 @@ final class BusinessHoursSetupScreenComponent: Component {
             
             contentHeight += 126.0
             
-            //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Turn this on to show your opening hours schedule to your customers.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.BusinessHoursSetup_Text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -471,7 +468,6 @@ final class BusinessHoursSetupScreenComponent: Component {
                 }), textAlignment: .center
             ))
             
-            //TODO:localize
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
@@ -508,7 +504,6 @@ final class BusinessHoursSetupScreenComponent: Component {
             contentHeight += subtitleSize.height
             contentHeight += 27.0
             
-            //TODO:localize
             let generalSectionSize = self.generalSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -521,7 +516,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Show Business Hours",
+                                        string: environment.strings.BusinessHoursSetup_MainToggle,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -559,22 +554,21 @@ final class BusinessHoursSetupScreenComponent: Component {
                 let dayIndex = daysSectionItems.count
                 
                 let title: String
-                //TODO:localize
                 switch dayIndex {
                 case 0:
-                    title = "Monday"
+                    title = environment.strings.Weekday_Monday
                 case 1:
-                    title = "Tuesday"
+                    title = environment.strings.Weekday_Tuesday
                 case 2:
-                    title = "Wednesday"
+                    title = environment.strings.Weekday_Wednesday
                 case 3:
-                    title = "Thursday"
+                    title = environment.strings.Weekday_Thursday
                 case 4:
-                    title = "Friday"
+                    title = environment.strings.Weekday_Friday
                 case 5:
-                    title = "Saturday"
+                    title = environment.strings.Weekday_Saturday
                 case 6:
-                    title = "Sunday"
+                    title = environment.strings.Weekday_Sunday
                 default:
                     title = " "
                 }
@@ -593,17 +587,17 @@ final class BusinessHoursSetupScreenComponent: Component {
                 
                 if let ranges = self.daysState.days[dayIndex].ranges {
                     if ranges.isEmpty {
-                        subtitle.append(NSAttributedString(string: "Open 24 Hours", font: subtitleFont, textColor: invalidIndices.contains(0) ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemAccentColor))
+                        subtitle.append(NSAttributedString(string: environment.strings.BusinessHoursSetup_DayOpen24h, font: subtitleFont, textColor: invalidIndices.contains(0) ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemAccentColor))
                     } else {
                         for i in 0 ..< ranges.count {
                             let range = ranges[i]
                             
                             let startHours = clipMinutes(range.startMinute) / 60
                             let startMinutes = clipMinutes(range.startMinute) % 60
-                            let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: PresentationDateTimeFormat())
+                            let startText = stringForShortTimestamp(hours: Int32(startHours), minutes: Int32(startMinutes), dateTimeFormat: presentationData.dateTimeFormat)
                             let endHours = clipMinutes(range.endMinute) / 60
                             let endMinutes = clipMinutes(range.endMinute) % 60
-                            let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: PresentationDateTimeFormat())
+                            let endText = stringForShortTimestamp(hours: Int32(endHours), minutes: Int32(endMinutes), dateTimeFormat: presentationData.dateTimeFormat)
                             
                             var rangeString = "\(startText)\u{00a0}- \(endText)"
                             if i != ranges.count - 1 {
@@ -614,7 +608,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                         }
                     }
                 } else {
-                    subtitle.append(NSAttributedString(string: "Closed", font: subtitleFont, textColor: environment.theme.list.itemAccentColor))
+                    subtitle.append(NSAttributedString(string: environment.strings.BusinessHoursSetup_DayClosed, font: subtitleFont, textColor: environment.theme.list.itemAccentColor))
                 }
                 
                 daysSectionItems.append(AnyComponentWithIdentity(id: dayIndex, component: AnyComponent(ListActionItemComponent(
@@ -678,7 +672,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "BUSINESS HOURS",
+                            string: environment.strings.BusinessHoursSetup_DaysSectionTitle,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -712,8 +706,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                     timezoneValueText = TimeZone(identifier: self.daysState.timezoneId)?.localizedName(for: .shortStandard, locale: Locale.current) ?? " "
                 }
             } else {
-                //TODO:localize
-                timezoneValueText = "Loading..."
+                timezoneValueText = "..."
             }
             
             let timezoneSectionSize = self.timezoneSection.update(
@@ -727,7 +720,7 @@ final class BusinessHoursSetupScreenComponent: Component {
                             theme: environment.theme,
                             title: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "Time Zone", //TODO:localize
+                                    string: environment.strings.BusinessHoursSetup_TimeZone,
                                     font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                     textColor: environment.theme.list.itemPrimaryTextColor
                                 )),

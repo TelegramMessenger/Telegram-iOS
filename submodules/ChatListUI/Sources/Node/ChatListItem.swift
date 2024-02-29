@@ -3066,8 +3066,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var trailingTextBadgeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil, let messageCount = customMessageListData.messageCount, messageCount > 1 {
                 let trailingText: String
-                //TODO:localize
-                trailingText = "+\(messageCount - 1) MORE"
+                trailingText = item.presentationData.strings.ChatList_ItemMoreMessagesFormat(Int32(messageCount - 1))
                 let trailingAttributedText = NSAttributedString(string: trailingText, font: Font.regular(12.0), textColor: theme.messageTextColor)
                 let (layout, apply) = makeTrailingTextBadgeLayout(TextNodeLayoutArguments(attributedString: trailingAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 trailingTextBadgeLayoutAndApply = (layout, apply)
@@ -3210,10 +3209,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData {
                             peerLeftRevealOptions = []
                             if customMessageListData.commandPrefix != nil {
-                                //TODO:localize
                                 peerRevealOptions = [
-                                    ItemListRevealOption(key: RevealOptionKey.edit.rawValue, title: "Edit", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.neutral2.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral2.foregroundColor),
-                                    ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: "Delete", icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)
+                                    ItemListRevealOption(key: RevealOptionKey.edit.rawValue, title: item.presentationData.strings.ChatList_ItemMenuEdit, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.neutral2.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral2.foregroundColor),
+                                    ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: item.presentationData.strings.ChatList_ItemMenuDelete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)
                                 ]
                             } else {
                                 peerRevealOptions = []

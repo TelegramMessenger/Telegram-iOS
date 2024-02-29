@@ -212,8 +212,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
         case let .listFooter(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .displayTags(value):
-            //TODO:localize
-            return ItemListSwitchItem(presentationData: presentationData, title: "Show Folder Tags", value: value == true, enableInteractiveChanges: value != nil, enabled: true, displayLocked: value == nil, sectionId: self.section, style: .blocks, updated: { updatedValue in
+            return ItemListSwitchItem(presentationData: presentationData, title: presentationData.strings.ChatListFilterList_ShowTags, value: value == true, enableInteractiveChanges: value != nil, enabled: true, displayLocked: value == nil, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 if value != nil {
                     arguments.updateDisplayTags(updatedValue)
                 } else {
@@ -223,8 +222,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
                 arguments.updateDisplayTagsLocked()
             }, tag: ChatListFilterPresetListEntryTag.displayTags)
         case .displayTagsFooter:
-            //TODO:localize
-            return ItemListTextItem(presentationData: presentationData, text: .plain("Display folder names for each chat in the chat list."), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(presentationData.strings.ChatListFilterList_ShowTagsFooter), sectionId: self.section)
         }
     }
 }

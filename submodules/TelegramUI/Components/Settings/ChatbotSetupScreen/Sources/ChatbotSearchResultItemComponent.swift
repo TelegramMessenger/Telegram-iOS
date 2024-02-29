@@ -108,12 +108,11 @@ final class ChatbotSearchResultItemComponent: Component {
                     self.addButton = addButton
                 }
                 
-                //TODO:localize
                 addButtonSize = addButton.update(
                     transition: addButtonTransition,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: "ADD", font: Font.semibold(15.0), textColor: component.theme.list.itemCheckColors.foregroundColor))
+                            text: .plain(NSAttributedString(string: component.strings.ChatbotSetup_BotAddAction, font: Font.semibold(15.0), textColor: component.theme.list.itemCheckColors.foregroundColor))
                         )),
                         background: AnyComponent(RoundedRectangle(color: component.theme.list.itemCheckColors.fillColor, cornerRadius: nil)),
                         effectAlignment: .center,
@@ -159,7 +158,6 @@ final class ChatbotSearchResultItemComponent: Component {
                     self.removeButton = removeButton
                 }
                 
-                //TODO:localize
                 removeButtonSize = removeButton.update(
                     transition: removeButtonTransition,
                     component: AnyComponent(PlainButtonComponent(
@@ -205,11 +203,11 @@ final class ChatbotSearchResultItemComponent: Component {
             case .searching, .notFound:
                 isTextVisible = false
                 titleValue = "AAAAAAAAA"
-                subtitleValue = "bot" //TODO:localize
+                subtitleValue = component.strings.Bot_GenericBotStatus
             case let .found(peer, _):
                 isTextVisible = true
                 titleValue = peer.displayTitle(strings: component.strings, displayOrder: .firstLast)
-                subtitleValue = "bot"
+                subtitleValue = component.strings.Bot_GenericBotStatus
             }
             
             let titleSize = self.titleLabel.update(
@@ -298,11 +296,10 @@ final class ChatbotSearchResultItemComponent: Component {
                     notFoundLabel = ComponentView()
                     self.notFoundLabel = notFoundLabel
                 }
-                //TODO:localize
                 let notFoundLabelSize = notFoundLabel.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Chatbot not found", font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                        text: .plain(NSAttributedString(string: component.strings.ChatbotSetup_BotNotFoundStatus, font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
                     )),
                     environment: {},
                     containerSize: CGSize(width: maxTextWidth, height: 100.0)

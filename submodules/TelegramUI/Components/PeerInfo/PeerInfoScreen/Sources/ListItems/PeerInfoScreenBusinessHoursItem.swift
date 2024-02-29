@@ -17,9 +17,9 @@ private func dayBusinessHoursText(presentationData: PresentationData, day: Teleg
     var businessHoursText: String = ""
     switch day {
     case .open:
-        businessHoursText += "open 24 hours"
+        businessHoursText += presentationData.strings.PeerInfo_BusinessHours_DayOpen24h
     case .closed:
-        businessHoursText += "closed"
+        businessHoursText += presentationData.strings.PeerInfo_BusinessHours_DayClosed
     case let .intervals(intervals):
         func clipMinutes(_ value: Int) -> Int {
             var value = value
@@ -216,22 +216,21 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                         
                         for i in 0 ..< businessDays.count {
                             let dayTitleValue: String
-                            //TODO:localize
                             switch i {
                             case 0:
-                                dayTitleValue = "Monday"
+                                dayTitleValue = presentationData.strings.Weekday_Monday
                             case 1:
-                                dayTitleValue = "Tuesday"
+                                dayTitleValue = presentationData.strings.Weekday_Tuesday
                             case 2:
-                                dayTitleValue = "Wednesday"
+                                dayTitleValue = presentationData.strings.Weekday_Wednesday
                             case 3:
-                                dayTitleValue = "Thursday"
+                                dayTitleValue = presentationData.strings.Weekday_Thursday
                             case 4:
-                                dayTitleValue = "Friday"
+                                dayTitleValue = presentationData.strings.Weekday_Friday
                             case 5:
-                                dayTitleValue = "Saturday"
+                                dayTitleValue = presentationData.strings.Weekday_Saturday
                             case 6:
-                                dayTitleValue = "Sunday"
+                                dayTitleValue = presentationData.strings.Weekday_Sunday
                             default:
                                 dayTitleValue = " "
                             }
@@ -328,8 +327,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         }
         
         let isOpen = self.cachedWeekMinuteSet.contains(currentWeekMinute)
-        //TODO:localize
-        let openStatusText = isOpen ? "Open" : "Closed"
+        let openStatusText = isOpen ? presentationData.strings.PeerInfo_BusinessHours_StatusOpen : presentationData.strings.PeerInfo_BusinessHours_StatusClosed
         
         var currentDayStatusText = currentDayIndex >= 0 && currentDayIndex < businessDays.count ? dayBusinessHoursText(presentationData: presentationData, day: businessDays[currentDayIndex], offsetMinutes: timezoneOffsetMinutes) : " "
         
@@ -337,11 +335,10 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             for range in self.cachedWeekMinuteSet.rangeView {
                 if range.lowerBound > currentWeekMinute {
                     let openInMinutes = range.lowerBound - currentWeekMinute
-                    //TODO:localize
                     if openInMinutes < 60 {
-                        currentDayStatusText = "Opens in \(openInMinutes) minutes"
+                        currentDayStatusText = presentationData.strings.PeerInfo_BusinessHours_StatusOpensInMinutes(Int32(openInMinutes))
                     } else if openInMinutes < 6 * 60 {
-                        currentDayStatusText = "Opens in \(openInMinutes / 60) hours"
+                        currentDayStatusText = presentationData.strings.PeerInfo_BusinessHours_StatusOpensInHours(Int32(openInMinutes / 60))
                     } else {
                         let openDate = currentDate.addingTimeInterval(Double(openInMinutes * 60))
                         let openTimestamp = Int32(openDate.timeIntervalSince1970) + Int32(currentCalendar.timeZone.secondsFromGMT() - TimeZone.current.secondsFromGMT())
@@ -360,7 +357,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                                 return PresentationStrings.FormattedString(string: presentationData.strings.Chat_MessageSeenTimestamp_YesterdayAt(value).string, ranges: [])
                             }
                         )).string
-                        currentDayStatusText = "opens \(dateText)"
+                        currentDayStatusText = presentationData.strings.PeerInfo_BusinessHours_StatusOpensOnDate(dateText).string
                     }
                     break
                 }
@@ -408,11 +405,10 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                 self.timezoneSwitchButton = timezoneSwitchButton
             }
             let timezoneSwitchTitle: String
-            //TODO:localize
             if self.displayLocalTimezone {
-                timezoneSwitchTitle = "my time"
+                timezoneSwitchTitle = presentationData.strings.PeerInfo_BusinessHours_TimezoneSwitchMy
             } else {
-                timezoneSwitchTitle = "local time"
+                timezoneSwitchTitle = presentationData.strings.PeerInfo_BusinessHours_TimezoneSwitchBusiness
             }
             timezoneSwitchButtonSize = timezoneSwitchButton.update(
                 transition: .immediate,
@@ -510,22 +506,21 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
             }
             
             let dayTitleValue: String
-            //TODO:localize
             switch i {
             case 0:
-                dayTitleValue = "Monday"
+                dayTitleValue = presentationData.strings.Weekday_Monday
             case 1:
-                dayTitleValue = "Tuesday"
+                dayTitleValue = presentationData.strings.Weekday_Tuesday
             case 2:
-                dayTitleValue = "Wednesday"
+                dayTitleValue = presentationData.strings.Weekday_Wednesday
             case 3:
-                dayTitleValue = "Thursday"
+                dayTitleValue = presentationData.strings.Weekday_Thursday
             case 4:
-                dayTitleValue = "Friday"
+                dayTitleValue = presentationData.strings.Weekday_Friday
             case 5:
-                dayTitleValue = "Saturday"
+                dayTitleValue = presentationData.strings.Weekday_Saturday
             case 6:
-                dayTitleValue = "Sunday"
+                dayTitleValue = presentationData.strings.Weekday_Sunday
             default:
                 dayTitleValue = " "
             }

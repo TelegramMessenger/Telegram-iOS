@@ -141,7 +141,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         private var customScheduleStart: Date?
         private var customScheduleEnd: Date?
         
-        private var sendWhenOffline: Bool = false
+        private var sendWhenOffline: Bool = true
         
         private var hasAccessToAllChatsByDefault: Bool = true
         private var additionalPeerList = AdditionalPeerList(
@@ -195,11 +195,10 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             
             if self.isOn {
                 if !self.hasAccessToAllChatsByDefault && self.additionalPeerList.categories.isEmpty && self.additionalPeerList.peers.isEmpty {
-                    //TODO:localize
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "No recipients selected. Reset?", actions: [
-                        TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.BusinessMessageSetup_ErrorNoRecipients_Text, actions: [
+                        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                         }),
-                        TextAlertAction(type: .defaultAction, title: "Reset", action: {
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.BusinessMessageSetup_ErrorNoRecipients_ResetAction, action: {
                             complete()
                         })
                     ]), in: .window(.root))
@@ -208,28 +207,26 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 }
             
                 if case .away = component.mode, case .custom = self.schedule {
-                    //TODO:localize
                     var errorText: String?
                     if let customScheduleStart = self.customScheduleStart, let customScheduleEnd = self.customScheduleEnd {
                         if customScheduleStart >= customScheduleEnd {
-                            errorText = "Custom schedule end time must be larger than start time."
+                            errorText = presentationData.strings.BusinessMessageSetup_ErrorScheduleEndTimeBeforeStartTime_Text
                         }
                     } else {
                         if self.customScheduleStart == nil && self.customScheduleEnd == nil {
-                            errorText = "Custom schedule time is missing."
+                            errorText = presentationData.strings.BusinessMessageSetup_ErrorScheduleTimeMissing_Text
                         } else if self.customScheduleStart == nil {
-                            errorText = "Custom schedule start time is missing."
+                            errorText = presentationData.strings.BusinessMessageSetup_ErrorScheduleStartTimeMissing_Text
                         } else {
-                            errorText = "Custom schedule end time is missing."
+                            errorText = presentationData.strings.BusinessMessageSetup_ErrorScheduleEndTimeMissing_Text
                         }
                     }
                     
                     if let errorText {
-                        //TODO:localize
                         self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: errorText, actions: [
-                            TextAlertAction(type: .genericAction, title: "Cancel", action: {
+                            TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                             }),
-                            TextAlertAction(type: .defaultAction, title: "Reset", action: {
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.BusinessMessageSetup_ErrorScheduleTime_ResetAction, action: {
                                 complete()
                             })
                         ]), in: .window(.root))
@@ -281,7 +278,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         if let customScheduleStart = self.customScheduleStart, let customScheduleEnd = self.customScheduleEnd {
                             mappedSchedule = .custom(beginTimestamp: Int32(customScheduleStart.timeIntervalSince1970), endTimestamp: Int32(customScheduleEnd.timeIntervalSince1970))
                         } else {
-                            //TODO:localize
                             return false
                         }
                     }
@@ -335,7 +331,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
         }
         
         private func openAdditionalPeerListSetup() {
-            guard let component = self.component else {
+            guard let component = self.component, let enviroment = self.environment else {
                 return
             }
             
@@ -351,19 +347,19 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     id: self.hasAccessToAllChatsByDefault ? AdditionalCategoryId.existingChats.rawValue : AdditionalCategoryId.newChats.rawValue,
                     icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), cornerRadius: 12.0, color: .purple),
                     smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
-                    title: self.hasAccessToAllChatsByDefault ? "Existing Chats" : "New Chats"
+                    title: self.hasAccessToAllChatsByDefault ? enviroment.strings.BusinessMessageSetup_Recipients_CategoryExistingChats : enviroment.strings.BusinessMessageSetup_Recipients_CategoryNewChats
                 ),
                 ChatListNodeAdditionalCategory(
                     id: AdditionalCategoryId.contacts.rawValue,
                     icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
                     smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-                    title: "Contacts"
+                    title: enviroment.strings.BusinessMessageSetup_Recipients_CategoryContacts
                 ),
                 ChatListNodeAdditionalCategory(
                     id: AdditionalCategoryId.nonContacts.rawValue,
                     icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .yellow),
                     smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-                    title: "Non-Contacts"
+                    title: enviroment.strings.BusinessMessageSetup_Recipients_CategoryNonContacts
                 )
             ]
             var selectedCategories = Set<Int>()
@@ -380,10 +376,9 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             let controller = component.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: component.context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                title: self.hasAccessToAllChatsByDefault ? "Exclude Chats" : "Include Chats",
-                searchPlaceholder: "Search chats",
+                title: self.hasAccessToAllChatsByDefault ? enviroment.strings.BusinessMessageSetup_Recipients_ExcludeSearchTitle : enviroment.strings.BusinessMessageSetup_Recipients_IncludeSearchTitle,
+                searchPlaceholder: enviroment.strings.ChatListFilter_AddChatsSearchPlaceholder,
                 selectedChats: Set(self.additionalPeerList.peers.map(\.peer.id)),
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
                 chatListFilters: nil,
@@ -687,11 +682,10 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.mode == .greeting ? "Greeting Message" : "Away Message", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: component.mode == .greeting ? environment.strings.BusinessMessageSetup_TitleGreetingMessage : environment.strings.BusinessMessageSetup_TitleAwayMessage, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -736,8 +730,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             
             contentHeight += 124.0
             
-            //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(component.mode == .greeting ? "Greet customers when they message you the first time or after a period of no activity." : "Automatically reply with a message when you are away.", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(component.mode == .greeting ? environment.strings.BusinessMessageSetup_TextGreetingMessage : environment.strings.BusinessMessageSetup_TextAwayMessage, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -746,7 +739,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 }), textAlignment: .center
             ))
             
-            //TODO:localize
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
@@ -789,7 +781,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: component.mode == .greeting ? "Send Greeting Message" : "Send Away Message",
+                            string: component.mode == .greeting ? environment.strings.BusinessMessageSetup_ToggleGreetingMessage : environment.strings.BusinessMessageSetup_ToggleAwayMessage,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemPrimaryTextColor
                         )),
@@ -806,7 +798,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 action: nil
             ))))
             
-            //TODO:localize
             let generalSectionSize = self.generalSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -830,7 +821,6 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             
             var otherSectionsHeight: CGFloat = 0.0
             
-            //TODO:localize
             var messagesSectionItems: [AnyComponentWithIdentity<Empty>] = []
             if let currentShortcut = self.currentShortcut {
                 if let accountPeer = self.accountPeer {
@@ -855,7 +845,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     title: AnyComponent(VStack([
                         AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: component.mode == .greeting ? "Create a Greeting Message" : "Create an Away Message",
+                                string: component.mode == .greeting ? environment.strings.BusinessMessageSetup_CreateGreetingMessage : environment.strings.BusinessMessageSetup_CreateAwayMessage,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: environment.theme.list.itemAccentColor
                             )),
@@ -881,7 +871,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: component.mode == .greeting ? "GREETING MESSAGE" : "AWAY MESSAGE",
+                            string: component.mode == .greeting ? environment.strings.BusinessMessageSetup_GreetingMessageSectionHeader : environment.strings.BusinessMessageSetup_AwayMessageSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -906,24 +896,23 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
             otherSectionsHeight += sectionSpacing
             
             if case .away = component.mode {
-                //TODO:localize
                 var scheduleSectionItems: [AnyComponentWithIdentity<Empty>] = []
                 optionLoop: for i in 0 ..< 3 {
                     let title: String
                     let schedule: Schedule
                     switch i {
                     case 0:
-                        title = "Always Send"
+                        title = environment.strings.BusinessMessageSetup_ScheduleAlways
                         schedule = .always
                     case 1:
                         if component.initialData.businessHours == nil {
                             continue optionLoop
                         }
                         
-                        title = "Outside of Business Hours"
+                        title = environment.strings.BusinessMessageSetup_ScheduleOutsideBusinessHours
                         schedule = .outsideBusinessHours
                     default:
-                        title = "Custom Schedule"
+                        title = environment.strings.BusinessMessageSetup_ScheduleCustom
                         schedule = .custom
                     }
                     let isSelected = self.schedule == schedule
@@ -963,7 +952,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "SCHEDULE",
+                                string: environment.strings.BusinessMessageSetup_ScheduleSectionHeader,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -995,11 +984,11 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     let isStartTime: Bool
                     switch i {
                     case 0:
-                        title = "Start Time"
+                        title = environment.strings.BusinessMessageSetup_ScheduleStartTime
                         itemDate = self.customScheduleStart
                         isStartTime = true
                     default:
-                        title = "End Time"
+                        title = environment.strings.BusinessMessageSetup_ScheduleEndTime
                         itemDate = self.customScheduleEnd
                         isStartTime = false
                     }
@@ -1059,7 +1048,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     } else {
                         icon = ListActionItemComponent.Icon(component: AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Set",
+                                string: environment.strings.BusinessMessageSetup_ScheduleTimePlaceholder,
                                 font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                 textColor: environment.theme.list.itemSecondaryTextColor
                             )),
@@ -1126,7 +1115,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .markdown(
-                                text: "Don't send the away message if you've recently been online.",
+                                text: environment.strings.BusinessMessageSetup_SendWhenOfflineFooter,
                                 attributes: MarkdownAttributes(
                                     body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
                                     bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
@@ -1144,7 +1133,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                                 title: AnyComponent(VStack([
                                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                         text: .plain(NSAttributedString(
-                                            string: "Only if Offline",
+                                            string: environment.strings.BusinessMessageSetup_SendWhenOffline,
                                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                             textColor: environment.theme.list.itemPrimaryTextColor
                                         )),
@@ -1182,15 +1171,14 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 otherSectionsHeight += sendWhenOfflineSectionSize.height
                 otherSectionsHeight += sectionSpacing
             }
-                
-            //TODO:localize
+            
             let accessSectionSize = self.accessSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "RECIPIENTS",
+                            string: environment.strings.BusinessMessageSetup_RecipientsSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1203,7 +1191,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "All 1-to-1 Chats Except...",
+                                        string: environment.strings.BusinessMessageSetup_RecipientsOptionAllExcept,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -1233,7 +1221,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Only Selected Chats",
+                                        string: environment.strings.BusinessMessageSetup_RecipientsOptionOnly,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -1281,7 +1269,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? "Exclude Chats..." : "Select Chats...",
+                            string: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_AddExclude : environment.strings.BusinessMessageSetup_Recipients_AddInclude,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemAccentColor
                         )),
@@ -1304,23 +1292,22 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 let title: String
                 let icon: String
                 let color: AvatarBackgroundColor
-                //TODO:localize
                 switch category {
                 case .newChats:
-                    title = "New Chats"
-                    icon = "Chat List/Filters/Contact"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryNewChats
+                    icon = "Chat List/Filters/NewChats"
                     color = .purple
                 case .existingChats:
-                    title = "Existing Chats"
-                    icon = "Chat List/Filters/Contact"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryExistingChats
+                    icon = "Chat List/Filters/Chats"
                     color = .purple
                 case .contacts:
-                    title = "Contacts"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryContacts
                     icon = "Chat List/Filters/Contact"
                     color = .blue
                 case .nonContacts:
-                    title = "Non-Contacts"
-                    icon = "Chat List/Filters/Contact"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryNonContacts
+                    icon = "Chat List/Filters/User"
                     color = .yellow
                 }
                 excludedSectionItems.append(AnyComponentWithIdentity(id: category, component: AnyComponent(PeerListItemComponent(
@@ -1354,7 +1341,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     sideInset: 0.0,
                     title: peer.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                     peer: peer.peer,
-                    subtitle: peer.isContact ? "contact" : "non-contact",
+                    subtitle: peer.isContact ? environment.strings.ChatList_PeerTypeContact : environment.strings.ChatList_PeerTypeNonContact,
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .none,
@@ -1364,14 +1351,13 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                 ))))
             }
             
-            //TODO:localize
             let excludedSectionSize = self.excludedSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? "EXCLUDED CHATS" : "INCLUDED CHATS",
+                            string: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_ExcludedSectionHeader : environment.strings.BusinessMessageSetup_Recipients_IncludedSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -1379,7 +1365,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: component.mode == .greeting ? "Choose chats or entire chat categories for sending a greeting message." : "Choose chats or entire chat categories for sending an away message.",
+                            text: component.mode == .greeting ? environment.strings.BusinessMessageSetup_Recipients_GreetingMessageFooter : environment.strings.BusinessMessageSetup_Recipients_AwayMessageFooter,
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
@@ -1428,7 +1414,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "PERIOD OF NO ACTIVITY",
+                                string: environment.strings.BusinessMessageSetup_InactivitySectionHeader,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1436,7 +1422,7 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         )),
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Choose how many days should pass after your last interaction with a recipient to send them the greeting in response to their message.",
+                                string: environment.strings.BusinessMessageSetup_InactivitySectionFooter,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1445,12 +1431,9 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         items: [
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
                                 theme: environment.theme,
-                                values: [
-                                    "7 days",
-                                    "14 days",
-                                    "21 days",
-                                    "28 days"
-                                ],
+                                values: valueList.map { item in
+                                    return environment.strings.MessageTimer_Days(Int32(item))
+                                },
                                 selectedIndex: selectedInactivityIndex,
                                 selectedIndexUpdated: { [weak self] index in
                                     guard let self else {

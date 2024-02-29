@@ -106,8 +106,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             case .quickReplyMessageInput:
                 displayCount = 20
             }
-            //TODO:localize
-            self.textNode.attributedText = NSAttributedString(string: "Limit of \(displayCount) messages reached", font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_QuickReplyMessageLimitReachedText(Int32(displayCount)), font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         }
         self.buttonNode.isUserInteractionEnabled = isUserInteractionEnabled
         

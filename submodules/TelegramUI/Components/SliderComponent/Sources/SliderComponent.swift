@@ -94,8 +94,8 @@ public final class SliderComponent: Component {
                 sliderView.minimumValue = 0.0
                 sliderView.startValue = 0.0
                 sliderView.disablesInteractiveTransitionGestureRecognizer = true
-                sliderView.maximumValue = CGFloat(component.valueCount)
-                sliderView.positionsCount = component.valueCount + 1
+                sliderView.maximumValue = CGFloat(component.valueCount - 1)
+                sliderView.positionsCount = component.valueCount
                 sliderView.useLinesForPositions = true
                 
                 sliderView.backgroundColor = nil

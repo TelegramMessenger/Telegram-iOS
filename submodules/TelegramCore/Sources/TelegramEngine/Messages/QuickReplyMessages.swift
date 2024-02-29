@@ -358,7 +358,7 @@ func _internal_applySentQuickReplyMessage(transaction: Transaction, shortcut: St
     var state = transaction.getPreferencesEntry(key: PreferencesKeys.shortcutMessages())?.get(QuickReplyMessageShortcutsState.self) ?? QuickReplyMessageShortcutsState(shortcuts: [])
     
     if !state.shortcuts.contains(where: { $0.id == quickReplyId }) {
-        state.shortcuts.insert(QuickReplyMessageShortcut(id: quickReplyId, shortcut: shortcut), at: 0)
+        state.shortcuts.append(QuickReplyMessageShortcut(id: quickReplyId, shortcut: shortcut))
         transaction.setPreferencesEntry(key: PreferencesKeys.shortcutMessages(), value: PreferencesEntry(state))
     }
 }
@@ -777,19 +777,6 @@ func _internal_updateBusinessAwayMessage(account: Account, awayMessage: Telegram
     |> ignoreValues
     |> then(remoteApply)
 }
-
-/*
- connectedBot flags:# can_reply:flags.0?true bot_id:long recipients:BusinessRecipients = ConnectedBot;
-
- account.connectedBots connected_bots:Vector<ConnectedBot> users:Vector<User> = account.ConnectedBots;
-
- ---functions---
-
- account.setConnectedBot flags:# can_reply:flags.0?true deleted:flags.1?true bot:InputUser recipients:InputBusinessRecipients = Updates;
-
- account.getConnectedBots = account.ConnectedBots;
-
- */
 
 public final class TelegramAccountConnectedBot: Codable, Equatable {
     public let id: PeerId

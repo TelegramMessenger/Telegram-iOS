@@ -296,7 +296,7 @@ final class ChatbotSetupScreenComponent: Component {
         }
         
         private func openAdditionalPeerListSetup() {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
             
@@ -312,19 +312,19 @@ final class ChatbotSetupScreenComponent: Component {
                     id: self.hasAccessToAllChatsByDefault ? AdditionalCategoryId.existingChats.rawValue : AdditionalCategoryId.newChats.rawValue,
                     icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), cornerRadius: 12.0, color: .purple),
                     smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: self.hasAccessToAllChatsByDefault ? "Chat List/Filters/Chats" : "Chat List/Filters/NewChats"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .purple),
-                    title: self.hasAccessToAllChatsByDefault ? "Existing Chats" : "New Chats"
+                    title: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_CategoryExistingChats : environment.strings.BusinessMessageSetup_Recipients_CategoryNewChats
                 ),
                 ChatListNodeAdditionalCategory(
                     id: AdditionalCategoryId.contacts.rawValue,
                     icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), cornerRadius: 12.0, color: .blue),
                     smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Contact"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .blue),
-                    title: "Contacts"
+                    title: environment.strings.BusinessMessageSetup_Recipients_CategoryContacts
                 ),
                 ChatListNodeAdditionalCategory(
                     id: AdditionalCategoryId.nonContacts.rawValue,
                     icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), cornerRadius: 12.0, color: .yellow),
                     smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/User"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .yellow),
-                    title: "Non-Contacts"
+                    title: environment.strings.BusinessMessageSetup_Recipients_CategoryNonContacts
                 )
             ]
             var selectedCategories = Set<Int>()
@@ -341,10 +341,9 @@ final class ChatbotSetupScreenComponent: Component {
                 }
             }
             
-            //TODO:localize
             let controller = component.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: component.context, mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                title: self.hasAccessToAllChatsByDefault ? "Exclude Chats" : "Include Chats",
-                searchPlaceholder: "Search chats",
+                title: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_ExcludeSearchTitle : environment.strings.BusinessMessageSetup_Recipients_IncludeSearchTitle,
+                searchPlaceholder: environment.strings.ChatListFilter_AddChatsSearchPlaceholder,
                 selectedChats: Set(self.additionalPeerList.peers.map(\.peer.id)),
                 additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories),
                 chatListFilters: nil,
@@ -480,11 +479,10 @@ final class ChatbotSetupScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             
-            //TODO:localize
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "Chatbots", font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: environment.strings.ChatbotSetup_Title, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -532,8 +530,7 @@ final class ChatbotSetupScreenComponent: Component {
             
             contentHeight += 129.0
             
-            //TODO:localize
-            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Add a bot to your account to help you automatically process and respond to the messages you receive. [Learn More >]()", attributes: MarkdownAttributes(
+            let subtitleString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.ChatbotSetup_Text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.freeTextColor),
                 bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.freeTextColor),
                 link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
@@ -548,7 +545,6 @@ final class ChatbotSetupScreenComponent: Component {
                 subtitleString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: subtitleString.string))
             }
             
-            //TODO:localize
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
@@ -565,11 +561,10 @@ final class ChatbotSetupScreenComponent: Component {
                         }
                     },
                     tapAction: { [weak self] _, _ in
-                        guard let self, let component = self.component else {
+                        guard let self, let component = self.component, let environment = self.environment else {
                             return
                         }
-                        //TODO:localize
-                        component.context.sharedContext.applicationBindings.openUrl("https://telegram.org")
+                        component.context.sharedContext.applicationBindings.openUrl(environment.strings.ChatbotSetup_TextLink)
                     }
                 )),
                 environment: {},
@@ -593,7 +588,7 @@ final class ChatbotSetupScreenComponent: Component {
                 theme: environment.theme,
                 initialText: "",
                 resetText: resetQueryText.flatMap { ListTextFieldItemComponent.ResetText(value: $0) },
-                placeholder: "Bot Username",
+                placeholder: environment.strings.ChatbotSetup_BotSearchPlaceholder,
                 autocapitalizationType: .none,
                 autocorrectionType: .no,
                 updated: { [weak self] value in
@@ -649,7 +644,6 @@ final class ChatbotSetupScreenComponent: Component {
                 ))))
             }
             
-            //TODO:localize
             let nameSectionSize = self.nameSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
@@ -657,7 +651,7 @@ final class ChatbotSetupScreenComponent: Component {
                     header: nil,
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Enter the username or URL of the Telegram bot that you want to automatically process your chats.",
+                            string: environment.strings.ChatbotSetup_BotSectionFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -678,14 +672,13 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += nameSectionSize.height
             contentHeight += sectionSpacing
             
-            //TODO:localize
             let accessSectionSize = self.accessSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "CHATS ACCESSIBLE FOR THE BOT",
+                            string: environment.strings.ChatbotSetup_RecipientsSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -698,7 +691,7 @@ final class ChatbotSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "All 1-to-1 Chats Except...",
+                                        string: environment.strings.BusinessMessageSetup_RecipientsOptionAllExcept,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -728,7 +721,7 @@ final class ChatbotSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Only Selected Chats",
+                                        string: environment.strings.BusinessMessageSetup_RecipientsOptionOnly,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
@@ -774,7 +767,7 @@ final class ChatbotSetupScreenComponent: Component {
                 title: AnyComponent(VStack([
                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? "Exclude Chats..." : "Select Chats...",
+                            string: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_AddExclude : environment.strings.BusinessMessageSetup_Recipients_AddInclude,
                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                             textColor: environment.theme.list.itemAccentColor
                         )),
@@ -797,23 +790,22 @@ final class ChatbotSetupScreenComponent: Component {
                 let title: String
                 let icon: String
                 let color: AvatarBackgroundColor
-                //TODO:localize
                 switch category {
                 case .newChats:
-                    title = "New Chats"
-                    icon = "Chat List/Filters/Contact"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryNewChats
+                    icon = "Chat List/Filters/NewChats"
                     color = .purple
                 case .existingChats:
-                    title = "Existing Chats"
-                    icon = "Chat List/Filters/Contact"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryExistingChats
+                    icon = "Chat List/Filters/Chats"
                     color = .purple
                 case .contacts:
-                    title = "Contacts"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryContacts
                     icon = "Chat List/Filters/Contact"
                     color = .blue
                 case .nonContacts:
-                    title = "Non-Contacts"
-                    icon = "Chat List/Filters/Contact"
+                    title = environment.strings.BusinessMessageSetup_Recipients_CategoryNonContacts
+                    icon = "Chat List/Filters/User"
                     color = .yellow
                 }
                 excludedSectionItems.append(AnyComponentWithIdentity(id: category, component: AnyComponent(PeerListItemComponent(
@@ -847,7 +839,7 @@ final class ChatbotSetupScreenComponent: Component {
                     sideInset: 0.0,
                     title: peer.peer.displayTitle(strings: environment.strings, displayOrder: .firstLast),
                     peer: peer.peer,
-                    subtitle: peer.isContact ? "contact" : "non-contact",
+                    subtitle: peer.isContact ? environment.strings.ChatList_PeerTypeContact : environment.strings.ChatList_PeerTypeNonContact,
                     subtitleAccessory: .none,
                     presence: nil,
                     selectionState: .none,
@@ -857,14 +849,13 @@ final class ChatbotSetupScreenComponent: Component {
                 ))))
             }
             
-            //TODO:localize
             let excludedSectionSize = self.excludedSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: self.hasAccessToAllChatsByDefault ? "EXCLUDED CHATS" : "INCLUDED CHATS",
+                            string: self.hasAccessToAllChatsByDefault ? environment.strings.BusinessMessageSetup_Recipients_ExcludedSectionHeader : environment.strings.BusinessMessageSetup_Recipients_IncludedSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -872,7 +863,7 @@ final class ChatbotSetupScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: self.hasAccessToAllChatsByDefault ? "Select chats or entire chat categories which the bot **WILL NOT** have access to." : "Select chats or entire chat categories which the bot **WILL** have access to.",
+                            text: self.hasAccessToAllChatsByDefault ? environment.strings.ChatbotSetup_Recipients_ExcludedSectionFooter : environment.strings.ChatbotSetup_Recipients_IncludedSectionFooter,
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: environment.theme.list.freeTextColor),
@@ -899,14 +890,13 @@ final class ChatbotSetupScreenComponent: Component {
             contentHeight += excludedSectionSize.height
             contentHeight += sectionSpacing
             
-            //TODO:localize
             let permissionsSectionSize = self.permissionsSection.update(
                 transition: transition,
                 component: AnyComponent(ListSectionComponent(
                     theme: environment.theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "BOT PERMISSIONS",
+                            string: environment.strings.ChatbotSetup_PermissionsSectionHeader,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -914,7 +904,7 @@ final class ChatbotSetupScreenComponent: Component {
                     )),
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "The bot will be able to view all new incoming messages, but not the messages that had been sent before you added the bot.",
+                            string: environment.strings.ChatbotSetup_PermissionsSectionFooter,
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: environment.theme.list.freeTextColor
                         )),
@@ -926,7 +916,7 @@ final class ChatbotSetupScreenComponent: Component {
                             title: AnyComponent(VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "Reply to Messages",
+                                        string: environment.strings.ChatbotSetup_Permission_ReplyToMessages,
                                         font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                         textColor: environment.theme.list.itemPrimaryTextColor
                                     )),
