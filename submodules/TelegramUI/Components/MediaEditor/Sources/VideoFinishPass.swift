@@ -144,6 +144,14 @@ private var transitionDuration = 0.5
 private var apperanceDuration = 0.2
 private var videoRemovalDuration: Double = 0.2
 
+struct VideoEncodeParameters {
+    var dimensions: simd_float2
+    var roundness: simd_float1
+    var alpha: simd_float1
+    var isOpaque: simd_float1
+    var empty: simd_float1
+}
+
 final class VideoFinishPass: RenderPass {
     private var cachedTexture: MTLTexture?
     
@@ -195,6 +203,7 @@ final class VideoFinishPass: RenderPass {
         containerSize: CGSize,
         texture: MTLTexture,
         textureRotation: TextureRotation,
+        maskTexture: MTLTexture?,
         position: VideoPosition,
         roundness: Float,
         alpha: Float,
@@ -202,6 +211,11 @@ final class VideoFinishPass: RenderPass {
         device: MTLDevice
     ) {
         encoder.setFragmentTexture(texture, index: 0)
+        if let maskTexture {
+            encoder.setFragmentTexture(maskTexture, index: 1)
+        } else {
+            encoder.setFragmentTexture(texture, index: 1)
+        }
         
         let center = CGPoint(
             x: position.position.x - containerSize.width / 2.0,
@@ -220,14 +234,25 @@ final class VideoFinishPass: RenderPass {
             options: [])
         encoder.setVertexBuffer(buffer, offset: 0, index: 0)
         
-        var resolution = simd_uint2(UInt32(size.width), UInt32(size.height))
-        encoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
-        
-        var roundness = roundness
-        encoder.setFragmentBytes(&roundness, length: MemoryLayout<simd_float1>.size, index: 1)
-        
-        var alpha = alpha
-        encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
+        var parameters = VideoEncodeParameters(
+            dimensions: simd_float2(Float(size.width), Float(size.height)),
+            roundness: roundness,
+            alpha: alpha,
+            isOpaque: maskTexture == nil ? 1.0 : 0.0,
+            empty: 0
+        )
+        encoder.setFragmentBytes(&parameters, length: MemoryLayout<VideoEncodeParameters>.size, index: 0)
+//        var resolution = simd_uint2(UInt32(size.width), UInt32(size.height))
+//        encoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
+//        
+//        var roundness = roundness
+//        encoder.setFragmentBytes(&roundness, length: MemoryLayout<simd_float1>.size, index: 1)
+//        
+//        var alpha = alpha
+//        encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
+//        
+//        var isOpaque = maskTexture == nil ? 1.0 : 0.0
+//        encoder.setFragmentBytes(&isOpaque, length: MemoryLayout<simd_float1>.size, index: 3)
         
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
@@ -478,7 +503,14 @@ final class VideoFinishPass: RenderPass {
         return (backgroundVideoState, foregroundVideoState, disappearingVideoState)
     }
     
-    func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(
+        input: MTLTexture,
+        inputMask: MTLTexture?,
+        secondInput: MTLTexture?,
+        timestamp: CMTime,
+        device: MTLDevice,
+        commandBuffer: MTLCommandBuffer
+    ) -> MTLTexture? {
         if !self.isStory {
             return input
         }
@@ -536,7 +568,6 @@ final class VideoFinishPass: RenderPass {
         )
         
         if self.gradientColors.topColor.w > 0.0 {
-            renderCommandEncoder.setRenderPipelineState(self.gradientPipelineState!)
             self.encodeGradient(
                 using: renderCommandEncoder,
                 containerSize: containerSize,
@@ -554,6 +585,7 @@ final class VideoFinishPass: RenderPass {
                 containerSize: containerSize,
                 texture: transitionVideoState.texture,
                 textureRotation: transitionVideoState.textureRotation,
+                maskTexture: nil,
                 position: transitionVideoState.position,
                 roundness: transitionVideoState.roundness,
                 alpha: transitionVideoState.alpha,
@@ -567,6 +599,7 @@ final class VideoFinishPass: RenderPass {
             containerSize: containerSize,
             texture: mainVideoState.texture,
             textureRotation: mainVideoState.textureRotation,
+            maskTexture: inputMask,
             position: mainVideoState.position,
             roundness: mainVideoState.roundness,
             alpha: mainVideoState.alpha,
@@ -580,6 +613,7 @@ final class VideoFinishPass: RenderPass {
                 containerSize: containerSize,
                 texture: additionalVideoState.texture,
                 textureRotation: additionalVideoState.textureRotation,
+                maskTexture: nil,
                 position: additionalVideoState.position,
                 roundness: additionalVideoState.roundness,
                 alpha: additionalVideoState.alpha,
@@ -603,6 +637,7 @@ final class VideoFinishPass: RenderPass {
         containerSize: CGSize,
         device: MTLDevice
     ) {
+        encoder.setRenderPipelineState(self.gradientPipelineState!)
         
         let vertices = verticesDataForRotation(.rotate0Degrees)
         let buffer = device.makeBuffer(

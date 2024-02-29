@@ -320,16 +320,12 @@ extension ChatControllerImpl {
                         attachmentController?.dismiss(animated: true)
                         self?.presentICloudFileGallery()
                     }, send: { [weak self] mediaReference in
-                        guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
+                        guard let strongSelf = self else {
                             return
                         }
+                        
                         let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: strongSelf.transformEnqueueMessages([message]))
-                                 |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
-                            if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
-                                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                            }
-                        })
+                        strongSelf.sendMessages([message], media: true)
                     })
                     if let controller = controller as? AttachmentFileControllerImpl {
                         let _ = currentFilesController.swap(controller)
@@ -684,26 +680,28 @@ extension ChatControllerImpl {
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).startStandalone(next: { [weak self] settings in
-            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+            guard let strongSelf = self else {
                 return
             }
             strongSelf.chatDisplayNode.dismissInput()
 
             var bannedSendMedia: (Int32, Bool)?
             var canSendPolls = true
-            if let channel = peer as? TelegramChannel {
-                if let value = channel.hasBannedPermission(.banSendMedia) {
-                    bannedSendMedia = value
-                }
-                if channel.hasBannedPermission(.banSendPolls) != nil {
-                    canSendPolls = false
-                }
-            } else if let group = peer as? TelegramGroup {
-                if group.hasBannedPermission(.banSendMedia) {
-                    bannedSendMedia = (Int32.max, false)
-                }
-                if group.hasBannedPermission(.banSendPolls) {
-                    canSendPolls = false
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if let channel = peer as? TelegramChannel {
+                    if let value = channel.hasBannedPermission(.banSendMedia) {
+                        bannedSendMedia = value
+                    }
+                    if channel.hasBannedPermission(.banSendPolls) != nil {
+                        canSendPolls = false
+                    }
+                } else if let group = peer as? TelegramGroup {
+                    if group.hasBannedPermission(.banSendMedia) {
+                        bannedSendMedia = (Int32.max, false)
+                    }
+                    if group.hasBannedPermission(.banSendPolls) {
+                        canSendPolls = false
+                    }
                 }
             }
         
@@ -771,11 +769,15 @@ extension ChatControllerImpl {
             }
             
             var slowModeEnabled = false
-            if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
-                slowModeEnabled = true
+            var hasSchedule = false
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
+                    slowModeEnabled = true
+                }
+                hasSchedule = strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat
             }
             
-            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, chatLocation: strongSelf.chatLocation, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, updatedPresentationData: strongSelf.updatedPresentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText, openGallery: {
+            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, threadTitle: strongSelf.threadInfo?.title, chatLocation: strongSelf.chatLocation, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: hasSchedule, canSendPolls: canSendPolls, updatedPresentationData: strongSelf.updatedPresentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText, openGallery: {
                 self?.presentOldMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting, scheduleTime in
                     if !inputText.string.isEmpty {
                         strongSelf.clearInputText()
@@ -787,7 +789,7 @@ extension ChatControllerImpl {
                     }
                 })
             }, openCamera: { [weak self] cameraView, menuController in
-                if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if let strongSelf = self {
                     var enablePhoto = true
                     var enableVideo = true
                     
@@ -798,19 +800,21 @@ extension ChatControllerImpl {
                     var bannedSendPhotos: (Int32, Bool)?
                     var bannedSendVideos: (Int32, Bool)?
                     
-                    if let channel = peer as? TelegramChannel {
-                        if let value = channel.hasBannedPermission(.banSendPhotos) {
-                            bannedSendPhotos = value
-                        }
-                        if let value = channel.hasBannedPermission(.banSendVideos) {
-                            bannedSendVideos = value
-                        }
-                    } else if let group = peer as? TelegramGroup {
-                        if group.hasBannedPermission(.banSendPhotos) {
-                            bannedSendPhotos = (Int32.max, false)
-                        }
-                        if group.hasBannedPermission(.banSendVideos) {
-                            bannedSendVideos = (Int32.max, false)
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                        if let channel = peer as? TelegramChannel {
+                            if let value = channel.hasBannedPermission(.banSendPhotos) {
+                                bannedSendPhotos = value
+                            }
+                            if let value = channel.hasBannedPermission(.banSendVideos) {
+                                bannedSendVideos = value
+                            }
+                        } else if let group = peer as? TelegramGroup {
+                            if group.hasBannedPermission(.banSendPhotos) {
+                                bannedSendPhotos = (Int32.max, false)
+                            }
+                            if group.hasBannedPermission(.banSendVideos) {
+                                bannedSendVideos = (Int32.max, false)
+                            }
                         }
                     }
                     
@@ -821,7 +825,15 @@ extension ChatControllerImpl {
                         enableVideo = false
                     }
                     
-                    presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos:  peer.id.namespace != Namespaces.Peer.SecretChat, mediaGrouping: true, initialCaption: inputText, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
+                    var storeCapturedPhotos = false
+                    var hasSchedule = false
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                        storeCapturedPhotos = peer.id.namespace != Namespaces.Peer.SecretChat
+                        
+                        hasSchedule = strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat
+                    }
+                    
+                    presentedLegacyCamera(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: menuController, parentController: strongSelf, editingMedia: editMediaOptions != nil, saveCapturedPhotos: storeCapturedPhotos, mediaGrouping: true, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                         if let strongSelf = self {
                             if editMediaOptions != nil {
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
@@ -979,7 +991,7 @@ extension ChatControllerImpl {
     
     func presentICloudFileGallery(editingMessage: Bool = false) {
         let _ = (self.context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+            TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
         )
@@ -1610,17 +1622,12 @@ extension ChatControllerImpl {
     }
     
     func openCamera(cameraView: TGAttachmentCameraView? = nil) {
-        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
-            return
-        }
-        let _ = peer
-        
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).startStandalone(next: { [weak self] settings in
-            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+            guard let strongSelf = self else {
                 return
             }
             
@@ -1634,19 +1641,21 @@ extension ChatControllerImpl {
             var bannedSendPhotos: (Int32, Bool)?
             var bannedSendVideos: (Int32, Bool)?
             
-            if let channel = peer as? TelegramChannel {
-                if let value = channel.hasBannedPermission(.banSendPhotos) {
-                    bannedSendPhotos = value
-                }
-                if let value = channel.hasBannedPermission(.banSendVideos) {
-                    bannedSendVideos = value
-                }
-            } else if let group = peer as? TelegramGroup {
-                if group.hasBannedPermission(.banSendPhotos) {
-                    bannedSendPhotos = (Int32.max, false)
-                }
-                if group.hasBannedPermission(.banSendVideos) {
-                    bannedSendVideos = (Int32.max, false)
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if let channel = peer as? TelegramChannel {
+                    if let value = channel.hasBannedPermission(.banSendPhotos) {
+                        bannedSendPhotos = value
+                    }
+                    if let value = channel.hasBannedPermission(.banSendVideos) {
+                        bannedSendVideos = value
+                    }
+                } else if let group = peer as? TelegramGroup {
+                    if group.hasBannedPermission(.banSendPhotos) {
+                        bannedSendPhotos = (Int32.max, false)
+                    }
+                    if group.hasBannedPermission(.banSendVideos) {
+                        bannedSendVideos = (Int32.max, false)
+                    }
                 }
             }
             
@@ -1657,10 +1666,15 @@ extension ChatControllerImpl {
                 enableVideo = false
             }
             
-            let storeCapturedMedia = peer.id.namespace != Namespaces.Peer.SecretChat
+            var storeCapturedMedia = false
+            var hasSchedule = false
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                storeCapturedMedia = peer.id.namespace != Namespaces.Peer.SecretChat
+                hasSchedule = strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat
+            }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             
-            presentedLegacyCamera(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
+            presentedLegacyCamera(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                 if let strongSelf = self {
                     strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                     if !inputText.string.isEmpty {

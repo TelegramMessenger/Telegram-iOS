@@ -411,13 +411,17 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     strongSelf.arrowNode.isHidden = item.isAllChats
                     
                     if let sharedIconImage = strongSelf.sharedIconNode.image {
-                        strongSelf.sharedIconNode.frame = CGRect(origin: CGPoint(x: strongSelf.arrowNode.frame.minX + 2.0 - sharedIconImage.size.width, y: floorToScreenPixels((layout.contentSize.height - sharedIconImage.size.height) / 2.0) + 1.0), size: sharedIconImage.size)
+                        var sharedIconFrame = CGRect(origin: CGPoint(x: strongSelf.arrowNode.frame.minX + 2.0 - sharedIconImage.size.width, y: floorToScreenPixels((layout.contentSize.height - sharedIconImage.size.height) / 2.0) + 1.0), size: sharedIconImage.size)
+                        if item.tagColor != nil {
+                            sharedIconFrame.origin.x -= 34.0
+                        }
+                        strongSelf.sharedIconNode.frame = sharedIconFrame
                     }
                     var isShared = false
                     if case let .filter(_, _, _, data) = item.preset, data.isShared {
                         isShared = true
                     }
-                    strongSelf.sharedIconNode.isHidden = !isShared || item.tagColor != nil
+                    strongSelf.sharedIconNode.isHidden = !isShared
                     
                     if let tagColor = item.tagColor {
                         let tagIconView: UIImageView
@@ -534,6 +538,9 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         
         var sharedIconFrame = self.sharedIconNode.frame
         sharedIconFrame.origin.x = arrowFrame.minX + 2.0 - sharedIconFrame.width
+        if self.item?.tagColor != nil {
+            sharedIconFrame.origin.x -= 34.0
+        }
         transition.updateFrame(node: self.sharedIconNode, frame: sharedIconFrame)
         
         if let tagIconView = self.tagIconView {

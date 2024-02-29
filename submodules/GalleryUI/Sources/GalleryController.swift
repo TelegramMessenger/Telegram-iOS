@@ -248,13 +248,18 @@ public func galleryItemForEntry(
                 if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
                     entities = result
                 }
+                
+                var originData = GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp)
+                if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+                    originData = GalleryItemOriginData(title: nil, timestamp: nil)
+                }
                                 
                 let caption = galleryCaptionStringWithAppliedEntities(context: context, text: text, entities: entities, message: message)
                 return UniversalVideoGalleryItem(
                     context: context,
                     presentationData: presentationData,
                     content: content,
-                    originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp),
+                    originData: originData,
                     indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) },
                     contentInfo: .message(message),
                     caption: caption,
@@ -348,11 +353,17 @@ public func galleryItemForEntry(
                     }
                     description = galleryCaptionStringWithAppliedEntities(context: context, text: descriptionText, entities: entities, message: message)
                 }
+                
+                var originData = GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp)
+                if Namespaces.Message.allNonRegular.contains(message.id.namespace) {
+                    originData = GalleryItemOriginData(title: nil, timestamp: nil)
+                }
+                
                 return UniversalVideoGalleryItem(
                     context: context,
                     presentationData: presentationData,
                     content: content,
-                    originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp),
+                    originData: originData,
                     indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) },
                     contentInfo: .message(message),
                     caption: NSAttributedString(string: ""),

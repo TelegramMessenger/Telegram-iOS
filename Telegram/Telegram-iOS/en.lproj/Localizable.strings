@@ -11316,6 +11316,11 @@ Sorry for the inconvenience.";
 "ChannelBoost.Header.Giveaway" = "giveaway";
 "ChannelBoost.Header.Features" = "features";
 
+"Premium.FolderTags" = "Folder Tags";
+"Premium.FolderTagsInfo" = "Add colorful labels to chats for faster access with Telegram Premium.";
+"Premium.FolderTagsStandaloneInfo" = "Add colorful labels to chats for faster access with Telegram Premium.";
+"Premium.FolderTags.Proceed" = "About Telegram Premium";
+
 "Premium.Business" = "Telegram Business";
 "Premium.BusinessInfo" = "Upgrade your account with business features such as location, opening hours and quick replies.";
 

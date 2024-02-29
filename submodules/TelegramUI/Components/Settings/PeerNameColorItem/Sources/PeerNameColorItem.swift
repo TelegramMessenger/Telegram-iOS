@@ -233,21 +233,27 @@ private final class PeerNameColorIconItemNode : ASDisplayNode {
 }
 
 public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
+    public enum Mode {
+        case name
+        case profile
+        case folderTag
+    }
+    
     public var sectionId: ItemListSectionId
     
     public let theme: PresentationTheme
     public let colors: PeerNameColors
-    public let isProfile: Bool
+    public let mode: Mode
     public let displayEmptyColor: Bool
     public let isLocked: Bool
     public let currentColor: PeerNameColor?
     public let updated: (PeerNameColor?) -> Void
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, colors: PeerNameColors, isProfile: Bool, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, colors: PeerNameColors, mode: Mode, displayEmptyColor: Bool = false, currentColor: PeerNameColor?, isLocked: Bool = false, updated: @escaping (PeerNameColor?) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.colors = colors
-        self.isProfile = isProfile
+        self.mode = mode
         self.displayEmptyColor = displayEmptyColor
         self.isLocked = isLocked
         self.currentColor = currentColor
@@ -300,7 +306,7 @@ public final class PeerNameColorItem: ListViewItem, ItemListItem, ListItemCompon
         if lhs.colors != rhs.colors {
             return false
         }
-        if lhs.isProfile != rhs.isProfile {
+        if lhs.mode != rhs.mode {
             return false
         }
         if lhs.currentColor != rhs.currentColor {
@@ -363,13 +369,18 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
             
             let itemsPerRow: Int
             let displayOrder: [Int32]
-            if item.isProfile {
-                displayOrder = item.colors.profileDisplayOrder
-                itemsPerRow = 8
-            } else {
+            switch item.mode {
+            case .name:
                 displayOrder = item.colors.displayOrder
                 itemsPerRow = 7
+            case .profile:
+                displayOrder = item.colors.profileDisplayOrder
+                itemsPerRow = 8
+            case .folderTag:
+                displayOrder = item.colors.chatFolderTagDisplayOrder
+                itemsPerRow = 8
             }
+            
             var numItems = displayOrder.count
             if item.displayEmptyColor {
                 numItems += 1
@@ -466,10 +477,13 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     for index in displayOrder {
                         let color = PeerNameColor(rawValue: index)
                         let colors: PeerNameColors.Colors
-                        if item.isProfile {
-                            colors = item.colors.getProfile(color, dark: item.theme.overallDarkAppearance, subject: .palette)
-                        } else {
+                        switch item.mode {
+                        case .name:
                             colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
+                        case .profile:
+                            colors = item.colors.getProfile(color, dark: item.theme.overallDarkAppearance, subject: .palette)
+                        case .folderTag:
+                            colors = item.colors.getChatFolderTag(color, dark: item.theme.overallDarkAppearance)
                         }
                         
                         items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, action: action))

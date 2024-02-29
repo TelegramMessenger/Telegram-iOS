@@ -199,6 +199,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case savedMessageTagLabelSuggestion = 65
     case dismissedLastSeenBadge = 66
     case dismissedMessagePrivacyBadge = 67
+    case dismissedBusinessBadge = 68
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -528,6 +529,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedMessagePrivacyBadge() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedMessagePrivacyBadge.key)
+    }
+    
+    static func dismissedBusinessBadge() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedBusinessBadge.key)
     }
 }
 
@@ -2214,6 +2219,27 @@ public struct ApplicationSpecificNotice {
     
     public static func dismissedMessagePrivacyBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
         return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedMessagePrivacyBadge())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDismissedBusinessBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedBusinessBadge(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func dismissedBusinessBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedBusinessBadge())
         |> map { view -> Bool in
             if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
                 return true

@@ -6144,6 +6144,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             
+                            var appliedBoosts: Int32?
+                            var boostsToUnrestrict: Int32?
+                            if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                                appliedBoosts = cachedChannelData.appliedBoosts
+                                boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                            }
+                            
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in
                                     return renderedPeer
@@ -6152,6 +6159,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedHasSearchTags(hasSearchTags)
                                     .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
                                     .updatedHasSavedChats(hasSavedChats)
+                                    .updatedAppliedBoosts(appliedBoosts)
+                                    .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         
@@ -9494,15 +9503,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
+            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
+            })
+            
             if !self.presentationInterfaceState.isPremium {
                 let controller = PremiumIntroScreen(context: self.context, source: .settings)
                 self.push(controller)
                 return
             }
             
-            self.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
-            })
             self.context.engine.accountData.sendMessageShortcut(peerId: peerId, id: shortcutId)
             
             /*self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
@@ -9906,37 +9916,36 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                return
-            }
             
             var bannedMediaInput = false
-            if let channel = peer as? TelegramChannel {
-                if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
-                    bannedMediaInput = true
-                } else if channel.hasBannedPermission(.banSendVoice) != nil {
-                    if channel.hasBannedPermission(.banSendInstantVideos) == nil {
-                        strongSelf.displayMediaRecordingTooltip()
-                        return
+            if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                if let channel = peer as? TelegramChannel {
+                    if channel.hasBannedPermission(.banSendVoice) != nil && channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                        bannedMediaInput = true
+                    } else if channel.hasBannedPermission(.banSendVoice) != nil {
+                        if channel.hasBannedPermission(.banSendInstantVideos) == nil {
+                            strongSelf.displayMediaRecordingTooltip()
+                            return
+                        }
+                    } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
+                        if channel.hasBannedPermission(.banSendVoice) == nil {
+                            strongSelf.displayMediaRecordingTooltip()
+                            return
+                        }
                     }
-                } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
-                    if channel.hasBannedPermission(.banSendVoice) == nil {
-                        strongSelf.displayMediaRecordingTooltip()
-                        return
-                    }
-                }
-            } else if let group = peer as? TelegramGroup {
-                if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
-                    bannedMediaInput = true
-                } else if group.hasBannedPermission(.banSendVoice) {
-                    if !group.hasBannedPermission(.banSendInstantVideos) {
-                        strongSelf.displayMediaRecordingTooltip()
-                        return
-                    }
-                } else if group.hasBannedPermission(.banSendInstantVideos) {
-                    if !group.hasBannedPermission(.banSendVoice) {
-                        strongSelf.displayMediaRecordingTooltip()
-                        return
+                } else if let group = peer as? TelegramGroup {
+                    if group.hasBannedPermission(.banSendVoice) && group.hasBannedPermission(.banSendInstantVideos) {
+                        bannedMediaInput = true
+                    } else if group.hasBannedPermission(.banSendVoice) {
+                        if !group.hasBannedPermission(.banSendInstantVideos) {
+                            strongSelf.displayMediaRecordingTooltip()
+                            return
+                        }
+                    } else if group.hasBannedPermission(.banSendInstantVideos) {
+                        if !group.hasBannedPermission(.banSendVoice) {
+                            strongSelf.displayMediaRecordingTooltip()
+                            return
+                        }
                     }
                 }
             }
@@ -14202,10 +14211,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func requestVideoRecorder() {
-        guard let peerId = self.chatLocation.peerId else {
-            return
-        }
-        
         if self.videoRecorderValue == nil {
             if let currentInputPanelFrame = self.chatDisplayNode.currentInputPanelFrame() {
                 if self.recorderFeedback == nil {
@@ -14219,6 +14224,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 var isBot = false
+                
+                var allowLiveUpload = false
+                var viewOnceAvailable = false
+                if let peerId = self.chatLocation.peerId {
+                    allowLiveUpload = peerId.namespace != Namespaces.Peer.SecretChat
+                    viewOnceAvailable = !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot
+                } else if case .customChatContents = self.chatLocation {
+                    allowLiveUpload = true
+                }
+                
                 if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
                     isBot = true
                 }
@@ -14226,8 +14241,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let controller = VideoMessageCameraScreen(
                     context: self.context,
                     updatedPresentationData: self.updatedPresentationData,
-                    allowLiveUpload: peerId.namespace != Namespaces.Peer.SecretChat,
-                    viewOnceAvailable: !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot,
+                    allowLiveUpload: allowLiveUpload,
+                    viewOnceAvailable: viewOnceAvailable,
                     inputPanelFrame: (currentInputPanelFrame, self.chatDisplayNode.inputNode != nil),
                     chatNode: self.chatDisplayNode.historyNode,
                     completion: { [weak self] message, silentPosting, scheduleTime in

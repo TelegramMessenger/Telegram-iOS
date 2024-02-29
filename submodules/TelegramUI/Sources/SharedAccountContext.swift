@@ -2000,6 +2000,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .readTime
         case .messageTags:
             mappedSource = .messageTags
+        case .folderTags:
+            mappedSource = .folderTags
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -2049,6 +2051,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .lastSeen
         case .messagePrivacy:
             mappedSubject = .messagePrivacy
+        case .folderTags:
+            mappedSubject = .folderTags
         default:
             mappedSubject = .doubleLimits
         }

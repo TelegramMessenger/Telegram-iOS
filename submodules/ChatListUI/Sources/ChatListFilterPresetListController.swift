@@ -190,7 +190,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
             if displayTags, case let .filter(_, _, _, data) = preset {
                 let tagColor = data.color
                 if let tagColor {
-                    resolvedColor = arguments.context.peerNameColors.getProfile(tagColor, dark: presentationData.theme.overallDarkAppearance, subject: .palette).main
+                    resolvedColor = arguments.context.peerNameColors.getChatFolderTag(tagColor, dark: presentationData.theme.overallDarkAppearance).main
                 }
             }
             
@@ -558,14 +558,15 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     }, updateDisplayTags: { value in
         context.engine.peers.updateChatListFiltersDisplayTags(isEnabled: value)
     }, updateDisplayTagsLocked: {
-        //TODO:localize
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: "Subscribe to **Telegram Premium** to show folder tags.", customUndoText: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-            if case .undo = action {
-                pushControllerImpl?(PremiumIntroScreen(context: context, source: .folders))
-            }
-            return false })
-        )
+        var replaceImpl: ((ViewController) -> Void)?
+        let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .folderTags, action: {
+            let controller = context.sharedContext.makePremiumIntroController(context: context, source: .folderTags, forceDark: false, dismissed: nil)
+            replaceImpl?(controller)
+        })
+        replaceImpl = { [weak controller] c in
+            controller?.replace(with: c)
+        }
+        pushControllerImpl?(controller)
     })
         
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])

@@ -154,6 +154,7 @@ final class AutomaticBusinessMessageSetupChatContents: ChatCustomContentsProtoco
         }
         
         func quickReplyUpdateShortcut(value: String) {
+            self.shortcut = value
             if let shortcutId = self.shortcutId {
                 self.context.engine.accountData.editMessageShortcut(id: shortcutId, shortcut: value)
             }

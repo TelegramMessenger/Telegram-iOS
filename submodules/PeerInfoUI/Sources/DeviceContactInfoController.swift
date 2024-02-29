@@ -510,7 +510,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     } else {
                         arguments.openAddress(value)
                     }
-                }, longTapAction: {
+                }, longTapAction: { _, _ in
                     if selected == nil {
                         arguments.displayCopyContextMenu(.info(index), string)
                     }

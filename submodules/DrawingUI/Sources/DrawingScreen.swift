@@ -2634,6 +2634,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
                     bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom,
                     right: layout.safeInsets.right
                 ),
+                additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,

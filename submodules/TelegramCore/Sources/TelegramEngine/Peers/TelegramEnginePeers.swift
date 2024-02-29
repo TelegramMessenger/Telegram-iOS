@@ -589,13 +589,7 @@ public extension TelegramEngine {
         }
         
         public func updateChatListFiltersDisplayTags(isEnabled: Bool) {
-            let _ = self.account.postbox.transaction({ transaction in
-                updateChatListFiltersState(transaction: transaction, { state in
-                    var state = state
-                    state.displayTags = isEnabled
-                    return state
-                })
-            }).start()
+            let _ = _internal_updateChatListFiltersDisplayTagsInteractively(postbox: self.account.postbox, displayTags: isEnabled).startStandalone()
         }
 
         public func updatedChatListFilters() -> Signal<[ChatListFilter], NoError> {
