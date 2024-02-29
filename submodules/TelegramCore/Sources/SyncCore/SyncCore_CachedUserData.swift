@@ -354,7 +354,7 @@ public final class TelegramBusinessHours: Equatable, Codable {
             }
             if minutes.isEmpty {
                 return .closed
-            } else if minutes == IndexSet(integersIn: 0 ..< 24 * 60) {
+            } else if minutes == IndexSet(integersIn: 0 ..< 24 * 60) || minutes == IndexSet(integersIn: 0 ..< (24 * 60 - 1)) {
                 return .open
             } else {
                 return .intervals(day)

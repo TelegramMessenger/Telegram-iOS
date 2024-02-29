@@ -22,6 +22,10 @@ private func dayBusinessHoursText(presentationData: PresentationData, day: Teleg
         businessHoursText += "closed"
     case let .intervals(intervals):
         func clipMinutes(_ value: Int) -> Int {
+            var value = value
+            if value < 0 {
+                value = 24 * 60 + value
+            }
             return value % (24 * 60)
         }
         
@@ -478,7 +482,13 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
         
         var dayHeights: CGFloat = 0.0
         
-        for i in 0 ..< businessDays.count {
+        for rawI in 0 ..< businessDays.count {
+            if rawI == 0 {
+                //skip current day
+                continue
+            }
+            let i = (rawI + currentDayIndex) % businessDays.count
+            
             dayHeights += daySpacing
             
             var dayTransition = transition

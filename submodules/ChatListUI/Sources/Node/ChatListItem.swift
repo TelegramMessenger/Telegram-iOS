@@ -27,6 +27,7 @@ import ComponentFlow
 import EmojiStatusComponent
 import AvatarVideoNode
 import AppBundle
+import MultilineTextComponent
 
 public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {
@@ -269,7 +270,9 @@ private final class ChatListItemTagListComponent: Component {
         func update(context: AccountContext, title: String, backgroundColor: UIColor, foregroundColor: UIColor) -> CGSize {
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: title.isEmpty ? " " : title, font: Font.semibold(11.0), color: foregroundColor)),
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: title.isEmpty ? " " : title, font: Font.semibold(11.0), textColor: foregroundColor))
+                )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
@@ -800,8 +803,8 @@ private let playIconImage = UIImage(bundleImageName: "Chat List/MiniThumbnailPla
 
 private final class ChatListMediaPreviewNode: ASDisplayNode {
     private let context: AccountContext
-    private let message: EngineMessage
-    private let media: EngineMedia
+    let message: EngineMessage
+    let media: EngineMedia
     
     private let imageNode: TransformImageNode
     private let playIcon: ASImageNode
@@ -862,10 +865,14 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             if file.isInstantVideo {
                 isRound = true
             }
-            if file.isAnimated {
+            if file.isSticker || file.isAnimatedSticker {
                 self.playIcon.isHidden = true
             } else {
-                self.playIcon.isHidden = false
+                if file.isAnimated {
+                    self.playIcon.isHidden = true
+                } else {
+                    self.playIcon.isHidden = false
+                }
             }
             if let mediaDimensions = file.dimensions {
                 dimensions = mediaDimensions.cgSize
@@ -877,9 +884,18 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             }
         }
         
+        let radius: CGFloat
+        if isRound {
+            radius = size.width / 2.0
+        } else if size.width >= 30.0 {
+            radius = 8.0
+        } else {
+            radius = 2.0
+        }
+        
         let makeLayout = self.imageNode.asyncLayout()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
-        let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: isRound ? size.width / 2.0 : 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+        let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: radius), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
         apply()
     }
 }
@@ -1142,6 +1158,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    private struct ContentImageSpec {
+        var message: EngineMessage
+        var media: EngineMedia
+        var size: CGSize
+        
+        init(message: EngineMessage, media: EngineMedia, size: CGSize) {
+            self.message = message
+            self.media = media
+            self.size = size
+        }
+    }
+    
     var item: ChatListItem?
     
     private let backgroundNode: ASDisplayNode
@@ -1156,7 +1184,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var avatarIconComponent: EmojiStatusComponent?
     var avatarVideoNode: AvatarVideoNode?
     var avatarTapRecognizer: UITapGestureRecognizer?
-    var avatarMediaNode: AvatarVideoNode?
+    private var avatarMediaNode: ChatListMediaPreviewNode?
     
     private var inlineNavigationMarkLayer: SimpleLayer?
     
@@ -1197,7 +1225,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var cachedDataDisposable = MetaDisposable()
     
     private var currentTextLeftCutout: CGFloat = 0.0
-    private var currentMediaPreviewSpecs: [(message: EngineMessage, media: EngineMedia, size: CGSize)] = []
+    private var currentMediaPreviewSpecs: [ContentImageSpec] = []
     private var mediaPreviewNodes: [EngineMedia.Id: ChatListMediaPreviewNode] = [:]
     
     var selectableControlNode: ItemListSelectableControlNode?
@@ -2153,6 +2181,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if !itemTags.isEmpty {
                 forumTopicData = nil
                 topForumTopicItems = []
+                
+                if case let .chat(itemPeer, _, _, _, _, _, _) = contentData {
+                    if let messagePeer = itemPeer.chatMainPeer {
+                        switch messagePeer {
+                        case let .channel(channel):
+                            if case .group = channel.info {
+                                useInlineAuthorPrefix = true
+                            }
+                        case .legacyGroup:
+                            useInlineAuthorPrefix = true
+                        default:
+                            break
+                        }
+                    }
+                }
             }
             
             if useInlineAuthorPrefix {
@@ -2175,7 +2218,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let contentImageSpacing: CGFloat = 2.0
             let forwardedIconSpacing: CGFloat = 6.0
             let contentImageTrailingSpace: CGFloat = 5.0
-            var contentImageSpecs: [(message: EngineMessage, media: EngineMedia, size: CGSize)] = []
+            
+            var contentImageSpecs: [ContentImageSpec] = []
+            var avatarContentImageSpec: ContentImageSpec?
             var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, isUnread: Bool)?
             
             var displayForwardedIcon = false
@@ -2494,21 +2539,31 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if displayMediaPreviews {
                             let contentImageFillSize = CGSize(width: 8.0, height: contentImageSize.height)
                             _ = contentImageFillSize
+                            
+                            var contentImageIsDisplayedAsAvatar = false
+                            if case let .peer(peerData) = item.content, let customMessageListData = peerData.customMessageListData, customMessageListData.commandPrefix != nil {
+                                contentImageIsDisplayedAsAvatar = true
+                            }
+                            
                             for message in messages {
                                 if contentImageSpecs.count >= 3 {
                                     break
                                 }
+                                
                                 inner: for media in message.media {
                                     if let image = media as? TelegramMediaImage {
                                         if let _ = largestImageRepresentation(image.representations) {
                                             let fitSize = contentImageSize
-                                            contentImageSpecs.append((message, .image(image), fitSize))
+                                            contentImageSpecs.append(ContentImageSpec(message: message, media:  .image(image), size: fitSize))
                                         }
                                         break inner
                                     } else if let file = media as? TelegramMediaFile {
                                         if file.isVideo, !file.isVideoSticker, let _ = file.dimensions {
                                             let fitSize = contentImageSize
-                                            contentImageSpecs.append((message, .file(file), fitSize))
+                                            contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
+                                        } else if contentImageIsDisplayedAsAvatar && (file.isSticker || file.isVideoSticker) {
+                                            let fitSize = contentImageSize
+                                            contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
                                         }
                                         break inner
                                     } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -2516,35 +2571,40 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         if let image = content.image, let type = content.type, imageTypes.contains(type) {
                                             if let _ = largestImageRepresentation(image.representations) {
                                                 let fitSize = contentImageSize
-                                                contentImageSpecs.append((message, .image(image), fitSize))
+                                                contentImageSpecs.append(ContentImageSpec(message: message, media: .image(image), size: fitSize))
                                             }
                                             break inner
                                         } else if let file = content.file {
                                             if file.isVideo, !file.isInstantVideo, let _ = file.dimensions {
                                                 let fitSize = contentImageSize
-                                                contentImageSpecs.append((message, .file(file), fitSize))
+                                                contentImageSpecs.append(ContentImageSpec(message: message, media: .file(file), size: fitSize))
                                             }
                                             break inner
                                         }
                                     } else if let action = media as? TelegramMediaAction, case let .suggestedProfilePhoto(image) = action.action, let _ = image {
                                         let fitSize = contentImageSize
-                                        contentImageSpecs.append((message, .action(action), fitSize))
+                                        contentImageSpecs.append(ContentImageSpec(message: message, media: .action(action), size: fitSize))
                                     } else if let storyMedia = media as? TelegramMediaStory, let story = message.associatedStories[storyMedia.storyId], !story.data.isEmpty, case let .item(storyItem) = story.get(Stories.StoredItem.self) {
                                         if let image = storyItem.media as? TelegramMediaImage {
                                             if let _ = largestImageRepresentation(image.representations) {
                                                 let fitSize = contentImageSize
-                                                contentImageSpecs.append((message, .image(image), fitSize))
+                                                contentImageSpecs.append(ContentImageSpec(message: message, media: .image(image), size: fitSize))
                                             }
                                             break inner
                                         } else if let file = storyItem.media as? TelegramMediaFile {
                                             if file.isVideo, !file.isInstantVideo, let _ = file.dimensions {
                                                 let fitSize = contentImageSize
-                                                contentImageSpecs.append((message, .file(file), fitSize))
+                                                contentImageSpecs.append(ContentImageSpec(message: message, media: .file(file), size: fitSize))
                                             }
                                             break inner
                                         }
                                     }
                                 }
+                            }
+                            
+                            if contentImageIsDisplayedAsAvatar {
+                                avatarContentImageSpec = contentImageSpecs.first
+                                contentImageSpecs.removeAll()
                             }
                         }
                     } else {
@@ -4056,7 +4116,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     var validMediaIds: [EngineMedia.Id] = []
-                    for (message, media, mediaSize) in contentImageSpecs {
+                    for spec in contentImageSpecs {
+                        let message = spec.message
+                        let media = spec.media
+                        let mediaSize = spec.size
+                        
                         var mediaId = media.id
                         if mediaId == nil, case let .action(action) = media, case let .suggestedProfilePhoto(image) = action.action {
                             mediaId = image?.id
@@ -4094,6 +4158,36 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     strongSelf.currentMediaPreviewSpecs = contentImageSpecs
                     strongSelf.currentTextLeftCutout = textLeftCutout
+                    
+                    if let avatarContentImageSpec {
+                        strongSelf.avatarNode.isHidden = true
+                        
+                        if let previous = strongSelf.avatarMediaNode, previous.media != avatarContentImageSpec.media {
+                            strongSelf.avatarMediaNode = nil
+                            previous.removeFromSupernode()
+                        }
+                        
+                        var avatarMediaNodeTransition = transition
+                        let avatarMediaNode: ChatListMediaPreviewNode
+                        if let current = strongSelf.avatarMediaNode {
+                            avatarMediaNode = current
+                        } else {
+                            avatarMediaNodeTransition = .immediate
+                            avatarMediaNode = ChatListMediaPreviewNode(context: item.context, message: avatarContentImageSpec.message, media: avatarContentImageSpec.media)
+                            strongSelf.avatarMediaNode = avatarMediaNode
+                            strongSelf.contextContainer.addSubnode(avatarMediaNode)
+                        }
+                        
+                        avatarMediaNodeTransition.updateFrame(node: avatarMediaNode, frame: avatarFrame)
+                        avatarMediaNode.updateLayout(size: avatarFrame.size, synchronousLoads: synchronousLoads)
+                    } else {
+                        strongSelf.avatarNode.isHidden = false
+                        
+                        if let avatarMediaNode = strongSelf.avatarMediaNode {
+                            strongSelf.avatarMediaNode = nil
+                            avatarMediaNode.removeFromSupernode()
+                        }
+                    }
                     
                     if !contentDelta.x.isZero || !contentDelta.y.isZero {
                         let titlePosition = strongSelf.titleNode.position

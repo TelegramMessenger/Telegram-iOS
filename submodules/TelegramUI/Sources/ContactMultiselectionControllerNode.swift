@@ -252,6 +252,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         var searchGroups = false
                         var searchChannels = false
                         var globalSearch = false
+                        var displaySavedMessages = true
+                        var filters = filters
                         switch mode {
                         case .groupCreation, .channelCreation:
                             globalSearch = true
@@ -260,15 +262,31 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchGroups = searchGroupsValue
                             searchChannels = searchChannelsValue
                             globalSearch = true
-                        case .chatSelection:
-                            searchChatList = true
-                            searchGroups = true
-                            searchChannels = true
+                        case let .chatSelection(chatSelection):
+                            if chatSelection.onlyUsers {
+                                searchChatList = true
+                                searchGroups = false
+                                searchChannels = false
+                                displaySavedMessages = false
+                                filters.append(.excludeSelf)
+                            } else {
+                                searchChatList = true
+                                searchGroups = true
+                                searchChannels = true
+                            }
                             globalSearch = false
                         case .premiumGifting, .requestedUsersSelection:
                             searchChatList = true
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(ContactListPresentation.Search(
+                                signal: searchText.get(),
+                                searchChatList: searchChatList,
+                                searchDeviceContacts: false,
+                                searchGroups: searchGroups,
+                                searchChannels: searchChannels,
+                                globalSearch: globalSearch,
+                                displaySavedMessages: displaySavedMessages
+                            ))), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
