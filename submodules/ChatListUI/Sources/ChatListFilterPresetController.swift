@@ -466,12 +466,16 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             var badge: String?
             var badgeStyle: ItemListSectionHeaderItem.BadgeStyle?
             var accessoryText: ItemListSectionHeaderAccessoryText?
-            if isPremium, let color {
-                badge = name.uppercased()
-                badgeStyle = ItemListSectionHeaderItem.BadgeStyle(
-                    background: color.main.withMultipliedAlpha(0.1),
-                    foreground: color.main
-                )
+            if isPremium {
+                if let color {
+                    badge = name.uppercased()
+                    badgeStyle = ItemListSectionHeaderItem.BadgeStyle(
+                        background: color.main.withMultipliedAlpha(0.1),
+                        foreground: color.main
+                    )
+                } else {
+                    accessoryText = ItemListSectionHeaderAccessoryText(value: "NO TAG", color: .generic)
+                }
             } else if color != nil {
                 accessoryText = ItemListSectionHeaderAccessoryText(value: "PREMIUM EXPIRED", color: .generic)
             }

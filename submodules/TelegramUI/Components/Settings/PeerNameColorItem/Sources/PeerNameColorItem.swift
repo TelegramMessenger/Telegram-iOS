@@ -469,10 +469,6 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var items: [PeerNameColorIconItem] = []
                     var i: Int = 0
-                    if item.displayEmptyColor {
-                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, action: action))
-                        i += 1
-                    }
                     
                     for index in displayOrder {
                         let color = PeerNameColor(rawValue: index)
@@ -487,6 +483,10 @@ public final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         
                         items.append(PeerNameColorIconItem(index: color, colors: colors, isDark: item.theme.overallDarkAppearance, selected: color == item.currentColor, isLocked: item.isLocked, action: action))
+                        i += 1
+                    }
+                    if item.displayEmptyColor {
+                        items.append(PeerNameColorIconItem(index: nil, colors: nil, isDark: item.theme.overallDarkAppearance, selected: item.currentColor == nil, isLocked: item.isLocked, action: action))
                         i += 1
                     }
                     strongSelf.items = items
