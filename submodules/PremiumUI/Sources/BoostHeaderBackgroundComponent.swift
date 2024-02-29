@@ -12,7 +12,7 @@ import TelegramCore
 import MultilineTextComponent
 import TelegramPresentationData
 
-private let sceneVersion: Int = 3
+private let sceneVersion: Int = 1
 
 public final class BoostHeaderBackgroundComponent: Component {
     let isVisible: Bool
@@ -58,7 +58,7 @@ public final class BoostHeaderBackgroundComponent: Component {
         
                 
         private func setup() {
-            guard let url = getAppBundle().url(forResource: "boost", withExtension: "scn"), let scene = try? SCNScene(url: url, options: nil) else {
+            guard let scene = loadCompressedScene(name: "boost", version: sceneVersion) else {
                 return
             }
             

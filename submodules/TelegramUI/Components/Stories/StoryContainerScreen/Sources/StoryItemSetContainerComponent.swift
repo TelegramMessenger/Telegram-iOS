@@ -5420,6 +5420,7 @@ public final class StoryItemSetContainerComponent: Component {
             var updateProgressImpl: ((Float) -> Void)?
             let controller = MediaEditorScreen(
                 context: context,
+                mode: .storyEditor,
                 subject: subject,
                 isEditing: !repost,
                 forwardSource: repost ? (component.slice.peer, item) : nil,
@@ -6857,7 +6858,7 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
-                if case let .file(file) = component.slice.item.storyItem.media, file.isVideo {
+                if !component.slice.item.storyItem.isMy, case let .file(file) = component.slice.item.storyItem.media, file.isVideo {
                     let isHq = component.slice.additionalPeerData.preferHighQualityStories
                     items.append(.action(ContextMenuActionItem(text: isHq ? component.strings.Story_ContextMenuSD : component.strings.Story_ContextMenuHD, icon: { theme in
                         if isHq {

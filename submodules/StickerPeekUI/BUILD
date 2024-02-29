@@ -28,7 +28,6 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/ContextUI:ContextUI",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
-        "//submodules/PremiumUI:PremiumUI",
     ],
     visibility = [
         "//visibility:public",

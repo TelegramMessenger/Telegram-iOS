@@ -217,6 +217,9 @@ private final class AttachButtonComponent: CombinedComponent {
                 name = ""
                 imageName = ""
                 imageFile = nil
+            case .quickReply:
+                name = strings.Attachment_Reply
+                imageName = "Chat/Attach Menu/Reply"
             }
 
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
@@ -821,6 +824,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, sendContextResult: { _, _, _, _ in
             return false
         }, sendBotCommand: { _, _ in
+        }, sendShortcut: { _ in
+        }, openEditShortcuts: {
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
         }, beginMediaRecording: { _ in
@@ -1181,6 +1186,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 accessibilityTitle = bot.shortName
             case .standalone:
                 accessibilityTitle = ""
+            case .quickReply:
+                accessibilityTitle = self.presentationData.strings.Attachment_Reply
             }
             buttonView.isAccessibilityElement = true
             buttonView.accessibilityLabel = accessibilityTitle

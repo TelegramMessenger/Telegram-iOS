@@ -11,6 +11,7 @@ public final class PlainButtonComponent: Component {
     }
     
     public let content: AnyComponent<Empty>
+    public let background: AnyComponent<Empty>?
     public let effectAlignment: EffectAlignment
     public let minSize: CGSize?
     public let contentInsets: UIEdgeInsets
@@ -23,6 +24,7 @@ public final class PlainButtonComponent: Component {
     
     public init(
         content: AnyComponent<Empty>,
+        background: AnyComponent<Empty>? = nil,
         effectAlignment: EffectAlignment,
         minSize: CGSize? = nil,
         contentInsets: UIEdgeInsets = UIEdgeInsets(),
@@ -34,6 +36,7 @@ public final class PlainButtonComponent: Component {
         tag: AnyObject? = nil
     ) {
         self.content = content
+        self.background = background
         self.effectAlignment = effectAlignment
         self.minSize = minSize
         self.contentInsets = contentInsets
@@ -47,6 +50,9 @@ public final class PlainButtonComponent: Component {
     
     public static func ==(lhs: PlainButtonComponent, rhs: PlainButtonComponent) -> Bool {
         if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.background != rhs.background {
             return false
         }
         if lhs.effectAlignment != rhs.effectAlignment {
@@ -92,6 +98,7 @@ public final class PlainButtonComponent: Component {
 
         private let contentContainer = UIView()
         private let content = ComponentView<Empty>()
+        private var background: ComponentView<Empty>?
         
         public var contentView: UIView? {
             return self.content.view
@@ -220,7 +227,12 @@ public final class PlainButtonComponent: Component {
                 }
                 let contentFrame = CGRect(origin: CGPoint(x: component.contentInsets.left + floor((size.width - component.contentInsets.left - component.contentInsets.right - contentSize.width) * 0.5), y: component.contentInsets.top + floor((size.height - component.contentInsets.top - component.contentInsets.bottom - contentSize.height) * 0.5)), size: contentSize)
                 
-                contentTransition.setPosition(view: contentView, position: CGPoint(x: contentFrame.minX + contentFrame.width * contentView.layer.anchorPoint.x, y: contentFrame.minY + contentFrame.height * contentView.layer.anchorPoint.y))
+                let contentPosition = CGPoint(x: contentFrame.minX + contentFrame.width * contentView.layer.anchorPoint.x, y: contentFrame.minY + contentFrame.height * contentView.layer.anchorPoint.y)
+                if !component.animateContents && (abs(contentView.center.x - contentPosition.x) <= 2.0 && abs(contentView.center.y - contentPosition.y) <= 2.0){
+                    contentView.center = contentPosition
+                } else {
+                    contentTransition.setPosition(view: contentView, position: contentPosition)
+                }
                 
                 if component.animateContents {
                     contentTransition.setBounds(view: contentView, bounds: CGRect(origin: CGPoint(), size: contentFrame.size))
@@ -242,6 +254,33 @@ public final class PlainButtonComponent: Component {
             self.contentContainer.layer.anchorPoint = CGPoint(x: anchorX, y: 0.5)
             transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: size))
             transition.setPosition(view: self.contentContainer, position: CGPoint(x: size.width * anchorX, y: size.height * 0.5))
+            
+            if let backgroundValue = component.background {
+                var backgroundTransition = transition
+                let background: ComponentView<Empty>
+                if let current = self.background {
+                    background = current
+                } else {
+                    backgroundTransition = .immediate
+                    background = ComponentView()
+                    self.background = background
+                }
+                let _ = background.update(
+                    transition: backgroundTransition,
+                    component: backgroundValue,
+                    environment: {},
+                    containerSize: size
+                )
+                if let backgroundView = background.view {
+                    if backgroundView.superview == nil {
+                        self.contentContainer.insertSubview(backgroundView, at: 0)
+                    }
+                    backgroundTransition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: size))
+                }
+            } else if let background = self.background {
+                self.background = nil
+                background.view?.removeFromSuperview()
+            }
             
             return size
         }

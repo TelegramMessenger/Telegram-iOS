@@ -13,7 +13,7 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
     let text: String
     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
     let action: (() -> Void)?
-    let longTapAction: (() -> Void)?
+    let longTapAction: ((ASDisplayNode, String) -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     init(
@@ -22,7 +22,7 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
         text: String,
         imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?,
         action: (() -> Void)?,
-        longTapAction: (() -> Void)? = nil,
+        longTapAction: ((ASDisplayNode, String) -> Void)? = nil,
         linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil
     ) {
         self.id = id
@@ -66,6 +66,16 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
         self.addSubnode(self.maskNode)
+        
+        self.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+    }
+    
+    @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if case .began = recognizer.state {
+            if let item = self.item {
+                item.longTapAction?(self, item.text)
+            }
+        }
     }
     
     override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -81,7 +91,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
-        let addressItem = ItemListAddressItem(theme: presentationData.theme, label: item.label, text: item.text, imageSignal: item.imageSignal, sectionId: 0, style: .blocks, displayDecorations: false, action: nil, longTapAction: item.longTapAction, linkItemAction: item.linkItemAction)
+        let addressItem = ItemListAddressItem(theme: presentationData.theme, label: item.label, text: item.text, imageSignal: item.imageSignal, sectionId: 0, style: .blocks, displayDecorations: false, action: nil, longTapAction: nil, linkItemAction: item.linkItemAction)
         
         let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)
         
@@ -90,7 +100,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
             itemNode = current
             addressItem.updateNode(async: { $0() }, node: {
                 return itemNode
-            }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+            }, params: params, previousItem: topItem != nil ? addressItem : nil, nextItem: bottomItem != nil ? addressItem : nil, animation: .None, completion: { (layout, apply) in
                 let nodeFrame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: layout.size.height))
                 
                 itemNode.contentSize = layout.contentSize
@@ -119,7 +129,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
         self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
-        self.bottomSeparatorNode.isHidden = hasBottomCorners
+        self.bottomSeparatorNode.isHidden = hasBottomCorners || bottomItem != nil
         
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
         

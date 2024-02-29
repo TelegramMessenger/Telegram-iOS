@@ -29,6 +29,7 @@ public class PremiumLimitsListScreen: ViewController {
         let backgroundView: ComponentHostView<Empty>
         let pagerView: ComponentHostView<Empty>
         let closeView: ComponentHostView<Empty>
+        let closeDarkIconView = UIImageView()
         
         fileprivate let footerNode: FooterNode
         
@@ -380,22 +381,46 @@ public class PremiumLimitsListScreen: ViewController {
                 isStandalone = true
             }
             
-            if let stickers = self.stickers, let appIcons = self.appIcons, let configuration = self.promoConfiguration {
+            let theme = self.presentationData.theme
+            let strings = self.presentationData.strings
+            
+            let videos: [String: TelegramMediaFile] = self.promoConfiguration?.videos ?? [:]
+            let stickers = self.stickers ?? []
+            let appIcons = self.appIcons ?? []
+            
+            let isReady: Bool
+            switch controller.subject {
+            case .premiumStickers:
+                isReady = !stickers.isEmpty
+            case .appIcons:
+                isReady = !appIcons.isEmpty
+            case .stories:
+                isReady = true
+            case .doubleLimits:
+                isReady = true
+            case .business:
+                isReady = true
+            default:
+                isReady = !videos.isEmpty
+            }
+            
+            if isReady {
                 let context = controller.context
-                let theme = self.presentationData.theme
-                let strings = self.presentationData.strings
-                                
+                    
                 let textColor = theme.actionSheet.primaryTextColor
                 
                 var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
                 
                 var storiesIndex: Int?
                 var limitsIndex: Int?
+                var businessIndex: Int?
                 var storiesNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
                 var limitsNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
+                let businessNeighbors = PageNeighbors(leftIsList: false, rightIsList: false)
                 if let order = controller.order {
                     storiesIndex = order.firstIndex(where: { $0 == .stories })
                     limitsIndex = order.firstIndex(where: { $0 == .doubleLimits })
+                    businessIndex = order.firstIndex(where: { $0 == .business })
                     if let limitsIndex, let storiesIndex {
                         if limitsIndex == storiesIndex + 1 {
                             storiesNeighbors.rightIsList = true
@@ -477,7 +502,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["more_upload"],
+                                    videoFile: videos["more_upload"],
                                     decoration: .dataRain
                                 )),
                                 title: strings.Premium_UploadSize,
@@ -495,7 +520,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["faster_download"],
+                                    videoFile: videos["faster_download"],
                                     decoration: .fasterStars
                                 )),
                                 title: strings.Premium_FasterSpeed,
@@ -513,7 +538,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["voice_to_text"],
+                                    videoFile: videos["voice_to_text"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_VoiceToText,
@@ -531,7 +556,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["no_ads"],
+                                    videoFile: videos["no_ads"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_NoAds,
@@ -549,7 +574,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["infinite_reactions"],
+                                    videoFile: videos["infinite_reactions"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_InfiniteReactions,
@@ -588,7 +613,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["emoji_status"],
+                                    videoFile: videos["emoji_status"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_EmojiStatus,
@@ -606,7 +631,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["advanced_chat_management"],
+                                    videoFile: videos["advanced_chat_management"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_ChatManagement,
@@ -624,7 +649,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["profile_badge"],
+                                    videoFile: videos["profile_badge"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Badge,
@@ -642,7 +667,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["animated_userpics"],
+                                    videoFile: videos["animated_userpics"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_Avatar,
@@ -676,7 +701,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["animated_emoji"],
+                                    videoFile: videos["animated_emoji"],
                                     decoration: .emoji
                                 )),
                                 title: strings.Premium_AnimatedEmoji,
@@ -695,7 +720,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["translations"],
+                                    videoFile: videos["translations"],
                                     decoration: .hello
                                 )),
                                 title: strings.Premium_Translation,
@@ -713,7 +738,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["peer_colors"],
+                                    videoFile: videos["peer_colors"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Colors,
@@ -732,7 +757,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["wallpapers"],
+                                    videoFile: videos["wallpapers"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_Wallpapers,
@@ -751,7 +776,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["saved_tags"],
+                                    videoFile: videos["saved_tags"],
                                     decoration: .tag
                                 )),
                                 title: strings.Premium_MessageTags,
@@ -770,7 +795,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["last_seen"],
+                                    videoFile: videos["last_seen"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_LastSeen,
@@ -789,7 +814,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["message_privacy"],
+                                    videoFile: videos["message_privacy"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_MessagePrivacy,
@@ -799,7 +824,159 @@ public class PremiumLimitsListScreen: ViewController {
                         )
                     )
                 )
-            
+                availableItems[.business] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.business,
+                        component: AnyComponent(
+                            BusinessPageComponent(
+                                context: context,
+                                theme: self.presentationData.theme,
+                                neighbors: businessNeighbors,
+                                bottomInset: self.footerNode.frame.height,
+                                updatedBottomAlpha: { [weak self] alpha in
+                                    if let strongSelf = self {
+                                        strongSelf.footerNode.updateCoverAlpha(alpha, transition: .immediate)
+                                    }
+                                },
+                                updatedDismissOffset: { [weak self] offset in
+                                    if let strongSelf = self {
+                                        strongSelf.updateDismissOffset(offset)
+                                    }
+                                },
+                                updatedIsDisplaying: { [weak self] isDisplaying in
+                                    if let self, self.isExpanded && !isDisplaying {
+                                        if let businessIndex, let indexPosition = self.indexPosition, abs(CGFloat(businessIndex) - indexPosition) < 0.1 {
+                                        } else {
+                                            self.update(isExpanded: false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                        }
+                                    }
+                                }
+                            )
+                        )
+                    )
+                )
+                
+                
+                availableItems[.businessLocation] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessLocation,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["business_location"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_Location,
+                                text: strings.Business_LocationInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessHours] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessHours,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["business_hours"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_OpeningHours,
+                                text: strings.Business_OpeningHoursInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessQuickReplies] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessQuickReplies,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["quick_replies"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_QuickReplies,
+                                text: strings.Business_QuickRepliesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessGreetingMessage] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessGreetingMessage,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["greeting_message"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_GreetingMessages,
+                                text: strings.Business_GreetingMessagesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessAwayMessage] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessAwayMessage,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["away_message"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_AwayMessages,
+                                text: strings.Business_AwayMessagesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.businessChatBots] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.businessChatBots,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: videos["business_bots"],
+                                    decoration: .business
+                                )),
+                                title: strings.Business_Chatbots,
+                                text: strings.Business_ChatbotsInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 if let order = controller.order {
                     var items: [DemoPagerComponent.Item] = order.compactMap { availableItems[$0] }
                     let initialIndex: Int
@@ -822,8 +999,42 @@ public class PremiumLimitsListScreen: ViewController {
                                 nextAction: nextAction,
                                 updated: { [weak self] position, count in
                                     if let self {
-                                        self.indexPosition = position * CGFloat(count)
+                                        let indexPosition = position * CGFloat(count - 1)
+                                        self.indexPosition = indexPosition
                                         self.footerNode.updatePosition(position, count: count)
+                                        
+                                        var distance: CGFloat?
+                                        if let storiesIndex {
+                                            let value = indexPosition - CGFloat(storiesIndex)
+                                            if abs(value) < 1.0 {
+                                                distance = value
+                                            }
+                                        }
+                                        if let limitsIndex {
+                                            let value = indexPosition - CGFloat(limitsIndex)
+                                            if abs(value) < 1.0 {
+                                                distance = value
+                                            }
+                                        }
+                                        if let businessIndex {
+                                            let value = indexPosition - CGFloat(businessIndex)
+                                            if abs(value) < 1.0 {
+                                                distance = value
+                                            }
+                                        }
+                                        var distanceToPage: CGFloat = 1.0
+                                        if let distance {
+                                            if distance >= 0.0 && distance < 0.1 {
+                                                distanceToPage = distance / 0.1
+                                            } else if distance < 0.0 {
+                                                if distance >= -1.0 && distance < -0.9 {
+                                                    distanceToPage = ((distance * -1.0) - 0.9) / 0.1
+                                                } else {
+                                                    distanceToPage = 0.0
+                                                }
+                                            }
+                                        }
+                                        self.closeDarkIconView.alpha = 1.0 - max(0.0, min(1.0, distanceToPage))
                                     }
                                 }
                             )
@@ -852,7 +1063,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 id: "background",
                                 component: AnyComponent(
                                     BlurredBackgroundComponent(
-                                        color:  UIColor(rgb: 0x888888, alpha: 0.3)
+                                        color:  UIColor(rgb: 0xbbbbbb, alpha: 0.22)
                                     )
                                 )
                             ),
@@ -874,6 +1085,12 @@ public class PremiumLimitsListScreen: ViewController {
             self.closeView.clipsToBounds = true
             self.closeView.layer.cornerRadius = 15.0
             self.closeView.frame = CGRect(origin: CGPoint(x: contentSize.width - closeSize.width * 1.5, y: 28.0 - closeSize.height / 2.0), size: closeSize)
+            
+            if self.closeDarkIconView.image == nil {
+                self.closeDarkIconView.image = generateCloseButtonImage(backgroundColor: .clear, foregroundColor: theme.list.itemSecondaryTextColor)!
+                self.closeDarkIconView.frame = CGRect(origin: .zero, size: closeSize)
+                self.closeView.addSubview(self.closeDarkIconView)
+            }
         }
         private var cachedCloseImage: UIImage?
         

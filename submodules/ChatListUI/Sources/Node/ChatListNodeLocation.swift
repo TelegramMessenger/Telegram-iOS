@@ -67,7 +67,7 @@ public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: E
         }
         if !filter.categories.contains(.contacts) && isContact {
             if let user = peer as? TelegramUser {
-                if user.botInfo == nil {
+                if user.botInfo == nil && !user.flags.contains(.isSupport) {
                     return false
                 }
             } else if let _ = peer as? TelegramSecretChat {
@@ -88,7 +88,7 @@ public func chatListFilterPredicate(filter: ChatListFilterData, accountPeerId: E
         }
         if !filter.categories.contains(.bots) {
             if let user = peer as? TelegramUser {
-                if user.botInfo != nil {
+                if user.botInfo != nil || user.flags.contains(.isSupport) {
                     return false
                 }
             }

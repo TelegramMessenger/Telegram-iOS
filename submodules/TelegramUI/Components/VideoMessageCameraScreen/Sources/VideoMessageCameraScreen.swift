@@ -260,23 +260,25 @@ private final class VideoMessageCameraScreenComponent: CombinedComponent {
             controller.updateCameraState({ $0.updatedRecording(pressing ? .holding : .handsFree).updatedDuration(initialDuration) }, transition: .spring(duration: 0.4))
         
             controller.node.withReadyCamera(isFirstTime: !controller.node.cameraIsActive) {
-                self.resultDisposable.set((camera.startRecording()
-                |> deliverOnMainQueue).start(next: { [weak self] recordingData in
-                    let duration = initialDuration + recordingData.duration
-                    if let self, let controller = self.getController() {
-                        controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
-                        if isFirstRecording {
-                            controller.node.setupLiveUpload(filePath: recordingData.filePath)
+                Queue.mainQueue().after(0.15) {
+                    self.resultDisposable.set((camera.startRecording()
+                    |> deliverOnMainQueue).start(next: { [weak self] recordingData in
+                        let duration = initialDuration + recordingData.duration
+                        if let self, let controller = self.getController() {
+                            controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
+                            if isFirstRecording {
+                                controller.node.setupLiveUpload(filePath: recordingData.filePath)
+                            }
+                            if duration > 59.5 {
+                                controller.onStop()
+                            }
                         }
-                        if duration > 59.5 {
-                            controller.onStop()
+                    }, error: { [weak self] _ in
+                        if let self, let controller = self.getController() {
+                            controller.completion(nil, nil, nil)
                         }
-                    }
-                }, error: { [weak self] _ in
-                    if let self, let controller = self.getController() {
-                        controller.completion(nil, nil, nil)
-                    }
-                }))
+                    }))
+                }
             }
             
             if initialDuration > 0.0 {
@@ -1094,6 +1096,7 @@ public class VideoMessageCameraScreen: ViewController {
                     bottom: 44.0,
                     right: layout.safeInsets.right
                 ),
+                additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,

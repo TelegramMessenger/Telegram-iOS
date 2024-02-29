@@ -409,6 +409,8 @@ public final class TextNodeLayout: NSObject {
             switch self.resolvedAlignment {
             case .center:
                 lineFrame = CGRect(origin: CGPoint(x: floor((size.width - line.frame.size.width) / 2.0), y: line.frame.minY), size: line.frame.size)
+            case .right:
+                lineFrame = CGRect(origin: CGPoint(x: size.width - line.frame.size.width, y: line.frame.minY), size: line.frame.size)
             default:
                 lineFrame = displayLineFrame(frame: line.frame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: size), cutout: cutout)
             }
@@ -521,6 +523,8 @@ public final class TextNodeLayout: NSObject {
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                    case .right:
+                        lineFrame.origin.x = self.size.width - lineFrame.size.width
                     default:
                         break
                     }
@@ -589,6 +593,8 @@ public final class TextNodeLayout: NSObject {
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                    case .right:
+                        lineFrame.origin.x = self.size.width - lineFrame.size.width
                     default:
                         break
                 }
@@ -666,6 +672,8 @@ public final class TextNodeLayout: NSObject {
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                    case .right:
+                        lineFrame.origin.x = self.size.width - lineFrame.size.width
                     default:
                         break
                 }
@@ -846,6 +854,8 @@ public final class TextNodeLayout: NSObject {
                                 lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                             case .natural:
                                 lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                            case .right:
+                                lineFrame.origin.x = self.size.width - lineFrame.size.width
                             default:
                                 break
                         }
@@ -2009,7 +2019,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                 }
@@ -2124,7 +2134,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                     
@@ -2407,6 +2417,8 @@ open class TextNode: ASDisplayNode {
                     } else {
                         lineFrame.origin.x += offset.x
                     }
+                } else if alignment == .right {
+                    lineFrame.origin.x = offset.x + (bounds.size.width - lineFrame.width)
                 }
                 
                 //context.setStrokeColor(UIColor.red.cgColor)

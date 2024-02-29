@@ -24,8 +24,8 @@ private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
 }
 
-private let titleFont = Font.medium(15.0)
-private let messageFont = Font.regular(14.0)
+private let titleFont = Font.semibold(15.0)
+private let messageFont = Font.regular(13.0)
 
 private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNodeContent {
     private let textNode: ImmediateTextNode
@@ -53,7 +53,7 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
                 text = interfaceState.strings.ChatList_StartMessaging
             } else {
                 switch interfaceState.chatLocation {
-                case .peer, .replyThread, .feed:
+                case .peer, .replyThread, .customChatContents:
                     if case .scheduledMessages = interfaceState.subject {
                         text = interfaceState.strings.ScheduledMessages_EmptyPlaceholder
                     } else {
@@ -701,25 +701,87 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        var maxWidth: CGFloat = size.width
+        var centerText = false
+        
+        var insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        var imageSpacing: CGFloat = 12.0
+        var titleSpacing: CGFloat = 4.0
+        
+        if case let .customChatContents(customChatContents) = interfaceState.subject {
+            maxWidth = min(240.0, maxWidth)
+            
+            switch customChatContents.kind {
+            case .quickReplyMessageInput:
+                insets.top = 10.0
+                imageSpacing = 5.0
+                titleSpacing = 5.0
+            }
+        }
+        
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
             let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
             
-            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Empty Chat/Cloud"), color: serviceColor.primaryText)
+            var iconName = "Chat/Empty Chat/Cloud"
             
-            let titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
+            let titleString: String
+            let strings: [String]
+            
+            if case let .customChatContents(customChatContents) = interfaceState.subject {
+                switch customChatContents.kind {
+                case let .quickReplyMessageInput(shortcut, shortcutType):
+                    switch shortcutType {
+                    case .generic:
+                        iconName = "Chat/Empty Chat/QuickReplies"
+                        centerText = false
+                        titleString = interfaceState.strings.Chat_EmptyState_QuickReply_Title
+                        strings = [
+                            interfaceState.strings.Chat_EmptyState_QuickReply_Text1(shortcut).string,
+                            interfaceState.strings.Chat_EmptyState_QuickReply_Text2
+                        ]
+                    case .greeting:
+                        iconName = "Chat/Empty Chat/GreetingShortcut"
+                        centerText = true
+                        titleString = interfaceState.strings.EmptyState_GreetingMessage_Title
+                        strings = [
+                            interfaceState.strings.EmptyState_GreetingMessage_Text
+                        ]
+                    case .away:
+                        iconName = "Chat/Empty Chat/AwayShortcut"
+                        centerText = true
+                        titleString = interfaceState.strings.EmptyState_AwayMessage_Title
+                        strings = [
+                            interfaceState.strings.EmptyState_AwayMessage_Text
+                        ]
+                    }
+                }
+            } else {
+                titleString = interfaceState.strings.Conversation_CloudStorageInfo_Title
+                strings = [
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description1,
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description2,
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description3,
+                    interfaceState.strings.Conversation_ClousStorageInfo_Description4
+                ]
+            }
+            
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: serviceColor.primaryText)
+            
             self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
             
-            let strings: [String] = [
-                interfaceState.strings.Conversation_ClousStorageInfo_Description1,
-                interfaceState.strings.Conversation_ClousStorageInfo_Description2,
-                interfaceState.strings.Conversation_ClousStorageInfo_Description3,
-                interfaceState.strings.Conversation_ClousStorageInfo_Description4
-            ]
-            
-            let lines: [NSAttributedString] = strings.map { NSAttributedString(string: $0, font: messageFont, textColor: serviceColor.primaryText) }
+            let lines: [NSAttributedString] = strings.map {
+                return parseMarkdownIntoAttributedString($0, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(14.0), textColor: serviceColor.primaryText),
+                    bold: MarkdownAttributeSet(font: Font.semibold(14.0), textColor: serviceColor.primaryText),
+                    link: MarkdownAttributeSet(font: Font.regular(14.0), textColor: serviceColor.primaryText),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ), textAlignment: centerText ? .center : .natural)
+            }
             
             for i in 0 ..< lines.count {
                 if i >= self.lineNodes.count {
@@ -727,6 +789,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                     textNode.maximumNumberOfLines = 0
                     textNode.isUserInteractionEnabled = false
                     textNode.displaysAsynchronously = false
+                    textNode.textAlignment = centerText ? .center : .natural
                     self.addSubnode(textNode)
                     self.lineNodes.append(textNode)
                 }
@@ -734,11 +797,6 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
                 self.lineNodes[i].attributedText = lines[i]
             }
         }
-        
-        let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
-        
-        let imageSpacing: CGFloat = 12.0
-        let titleSpacing: CGFloat = 4.0
         
         var contentWidth: CGFloat = 100.0
         var contentHeight: CGFloat = 0.0
@@ -751,7 +809,7 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
         
         var lineNodes: [(CGSize, ImmediateTextNode)] = []
         for textNode in self.lineNodes {
-            let textSize = textNode.updateLayout(CGSize(width: size.width - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
+            let textSize = textNode.updateLayout(CGSize(width: maxWidth - insets.left - insets.right - 10.0, height: CGFloat.greatestFiniteMagnitude))
             contentWidth = max(contentWidth, textSize.width)
             contentHeight += textSize.height + titleSpacing
             lineNodes.append((textSize, textNode))
@@ -1166,7 +1224,9 @@ final class ChatEmptyNode: ASDisplayNode {
         case .detailsPlaceholder:
             contentType = .regular
         case let .emptyChat(emptyType):
-            if case .replyThread = interfaceState.chatLocation {
+            if case .customChatContents = interfaceState.subject {
+                contentType = .cloud
+            } else if case .replyThread = interfaceState.chatLocation {
                 if case .topic = emptyType {
                     contentType = .topic
                 } else {

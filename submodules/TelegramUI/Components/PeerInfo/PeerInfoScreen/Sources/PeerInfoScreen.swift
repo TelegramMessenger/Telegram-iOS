@@ -346,6 +346,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, sendContextResult: { _, _, _, _ in
             return false
         }, sendBotCommand: { _, _ in
+        }, sendShortcut: { _ in
+        }, openEditShortcuts: {
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
         }, beginMediaRecording: { _ in
@@ -479,6 +481,8 @@ private enum PeerInfoContextSubject {
     case bio
     case phone(String)
     case link(customLink: String?)
+    case businessHours(String)
+    case businessLocation(String)
 }
 
 private enum PeerInfoSettingsSection {
@@ -927,7 +931,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
         }))
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 101, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
+            interaction.openSettings(.businessSetup)
+        }))
+        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(""), text: presentationData.strings.Settings_PremiumGift, icon: PresentationResourcesSettings.premiumGift, action: {
             interaction.openSettings(.premiumGift)
         }))
     }
@@ -1157,6 +1164,49 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.isPremium ? enabledPublicBioEntities : enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout(false)
                 }))
+            }
+            
+            if let businessHours = cachedData.businessHours {
+                items[.peerInfo]!.append(PeerInfoScreenBusinessHoursItem(id: 300, label: presentationData.strings.PeerInfo_BusinessHours_Label, businessHours: businessHours, requestLayout: { animated in
+                    interaction.requestLayout(animated)
+                }, longTapAction: { sourceNode, text in
+                    if !text.isEmpty {
+                        interaction.openPeerInfoContextMenu(.businessHours(text), sourceNode, nil)
+                    }
+                }))
+            }
+            
+            if let businessLocation = cachedData.businessLocation {
+                if let coordinates = businessLocation.coordinates {
+                    let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: coordinates.latitude, longitude: coordinates.longitude, width: 90, height: 90))
+                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                        id: 301,
+                        label: presentationData.strings.PeerInfo_Location_Label,
+                        text: businessLocation.address,
+                        imageSignal: imageSignal,
+                        action: {
+                            interaction.openLocation()
+                        },
+                        longTapAction: { sourceNode, text in
+                            if !text.isEmpty {
+                                interaction.openPeerInfoContextMenu(.businessLocation(text), sourceNode, nil)
+                            }
+                        }
+                    ))
+                } else {
+                    items[.peerInfo]!.append(PeerInfoScreenAddressItem(
+                        id: 301,
+                        label: presentationData.strings.PeerInfo_Location_Label,
+                        text: businessLocation.address,
+                        imageSignal: nil,
+                        action: nil,
+                        longTapAction: { sourceNode, text in
+                            if !text.isEmpty {
+                                interaction.openPeerInfoContextMenu(.businessLocation(text), sourceNode, nil)
+                            }
+                        }
+                    ))
+                }
             }
         }
         if let reactionSourceMessageId = reactionSourceMessageId, !data.isContact {
@@ -3038,6 +3088,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
+        }, openStickerEditor: {   
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -5705,16 +5756,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
-                        if case .group = channel.info {
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_Group_Boost, badge: ContextMenuActionBadge(value: presentationData.strings.Settings_New, color: .accent, style: .label), icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, f in
-                                f(.dismissWithoutContent)
-                                
-                                self?.openBoost()
-                            })))
+                        let boostTitle: String
+                        var isNew = false
+                        switch channel.info {
+                        case .group:
+                            boostTitle = presentationData.strings.PeerInfo_Group_Boost
+                            isNew = true
+                        case .broadcast:
+                            boostTitle = presentationData.strings.PeerInfo_Channel_Boost
                         }
                         
+                        items.append(.action(ContextMenuActionItem(text: boostTitle, badge: isNew ? ContextMenuActionBadge(value: presentationData.strings.Settings_New, color: .accent, style: .label) : nil, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            self?.openBoost()
+                        })))
+                                                
                         if channel.hasPermission(.editStories) {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeerInfo_Channel_ArchivedStories, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
@@ -7525,9 +7584,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openLocation() {
-        guard let data = self.data, let peer = data.peer, let cachedData = data.cachedData as? CachedChannelData, let location = cachedData.peerGeoLocation else {
+        guard let data = self.data, let peer = data.peer else {
             return
         }
+        
+        var location: PeerGeoLocation?
+        if let cachedData = data.cachedData as? CachedChannelData, let locationValue = cachedData.peerGeoLocation {
+            location = locationValue
+        } else if let cachedData = data.cachedData as? CachedUserData, let businessLocation = cachedData.businessLocation, let coordinates = businessLocation.coordinates {
+            location = PeerGeoLocation(latitude: coordinates.latitude, longitude: coordinates.longitude, address: businessLocation.address)
+        }
+        
+        guard let location else {
+            return
+        }
+        
         let context = self.context
         let presentationData = self.presentationData
         let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
@@ -7811,6 +7882,27 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             })])
+            controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
+                if let controller = self?.controller, let sourceNode = sourceNode {
+                    var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
+                    if let sourceRect = sourceRect {
+                        rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
+                    }
+                    return (sourceNode, rect, controller.displayNode, controller.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
+        case .businessHours(let text), .businessLocation(let text):
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+            let actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                UIPasteboard.general.string = text
+                
+                self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            })]
+            
+            let contextMenuController = makeContextMenuController(actions: actions)
             controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                 if let controller = self?.controller, let sourceNode = sourceNode {
                     var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
@@ -8739,7 +8831,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             })
         case .chatFolders:
-            push(chatListFilterPresetListController(context: self.context, mode: .default))
+            let controller = self.context.sharedContext.makeFilterSettingsController(context: self.context, modal: false, scrollToTags: false, dismissed: nil)
+            push(controller)
         case .notificationsAndSounds:
             if let settings = self.data?.globalSettings {
                 push(notificationsAndSoundsController(context: self.context, exceptionsList: settings.notificationExceptions))

@@ -663,6 +663,52 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ConnectedBot: TypeConstructorDescription {
+        case connectedBot(flags: Int32, botId: Int64, recipients: Api.BusinessRecipients)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .connectedBot(let flags, let botId, let recipients):
+                    if boxed {
+                        buffer.appendInt32(-404121113)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    recipients.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .connectedBot(let flags, let botId, let recipients):
+                return ("connectedBot", [("flags", flags as Any), ("botId", botId as Any), ("recipients", recipients as Any)])
+    }
+    }
+    
+        public static func parse_connectedBot(_ reader: BufferReader) -> ConnectedBot? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Api.BusinessRecipients?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ConnectedBot.connectedBot(flags: _1!, botId: _2!, recipients: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Contact: TypeConstructorDescription {
         case contact(userId: Int64, mutual: Api.Bool)
     
@@ -1014,20 +1060,21 @@ public extension Api {
 }
 public extension Api {
     enum DialogFilter: TypeConstructorDescription {
-        case dialogFilter(flags: Int32, id: Int32, title: String, emoticon: String?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
-        case dialogFilterChatlist(flags: Int32, id: Int32, title: String, emoticon: String?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer])
+        case dialogFilter(flags: Int32, id: Int32, title: String, emoticon: String?, color: Int32?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
+        case dialogFilterChatlist(flags: Int32, id: Int32, title: String, emoticon: String?, color: Int32?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer])
         case dialogFilterDefault
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
+                case .dialogFilter(let flags, let id, let title, let emoticon, let color, let pinnedPeers, let includePeers, let excludePeers):
                     if boxed {
-                        buffer.appendInt32(1949890536)
+                        buffer.appendInt32(1605718587)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 25) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 27) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(pinnedPeers.count))
                     for item in pinnedPeers {
@@ -1044,14 +1091,15 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
-                case .dialogFilterChatlist(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers):
+                case .dialogFilterChatlist(let flags, let id, let title, let emoticon, let color, let pinnedPeers, let includePeers):
                     if boxed {
-                        buffer.appendInt32(-699792216)
+                        buffer.appendInt32(-1612542300)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 25) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 27) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(pinnedPeers.count))
                     for item in pinnedPeers {
@@ -1074,10 +1122,10 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
-                return ("dialogFilter", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("pinnedPeers", pinnedPeers as Any), ("includePeers", includePeers as Any), ("excludePeers", excludePeers as Any)])
-                case .dialogFilterChatlist(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers):
-                return ("dialogFilterChatlist", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("pinnedPeers", pinnedPeers as Any), ("includePeers", includePeers as Any)])
+                case .dialogFilter(let flags, let id, let title, let emoticon, let color, let pinnedPeers, let includePeers, let excludePeers):
+                return ("dialogFilter", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("color", color as Any), ("pinnedPeers", pinnedPeers as Any), ("includePeers", includePeers as Any), ("excludePeers", excludePeers as Any)])
+                case .dialogFilterChatlist(let flags, let id, let title, let emoticon, let color, let pinnedPeers, let includePeers):
+                return ("dialogFilterChatlist", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("emoticon", emoticon as Any), ("color", color as Any), ("pinnedPeers", pinnedPeers as Any), ("includePeers", includePeers as Any)])
                 case .dialogFilterDefault:
                 return ("dialogFilterDefault", [])
     }
@@ -1092,10 +1140,8 @@ public extension Api {
             _3 = parseString(reader)
             var _4: String?
             if Int(_1!) & Int(1 << 25) != 0 {_4 = parseString(reader) }
-            var _5: [Api.InputPeer]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
-            }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 27) != 0 {_5 = reader.readInt32() }
             var _6: [Api.InputPeer]?
             if let _ = reader.readInt32() {
                 _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
@@ -1104,15 +1150,20 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
             }
+            var _8: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 25) == 0) || _4 != nil
-            let _c5 = _5 != nil
+            let _c5 = (Int(_1!) & Int(1 << 27) == 0) || _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, emoticon: _4, pinnedPeers: _5!, includePeers: _6!, excludePeers: _7!)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.DialogFilter.dialogFilter(flags: _1!, id: _2!, title: _3!, emoticon: _4, color: _5, pinnedPeers: _6!, includePeers: _7!, excludePeers: _8!)
             }
             else {
                 return nil
@@ -1127,22 +1178,25 @@ public extension Api {
             _3 = parseString(reader)
             var _4: String?
             if Int(_1!) & Int(1 << 25) != 0 {_4 = parseString(reader) }
-            var _5: [Api.InputPeer]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
-            }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 27) != 0 {_5 = reader.readInt32() }
             var _6: [Api.InputPeer]?
             if let _ = reader.readInt32() {
                 _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
+            }
+            var _7: [Api.InputPeer]?
+            if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 25) == 0) || _4 != nil
-            let _c5 = _5 != nil
+            let _c5 = (Int(_1!) & Int(1 << 27) == 0) || _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.DialogFilter.dialogFilterChatlist(flags: _1!, id: _2!, title: _3!, emoticon: _4, pinnedPeers: _5!, includePeers: _6!)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.DialogFilter.dialogFilterChatlist(flags: _1!, id: _2!, title: _3!, emoticon: _4, color: _5, pinnedPeers: _6!, includePeers: _7!)
             }
             else {
                 return nil

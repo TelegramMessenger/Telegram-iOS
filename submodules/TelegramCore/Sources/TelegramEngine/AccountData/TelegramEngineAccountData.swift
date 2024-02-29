@@ -105,5 +105,105 @@ public extension TelegramEngine {
             |> ignoreValues
             |> then(remoteApply)
         }
+        
+        public func updateAccountBusinessHours(businessHours: TelegramBusinessHours?) -> Signal<Never, NoError> {
+            let peerId = self.account.peerId
+            
+            var flags: Int32 = 0
+            if businessHours != nil {
+                flags |= 1 << 0
+            }
+            let remoteApply: Signal<Never, NoError> = self.account.network.request(Api.functions.account.updateBusinessWorkHours(flags: flags, businessWorkHours: businessHours?.apiBusinessHours))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+            
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    let current = current as? CachedUserData ?? CachedUserData()
+                    return current.withUpdatedBusinessHours(businessHours)
+                })
+            }
+            |> ignoreValues
+            |> then(remoteApply)
+        }
+        
+        public func updateAccountBusinessLocation(businessLocation: TelegramBusinessLocation?) -> Signal<Never, NoError> {
+            let peerId = self.account.peerId
+            
+            var flags: Int32 = 0
+            
+            var inputGeoPoint: Api.InputGeoPoint?
+            var inputAddress: String?
+            if let businessLocation {
+                flags |= 1 << 0
+                inputAddress = businessLocation.address
+                
+                inputGeoPoint = businessLocation.coordinates?.apiInputGeoPoint
+                if inputGeoPoint != nil {
+                    flags |= 1 << 1
+                }
+            }
+            
+            let remoteApply: Signal<Never, NoError> = self.account.network.request(Api.functions.account.updateBusinessLocation(flags: flags, geoPoint: inputGeoPoint, address: inputAddress))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+            
+            return self.account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    let current = current as? CachedUserData ?? CachedUserData()
+                    return current.withUpdatedBusinessLocation(businessLocation)
+                })
+            }
+            |> ignoreValues
+            |> then(remoteApply)
+        }
+        
+        public func shortcutMessageList() -> Signal<ShortcutMessageList, NoError> {
+            return _internal_shortcutMessageList(account: self.account)
+        }
+
+        public func keepShortcutMessageListUpdated() -> Signal<Never, NoError> {
+            return _internal_keepShortcutMessagesUpdated(account: self.account)
+        }
+        
+        public func editMessageShortcut(id: Int32, shortcut: String) {
+            let _ = _internal_editMessageShortcut(account: self.account, id: id, shortcut: shortcut).startStandalone()
+        }
+        
+        public func deleteMessageShortcuts(ids: [Int32]) {
+            let _ = _internal_deleteMessageShortcuts(account: self.account, ids: ids).startStandalone()
+        }
+        
+        public func reorderMessageShortcuts(ids: [Int32], completion: @escaping () -> Void) {
+            let _ = _internal_reorderMessageShortcuts(account: self.account, ids: ids, localCompletion: completion).startStandalone()
+        }
+        
+        public func sendMessageShortcut(peerId: EnginePeer.Id, id: Int32) {
+            let _ = _internal_sendMessageShortcut(account: self.account, peerId: peerId, id: id).startStandalone()
+        }
+        
+        public func cachedTimeZoneList() -> Signal<TimeZoneList?, NoError> {
+            return _internal_cachedTimeZoneList(account: self.account)
+        }
+
+        public func keepCachedTimeZoneListUpdated() -> Signal<Never, NoError> {
+            return _internal_keepCachedTimeZoneListUpdated(account: self.account)
+        }
+        
+        public func updateBusinessGreetingMessage(greetingMessage: TelegramBusinessGreetingMessage?) -> Signal<Never, NoError> {
+            return _internal_updateBusinessGreetingMessage(account: self.account, greetingMessage: greetingMessage)
+        }
+        
+        public func updateBusinessAwayMessage(awayMessage: TelegramBusinessAwayMessage?) -> Signal<Never, NoError> {
+            return _internal_updateBusinessAwayMessage(account: self.account, awayMessage: awayMessage)
+        }
+        
+        public func setAccountConnectedBot(bot: TelegramAccountConnectedBot?) -> Signal<Never, NoError> {
+            return _internal_setAccountConnectedBot(account: self.account, bot: bot)
+        }
     }
 }

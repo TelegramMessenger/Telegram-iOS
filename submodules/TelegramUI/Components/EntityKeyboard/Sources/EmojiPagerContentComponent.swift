@@ -2519,6 +2519,7 @@ public final class EmojiPagerContentComponent: Component {
             case premiumStar
             case topic(String, Int32)
             case stop
+            case add
         }
         
         case animation(EntityKeyboardAnimationData)
@@ -3559,6 +3560,15 @@ public final class EmojiPagerContentComponent: Component {
                                 let imageSize = image.size.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
+                        case .add:
+                            context.setFillColor(UIColor.black.withAlphaComponent(0.08).cgColor)
+                            context.fillEllipse(in: CGRect(origin: .zero, size: size).insetBy(dx: 8.0, dy: 8.0))
+                            context.setFillColor(UIColor.black.withAlphaComponent(0.16).cgColor)
+                            
+                            let plusSize = CGSize(width: 4.5, height: 31.5)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.width) / 2.0), y: floorToScreenPixels((size.height - plusSize.height) / 2.0), width: plusSize.width, height: plusSize.height), cornerRadius: plusSize.width / 2.0).cgPath)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(x: floorToScreenPixels((size.width - plusSize.height) / 2.0), y: floorToScreenPixels((size.height - plusSize.width) / 2.0), width: plusSize.height, height: plusSize.width), cornerRadius: plusSize.width / 2.0).cgPath)
+                            context.fillPath()
                         }
                         
                         UIGraphicsPopContext()

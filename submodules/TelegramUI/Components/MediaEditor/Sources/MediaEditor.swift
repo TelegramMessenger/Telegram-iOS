@@ -94,6 +94,11 @@ public final class MediaEditor {
         }
     }
     
+    public enum Mode {
+        case `default`
+        case sticker
+    }
+    
     public enum Subject {
         case image(UIImage, PixelDimensions)
         case video(String, UIImage?, Bool, String?, PixelDimensions, Double)
@@ -116,6 +121,7 @@ public final class MediaEditor {
     }
 
     private let context: AccountContext
+    private let mode: Mode
     private let subject: Subject
     
     private let clock = CMClockGetHostTimeClock()
@@ -181,6 +187,10 @@ public final class MediaEditor {
             }
         }
     }
+    
+    public private(set) var canCutout: Bool = false
+    public var canCutoutUpdated: (Bool) -> Void = { _ in }
+    public var isCutoutUpdated: (Bool) -> Void = { _ in }
     
     private var textureCache: CVMetalTextureCache!
     
@@ -391,8 +401,9 @@ public final class MediaEditor {
         }
     }
     
-    public init(context: AccountContext, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
+    public init(context: AccountContext, mode: Mode, subject: Subject, values: MediaEditorValues? = nil, hasHistogram: Bool = false) {
         self.context = context
+        self.mode = mode
         self.subject = subject
         if let values {
             self.values = values
@@ -668,6 +679,19 @@ public final class MediaEditor {
                     } else {
                         textureSource.setMainInput(.image(image))
                     }
+                    
+                    
+                    if case .sticker = self.mode {
+                        let _ = (cutoutStickerImage(from: image, onlyCheck: true)
+                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                            guard let self, result != nil else {
+                                return
+                            }
+                            self.canCutout = true
+                            self.canCutoutUpdated(true)
+                        })
+                    }
+                    
                 }
                 if let player, let playerItem = player.currentItem, !textureSourceResult.playerIsReference {
                     textureSource.setMainInput(.video(playerItem))
@@ -677,7 +701,12 @@ public final class MediaEditor {
                 }
                 self.renderer.textureSource = textureSource
                 
-                self.setGradientColors(textureSourceResult.gradientColors)
+                switch self.mode {
+                case .default:
+                    self.setGradientColors(textureSourceResult.gradientColors)
+                case .sticker:
+                    self.setGradientColors(GradientColors(top: .clear, bottom: .clear))
+                }
                 
                 if let _ = textureSourceResult.player {
                     self.updateRenderChain()
@@ -1615,7 +1644,7 @@ public final class MediaEditor {
     
     public func setGradientColors(_ gradientColors: GradientColors) {
         self.gradientColorsPromise.set(.single(gradientColors))
-        self.updateValues(mode: .skipRendering) { values in
+        self.updateValues(mode: self.sourceIsVideo ? .skipRendering : .generic) { values in
             return values.withUpdatedGradientColors(gradientColors: gradientColors.array)
         }
     }
@@ -1652,6 +1681,51 @@ public final class MediaEditor {
     public func requestRenderFrame() {
         self.renderer.willRenderFrame()
         self.renderer.renderFrame()
+    }
+    
+    public func getSeparatedImage(point: CGPoint?) -> Signal<UIImage?, NoError> {
+        guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {
+            return .single(nil)
+        }
+        return cutoutImage(from: image, atPoint: point, asImage: true)
+        |> map { result in
+            if let result, case let .image(image) = result {
+                return image
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public func removeSeparationMask() {
+        self.isCutoutUpdated(false)
+        
+        self.renderer.currentMainInputMask = nil
+        if !self.skipRendering {
+            self.updateRenderChain()
+        }
+    }
+    
+    public func setSeparationMask(point: CGPoint?) {
+        guard let renderTarget = self.previewView, let device = renderTarget.mtlDevice else {
+            return
+        }
+        guard let textureSource = self.renderer.textureSource as? UniversalTextureSource, let image = textureSource.mainImage else {
+            return
+        }
+        self.isCutoutUpdated(true)
+        
+        let _ = (cutoutImage(from: image, atPoint: point, asImage: false)
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let self, let result, case let .image(image) = result else {
+                return
+            }
+            //TODO:replace with pixelbuffer
+            self.renderer.currentMainInputMask = loadTexture(image: image, device: device)
+            if !self.skipRendering {
+                self.updateRenderChain()
+            }
+        })
     }
     
     private func maybeGeneratePersonSegmentation(_ image: UIImage?) {

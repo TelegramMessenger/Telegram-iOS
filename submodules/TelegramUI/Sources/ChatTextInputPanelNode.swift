@@ -1517,7 +1517,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             
         } else {
             if let user = interfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+                if let chatHistoryState = interfaceState.chatHistoryState, case .loaded(true, _) = chatHistoryState {
                     displayBotStartButton = true
                 } else if interfaceState.peerIsBlocked {
                     displayBotStartButton = true
@@ -1801,37 +1801,57 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             let dismissedButtonMessageUpdated = interfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != previousState?.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId
             let replyMessageUpdated = interfaceState.interfaceState.replyMessageSubject != previousState?.interfaceState.replyMessageSubject
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated || (previousState?.interfaceState.editMessage == nil) != (interfaceState.interfaceState.editMessage == nil) || previousState?.forumTopicData != interfaceState.forumTopicData || previousState?.replyMessage?.id != interfaceState.replyMessage?.id {
+            var peerUpdated = false
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) {
+                peerUpdated = true
+            }
+            
+            if peerUpdated || previousState?.interfaceState.silentPosting != interfaceState.interfaceState.silentPosting || themeUpdated || !self.initializedPlaceholder || previousState?.keyboardButtonsMessage?.id != interfaceState.keyboardButtonsMessage?.id || previousState?.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder != interfaceState.keyboardButtonsMessage?.visibleReplyMarkupPlaceholder || dismissedButtonMessageUpdated || replyMessageUpdated || (previousState?.interfaceState.editMessage == nil) != (interfaceState.interfaceState.editMessage == nil) || previousState?.forumTopicData != interfaceState.forumTopicData || previousState?.replyMessage?.id != interfaceState.replyMessage?.id {
                 self.initializedPlaceholder = true
                 
-                var placeholder: String
+                var placeholder: String = ""
                 
-                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    if interfaceState.interfaceState.silentPosting {
-                        placeholder = interfaceState.strings.Conversation_InputTextSilentBroadcastPlaceholder
-                    } else {
-                        placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
-                    }
-                } else {
-                    if sendingTextDisabled {
-                        placeholder = interfaceState.strings.Chat_PlaceholderTextNotAllowed
-                    } else {
-                        if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
-                            placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
-                        } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation, !replyThreadMessage.isForumPost, replyThreadMessage.peerId != self.context?.account.peerId {
-                            if replyThreadMessage.isChannelPost {
-                                placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
-                            } else {
-                                placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
-                            }
-                        } else if let channel = peer as? TelegramChannel, channel.isForum, let forumTopicData = interfaceState.forumTopicData {
-                            if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
-                                placeholder = interfaceState.strings.Chat_InputPlaceholderReplyInTopic(threadInfo.title).string
-                            } else {
-                                placeholder = interfaceState.strings.Chat_InputPlaceholderMessageInTopic(forumTopicData.title).string
-                            }
+                if let peer = interfaceState.renderedPeer?.peer {
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        if interfaceState.interfaceState.silentPosting {
+                            placeholder = interfaceState.strings.Conversation_InputTextSilentBroadcastPlaceholder
                         } else {
-                            placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
+                            placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
+                        }
+                    } else {
+                        if sendingTextDisabled {
+                            placeholder = interfaceState.strings.Chat_PlaceholderTextNotAllowed
+                        } else {
+                            if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                                placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
+                            } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation, !replyThreadMessage.isForumPost, replyThreadMessage.peerId != self.context?.account.peerId {
+                                if replyThreadMessage.isChannelPost {
+                                    placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
+                                } else {
+                                    placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
+                                }
+                            } else if let channel = peer as? TelegramChannel, channel.isForum, let forumTopicData = interfaceState.forumTopicData {
+                                if let replyMessage = interfaceState.replyMessage, let threadInfo = replyMessage.associatedThreadInfo {
+                                    placeholder = interfaceState.strings.Chat_InputPlaceholderReplyInTopic(threadInfo.title).string
+                                } else {
+                                    placeholder = interfaceState.strings.Chat_InputPlaceholderMessageInTopic(forumTopicData.title).string
+                                }
+                            } else {
+                                placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
+                            }
+                        }
+                    }
+                }
+                if case let .customChatContents(customChatContents) = interfaceState.subject {
+                    switch customChatContents.kind {
+                    case let .quickReplyMessageInput(_, shortcutType):
+                        switch shortcutType {
+                        case .generic:
+                            placeholder = interfaceState.strings.Chat_Placeholder_QuickReply
+                        case .greeting:
+                            placeholder = interfaceState.strings.Chat_Placeholder_GreetingMessage
+                        case .away:
+                            placeholder = interfaceState.strings.Chat_Placeholder_AwayMessage
                         }
                     }
                 }

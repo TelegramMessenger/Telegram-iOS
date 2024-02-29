@@ -567,6 +567,9 @@
                     updateGroupingButtonVisibility();
                 } file:__FILE_NAME__ line:__LINE__]];
                 
+                if (_adjustmentsChangedDisposable) {
+                    [_adjustmentsChangedDisposable dispose];
+                }
                 _adjustmentsChangedDisposable = [[SMetaDisposable alloc] init];
                 [_adjustmentsChangedDisposable setDisposable:[_editingContext.adjustmentsUpdatedSignal startStrictWithNext:^(__unused NSNumber *next)
                 {
@@ -583,6 +586,7 @@
     self.delegate = nil;
     [_selectionChangedDisposable dispose];
     [_tooltipDismissDisposable dispose];
+    [_adjustmentsChangedDisposable dispose];
 }
 
 - (void)loadView

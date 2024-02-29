@@ -1,4 +1,84 @@
 public extension Api {
+    enum InputWallPaper: TypeConstructorDescription {
+        case inputWallPaper(id: Int64, accessHash: Int64)
+        case inputWallPaperNoFile(id: Int64)
+        case inputWallPaperSlug(slug: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputWallPaper(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-433014407)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputWallPaperNoFile(let id):
+                    if boxed {
+                        buffer.appendInt32(-1770371538)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+                case .inputWallPaperSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(1913199744)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputWallPaper(let id, let accessHash):
+                return ("inputWallPaper", [("id", id as Any), ("accessHash", accessHash as Any)])
+                case .inputWallPaperNoFile(let id):
+                return ("inputWallPaperNoFile", [("id", id as Any)])
+                case .inputWallPaperSlug(let slug):
+                return ("inputWallPaperSlug", [("slug", slug as Any)])
+    }
+    }
+    
+        public static func parse_inputWallPaper(_ reader: BufferReader) -> InputWallPaper? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputWallPaper.inputWallPaper(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputWallPaperNoFile(_ reader: BufferReader) -> InputWallPaper? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputWallPaper.inputWallPaperNoFile(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputWallPaperSlug(_ reader: BufferReader) -> InputWallPaper? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputWallPaper.inputWallPaperSlug(slug: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputWebDocument: TypeConstructorDescription {
         case inputWebDocument(url: String, size: Int32, mimeType: String, attributes: [Api.DocumentAttribute])
     
@@ -896,168 +976,6 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.KeyboardButtonRow.keyboardButtonRow(buttons: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum LabeledPrice: TypeConstructorDescription {
-        case labeledPrice(label: String, amount: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .labeledPrice(let label, let amount):
-                    if boxed {
-                        buffer.appendInt32(-886477832)
-                    }
-                    serializeString(label, buffer: buffer, boxed: false)
-                    serializeInt64(amount, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .labeledPrice(let label, let amount):
-                return ("labeledPrice", [("label", label as Any), ("amount", amount as Any)])
-    }
-    }
-    
-        public static func parse_labeledPrice(_ reader: BufferReader) -> LabeledPrice? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.LabeledPrice.labeledPrice(label: _1!, amount: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum LangPackDifference: TypeConstructorDescription {
-        case langPackDifference(langCode: String, fromVersion: Int32, version: Int32, strings: [Api.LangPackString])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .langPackDifference(let langCode, let fromVersion, let version, let strings):
-                    if boxed {
-                        buffer.appendInt32(-209337866)
-                    }
-                    serializeString(langCode, buffer: buffer, boxed: false)
-                    serializeInt32(fromVersion, buffer: buffer, boxed: false)
-                    serializeInt32(version, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(strings.count))
-                    for item in strings {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .langPackDifference(let langCode, let fromVersion, let version, let strings):
-                return ("langPackDifference", [("langCode", langCode as Any), ("fromVersion", fromVersion as Any), ("version", version as Any), ("strings", strings as Any)])
-    }
-    }
-    
-        public static func parse_langPackDifference(_ reader: BufferReader) -> LangPackDifference? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: [Api.LangPackString]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.LangPackString.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.LangPackDifference.langPackDifference(langCode: _1!, fromVersion: _2!, version: _3!, strings: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum LangPackLanguage: TypeConstructorDescription {
-        case langPackLanguage(flags: Int32, name: String, nativeName: String, langCode: String, baseLangCode: String?, pluralCode: String, stringsCount: Int32, translatedCount: Int32, translationsUrl: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
-                    if boxed {
-                        buffer.appendInt32(-288727837)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(name, buffer: buffer, boxed: false)
-                    serializeString(nativeName, buffer: buffer, boxed: false)
-                    serializeString(langCode, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(baseLangCode!, buffer: buffer, boxed: false)}
-                    serializeString(pluralCode, buffer: buffer, boxed: false)
-                    serializeInt32(stringsCount, buffer: buffer, boxed: false)
-                    serializeInt32(translatedCount, buffer: buffer, boxed: false)
-                    serializeString(translationsUrl, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .langPackLanguage(let flags, let name, let nativeName, let langCode, let baseLangCode, let pluralCode, let stringsCount, let translatedCount, let translationsUrl):
-                return ("langPackLanguage", [("flags", flags as Any), ("name", name as Any), ("nativeName", nativeName as Any), ("langCode", langCode as Any), ("baseLangCode", baseLangCode as Any), ("pluralCode", pluralCode as Any), ("stringsCount", stringsCount as Any), ("translatedCount", translatedCount as Any), ("translationsUrl", translationsUrl as Any)])
-    }
-    }
-    
-        public static func parse_langPackLanguage(_ reader: BufferReader) -> LangPackLanguage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: Int32?
-            _7 = reader.readInt32()
-            var _8: Int32?
-            _8 = reader.readInt32()
-            var _9: String?
-            _9 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.LangPackLanguage.langPackLanguage(flags: _1!, name: _2!, nativeName: _3!, langCode: _4!, baseLangCode: _5, pluralCode: _6!, stringsCount: _7!, translatedCount: _8!, translationsUrl: _9!)
             }
             else {
                 return nil

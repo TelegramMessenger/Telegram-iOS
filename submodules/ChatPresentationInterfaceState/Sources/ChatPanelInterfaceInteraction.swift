@@ -104,6 +104,8 @@ public final class ChatPanelInterfaceInteraction {
     public let togglePeerNotifications: () -> Void
     public let sendContextResult: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool
     public let sendBotCommand: (Peer, String) -> Void
+    public let sendShortcut: (Int32) -> Void
+    public let openEditShortcuts: () -> Void
     public let sendBotStart: (String?) -> Void
     public let botSwitchChatWithPayload: (PeerId, String) -> Void
     public let beginMediaRecording: (Bool) -> Void
@@ -217,6 +219,8 @@ public final class ChatPanelInterfaceInteraction {
         togglePeerNotifications: @escaping () -> Void,
         sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
         sendBotCommand: @escaping (Peer, String) -> Void,
+        sendShortcut: @escaping (Int32) -> Void,
+        openEditShortcuts: @escaping () -> Void,
         sendBotStart: @escaping (String?) -> Void,
         botSwitchChatWithPayload: @escaping (PeerId, String) -> Void,
         beginMediaRecording: @escaping (Bool) -> Void,
@@ -329,6 +333,8 @@ public final class ChatPanelInterfaceInteraction {
         self.togglePeerNotifications = togglePeerNotifications
         self.sendContextResult = sendContextResult
         self.sendBotCommand = sendBotCommand
+        self.sendShortcut = sendShortcut
+        self.openEditShortcuts = openEditShortcuts
         self.sendBotStart = sendBotStart
         self.botSwitchChatWithPayload = botSwitchChatWithPayload
         self.beginMediaRecording = beginMediaRecording
@@ -448,6 +454,8 @@ public final class ChatPanelInterfaceInteraction {
         }, sendContextResult: { _, _, _, _ in
             return false
         }, sendBotCommand: { _, _ in
+        }, sendShortcut: { _ in
+        }, openEditShortcuts: {
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
         }, beginMediaRecording: { _ in

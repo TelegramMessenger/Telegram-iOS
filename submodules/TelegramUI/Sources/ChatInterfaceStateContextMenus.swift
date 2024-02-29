@@ -68,6 +68,8 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
         } else {
             hasEditRights = true
         }
+    } else if message.id.namespace == Namespaces.Message.QuickReplyCloud {
+        hasEditRights = true
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
     } else if let author = message.author, author.id == accountPeerId, let peer = message.peers[message.id.peerId] {
@@ -271,6 +273,10 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
 }
 
 func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, accountPeerId: PeerId) -> Bool {
+    if case .customChatContents = chatPresentationInterfaceState.chatLocation {
+        return true
+    }
+    
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return false
     }
@@ -337,8 +343,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         }
     case .replyThread:
         canReply = true
-    case .feed:
-        canReply = false
+    case .customChatContents:
+        canReply = true
     }
     return canReply
 }
@@ -649,12 +655,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
-    if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
+    if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
-        case .peer, .replyThread, .feed:
+        case .peer, .replyThread, .customChatContents:
             if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                 if !isAction {
                     canPin = channel.hasPermission(.pinMessages)
@@ -1074,8 +1080,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
         
-
-        
         var messageText: String = ""
         for message in messages {
             if !message.text.isEmpty {
@@ -1085,6 +1089,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     messageText = ""
                     break
                 }
+            }
+        }
+        
+        for attribute in message.attributes {
+            if hasExpandedAudioTranscription, let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                if !messageText.isEmpty {
+                    messageText.append("\n")
+                }
+                messageText.append(attribute.text)
+                break
             }
         }
         
@@ -1869,6 +1883,76 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         if !actions.isEmpty, case .separator = actions[0] {
             actions.removeFirst()
+        }
+        
+        if let message = messages.first, case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
+            actions.removeAll()
+            
+            switch customChatContents.kind {
+            case .quickReplyMessageInput:
+                if !messageText.isEmpty || (resourceAvailable && isImage) || diceEmoji != nil {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        var messageEntities: [MessageTextEntity]?
+                        var restrictedText: String?
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                messageEntities = attribute.entities
+                            }
+                            if let attribute = attribute as? RestrictedContentMessageAttribute {
+                                restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                            }
+                        }
+                        
+                        if let restrictedText = restrictedText {
+                            storeMessageTextInPasteboard(restrictedText, entities: nil)
+                        } else {
+                            if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
+                               let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
+                                storeMessageTextInPasteboard(translation.text, entities: translation.entities)
+                            } else {
+                                storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                            }
+                        }
+                        
+                        Queue.mainQueue().after(0.2, {
+                            let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                            controllerInteraction.displayUndo(content)
+                        })
+                        
+                        f(.default)
+                    })))
+                }
+                
+                if message.id.namespace == Namespaces.Message.QuickReplyCloud {
+                    if data.canEdit {
+                        actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { c, f in
+                            interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                                f(.custom(transition))
+                            })
+                        })))
+                    }
+                }
+                
+                if message.id.id < Int32.max - 1000 {
+                    if !actions.isEmpty {
+                        actions.append(.separator)
+                    }
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    }, action: { [weak customChatContents] _, f in
+                        f(.dismissWithoutContent)
+                        
+                        guard let customChatContents else {
+                            return
+                        }
+                        customChatContents.deleteMessages(ids: messages.map(\.id))
+                    })))
+                }
+            }
         }
         
         return ContextController.Items(content: .list(actions), tip: nil)

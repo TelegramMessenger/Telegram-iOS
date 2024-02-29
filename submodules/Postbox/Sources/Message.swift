@@ -639,6 +639,10 @@ public extension MessageAttribute {
 
 public struct MessageGroupInfo: Equatable {
     public let stableId: UInt32
+    
+    public init(stableId: UInt32) {
+        self.stableId = stableId
+    }
 }
 
 public final class Message {
@@ -730,6 +734,14 @@ public final class Message {
         self.associatedMedia = associatedMedia
         self.associatedThreadInfo = associatedThreadInfo
         self.associatedStories = associatedStories
+    }
+    
+    public func withUpdatedStableId(stableId: UInt32) -> Message {
+        return Message(stableId: stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo, associatedStories: self.associatedStories)
+    }
+    
+    public func withUpdatedId(id: MessageId) -> Message {
+        return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, customTags: self.customTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds, associatedMedia: self.associatedMedia, associatedThreadInfo: self.associatedThreadInfo, associatedStories: self.associatedStories)
     }
     
     public func withUpdatedStableVersion(stableVersion: UInt32) -> Message {
@@ -1017,7 +1029,7 @@ final class InternalStoreMessage {
     }
 }
 
-public enum MessageIdNamespaces {
+public enum MessageIdNamespaces: Equatable {
     case all
     case just(Set<MessageId.Namespace>)
     case not(Set<MessageId.Namespace>)
@@ -1031,5 +1043,25 @@ public enum MessageIdNamespaces {
         case let .not(namespaces):
             return !namespaces.contains(namespace)
         }
+    }
+}
+
+public struct PeerAndThreadId: Hashable {
+    public var peerId: PeerId
+    public var threadId: Int64?
+    
+    public init(peerId: PeerId, threadId: Int64?) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
+}
+
+public struct MessageAndThreadId: Hashable {
+    public var messageId: MessageId
+    public var threadId: Int64?
+    
+    public init(messageId: MessageId, threadId: Int64?) {
+        self.messageId = messageId
+        self.threadId = threadId
     }
 }

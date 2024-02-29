@@ -425,6 +425,58 @@ public extension Api.account {
     }
 }
 public extension Api.account {
+    enum ConnectedBots: TypeConstructorDescription {
+        case connectedBots(connectedBots: [Api.ConnectedBot], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .connectedBots(let connectedBots, let users):
+                    if boxed {
+                        buffer.appendInt32(400029819)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(connectedBots.count))
+                    for item in connectedBots {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .connectedBots(let connectedBots, let users):
+                return ("connectedBots", [("connectedBots", connectedBots as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_connectedBots(_ reader: BufferReader) -> ConnectedBots? {
+            var _1: [Api.ConnectedBot]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ConnectedBot.self)
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.ConnectedBots.connectedBots(connectedBots: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.account {
     enum ContentSettings: TypeConstructorDescription {
         case contentSettings(flags: Int32)
     
@@ -1234,58 +1286,6 @@ public extension Api.account {
         }
         public static func parse_wallPapersNotModified(_ reader: BufferReader) -> WallPapers? {
             return Api.account.WallPapers.wallPapersNotModified
-        }
-    
-    }
-}
-public extension Api.account {
-    enum WebAuthorizations: TypeConstructorDescription {
-        case webAuthorizations(authorizations: [Api.WebAuthorization], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .webAuthorizations(let authorizations, let users):
-                    if boxed {
-                        buffer.appendInt32(-313079300)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(authorizations.count))
-                    for item in authorizations {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .webAuthorizations(let authorizations, let users):
-                return ("webAuthorizations", [("authorizations", authorizations as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_webAuthorizations(_ reader: BufferReader) -> WebAuthorizations? {
-            var _1: [Api.WebAuthorization]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.WebAuthorization.self)
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.WebAuthorizations.webAuthorizations(authorizations: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

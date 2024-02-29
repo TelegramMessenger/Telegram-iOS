@@ -843,7 +843,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                         count: 40,
                         clipHoles: true,
                         anchor: inputAnchor,
-                        namespaces: .not(Namespaces.Message.allScheduled)
+                        namespaces: .not(Namespaces.Message.allNonRegular)
                     )
                     if !testView.isLoading || transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id)) != nil {
                         let initialAnchor: ChatReplyThreadMessage.Anchor

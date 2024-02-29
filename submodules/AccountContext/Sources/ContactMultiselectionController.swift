@@ -45,6 +45,7 @@ public enum ContactMultiselectionControllerMode {
         public var chatListFilters: [ChatListFilter]?
         public var displayAutoremoveTimeout: Bool
         public var displayPresence: Bool
+        public var onlyUsers: Bool
         
         public init(
             title: String,
@@ -53,7 +54,8 @@ public enum ContactMultiselectionControllerMode {
             additionalCategories: ContactMultiselectionControllerAdditionalCategories?,
             chatListFilters: [ChatListFilter]?,
             displayAutoremoveTimeout: Bool = false,
-            displayPresence: Bool = false
+            displayPresence: Bool = false,
+            onlyUsers: Bool = false
         ) {
             self.title = title
             self.searchPlaceholder = searchPlaceholder
@@ -62,6 +64,7 @@ public enum ContactMultiselectionControllerMode {
             self.chatListFilters = chatListFilters
             self.displayAutoremoveTimeout = displayAutoremoveTimeout
             self.displayPresence = displayPresence
+            self.onlyUsers = onlyUsers
         }
     }
     

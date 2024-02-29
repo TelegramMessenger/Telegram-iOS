@@ -38,6 +38,7 @@ public enum PremiumIntroSource {
     case presence
     case readTime
     case messageTags
+    case folderTags
 }
 
 public enum PremiumGiftSource: Equatable {
@@ -70,6 +71,14 @@ public enum PremiumDemoSubject {
     case messageTags
     case lastSeen
     case messagePrivacy
+    case folderTags
+    
+    case businessLocation
+    case businessHours
+    case businessGreetingMessage
+    case businessQuickReplies
+    case businessAwayMessage
+    case businessChatBots
 }
 
 public enum PremiumLimitSubject {

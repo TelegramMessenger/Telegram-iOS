@@ -187,7 +187,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             if ["home", "work"].contains(venueType) {
                 completion(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil), nil, nil, nil, nil)
             } else {
-                completion(venue, queryId, resultId, nil, nil)
+                completion(venue, queryId, resultId, venue.venue?.address, nil)
             }
             strongSelf.dismiss()
         }, toggleMapModeSelection: { [weak self] in

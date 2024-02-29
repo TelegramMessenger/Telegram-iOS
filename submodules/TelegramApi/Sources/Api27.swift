@@ -355,6 +355,64 @@ public extension Api.help {
     }
 }
 public extension Api.help {
+    enum TimezonesList: TypeConstructorDescription {
+        case timezonesList(timezones: [Api.Timezone], hash: Int32)
+        case timezonesListNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .timezonesList(let timezones, let hash):
+                    if boxed {
+                        buffer.appendInt32(2071260529)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(timezones.count))
+                    for item in timezones {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    break
+                case .timezonesListNotModified:
+                    if boxed {
+                        buffer.appendInt32(-1761146676)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .timezonesList(let timezones, let hash):
+                return ("timezonesList", [("timezones", timezones as Any), ("hash", hash as Any)])
+                case .timezonesListNotModified:
+                return ("timezonesListNotModified", [])
+    }
+    }
+    
+        public static func parse_timezonesList(_ reader: BufferReader) -> TimezonesList? {
+            var _1: [Api.Timezone]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Timezone.self)
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.help.TimezonesList.timezonesList(timezones: _1!, hash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_timezonesListNotModified(_ reader: BufferReader) -> TimezonesList? {
+            return Api.help.TimezonesList.timezonesListNotModified
+        }
+    
+    }
+}
+public extension Api.help {
     enum UserInfo: TypeConstructorDescription {
         case userInfo(message: String, entities: [Api.MessageEntity], author: String, date: Int32)
         case userInfoEmpty
@@ -1233,67 +1291,19 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
-    enum Dialogs: TypeConstructorDescription {
-        case dialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
-        case dialogsNotModified(count: Int32)
-        case dialogsSlice(count: Int32, dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+    enum DialogFilters: TypeConstructorDescription {
+        case dialogFilters(flags: Int32, filters: [Api.DialogFilter])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialogs(let dialogs, let messages, let chats, let users):
+                case .dialogFilters(let flags, let filters):
                     if boxed {
-                        buffer.appendInt32(364538944)
+                        buffer.appendInt32(718878489)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(dialogs.count))
-                    for item in dialogs {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .dialogsNotModified(let count):
-                    if boxed {
-                        buffer.appendInt32(-253500010)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    break
-                case .dialogsSlice(let count, let dialogs, let messages, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(1910543603)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(dialogs.count))
-                    for item in dialogs {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
+                    buffer.appendInt32(Int32(filters.count))
+                    for item in filters {
                         item.serialize(buffer, true)
                     }
                     break
@@ -1302,80 +1312,22 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialogs(let dialogs, let messages, let chats, let users):
-                return ("dialogs", [("dialogs", dialogs as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
-                case .dialogsNotModified(let count):
-                return ("dialogsNotModified", [("count", count as Any)])
-                case .dialogsSlice(let count, let dialogs, let messages, let chats, let users):
-                return ("dialogsSlice", [("count", count as Any), ("dialogs", dialogs as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .dialogFilters(let flags, let filters):
+                return ("dialogFilters", [("flags", flags as Any), ("filters", filters as Any)])
     }
     }
     
-        public static func parse_dialogs(_ reader: BufferReader) -> Dialogs? {
-            var _1: [Api.Dialog]?
+        public static func parse_dialogFilters(_ reader: BufferReader) -> DialogFilters? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.DialogFilter]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Dialog.self)
-            }
-            var _2: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _3: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _4: [Api.User]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DialogFilter.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.Dialogs.dialogs(dialogs: _1!, messages: _2!, chats: _3!, users: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_dialogsNotModified(_ reader: BufferReader) -> Dialogs? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.Dialogs.dialogsNotModified(count: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_dialogsSlice(_ reader: BufferReader) -> Dialogs? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.Dialog]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Dialog.self)
-            }
-            var _3: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.Dialogs.dialogsSlice(count: _1!, dialogs: _2!, messages: _3!, chats: _4!, users: _5!)
+            if _c1 && _c2 {
+                return Api.messages.DialogFilters.dialogFilters(flags: _1!, filters: _2!)
             }
             else {
                 return nil

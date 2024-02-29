@@ -464,7 +464,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     break
                 }
             }
-            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
+            if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal || item.message.id.namespace == Namespaces.Message.QuickReplyLocal {
                 notConsumed = true
             }
             
@@ -947,6 +947,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                         }
                         animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
+                    }
+                    
+                    if case .customChatContents = item.associatedData.subject {
+                        strongSelf.dateAndStatusNode.isHidden = true
                     }
                     
                     if let videoNode = strongSelf.videoNode {

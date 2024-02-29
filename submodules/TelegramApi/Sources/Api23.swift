@@ -602,15 +602,16 @@ public extension Api {
 }
 public extension Api {
     enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, id: Int64, about: String?, settings: Api.PeerSettings, personalPhoto: Api.Photo?, profilePhoto: Api.Photo?, fallbackPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?, botGroupAdminRights: Api.ChatAdminRights?, botBroadcastAdminRights: Api.ChatAdminRights?, premiumGifts: [Api.PremiumGiftOption]?, wallpaper: Api.WallPaper?, stories: Api.PeerStories?)
+        case userFull(flags: Int32, flags2: Int32, id: Int64, about: String?, settings: Api.PeerSettings, personalPhoto: Api.Photo?, profilePhoto: Api.Photo?, fallbackPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?, botGroupAdminRights: Api.ChatAdminRights?, botBroadcastAdminRights: Api.ChatAdminRights?, premiumGifts: [Api.PremiumGiftOption]?, wallpaper: Api.WallPaper?, stories: Api.PeerStories?, businessWorkHours: Api.BusinessWorkHours?, businessLocation: Api.BusinessLocation?, businessGreetingMessage: Api.BusinessGreetingMessage?, businessAwayMessage: Api.BusinessAwayMessage?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts, let wallpaper, let stories):
+                case .userFull(let flags, let flags2, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts, let wallpaper, let stories, let businessWorkHours, let businessLocation, let businessGreetingMessage, let businessAwayMessage):
                     if boxed {
-                        buffer.appendInt32(-1179571092)
+                        buffer.appendInt32(587153029)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(flags2, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
                     settings.serialize(buffer, true)
@@ -634,102 +635,129 @@ public extension Api {
                     }}
                     if Int(flags) & Int(1 << 24) != 0 {wallpaper!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 25) != 0 {stories!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 0) != 0 {businessWorkHours!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 1) != 0 {businessLocation!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 2) != 0 {businessGreetingMessage!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 3) != 0 {businessAwayMessage!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts, let wallpaper, let stories):
-                return ("userFull", [("flags", flags as Any), ("id", id as Any), ("about", about as Any), ("settings", settings as Any), ("personalPhoto", personalPhoto as Any), ("profilePhoto", profilePhoto as Any), ("fallbackPhoto", fallbackPhoto as Any), ("notifySettings", notifySettings as Any), ("botInfo", botInfo as Any), ("pinnedMsgId", pinnedMsgId as Any), ("commonChatsCount", commonChatsCount as Any), ("folderId", folderId as Any), ("ttlPeriod", ttlPeriod as Any), ("themeEmoticon", themeEmoticon as Any), ("privateForwardName", privateForwardName as Any), ("botGroupAdminRights", botGroupAdminRights as Any), ("botBroadcastAdminRights", botBroadcastAdminRights as Any), ("premiumGifts", premiumGifts as Any), ("wallpaper", wallpaper as Any), ("stories", stories as Any)])
+                case .userFull(let flags, let flags2, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts, let wallpaper, let stories, let businessWorkHours, let businessLocation, let businessGreetingMessage, let businessAwayMessage):
+                return ("userFull", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("about", about as Any), ("settings", settings as Any), ("personalPhoto", personalPhoto as Any), ("profilePhoto", profilePhoto as Any), ("fallbackPhoto", fallbackPhoto as Any), ("notifySettings", notifySettings as Any), ("botInfo", botInfo as Any), ("pinnedMsgId", pinnedMsgId as Any), ("commonChatsCount", commonChatsCount as Any), ("folderId", folderId as Any), ("ttlPeriod", ttlPeriod as Any), ("themeEmoticon", themeEmoticon as Any), ("privateForwardName", privateForwardName as Any), ("botGroupAdminRights", botGroupAdminRights as Any), ("botBroadcastAdminRights", botBroadcastAdminRights as Any), ("premiumGifts", premiumGifts as Any), ("wallpaper", wallpaper as Any), ("stories", stories as Any), ("businessWorkHours", businessWorkHours as Any), ("businessLocation", businessLocation as Any), ("businessGreetingMessage", businessGreetingMessage as Any), ("businessAwayMessage", businessAwayMessage as Any)])
     }
     }
     
         public static func parse_userFull(_ reader: BufferReader) -> UserFull? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
-            var _4: Api.PeerSettings?
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: Api.PeerSettings?
             if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.PeerSettings
+                _5 = Api.parse(reader, signature: signature) as? Api.PeerSettings
             }
-            var _5: Api.Photo?
-            if Int(_1!) & Int(1 << 21) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.Photo
-            } }
             var _6: Api.Photo?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 21) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.Photo
             } }
             var _7: Api.Photo?
-            if Int(_1!) & Int(1 << 22) != 0 {if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.Photo
             } }
-            var _8: Api.PeerNotifySettings?
+            var _8: Api.Photo?
+            if Int(_1!) & Int(1 << 22) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            var _9: Api.PeerNotifySettings?
             if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+                _9 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
-            var _9: Api.BotInfo?
+            var _10: Api.BotInfo?
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.BotInfo
+                _10 = Api.parse(reader, signature: signature) as? Api.BotInfo
             } }
-            var _10: Int32?
-            if Int(_1!) & Int(1 << 6) != 0 {_10 = reader.readInt32() }
             var _11: Int32?
-            _11 = reader.readInt32()
+            if Int(_1!) & Int(1 << 6) != 0 {_11 = reader.readInt32() }
             var _12: Int32?
-            if Int(_1!) & Int(1 << 11) != 0 {_12 = reader.readInt32() }
+            _12 = reader.readInt32()
             var _13: Int32?
-            if Int(_1!) & Int(1 << 14) != 0 {_13 = reader.readInt32() }
-            var _14: String?
-            if Int(_1!) & Int(1 << 15) != 0 {_14 = parseString(reader) }
+            if Int(_1!) & Int(1 << 11) != 0 {_13 = reader.readInt32() }
+            var _14: Int32?
+            if Int(_1!) & Int(1 << 14) != 0 {_14 = reader.readInt32() }
             var _15: String?
-            if Int(_1!) & Int(1 << 16) != 0 {_15 = parseString(reader) }
-            var _16: Api.ChatAdminRights?
-            if Int(_1!) & Int(1 << 17) != 0 {if let signature = reader.readInt32() {
-                _16 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
-            } }
+            if Int(_1!) & Int(1 << 15) != 0 {_15 = parseString(reader) }
+            var _16: String?
+            if Int(_1!) & Int(1 << 16) != 0 {_16 = parseString(reader) }
             var _17: Api.ChatAdminRights?
-            if Int(_1!) & Int(1 << 18) != 0 {if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 17) != 0 {if let signature = reader.readInt32() {
                 _17 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
             } }
-            var _18: [Api.PremiumGiftOption]?
+            var _18: Api.ChatAdminRights?
+            if Int(_1!) & Int(1 << 18) != 0 {if let signature = reader.readInt32() {
+                _18 = Api.parse(reader, signature: signature) as? Api.ChatAdminRights
+            } }
+            var _19: [Api.PremiumGiftOption]?
             if Int(_1!) & Int(1 << 19) != 0 {if let _ = reader.readInt32() {
-                _18 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PremiumGiftOption.self)
+                _19 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PremiumGiftOption.self)
             } }
-            var _19: Api.WallPaper?
+            var _20: Api.WallPaper?
             if Int(_1!) & Int(1 << 24) != 0 {if let signature = reader.readInt32() {
-                _19 = Api.parse(reader, signature: signature) as? Api.WallPaper
+                _20 = Api.parse(reader, signature: signature) as? Api.WallPaper
             } }
-            var _20: Api.PeerStories?
+            var _21: Api.PeerStories?
             if Int(_1!) & Int(1 << 25) != 0 {if let signature = reader.readInt32() {
-                _20 = Api.parse(reader, signature: signature) as? Api.PeerStories
+                _21 = Api.parse(reader, signature: signature) as? Api.PeerStories
+            } }
+            var _22: Api.BusinessWorkHours?
+            if Int(_2!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _22 = Api.parse(reader, signature: signature) as? Api.BusinessWorkHours
+            } }
+            var _23: Api.BusinessLocation?
+            if Int(_2!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _23 = Api.parse(reader, signature: signature) as? Api.BusinessLocation
+            } }
+            var _24: Api.BusinessGreetingMessage?
+            if Int(_2!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _24 = Api.parse(reader, signature: signature) as? Api.BusinessGreetingMessage
+            } }
+            var _25: Api.BusinessAwayMessage?
+            if Int(_2!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _25 = Api.parse(reader, signature: signature) as? Api.BusinessAwayMessage
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 21) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 22) == 0) || _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 3) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 6) == 0) || _10 != nil
-            let _c11 = _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 11) == 0) || _12 != nil
-            let _c13 = (Int(_1!) & Int(1 << 14) == 0) || _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 15) == 0) || _14 != nil
-            let _c15 = (Int(_1!) & Int(1 << 16) == 0) || _15 != nil
-            let _c16 = (Int(_1!) & Int(1 << 17) == 0) || _16 != nil
-            let _c17 = (Int(_1!) & Int(1 << 18) == 0) || _17 != nil
-            let _c18 = (Int(_1!) & Int(1 << 19) == 0) || _18 != nil
-            let _c19 = (Int(_1!) & Int(1 << 24) == 0) || _19 != nil
-            let _c20 = (Int(_1!) & Int(1 << 25) == 0) || _20 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 {
-                return Api.UserFull.userFull(flags: _1!, id: _2!, about: _3, settings: _4!, personalPhoto: _5, profilePhoto: _6, fallbackPhoto: _7, notifySettings: _8!, botInfo: _9, pinnedMsgId: _10, commonChatsCount: _11!, folderId: _12, ttlPeriod: _13, themeEmoticon: _14, privateForwardName: _15, botGroupAdminRights: _16, botBroadcastAdminRights: _17, premiumGifts: _18, wallpaper: _19, stories: _20)
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 21) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 22) == 0) || _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 3) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 6) == 0) || _11 != nil
+            let _c12 = _12 != nil
+            let _c13 = (Int(_1!) & Int(1 << 11) == 0) || _13 != nil
+            let _c14 = (Int(_1!) & Int(1 << 14) == 0) || _14 != nil
+            let _c15 = (Int(_1!) & Int(1 << 15) == 0) || _15 != nil
+            let _c16 = (Int(_1!) & Int(1 << 16) == 0) || _16 != nil
+            let _c17 = (Int(_1!) & Int(1 << 17) == 0) || _17 != nil
+            let _c18 = (Int(_1!) & Int(1 << 18) == 0) || _18 != nil
+            let _c19 = (Int(_1!) & Int(1 << 19) == 0) || _19 != nil
+            let _c20 = (Int(_1!) & Int(1 << 24) == 0) || _20 != nil
+            let _c21 = (Int(_1!) & Int(1 << 25) == 0) || _21 != nil
+            let _c22 = (Int(_2!) & Int(1 << 0) == 0) || _22 != nil
+            let _c23 = (Int(_2!) & Int(1 << 1) == 0) || _23 != nil
+            let _c24 = (Int(_2!) & Int(1 << 2) == 0) || _24 != nil
+            let _c25 = (Int(_2!) & Int(1 << 3) == 0) || _25 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 {
+                return Api.UserFull.userFull(flags: _1!, flags2: _2!, id: _3!, about: _4, settings: _5!, personalPhoto: _6, profilePhoto: _7, fallbackPhoto: _8, notifySettings: _9!, botInfo: _10, pinnedMsgId: _11, commonChatsCount: _12!, folderId: _13, ttlPeriod: _14, themeEmoticon: _15, privateForwardName: _16, botGroupAdminRights: _17, botBroadcastAdminRights: _18, premiumGifts: _19, wallpaper: _20, stories: _21, businessWorkHours: _22, businessLocation: _23, businessGreetingMessage: _24, businessAwayMessage: _25)
             }
             else {
                 return nil

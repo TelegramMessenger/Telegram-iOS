@@ -29,6 +29,7 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/TextFormat",
         "//submodules/PhotoResources",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
     ],
     visibility = [
         "//visibility:public",

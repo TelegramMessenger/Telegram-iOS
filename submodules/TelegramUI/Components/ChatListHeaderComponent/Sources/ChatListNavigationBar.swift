@@ -27,6 +27,7 @@ public final class ChatListNavigationBar: Component {
     public let statusBarHeight: CGFloat
     public let sideInset: CGFloat
     public let isSearchActive: Bool
+    public let isSearchEnabled: Bool
     public let primaryContent: ChatListHeaderComponent.Content?
     public let secondaryContent: ChatListHeaderComponent.Content?
     public let secondaryTransition: CGFloat
@@ -48,6 +49,7 @@ public final class ChatListNavigationBar: Component {
         statusBarHeight: CGFloat,
         sideInset: CGFloat,
         isSearchActive: Bool,
+        isSearchEnabled: Bool,
         primaryContent: ChatListHeaderComponent.Content?,
         secondaryContent: ChatListHeaderComponent.Content?,
         secondaryTransition: CGFloat,
@@ -68,6 +70,7 @@ public final class ChatListNavigationBar: Component {
         self.statusBarHeight = statusBarHeight
         self.sideInset = sideInset
         self.isSearchActive = isSearchActive
+        self.isSearchEnabled = isSearchEnabled
         self.primaryContent = primaryContent
         self.secondaryContent = secondaryContent
         self.secondaryTransition = secondaryTransition
@@ -100,6 +103,9 @@ public final class ChatListNavigationBar: Component {
             return false
         }
         if lhs.isSearchActive != rhs.isSearchActive {
+            return false
+        }
+        if lhs.isSearchEnabled != rhs.isSearchEnabled {
             return false
         }
         if lhs.primaryContent != rhs.primaryContent {
@@ -316,6 +322,9 @@ public final class ChatListNavigationBar: Component {
             
             searchContentNode.updateLayout(size: searchSize, leftInset: component.sideInset, rightInset: component.sideInset, transition: transition.containedViewLayoutTransition)
             
+            transition.setAlpha(view: searchContentNode.view, alpha: component.isSearchEnabled ? 1.0 : 0.5)
+            searchContentNode.isUserInteractionEnabled = component.isSearchEnabled
+            
             let headerTransition = transition
             
             let storiesOffsetFraction: CGFloat
@@ -520,6 +529,7 @@ public final class ChatListNavigationBar: Component {
                     statusBarHeight: component.statusBarHeight,
                     sideInset: component.sideInset,
                     isSearchActive: component.isSearchActive,
+                    isSearchEnabled: component.isSearchEnabled,
                     primaryContent: component.primaryContent,
                     secondaryContent: component.secondaryContent,
                     secondaryTransition: component.secondaryTransition,

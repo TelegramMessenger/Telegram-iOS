@@ -51,8 +51,10 @@ import PeerInfoScreen
 import ChatQrCodeScreen
 import UndoUI
 import ChatMessageNotificationItem
-import BusinessSetupScreen
 import ChatbotSetupScreen
+import BusinessLocationSetupScreen
+import BusinessHoursSetupScreen
+import AutomaticBusinessMessageSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1752,6 +1754,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openPremiumStatusInfo: { _, _, _, _ in
         }, openRecommendedChannelContextMenu: { _, _, _ in
         }, openGroupBoostInfo: { _, _ in
+        }, openStickerEditor: {
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1880,12 +1883,44 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return archiveSettingsController(context: context)
     }
     
-    public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
-        return BusinessSetupScreen(context: context)
+    public func makeFilterSettingsController(context: AccountContext, modal: Bool, scrollToTags: Bool, dismissed: (() -> Void)?) -> ViewController {
+        return chatListFilterPresetListController(context: context, mode: modal ? .modal : .default, scrollToTags: scrollToTags, dismissed: dismissed)
     }
     
-    public func makeChatbotSetupScreen(context: AccountContext) -> ViewController {
-        return ChatbotSetupScreen(context: context)
+    public func makeBusinessSetupScreen(context: AccountContext) -> ViewController {
+        return PremiumIntroScreen(context: context, mode: .business, source: .settings, modal: false, forceDark: false)
+    }
+    
+    public func makeChatbotSetupScreen(context: AccountContext, initialData: ChatbotSetupScreenInitialData) -> ViewController {
+        return ChatbotSetupScreen(context: context, initialData: initialData as! ChatbotSetupScreen.InitialData)
+    }
+    
+    public func makeChatbotSetupScreenInitialData(context: AccountContext) -> Signal<ChatbotSetupScreenInitialData, NoError> {
+        return ChatbotSetupScreen.initialData(context: context)
+    }
+    
+    public func makeBusinessLocationSetupScreen(context: AccountContext, initialValue: TelegramBusinessLocation?, completion: @escaping (TelegramBusinessLocation?) -> Void) -> ViewController {
+        return BusinessLocationSetupScreen(context: context, initialValue: initialValue, completion: completion)
+    }
+    
+    public func makeBusinessHoursSetupScreen(context: AccountContext, initialValue: TelegramBusinessHours?, completion: @escaping (TelegramBusinessHours?) -> Void) -> ViewController {
+        return BusinessHoursSetupScreen(context: context, initialValue: initialValue, completion: completion)
+    }
+    
+    public func makeAutomaticBusinessMessageSetupScreen(context: AccountContext, initialData: AutomaticBusinessMessageSetupScreenInitialData, isAwayMode: Bool) -> ViewController {
+        return AutomaticBusinessMessageSetupScreen(context: context, initialData: initialData as! AutomaticBusinessMessageSetupScreen.InitialData, mode: isAwayMode ? .away : .greeting)
+    }
+    
+    public func makeAutomaticBusinessMessageSetupScreenInitialData(context: AccountContext) -> Signal<AutomaticBusinessMessageSetupScreenInitialData, NoError> {
+        return AutomaticBusinessMessageSetupScreen.initialData(context: context)
+    }
+    
+    public func makeQuickReplySetupScreen(context: AccountContext, initialData: QuickReplySetupScreenInitialData) -> ViewController {
+        return QuickReplySetupScreen(context: context, initialData: initialData as! QuickReplySetupScreen.InitialData, mode: .manage)
+    }
+    
+    public func makeQuickReplySetupScreenInitialData(context: AccountContext) -> Signal<QuickReplySetupScreenInitialData, NoError> {
+        return QuickReplySetupScreen.initialData(context: context)
     }
     
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
@@ -1965,8 +2000,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .readTime
         case .messageTags:
             mappedSource = .messageTags
+        case .folderTags:
+            mappedSource = .folderTags
         }
-        let controller = PremiumIntroScreen(context: context, modal: modal, source: mappedSource, forceDark: forceDark)
+        let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
         controller.wasDismissed = dismissed
         return controller
     }
@@ -2014,6 +2051,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .lastSeen
         case .messagePrivacy:
             mappedSubject = .messagePrivacy
+        case .folderTags:
+            mappedSubject = .folderTags
+        default:
+            mappedSubject = .doubleLimits
         }
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }

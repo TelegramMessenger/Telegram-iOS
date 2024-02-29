@@ -284,7 +284,9 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
         
         let titleString: String
-        if canEditMedia {
+        if let message, message.id.namespace == Namespaces.Message.QuickReplyCloud {
+            titleString = self.strings.Conversation_EditingQuickReplyPanelTitle
+        } else if canEditMedia {
             titleString = isPhoto ? self.strings.Conversation_EditingPhotoPanelTitle : self.strings.Conversation_EditingCaptionPanelTitle
         } else {
             titleString = self.strings.Conversation_EditingMessagePanelTitle

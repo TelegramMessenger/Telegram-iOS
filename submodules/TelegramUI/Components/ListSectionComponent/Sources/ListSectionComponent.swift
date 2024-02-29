@@ -217,6 +217,7 @@ public final class ListSectionComponent: Component {
                     itemTransition = itemTransition.withAnimation(.none)
                     itemView = ItemView()
                     self.itemViews[itemId] = itemView
+                    itemView.contents.parentState = state
                 }
                 
                 let itemSize = itemView.contents.update(

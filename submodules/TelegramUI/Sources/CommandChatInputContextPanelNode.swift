@@ -13,34 +13,226 @@ import ChatControllerInteraction
 import ItemListUI
 import ChatContextQuery
 import ChatInputContextPanelNode
+import ChatListUI
+import ComponentFlow
+import ComponentDisplayAdapters
 
-private struct CommandChatInputContextPanelEntryStableId: Hashable {
-    let command: PeerCommand
+private enum CommandChatInputContextPanelEntryStableId: Hashable {
+    case editShortcuts
+    case command(PeerCommand)
+    case shortcut(Int32)
 }
 
 private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
-    let index: Int
-    let command: PeerCommand
-    let theme: PresentationTheme
-    
-    var stableId: CommandChatInputContextPanelEntryStableId {
-        return CommandChatInputContextPanelEntryStableId(command: self.command)
+    struct Command: Equatable {
+        let command: ChatInputTextCommand
+        let accountPeer: EnginePeer?
+        let searchQuery: String?
+        
+        static func ==(lhs: Command, rhs: Command) -> Bool {
+            return lhs.command == rhs.command && lhs.accountPeer == rhs.accountPeer && lhs.searchQuery == rhs.searchQuery
+        }
     }
     
-    func withUpdatedTheme(_ theme: PresentationTheme) -> CommandChatInputContextPanelEntry {
-        return CommandChatInputContextPanelEntry(index: self.index, command: self.command, theme: theme)
+    enum Content: Equatable {
+        case editShortcuts
+        case command(Command)
+    }
+    
+    let content: Content
+    let index: Int
+    let theme: PresentationTheme
+    
+    init(index: Int, content: Content, theme: PresentationTheme) {
+        self.content = content
+        self.index = index
+        self.theme = theme
     }
     
     static func ==(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.command == rhs.command && lhs.theme === rhs.theme
+        return lhs.index == rhs.index && lhs.content == rhs.content && lhs.theme === rhs.theme
     }
     
     static func <(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> ListViewItem {
-        return CommandChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), command: self.command, commandSelected: commandSelected)
+    var stableId: CommandChatInputContextPanelEntryStableId {
+        switch self.content {
+        case .editShortcuts:
+            return .editShortcuts
+        case let .command(command):
+            switch command.command {
+            case let .command(command):
+                return .command(command)
+            case let .shortcut(shortcut):
+                return .shortcut(shortcut.id)
+            }
+        }
+    }
+    
+    func withUpdatedTheme(_ theme: PresentationTheme) -> CommandChatInputContextPanelEntry {
+        return CommandChatInputContextPanelEntry(index: self.index, content: self.content, theme: theme)
+    }
+    
+    func item(context: AccountContext, presentationData: PresentationData, commandSelected: @escaping (ChatInputTextCommand, Bool) -> Void, openEditShortcuts: @escaping () -> Void) -> ListViewItem {
+        switch self.content {
+        case .editShortcuts:
+            return VerticalListContextResultsChatInputPanelButtonItem(theme: presentationData.theme, style: .round, title: presentationData.strings.Chat_CommandList_EditQuickReplies, pressed: {
+                openEditShortcuts()
+            })
+        case let .command(command):
+            switch command.command {
+            case let .command(command):
+                return CommandChatInputPanelItem(context: context, presentationData: ItemListPresentationData(presentationData), command: command, commandSelected: { value, sendImmediately in
+                    commandSelected(.command(value), sendImmediately)
+                })
+            case let .shortcut(shortcut):
+                let chatListNodeInteraction = ChatListNodeInteraction(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    activateSearch: {
+                    },
+                    peerSelected: { _, _, _, _ in
+                        commandSelected(.shortcut(shortcut), true)
+                    },
+                    disabledPeerSelected: { _, _, _ in
+                    },
+                    togglePeerSelected: { _, _ in
+                    },
+                    togglePeersSelection: { _, _ in
+                    },
+                    additionalCategorySelected: { _ in
+                    },
+                    messageSelected: { _, _, _, _ in
+                        commandSelected(.shortcut(shortcut), true)
+                    },
+                    groupSelected: { _ in
+                    },
+                    addContact: { _ in
+                    },
+                    setPeerIdWithRevealedOptions: { _, _ in
+                    },
+                    setItemPinned: { _, _ in
+                    },
+                    setPeerMuted: { _, _ in
+                    },
+                    setPeerThreadMuted: { _, _, _ in
+                    },
+                    deletePeer: { _, _ in
+                    },
+                    deletePeerThread: { _, _ in
+                    },
+                    setPeerThreadStopped: { _, _, _ in
+                    },
+                    setPeerThreadPinned: { _, _, _ in
+                    },
+                    setPeerThreadHidden: { _, _, _ in
+                    },
+                    updatePeerGrouping: { _, _ in
+                    },
+                    togglePeerMarkedUnread: { _, _ in
+                    },
+                    toggleArchivedFolderHiddenByDefault: {
+                    },
+                    toggleThreadsSelection: { _, _ in
+                    },
+                    hidePsa: { _ in
+                    },
+                    activateChatPreview: { _, _, _, _, _ in
+                    },
+                    present: { _ in
+                    },
+                    openForumThread: { _, _ in
+                    },
+                    openStorageManagement: {
+                    },
+                    openPasswordSetup: {
+                    },
+                    openPremiumIntro: {
+                    },
+                    openPremiumGift: {
+                    },
+                    openActiveSessions: {
+                    },
+                    performActiveSessionAction: { _, _ in
+                    },
+                    openChatFolderUpdates: {
+                    },
+                    hideChatFolderUpdates: {
+                    },
+                    openStories: { _, _ in
+                    },
+                    dismissNotice: { _ in
+                    },
+                    editPeer: { _ in
+                    }
+                )
+                
+                let chatListPresentationData = ChatListPresentationData(
+                    theme: presentationData.theme,
+                    fontSize: presentationData.listsFontSize,
+                    strings: presentationData.strings,
+                    dateTimeFormat: presentationData.dateTimeFormat,
+                    nameSortOrder: presentationData.nameSortOrder,
+                    nameDisplayOrder: presentationData.nameDisplayOrder,
+                    disableAnimations: false
+                )
+                
+                let renderedPeer: EngineRenderedPeer
+                if let accountPeer = command.accountPeer {
+                    renderedPeer = EngineRenderedPeer(peer: accountPeer)
+                } else {
+                    renderedPeer = EngineRenderedPeer(peerId: context.account.peerId, peers: [:], associatedMedia: [:])
+                }
+                
+                return ChatListItem(
+                    presentationData: chatListPresentationData,
+                    context: context,
+                    chatListLocation: .chatList(groupId: .root),
+                    filterData: nil,
+                    index: EngineChatList.Item.Index.chatList(ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: context.account.peerId, namespace: 0, id: 0), timestamp: 0))),
+                    content: .peer(ChatListItemContent.PeerData(
+                        messages: [shortcut.topMessage],
+                        peer: renderedPeer,
+                        threadInfo: nil,
+                        combinedReadState: nil,
+                        isRemovedFromTotalUnreadCount: false,
+                        presence: nil,
+                        hasUnseenMentions: false,
+                        hasUnseenReactions: false,
+                        draftState: nil,
+                        mediaDraftContentType: nil,
+                        inputActivities: nil,
+                        promoInfo: nil,
+                        ignoreUnreadBadge: false,
+                        displayAsMessage: false,
+                        hasFailedMessages: false,
+                        forumTopicData: nil,
+                        topForumTopicItems: [],
+                        autoremoveTimeout: nil,
+                        storyState: nil,
+                        requiresPremiumForMessaging: false,
+                        displayAsTopicList: false,
+                        tags: [],
+                        customMessageListData: ChatListItemContent.CustomMessageListData(
+                            commandPrefix: "/\(shortcut.shortcut)",
+                            searchQuery: command.searchQuery.flatMap { "/\($0)"},
+                            messageCount: shortcut.totalCount,
+                            hideSeparator: false
+                        )
+                    )),
+                    editing: false,
+                    hasActiveRevealControls: false,
+                    selected: false,
+                    header: nil,
+                    enableContextActions: false,
+                    hiddenOffset: false,
+                    interaction: chatListNodeInteraction
+                )
+            }
+        }
     }
 }
 
@@ -48,21 +240,33 @@ private struct CommandChatInputContextPanelTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
+    let hasShortcuts: Bool
+    let itemCountChanged: Bool
 }
 
-private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData,  commandSelected: @escaping (PeerCommand, Bool) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], context: AccountContext, presentationData: PresentationData,  commandSelected: @escaping (ChatInputTextCommand, Bool) -> Void, openEditShortcuts: @escaping () -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, commandSelected: commandSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, commandSelected: commandSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, commandSelected: commandSelected, openEditShortcuts: openEditShortcuts), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, commandSelected: commandSelected, openEditShortcuts: openEditShortcuts), directionHint: nil) }
     
-    return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
+    let itemCountChanged = fromEntries.count != toEntries.count
+    
+    return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates, hasShortcuts: toEntries.contains(where: { entry in
+        if case .editShortcuts = entry.content {
+            return true
+        }
+        return false
+    }), itemCountChanged: itemCountChanged)
 }
 
 final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     private let listView: ListView
+    private let listBackgroundView: UIView
     private var currentEntries: [CommandChatInputContextPanelEntry]?
+    private var contentOffsetChangeTransition: Transition?
+    private var isAnimatingOut: Bool = false
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
@@ -78,20 +282,54 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
+        self.listBackgroundView = UIView()
+        self.listBackgroundView.backgroundColor = theme.list.plainBackgroundColor
+        self.listBackgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        self.listBackgroundView.layer.cornerRadius = 10.0
+        
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.isOpaque = false
         self.clipsToBounds = true
         
+        self.view.addSubview(self.listBackgroundView)
         self.addSubnode(self.listView)
+        
+        self.listView.visibleContentOffsetChanged = { [weak self] offset in
+            guard let self else {
+                return
+            }
+            
+            if self.isAnimatingOut {
+                return
+            }
+            
+            var topItemOffset: CGFloat = self.listView.bounds.height
+            var isFirst = true
+            self.listView.forEachItemNode { itemNode in
+                if isFirst {
+                    isFirst = false
+                    topItemOffset = itemNode.frame.minY
+                }
+            }
+            
+            let transition: Transition = self.contentOffsetChangeTransition ?? .immediate
+            transition.setFrame(view: self.listBackgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: topItemOffset), size: CGSize(width: self.listView.bounds.width, height: self.listView.bounds.height + 1000.0)))
+        }
     }
     
-    func updateResults(_ results: [PeerCommand]) {
+    func updateResults(_ results: [ChatInputTextCommand], accountPeer: EnginePeer?, hasShortcuts: Bool, query: String?) {
         var entries: [CommandChatInputContextPanelEntry] = []
         var index = 0
         var stableIds = Set<CommandChatInputContextPanelEntryStableId>()
+        if hasShortcuts {
+            let entry = CommandChatInputContextPanelEntry(index: index, content: .editShortcuts, theme: self.theme)
+            stableIds.insert(entry.stableId)
+            entries.append(entry)
+            index += 1
+        }
         for command in results {
-            let entry = CommandChatInputContextPanelEntry(index: index, command: command, theme: self.theme)
+            let entry = CommandChatInputContextPanelEntry(index: index, content: .command(CommandChatInputContextPanelEntry.Command(command: command, accountPeer: accountPeer, searchQuery: query)), theme: self.theme)
             if stableIds.contains(entry.stableId) {
                 continue
             }
@@ -106,7 +344,11 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         let firstTime = self.currentEntries == nil
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let transition = preparedTransition(from: from ?? [], to: to, context: self.context, presentationData: presentationData, commandSelected: { [weak self] command, sendImmediately in
-            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+            guard let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction else {
+                return
+            }
+            switch command {
+            case let .command(command):
                 if sendImmediately {
                     interfaceInteraction.sendBotCommand(command.peer, "/" + command.command.text)
                 } else {
@@ -132,7 +374,14 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                         return (textInputState, inputMode)
                     }
                 }
+            case let .shortcut(shortcut):
+                interfaceInteraction.sendShortcut(shortcut.id)
             }
+        }, openEditShortcuts: { [weak self] in
+            guard let self, let interfaceInteraction = self.interfaceInteraction else {
+                return
+            }
+            interfaceInteraction.openEditShortcuts()
         })
         self.currentEntries = to
         self.enqueueTransition(transition, firstTime: firstTime)
@@ -153,12 +402,20 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
+            options.insert(.Synchronous)
+            options.insert(.LowLatency)
+            options.insert(.PreferSynchronousResourceLoading)
             if firstTime {
-                //options.insert(.Synchronous)
-                //options.insert(.LowLatency)
+                self.contentOffsetChangeTransition = .immediate
+                
+                self.listBackgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.listView.bounds.height), size: CGSize(width: self.listView.bounds.width, height: self.listView.bounds.height + 1000.0))
             } else {
-                options.insert(.AnimateTopItemPosition)
-                options.insert(.AnimateCrossfade)
+                if transition.itemCountChanged {
+                    options.insert(.AnimateTopItemPosition)
+                    options.insert(.AnimateCrossfade)
+                }
+                
+                self.contentOffsetChangeTransition = .spring(duration: 0.4)
             }
             
             var insets = UIEdgeInsets()
@@ -178,19 +435,45 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                     }
                     
                     if let topItemOffset = topItemOffset {
-                        let position = strongSelf.listView.layer.position
-                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
-                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
-                            strongSelf.listView.position = position
-                        }
+                        let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                        
+                        transition.animatePositionAdditive(layer: strongSelf.listView.layer, offset: CGPoint(x: 0.0, y: strongSelf.listView.bounds.size.height - topItemOffset))
+                        transition.animatePositionAdditive(layer: strongSelf.listBackgroundView.layer, offset: CGPoint(x: 0.0, y: strongSelf.listView.bounds.size.height - topItemOffset))
                     }
                 }
             })
+            
+            self.contentOffsetChangeTransition = nil
         }
     }
     
     private func topInsetForLayout(size: CGSize) -> CGFloat {
-        let minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        var minimumItemHeights: CGFloat = 0.0
+        if let currentEntries = self.currentEntries, !currentEntries.isEmpty {
+            let indexLimit = min(4, currentEntries.count - 1)
+            for i in 0 ... indexLimit {
+                var itemHeight: CGFloat
+                switch currentEntries[i].content {
+                case .editShortcuts:
+                    itemHeight = VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight(style: .round)
+                case let .command(command):
+                    switch command.command {
+                    case .command:
+                        itemHeight = MentionChatInputPanelItemNode.itemHeight
+                    case .shortcut:
+                        itemHeight = 58.0
+                    }
+                }
+                if indexLimit >= 4 && i == indexLimit {
+                    minimumItemHeights += floor(itemHeight * 0.5)
+                } else {
+                    minimumItemHeights += itemHeight
+                }
+            }
+        } else {
+            minimumItemHeights = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        }
+        
         return max(size.height - minimumItemHeights, 0.0)
     }
     
@@ -208,7 +491,11 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve)
         
+        self.contentOffsetChangeTransition = Transition(transition)
+        
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        self.contentOffsetChangeTransition = nil
         
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
@@ -226,6 +513,8 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     }
     
     override func animateOut(completion: @escaping () -> Void) {
+        self.isAnimatingOut = true
+        
         var topItemOffset: CGFloat?
         self.listView.forEachItemNode { itemNode in
             if topItemOffset == nil {
@@ -235,8 +524,11 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         
         if let topItemOffset = topItemOffset {
             let position = self.listView.layer.position
-            self.listView.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.listView.bounds.size.height - topItemOffset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            let offset = (self.listView.bounds.size.height - topItemOffset)
+            self.listView.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 completion()
+            })
+            self.listBackgroundView.layer.animatePosition(from: self.listBackgroundView.layer.position, to: CGPoint(x: self.listBackgroundView.layer.position.x, y: self.listBackgroundView.layer.position.y + offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             })
         } else {
             completion()

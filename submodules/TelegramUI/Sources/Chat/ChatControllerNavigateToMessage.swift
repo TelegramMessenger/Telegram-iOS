@@ -104,6 +104,9 @@ extension ChatControllerImpl {
         if case let .peer(peerId) = self.chatLocation, messageLocation.peerId == peerId, !isPinnedMessages, !isScheduledMessages {
             forceInCurrentChat = true
         }
+        if case .customChatContents = self.chatLocation {
+            forceInCurrentChat = true
+        }
         
         if isPinnedMessages, let messageId = messageLocation.messageId {
             let _ = (combineLatest(
@@ -139,7 +142,7 @@ extension ChatControllerImpl {
                 
                 completion?()
             })
-        } else if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allScheduled.contains(messageId.namespace)) {
+        } else if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allNonRegular.contains(messageId.namespace)) {
             let _ = (self.context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId),
                 TelegramEngine.EngineData.Item.Messages.Message(id: messageId)
@@ -205,6 +208,7 @@ extension ChatControllerImpl {
                     if case let .id(_, params) = messageLocation {
                         quote = params.quote.flatMap { quote in (string: quote.string, offset: quote.offset) }
                     }
+                    
                     self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition)
                     
                     if delayCompletion {

@@ -91,16 +91,22 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             } else if personal {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             } else {
-                if "".isEmpty {
-                    //TODO:localize
+                if (self.presentationInterfaceState?.boostsToUnrestrict ?? 0) > 0 {
                     iconSpacing = 0.0
                     iconImage = PresentationResourcesChat.chatPanelBoostIcon(interfaceState.theme)
-                    self.textNode.attributedText = NSAttributedString(string: "Boost this group to send messages", font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+                    self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_BoostToUnrestrictText, font: Font.regular(15.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
                     isUserInteractionEnabled = true
                 } else {
                     self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_DefaultRestrictedText, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
                 }
             }
+        } else if case let .customChatContents(customChatContents) = interfaceState.subject {
+            let displayCount: Int
+            switch customChatContents.kind {
+            case .quickReplyMessageInput:
+                displayCount = 20
+            }
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_QuickReplyMessageLimitReachedText(Int32(displayCount)), font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         }
         self.buttonNode.isUserInteractionEnabled = isUserInteractionEnabled
         

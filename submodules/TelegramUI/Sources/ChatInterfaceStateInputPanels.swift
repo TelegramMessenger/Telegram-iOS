@@ -368,7 +368,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
                     displayBotStartPanel = true
                 }
-            } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+            } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true, _) = chatHistoryState {
                 if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
                     displayBotStartPanel = true
                 }
@@ -398,6 +398,24 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
             
             displayInputTextPanel = true
+        }
+    }
+    
+    if case let .customChatContents(customChatContents) = chatPresentationInterfaceState.subject {
+        switch customChatContents.kind {
+        case .quickReplyMessageInput:
+            displayInputTextPanel = true
+        }
+        
+        if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(_, true) = chatHistoryState {
+            if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                return (currentPanel, nil)
+            } else {
+                let panel = ChatRestrictedInputPanelNode()
+                panel.context = context
+                panel.interfaceInteraction = interfaceInteraction
+                return (panel, nil)
+            }
         }
     }
     

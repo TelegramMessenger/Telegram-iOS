@@ -85,6 +85,50 @@ public extension Api {
     }
 }
 public extension Api {
+    enum SmsJob: TypeConstructorDescription {
+        case smsJob(jobId: String, phoneNumber: String, text: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .smsJob(let jobId, let phoneNumber, let text):
+                    if boxed {
+                        buffer.appendInt32(-425595208)
+                    }
+                    serializeString(jobId, buffer: buffer, boxed: false)
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .smsJob(let jobId, let phoneNumber, let text):
+                return ("smsJob", [("jobId", jobId as Any), ("phoneNumber", phoneNumber as Any), ("text", text as Any)])
+    }
+    }
+    
+        public static func parse_smsJob(_ reader: BufferReader) -> SmsJob? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SmsJob.smsJob(jobId: _1!, phoneNumber: _2!, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum SponsoredMessage: TypeConstructorDescription {
         case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, webpage: Api.SponsoredWebPage?, app: Api.BotApp?, message: String, entities: [Api.MessageEntity]?, buttonText: String?, sponsorInfo: String?, additionalInfo: String?)
     

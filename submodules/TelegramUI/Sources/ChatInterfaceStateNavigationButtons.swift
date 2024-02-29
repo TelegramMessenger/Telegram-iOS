@@ -54,6 +54,20 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             }
         }
     }
+    
+    if case let .customChatContents(customChatContents) = presentationInterfaceState.subject {
+        switch customChatContents.kind {
+        case .quickReplyMessageInput:
+            if let currentButton = currentButton, currentButton.action == .dismiss {
+                return currentButton
+            } else {
+                let buttonItem = UIBarButtonItem(title: strings.Common_Close, style: .plain, target: target, action: selector)
+                buttonItem.accessibilityLabel = strings.Common_Close
+                return ChatNavigationButton(action: .dismiss, buttonItem: buttonItem)
+            }
+        }
+    }
+    
     return nil
 }
 
@@ -95,7 +109,7 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     
     var hasMessages = false
     if let chatHistoryState = presentationInterfaceState.chatHistoryState {
-        if case .loaded(false) = chatHistoryState {
+        if case .loaded(false, _) = chatHistoryState {
             hasMessages = true
         }
     }
@@ -106,6 +120,24 @@ func rightNavigationButtonForChatInterfaceState(context: AccountContext, present
     
     if case .pinnedMessages = presentationInterfaceState.subject {
         return nil
+    }
+    
+    if case let .customChatContents(customChatContents) = presentationInterfaceState.subject {
+        switch customChatContents.kind {
+        case let .quickReplyMessageInput(_, shortcutType):
+            switch shortcutType {
+            case .generic:
+                if let currentButton = currentButton, currentButton.action == .edit {
+                    return currentButton
+                } else {
+                    let buttonItem = UIBarButtonItem(title: strings.Common_Edit, style: .plain, target: target, action: selector)
+                    buttonItem.accessibilityLabel = strings.Common_Done
+                    return ChatNavigationButton(action: .edit, buttonItem: buttonItem)
+                }
+            case .greeting, .away:
+                return nil
+            }
+        }
     }
     
     if case .replyThread = presentationInterfaceState.chatLocation {

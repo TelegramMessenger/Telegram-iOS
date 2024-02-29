@@ -1041,6 +1041,58 @@ public extension Api {
     }
 }
 public extension Api {
+    enum BotBusinessConnection: TypeConstructorDescription {
+        case botBusinessConnection(flags: Int32, connectionId: String, userId: Int64, dcId: Int32, date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botBusinessConnection(let flags, let connectionId, let userId, let dcId, let date):
+                    if boxed {
+                        buffer.appendInt32(-1989921868)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(connectionId, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botBusinessConnection(let flags, let connectionId, let userId, let dcId, let date):
+                return ("botBusinessConnection", [("flags", flags as Any), ("connectionId", connectionId as Any), ("userId", userId as Any), ("dcId", dcId as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_botBusinessConnection(_ reader: BufferReader) -> BotBusinessConnection? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.BotBusinessConnection.botBusinessConnection(flags: _1!, connectionId: _2!, userId: _3!, dcId: _4!, date: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BotCommand: TypeConstructorDescription {
         case botCommand(command: String, description: String)
     

@@ -20,12 +20,12 @@ public final class ItemListAddressItem: ListViewItem, ItemListItem {
     let style: ItemListStyle
     let displayDecorations: Bool
     let action: (() -> Void)?
-    let longTapAction: (() -> Void)?
+    let longTapAction: ((ASDisplayNode, String) -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     
     public let tag: Any?
     
-    public init(theme: PresentationTheme, label: String, text: String, imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?, selected: Bool? = nil, sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true, action: (() -> Void)?, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    public init(theme: PresentationTheme, label: String, text: String, imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?, selected: Bool? = nil, sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true, action: (() -> Void)?, longTapAction: ((ASDisplayNode, String) -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.label = label
         self.text = text
@@ -188,7 +188,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
             var leftOffset: CGFloat = 0.0
             var selectionNodeWidthAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             if let selected = item.selected {
-                let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected, false)
+                let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected, .regular)
                 selectionNodeWidthAndApply = (selectionWidth, selectionApply)
                 leftOffset += selectionWidth - 8.0
             }
@@ -202,11 +202,11 @@ public class ItemListAddressItemNode: ListViewItemNode {
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftOffset - leftInset - rightInset - 98.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let padding: CGFloat = !item.label.isEmpty ? 39.0 : 20.0
             
-            let imageSide = min(90.0, max(46.0, textLayout.size.height + padding - 18.0))
+            let imageSide = min(90.0, max(66.0, textLayout.size.height + padding - 18.0))
             let imageSize = CGSize(width: imageSide, height: imageSide)
             let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: max(textLayout.size.height + padding, imageSize.height + 18.0))
+            let contentSize = CGSize(width: params.width, height: max(textLayout.size.height + padding, imageSize.height + 14.0))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             return (nodeLayout, { [weak self] animation in
@@ -268,7 +268,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 11.0), size: labelLayout.size)
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: item.label.isEmpty ? 11.0 : 31.0), size: textLayout.size)
                     
-                    let imageFrame = CGRect(origin: CGPoint(x: params.width - imageSize.width - rightInset, y: floorToScreenPixels((contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                    let imageFrame = CGRect(origin: CGPoint(x: params.width - imageSize.width - rightInset, y: 7.0), size: imageSize)
                     strongSelf.imageNode.frame = imageFrame
                     
                     if let icon = strongSelf.iconNode.image {
@@ -396,7 +396,10 @@ public class ItemListAddressItemNode: ListViewItemNode {
     }
     
     override public func longTapped() {
-        self.item?.longTapAction?()
+        guard let item = self.item else {
+            return
+        }
+        item.longTapAction?(self, item.text)
     }
     
     public var tag: Any? {

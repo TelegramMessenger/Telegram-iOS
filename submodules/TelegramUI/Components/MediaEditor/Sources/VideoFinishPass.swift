@@ -144,6 +144,14 @@ private var transitionDuration = 0.5
 private var apperanceDuration = 0.2
 private var videoRemovalDuration: Double = 0.2
 
+struct VideoEncodeParameters {
+    var dimensions: simd_float2
+    var roundness: simd_float1
+    var alpha: simd_float1
+    var isOpaque: simd_float1
+    var empty: simd_float1
+}
+
 final class VideoFinishPass: RenderPass {
     private var cachedTexture: MTLTexture?
     
@@ -195,6 +203,7 @@ final class VideoFinishPass: RenderPass {
         containerSize: CGSize,
         texture: MTLTexture,
         textureRotation: TextureRotation,
+        maskTexture: MTLTexture?,
         position: VideoPosition,
         roundness: Float,
         alpha: Float,
@@ -202,6 +211,11 @@ final class VideoFinishPass: RenderPass {
         device: MTLDevice
     ) {
         encoder.setFragmentTexture(texture, index: 0)
+        if let maskTexture {
+            encoder.setFragmentTexture(maskTexture, index: 1)
+        } else {
+            encoder.setFragmentTexture(texture, index: 1)
+        }
         
         let center = CGPoint(
             x: position.position.x - containerSize.width / 2.0,
@@ -220,20 +234,31 @@ final class VideoFinishPass: RenderPass {
             options: [])
         encoder.setVertexBuffer(buffer, offset: 0, index: 0)
         
-        var resolution = simd_uint2(UInt32(size.width), UInt32(size.height))
-        encoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
-        
-        var roundness = roundness
-        encoder.setFragmentBytes(&roundness, length: MemoryLayout<simd_float1>.size, index: 1)
-        
-        var alpha = alpha
-        encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
+        var parameters = VideoEncodeParameters(
+            dimensions: simd_float2(Float(size.width), Float(size.height)),
+            roundness: roundness,
+            alpha: alpha,
+            isOpaque: maskTexture == nil ? 1.0 : 0.0,
+            empty: 0
+        )
+        encoder.setFragmentBytes(&parameters, length: MemoryLayout<VideoEncodeParameters>.size, index: 0)
+//        var resolution = simd_uint2(UInt32(size.width), UInt32(size.height))
+//        encoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
+//        
+//        var roundness = roundness
+//        encoder.setFragmentBytes(&roundness, length: MemoryLayout<simd_float1>.size, index: 1)
+//        
+//        var alpha = alpha
+//        encoder.setFragmentBytes(&alpha, length: MemoryLayout<simd_float1>.size, index: 2)
+//        
+//        var isOpaque = maskTexture == nil ? 1.0 : 0.0
+//        encoder.setFragmentBytes(&isOpaque, length: MemoryLayout<simd_float1>.size, index: 3)
         
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
     
     private let canvasSize = CGSize(width: 1080.0, height: 1920.0)
-    private var gradientColors = GradientColors(topColor: simd_float3(0.0, 0.0, 0.0), bottomColor: simd_float3(0.0, 0.0, 0.0))
+    private var gradientColors = GradientColors(topColor: simd_float4(0.0, 0.0, 0.0, 0.0), bottomColor: simd_float4(0.0, 0.0, 0.0, 0.0))
     func update(values: MediaEditorValues, videoDuration: Double?, additionalVideoDuration: Double?) {
         let position = CGPoint(
             x: canvasSize.width / 2.0 + values.cropOffset.x,
@@ -241,6 +266,7 @@ final class VideoFinishPass: RenderPass {
         )
         
         self.isStory = values.isStory
+        self.isSticker = values.gradientColors?.first?.alpha == 0.0
         self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, baseScale: self.mainPosition.baseScale)
             
         if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
@@ -262,12 +288,12 @@ final class VideoFinishPass: RenderPass {
         }
         
         if let gradientColors = values.gradientColors, let top = gradientColors.first, let bottom = gradientColors.last {
-            let (topRed, topGreen, topBlue, _) = top.components
-            let (bottomRed, bottomGreen, bottomBlue, _) = bottom.components
+            let (topRed, topGreen, topBlue, topAlpha) = top.components
+            let (bottomRed, bottomGreen, bottomBlue, bottomAlpha) = bottom.components
             
             self.gradientColors = GradientColors(
-                topColor: simd_float3(Float(topRed), Float(topGreen), Float(topBlue)),
-                bottomColor: simd_float3(Float(bottomRed), Float(bottomGreen), Float(bottomBlue))
+                topColor: simd_float4(Float(topRed), Float(topGreen), Float(topBlue), Float(topAlpha)),
+                bottomColor: simd_float4(Float(bottomRed), Float(bottomGreen), Float(bottomBlue), Float(bottomAlpha))
             )
         }
     }
@@ -289,6 +315,7 @@ final class VideoFinishPass: RenderPass {
     )
     
     private var isStory = true
+    private var isSticker = true
     private var videoPositionChanges: [VideoPositionChange] = []
     private var videoDuration: Double?
     private var additionalVideoDuration: Double?
@@ -476,16 +503,31 @@ final class VideoFinishPass: RenderPass {
         return (backgroundVideoState, foregroundVideoState, disappearingVideoState)
     }
     
-    func process(input: MTLTexture, secondInput: MTLTexture?, timestamp: CMTime, device: MTLDevice, commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    func process(
+        input: MTLTexture,
+        inputMask: MTLTexture?,
+        secondInput: MTLTexture?,
+        timestamp: CMTime,
+        device: MTLDevice,
+        commandBuffer: MTLCommandBuffer
+    ) -> MTLTexture? {
         if !self.isStory {
             return input
         }
         
         let baseScale: CGFloat
-        if input.height > input.width {
-            baseScale = max(canvasSize.width / CGFloat(input.width), canvasSize.height / CGFloat(input.height))
+        if !self.isSticker {
+            if input.height > input.width {
+                baseScale = max(canvasSize.width / CGFloat(input.width), canvasSize.height / CGFloat(input.height))
+            } else {
+                baseScale = canvasSize.width / CGFloat(input.width)
+            }
         } else {
-            baseScale = canvasSize.width / CGFloat(input.width)
+            if input.height > input.width {
+                baseScale = canvasSize.width / CGFloat(input.width)
+            } else {
+                baseScale = canvasSize.width / CGFloat(input.height)
+            }
         }
         self.mainPosition = self.mainPosition.with(size: CGSize(width: input.width, height: input.height), baseScale: baseScale)
         
@@ -508,9 +550,13 @@ final class VideoFinishPass: RenderPass {
         
         let renderPassDescriptor = MTLRenderPassDescriptor()
         renderPassDescriptor.colorAttachments[0].texture = self.cachedTexture!
-        renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
+        if self.gradientColors.topColor.w > 0.0 {
+            renderPassDescriptor.colorAttachments[0].loadAction = .dontCare
+        } else {
+            renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        }
         renderPassDescriptor.colorAttachments[0].storeAction = .store
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 0.0)
         guard let renderCommandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
             return input
         }
@@ -521,12 +567,13 @@ final class VideoFinishPass: RenderPass {
             znear: -1.0, zfar: 1.0)
         )
         
-        renderCommandEncoder.setRenderPipelineState(self.gradientPipelineState!)
-        self.encodeGradient(
-            using: renderCommandEncoder,
-            containerSize: containerSize,
-            device: device
-        )
+        if self.gradientColors.topColor.w > 0.0 {
+            self.encodeGradient(
+                using: renderCommandEncoder,
+                containerSize: containerSize,
+                device: device
+            )
+        }
         
         renderCommandEncoder.setRenderPipelineState(self.mainPipelineState!)
         
@@ -538,6 +585,7 @@ final class VideoFinishPass: RenderPass {
                 containerSize: containerSize,
                 texture: transitionVideoState.texture,
                 textureRotation: transitionVideoState.textureRotation,
+                maskTexture: nil,
                 position: transitionVideoState.position,
                 roundness: transitionVideoState.roundness,
                 alpha: transitionVideoState.alpha,
@@ -551,6 +599,7 @@ final class VideoFinishPass: RenderPass {
             containerSize: containerSize,
             texture: mainVideoState.texture,
             textureRotation: mainVideoState.textureRotation,
+            maskTexture: inputMask,
             position: mainVideoState.position,
             roundness: mainVideoState.roundness,
             alpha: mainVideoState.alpha,
@@ -564,6 +613,7 @@ final class VideoFinishPass: RenderPass {
                 containerSize: containerSize,
                 texture: additionalVideoState.texture,
                 textureRotation: additionalVideoState.textureRotation,
+                maskTexture: nil,
                 position: additionalVideoState.position,
                 roundness: additionalVideoState.roundness,
                 alpha: additionalVideoState.alpha,
@@ -578,8 +628,8 @@ final class VideoFinishPass: RenderPass {
     }
     
     struct GradientColors {
-        var topColor: simd_float3
-        var bottomColor: simd_float3
+        var topColor: simd_float4
+        var bottomColor: simd_float4
     }
     
     func encodeGradient(
@@ -587,6 +637,7 @@ final class VideoFinishPass: RenderPass {
         containerSize: CGSize,
         device: MTLDevice
     ) {
+        encoder.setRenderPipelineState(self.gradientPipelineState!)
         
         let vertices = verticesDataForRotation(.rotate0Degrees)
         let buffer = device.makeBuffer(

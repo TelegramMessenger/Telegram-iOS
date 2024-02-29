@@ -2324,6 +2324,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 self.interaction.openStories?(id, sourceNode.avatarNode)
             }
         }, dismissNotice: { _ in
+        }, editPeer: { _ in
         })
         chatListInteraction.isSearchMode = true
         
@@ -3689,6 +3690,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
             }, openStories: { _, _ in
             }, dismissNotice: { _ in
+            }, editPeer: { _ in
             })
             var isInlineMode = false
             if case .topics = key {

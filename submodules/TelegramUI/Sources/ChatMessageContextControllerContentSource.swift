@@ -34,6 +34,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     let blurBackground: Bool = true
     let centerVertically: Bool
     
+    private weak var chatController: ChatControllerImpl?
     private weak var chatNode: ChatControllerNode?
     private let engine: TelegramEngine
     private let message: Message
@@ -41,6 +42,9 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     
     var shouldBeDismissed: Signal<Bool, NoError> {
         if self.message.adAttribute != nil {
+            return .single(false)
+        }
+        if let chatController = self.chatController, case .customChatContents = chatController.subject {
             return .single(false)
         }
     
@@ -55,7 +59,8 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
         |> distinctUntilChanged
     }
     
-    init(chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool, centerVertically: Bool = false) {
+    init(chatController: ChatControllerImpl, chatNode: ChatControllerNode, engine: TelegramEngine, message: Message, selectAll: Bool, centerVertically: Bool = false) {
+        self.chatController = chatController
         self.chatNode = chatNode
         self.engine = engine
         self.message = message

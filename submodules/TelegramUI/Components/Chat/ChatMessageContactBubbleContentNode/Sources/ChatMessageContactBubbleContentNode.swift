@@ -252,7 +252,10 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType?
-                switch position {
+                if case .customChatContents = item.associatedData.subject {
+                    statusType = nil
+                } else {
+                    switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if incoming {
                             statusType = .BubbleIncoming
@@ -267,6 +270,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     default:
                         statusType = nil
+                    }
                 }
                 
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?

@@ -50,6 +50,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/ForwardInfoPanelComponent",
         "//submodules/TelegramUI/Components/ContextReferenceButtonComponent",
         "//submodules/TelegramUI/Components/MediaScrubberComponent",
+        "//submodules/Components/BlurredBackgroundComponent",
+        "//submodules/TelegramUI/Components/DustEffect",
     ],
     visibility = [
         "//visibility:public",

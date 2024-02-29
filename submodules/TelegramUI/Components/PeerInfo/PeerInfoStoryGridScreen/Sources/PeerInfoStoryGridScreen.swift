@@ -295,7 +295,23 @@ final class PeerInfoStoryGridScreenComponent: Component {
             let _ = paneNode.scrollToTop()
         }
         
+        func openCreateStory() {
+            guard let component = self.component else {
+                return
+            }
+            if let rootController = component.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                let coordinator = rootController.openStoryCamera(customTarget: nil, transitionIn: nil, transitionedIn: {}, transitionOut: { _, _ in return nil })
+                coordinator?.animateIn()
+            }
+        }
+        
+        private var isUpdating = false
         func update(component: PeerInfoStoryGridScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.component = component
             self.state = state
             
@@ -313,7 +329,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
             
             var bottomInset: CGFloat = environment.safeInsets.bottom
             
-            if self.selectedCount != 0 {
+            if self.selectedCount != 0 || (component.scope == .saved && self.paneNode?.isEmpty == false) {
                 let selectionPanel: ComponentView<Empty>
                 var selectionPanelTransition = transition
                 if let current = self.selectionPanel {
@@ -327,7 +343,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                 let buttonText: String
                 switch component.scope {
                 case .saved:
-                    buttonText = environment.strings.ChatList_Context_Archive
+                    buttonText = self.selectedCount > 0 ? environment.strings.ChatList_Context_Archive : environment.strings.StoryList_SavedAddAction
                 case .archive:
                     buttonText = environment.strings.StoryList_SaveToProfile
                 }
@@ -344,7 +360,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                             guard let self, let component = self.component, let environment = self.environment else {
                                 return
                             }
-                            guard let paneNode = self.paneNode, !paneNode.selectedIds.isEmpty else {
+                            guard let paneNode = self.paneNode else {
                                 return
                             }
                             
@@ -361,21 +377,25 @@ final class PeerInfoStoryGridScreenComponent: Component {
                                 switch component.scope {
                                 case .saved:
                                     let selectedCount = paneNode.selectedItems.count
-                                    let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: false).start()
-                                    
-                                    paneNode.setIsSelectionModeActive(false)
-                                    (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
-                                    
-                                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                                    
-                                    let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(selectedCount))
-                                    environment.controller()?.present(UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .info(title: nil, text: title, timeout: nil, customUndoText: nil),
-                                        elevatedLayout: false,
-                                        animateInAsReplacement: false,
-                                        action: { _ in return false }
-                                    ), in: .current)
+                                    if selectedCount == 0 {
+                                        self.openCreateStory()
+                                    } else {
+                                        let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: false).start()
+                                        
+                                        paneNode.setIsSelectionModeActive(false)
+                                        (self.environment?.controller() as? PeerInfoStoryGridScreen)?.updateTitle()
+                                        
+                                        let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                                        
+                                        let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(selectedCount))
+                                        environment.controller()?.present(UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .info(title: nil, text: title, timeout: nil, customUndoText: nil),
+                                            elevatedLayout: false,
+                                            animateInAsReplacement: false,
+                                            action: { _ in return false }
+                                        ), in: .current)
+                                    }
                                 case .archive:
                                     let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.peerId, ids: paneNode.selectedItems, isPinned: true).start()
                                     
@@ -449,10 +469,28 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     },
                     listContext: nil
                 )
+                paneNode.isEmptyUpdated = { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
+                }
                 self.paneNode = paneNode
-                self.addSubview(paneNode.view)
+                if let selectionPanelView = self.selectionPanel?.view {
+                    self.insertSubview(paneNode.view, belowSubview: selectionPanelView)
+                } else {
+                    self.addSubview(paneNode.view)
+                }
                 
                 paneNode.emptyAction = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.openCreateStory()
+                }
+                paneNode.additionalEmptyAction = { [weak self] in
                     guard let self, let component = self.component else {
                         return
                     }

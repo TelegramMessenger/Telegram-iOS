@@ -2,7 +2,7 @@ import Foundation
 import TelegramPresentationData
 import TelegramUIPreferences
 
-public func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
+public func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: PresentationDateTimeFormat, formatAsPlainText: Bool = false) -> String {
     switch dateTimeFormat.timeFormat {
     case .regular:
         let hourString: String
@@ -20,10 +20,18 @@ public func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat
         } else {
             periodString = "AM"
         }
-        if minutes >= 10 {
-            return "\(hourString):\(minutes) \(periodString)"
+        
+        let spaceCharacter: String
+        if formatAsPlainText {
+            spaceCharacter = " "
         } else {
-            return "\(hourString):0\(minutes) \(periodString)"
+            spaceCharacter = "\u{00a0}"
+        }
+        
+        if minutes >= 10 {
+            return "\(hourString):\(minutes)\(spaceCharacter)\(periodString)"
+        } else {
+            return "\(hourString):0\(minutes)\(spaceCharacter)\(periodString)"
         }
     case .military:
         return String(format: "%02d:%02d", arguments: [Int(hours), Int(minutes)])

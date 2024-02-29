@@ -7,28 +7,83 @@ import ListSectionComponent
 import SwitchNode
 
 public final class ListActionItemComponent: Component {
+    public enum ToggleStyle {
+        case regular
+        case icons
+    }
+    
+    public struct Toggle: Equatable {
+        public var style: ToggleStyle
+        public var isOn: Bool
+        public var isInteractive: Bool
+        public var action: ((Bool) -> Void)?
+        
+        public init(style: ToggleStyle, isOn: Bool, isInteractive: Bool = true, action: ((Bool) -> Void)? = nil) {
+            self.style = style
+            self.isOn = isOn
+            self.isInteractive = isInteractive
+            self.action = action
+        }
+        
+        public static func ==(lhs: Toggle, rhs: Toggle) -> Bool {
+            if lhs.style != rhs.style {
+                return false
+            }
+            if lhs.isOn != rhs.isOn {
+                return false
+            }
+            if lhs.isInteractive != rhs.isInteractive {
+                return false
+            }
+            if (lhs.action == nil) != (rhs.action == nil) {
+                return false
+            }
+            return true
+        }
+    }
+    
     public enum Accessory: Equatable {
         case arrow
-        case toggle(Bool)
+        case toggle(Toggle)
+    }
+    
+    public enum IconInsets: Equatable {
+        case `default`
+        case custom(UIEdgeInsets)
+    }
+    
+    public struct Icon: Equatable {
+        public var component: AnyComponentWithIdentity<Empty>
+        public var insets: IconInsets
+        public var allowUserInteraction: Bool
+        
+        public init(component: AnyComponentWithIdentity<Empty>, insets: IconInsets = .default, allowUserInteraction: Bool = false) {
+            self.component = component
+            self.insets = insets
+            self.allowUserInteraction = allowUserInteraction
+        }
     }
     
     public let theme: PresentationTheme
     public let title: AnyComponent<Empty>
+    public let contentInsets: UIEdgeInsets
     public let leftIcon: AnyComponentWithIdentity<Empty>?
-    public let icon: AnyComponentWithIdentity<Empty>?
+    public let icon: Icon?
     public let accessory: Accessory?
     public let action: ((UIView) -> Void)?
     
     public init(
         theme: PresentationTheme,
         title: AnyComponent<Empty>,
+        contentInsets: UIEdgeInsets = UIEdgeInsets(top: 12.0, left: 0.0, bottom: 12.0, right: 0.0),
         leftIcon: AnyComponentWithIdentity<Empty>? = nil,
-        icon: AnyComponentWithIdentity<Empty>? = nil,
+        icon: Icon? = nil,
         accessory: Accessory? = .arrow,
         action: ((UIView) -> Void)?
     ) {
         self.theme = theme
         self.title = title
+        self.contentInsets = contentInsets
         self.leftIcon = leftIcon
         self.icon = icon
         self.accessory = accessory
@@ -40,6 +95,9 @@ public final class ListActionItemComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.contentInsets != rhs.contentInsets {
             return false
         }
         if lhs.leftIcon != rhs.leftIcon {
@@ -63,7 +121,8 @@ public final class ListActionItemComponent: Component {
         private var icon: ComponentView<Empty>?
         
         private var arrowView: UIImageView?
-        private var switchNode: IconSwitchNode?
+        private var switchNode: SwitchNode?
+        private var iconSwitchNode: IconSwitchNode?
         
         private var component: ListActionItemComponent?
         
@@ -83,7 +142,10 @@ public final class ListActionItemComponent: Component {
             
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             self.internalHighligthedChanged = { [weak self] isHighlighted in
-                guard let self else {
+                guard let self, let component = self.component, component.action != nil else {
+                    return
+                }
+                if case .toggle = component.accessory, component.action == nil {
                     return
                 }
                 if let customUpdateIsHighlighted = self.customUpdateIsHighlighted {
@@ -97,35 +159,45 @@ public final class ListActionItemComponent: Component {
         }
         
         @objc private func pressed() {
-            self.component?.action?(self)
+            guard let component, let action = component.action else {
+                return
+            }
+            action(self)
+        }
+        
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            return result
         }
         
         func update(component: ListActionItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let previousComponent = self.component
             self.component = component
             
-            self.isEnabled = component.action != nil
-            
             let themeUpdated = component.theme !== previousComponent?.theme
-            
-            let verticalInset: CGFloat = 12.0
             
             var contentLeftInset: CGFloat = 16.0
             let contentRightInset: CGFloat
             switch component.accessory {
             case .none:
-                contentRightInset = 16.0
+                if let _ = component.icon {
+                    contentRightInset = 42.0
+                } else {
+                    contentRightInset = 16.0
+                }
             case .arrow:
                 contentRightInset = 30.0
             case .toggle:
-                contentRightInset = 42.0
+                contentRightInset = 76.0
             }
             
             var contentHeight: CGFloat = 0.0
-            contentHeight += verticalInset
+            contentHeight += component.contentInsets.top
             
             if component.leftIcon != nil {
-                contentLeftInset += 46.0
+                contentLeftInset += 52.0
             }
 
             let titleSize = self.title.update(
@@ -134,7 +206,7 @@ public final class ListActionItemComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - contentLeftInset - contentRightInset, height: availableSize.height)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: verticalInset), size: titleSize)
+            let titleFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: contentHeight), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
@@ -144,10 +216,10 @@ public final class ListActionItemComponent: Component {
             }
             contentHeight += titleSize.height
             
-            contentHeight += verticalInset
+            contentHeight += component.contentInsets.bottom
             
             if let iconValue = component.icon {
-                if previousComponent?.icon?.id != iconValue.id, let icon = self.icon {
+                if previousComponent?.icon?.component.id != iconValue.component.id, let icon = self.icon {
                     self.icon = nil
                     if let iconView = icon.view {
                         transition.setAlpha(view: iconView, alpha: 0.0, completion: { [weak iconView] _ in
@@ -168,17 +240,23 @@ public final class ListActionItemComponent: Component {
                 
                 let iconSize = icon.update(
                     transition: iconTransition,
-                    component: iconValue.component,
+                    component: iconValue.component.component,
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: availableSize.height)
                 )
-                let iconFrame = CGRect(origin: CGPoint(x: availableSize.width - contentRightInset - iconSize.width, y: floor((contentHeight - iconSize.height) * 0.5)), size: iconSize)
+                
+                var iconOffset: CGFloat = 0.0
+                if case .none = component.accessory {
+                    iconOffset = 26.0
+                }
+                
+                let iconFrame = CGRect(origin: CGPoint(x: availableSize.width - contentRightInset - iconSize.width + iconOffset, y: floor((contentHeight - iconSize.height) * 0.5)), size: iconSize)
                 if let iconView = icon.view {
                     if iconView.superview == nil {
-                        iconView.isUserInteractionEnabled = false
                         self.addSubview(iconView)
                         transition.animateAlpha(view: iconView, from: 0.0, to: 1.0)
                     }
+                    iconView.isUserInteractionEnabled = iconValue.allowUserInteraction
                     iconTransition.setFrame(view: iconView, frame: iconFrame)
                 }
             } else {
@@ -243,15 +321,16 @@ public final class ListActionItemComponent: Component {
                 var arrowTransition = transition
                 if let current = self.arrowView {
                     arrowView = current
+                    if themeUpdated {
+                        arrowView.image = PresentationResourcesItemList.disclosureArrowImage(component.theme)
+                    }
                 } else {
                     arrowTransition = arrowTransition.withAnimation(.none)
-                    arrowView = UIImageView(image: PresentationResourcesItemList.disclosureArrowImage(component.theme)?.withRenderingMode(.alwaysTemplate))
+                    arrowView = UIImageView(image: PresentationResourcesItemList.disclosureArrowImage(component.theme))
                     self.arrowView = arrowView
                     self.addSubview(arrowView)
                 }
-                
-                arrowView.tintColor = component.theme.list.disclosureArrowColor
-                
+                                
                 if let image = arrowView.image {
                     let arrowFrame = CGRect(origin: CGPoint(x: availableSize.width - 7.0 - image.size.width, y: floor((contentHeight - image.size.height) * 0.5)), size: image.size)
                     arrowTransition.setFrame(view: arrowView, frame: arrowFrame)
@@ -263,32 +342,85 @@ public final class ListActionItemComponent: Component {
                 }
             }
             
-            if case let .toggle(isOn) = component.accessory {
-                let switchNode: IconSwitchNode
-                var switchTransition = transition
-                var updateSwitchTheme = themeUpdated
-                if let current = self.switchNode {
-                    switchNode = current
-                    switchNode.setOn(isOn, animated: !transition.animation.isImmediate)
-                } else {
-                    switchTransition = switchTransition.withAnimation(.none)
-                    updateSwitchTheme = true
-                    switchNode = IconSwitchNode()
-                    switchNode.setOn(isOn, animated: false)
-                    self.addSubview(switchNode.view)
+            if case let .toggle(toggle) = component.accessory {
+                switch toggle.style {
+                case .regular:
+                    let switchNode: SwitchNode
+                    var switchTransition = transition
+                    var updateSwitchTheme = themeUpdated
+                    if let current = self.switchNode {
+                        switchNode = current
+                        switchNode.setOn(toggle.isOn, animated: !transition.animation.isImmediate)
+                    } else {
+                        switchTransition = switchTransition.withAnimation(.none)
+                        updateSwitchTheme = true
+                        switchNode = SwitchNode()
+                        switchNode.setOn(toggle.isOn, animated: false)
+                        self.switchNode = switchNode
+                        self.addSubview(switchNode.view)
+                        
+                        switchNode.valueUpdated = { [weak self] value in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            if case let .toggle(toggle) = component.accessory, let action = toggle.action {
+                                action(value)
+                            } else {
+                                component.action?(self)
+                            }
+                        }
+                    }
+                    switchNode.isUserInteractionEnabled = toggle.isInteractive
+                    
+                    if updateSwitchTheme {
+                        switchNode.frameColor = component.theme.list.itemSwitchColors.frameColor
+                        switchNode.contentColor = component.theme.list.itemSwitchColors.contentColor
+                        switchNode.handleColor = component.theme.list.itemSwitchColors.handleColor
+                    }
+                    
+                    let switchSize = CGSize(width: 51.0, height: 31.0)
+                    let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: floor((min(60.0, contentHeight) - switchSize.height) * 0.5)), size: switchSize)
+                    switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
+                case .icons:
+                    let switchNode: IconSwitchNode
+                    var switchTransition = transition
+                    var updateSwitchTheme = themeUpdated
+                    if let current = self.iconSwitchNode {
+                        switchNode = current
+                        switchNode.setOn(toggle.isOn, animated: !transition.animation.isImmediate)
+                    } else {
+                        switchTransition = switchTransition.withAnimation(.none)
+                        updateSwitchTheme = true
+                        switchNode = IconSwitchNode()
+                        switchNode.setOn(toggle.isOn, animated: false)
+                        self.iconSwitchNode = switchNode
+                        self.addSubview(switchNode.view)
+                        
+                        switchNode.valueUpdated = { [weak self] value in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            if case let .toggle(toggle) = component.accessory, let action = toggle.action {
+                                action(value)
+                            } else {
+                                component.action?(self)
+                            }
+                        }
+                    }
+                    switchNode.isUserInteractionEnabled = toggle.isInteractive
+                    
+                    if updateSwitchTheme {
+                        switchNode.frameColor = component.theme.list.itemSwitchColors.frameColor
+                        switchNode.contentColor = component.theme.list.itemSwitchColors.contentColor
+                        switchNode.handleColor = component.theme.list.itemSwitchColors.handleColor
+                        switchNode.positiveContentColor = component.theme.list.itemSwitchColors.positiveColor
+                        switchNode.negativeContentColor = component.theme.list.itemSwitchColors.negativeColor
+                    }
+                    
+                    let switchSize = CGSize(width: 51.0, height: 31.0)
+                    let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: floor((min(60.0, contentHeight) - switchSize.height) * 0.5)), size: switchSize)
+                    switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
                 }
-                
-                if updateSwitchTheme {
-                    switchNode.frameColor = component.theme.list.itemSwitchColors.frameColor
-                    switchNode.contentColor = component.theme.list.itemSwitchColors.contentColor
-                    switchNode.handleColor = component.theme.list.itemSwitchColors.handleColor
-                    switchNode.positiveContentColor = component.theme.list.itemSwitchColors.positiveColor
-                    switchNode.negativeContentColor = component.theme.list.itemSwitchColors.negativeColor
-                }
-                
-                let switchSize = CGSize(width: 51.0, height: 31.0)
-                let switchFrame = CGRect(origin: CGPoint(x: availableSize.width - 16.0 - switchSize.width, y: floor((min(60.0, contentHeight) - switchSize.height) * 0.5)), size: switchSize)
-                switchTransition.setFrame(view: switchNode.view, frame: switchFrame)
             } else {
                 if let switchNode = self.switchNode {
                     self.switchNode = nil

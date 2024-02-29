@@ -237,7 +237,7 @@ public enum MessageHistoryViewRelativeHoleDirection: Equatable, Hashable, Custom
     }
 }
 
-public struct MessageHistoryViewOrderStatistics: OptionSet {
+public struct MessageHistoryViewOrderStatistics: OptionSet, Equatable {
     public var rawValue: Int32
     
     public init(rawValue: Int32) {
@@ -290,7 +290,7 @@ public enum MessageHistoryViewInput: Equatable {
     case external(MessageHistoryViewExternalInput)
 }
 
-public enum MessageHistoryViewReadState {
+public enum MessageHistoryViewReadState: Equatable {
     case peer([PeerId: CombinedPeerReadState])
 }
 
@@ -302,7 +302,7 @@ public enum HistoryViewInputAnchor: Equatable {
     case unread
 }
 
-final class MutableMessageHistoryView {
+final class MutableMessageHistoryView: MutablePostboxView {
     private(set) var peerIds: MessageHistoryViewInput
     private let ignoreMessagesInTimestampRange: ClosedRange<Int32>?
     let tag: HistoryViewInputTag?
@@ -310,6 +310,7 @@ final class MutableMessageHistoryView {
     let namespaces: MessageIdNamespaces
     private let orderStatistics: MessageHistoryViewOrderStatistics
     private let clipHoles: Bool
+    private let trackHoles: Bool
     private let anchor: HistoryViewInputAnchor
     
     fileprivate var combinedReadStates: MessageHistoryViewReadState?
@@ -333,6 +334,7 @@ final class MutableMessageHistoryView {
         postbox: PostboxImpl,
         orderStatistics: MessageHistoryViewOrderStatistics,
         clipHoles: Bool,
+        trackHoles: Bool,
         peerIds: MessageHistoryViewInput,
         ignoreMessagesInTimestampRange: ClosedRange<Int32>?,
         anchor inputAnchor: HistoryViewInputAnchor,
@@ -343,13 +345,13 @@ final class MutableMessageHistoryView {
         namespaces: MessageIdNamespaces,
         count: Int,
         topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?],
-        additionalDatas: [AdditionalMessageHistoryViewDataEntry],
-        getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32
+        additionalDatas: [AdditionalMessageHistoryViewDataEntry]
     ) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
         self.clipHoles = clipHoles
+        self.trackHoles = trackHoles
         self.peerIds = peerIds
         self.ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange
         self.combinedReadStates = combinedReadStates
@@ -1040,6 +1042,10 @@ final class MutableMessageHistoryView {
     }
     
     func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection, Int, Int64?)? {
+        if !self.trackHoles {
+            return nil
+        }
+        
         switch self.sampledState {
         case let .loading(loadingSample):
             switch loadingSample {
@@ -1065,9 +1071,13 @@ final class MutableMessageHistoryView {
             }
         }
     }
+    
+    func immutableView() -> PostboxView {
+        return MessageHistoryView(self)
+    }
 }
 
-public final class MessageHistoryView {
+public final class MessageHistoryView: PostboxView {
     public let tag: HistoryViewInputTag?
     public let namespaces: MessageIdNamespaces
     public let anchorIndex: MessageHistoryAnchorIndex
@@ -1101,7 +1111,7 @@ public final class MessageHistoryView {
         self.topTaggedMessages = []
         self.additionalData = []
         self.isLoading = isLoading
-        self.isLoadingEarlier = true
+        self.isLoadingEarlier = false
         self.isAddedToChatList = false
         self.peerStoryStats = [:]
     }

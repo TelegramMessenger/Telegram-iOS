@@ -1784,6 +1784,7 @@ public extension EmojiPagerContentComponent {
             }
             
             if let recentStickers = recentStickers {
+                let groupId = "recent"
                 for item in recentStickers.items {
                     guard let item = item.contents.get(RecentMediaItem.self) else {
                         continue
@@ -1807,7 +1808,6 @@ public extension EmojiPagerContentComponent {
                         tintMode: tintMode
                     )
                     
-                    let groupId = "recent"
                     if let groupIndex = itemGroupIndexById[groupId] {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {

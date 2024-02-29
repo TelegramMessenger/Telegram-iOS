@@ -698,7 +698,7 @@ private final class SheetContent: CombinedComponent {
                     isCurrent = mode == .current
                 }
             case .features:
-                textString = strings.GroupBoost_AdditionalFeaturesText
+                textString = isGroup ? strings.GroupBoost_AdditionalFeaturesText : strings.ChannelBoost_AdditionalFeaturesText
             }
             
             let defaultTitle = strings.ChannelBoost_Level("\(level)").string

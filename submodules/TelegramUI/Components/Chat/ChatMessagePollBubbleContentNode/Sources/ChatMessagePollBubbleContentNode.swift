@@ -494,7 +494,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
             
             let shouldHaveRadioNode = optionResult == nil
             let isSelectable: Bool
-            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind, !Namespaces.Message.allScheduled.contains(message.id.namespace) {
+            if shouldHaveRadioNode, case .poll(multipleAnswers: true) = poll.kind, !Namespaces.Message.allNonRegular.contains(message.id.namespace) {
                 isSelectable = true
             } else {
                 isSelectable = false
@@ -905,7 +905,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         if !hasSelection {
-            if !Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            if !Namespaces.Message.allNonRegular.contains(item.message.id.namespace) {
                 item.controllerInteraction.requestOpenMessagePollResults(item.message.id, pollId)
             }
         } else if !selectedOpaqueIdentifiers.isEmpty {
@@ -986,7 +986,10 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, associatedData: item.associatedData)
                 
                 let statusType: ChatMessageDateAndStatusType?
-                switch position {
+                if case .customChatContents = item.associatedData.subject {
+                    statusType = nil
+                } else {
+                    switch position {
                     case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if incoming {
                             statusType = .BubbleIncoming
@@ -1001,8 +1004,9 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     default:
                         statusType = nil
+                    }
                 }
-                
+                    
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 
                 if let statusType = statusType {
@@ -1207,7 +1211,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 boundingSize.width = max(boundingSize.width, min(270.0, constrainedSize.width))
                 
                 var canVote = false
-                if (item.message.id.namespace == Namespaces.Message.Cloud || Namespaces.Message.allScheduled.contains(item.message.id.namespace)), let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll, !isClosed {
+                if (item.message.id.namespace == Namespaces.Message.Cloud || Namespaces.Message.allNonRegular.contains(item.message.id.namespace)), let poll = poll, poll.pollId.namespace == Namespaces.Media.CloudPoll, !isClosed {
                     var hasVoted = false
                     if let voters = poll.results.voters {
                         for voter in voters {
@@ -1576,7 +1580,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     self.buttonNode.isHidden = false
                 }
                 
-                if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                if Namespaces.Message.allNonRegular.contains(item.message.id.namespace) {
                     self.buttonNode.isUserInteractionEnabled = false
                 } else {
                     self.buttonNode.isUserInteractionEnabled = true
@@ -1639,7 +1643,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
                         return ChatMessageBubbleContentTapAction(content: .ignore)
-                    } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option, !isBotChat {
+                    } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allNonRegular.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option, !isBotChat {
                         switch poll.publicity {
                         case .anonymous:
                             let string: String

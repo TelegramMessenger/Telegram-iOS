@@ -127,8 +127,23 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             let additionalCategories = chatSelection.additionalCategories
             let chatListFilters = chatSelection.chatListFilters
             
+            var chatListFilter: ChatListFilter?
+            if chatSelection.onlyUsers {
+                chatListFilter = .filter(id: Int32.max, title: "", emoticon: nil, data: ChatListFilterData(
+                    isShared: false,
+                    hasSharedLinks: false,
+                    categories: [.contacts, .nonContacts],
+                    excludeMuted: false,
+                    excludeRead: false,
+                    excludeArchived: false,
+                    includePeers: ChatListFilterIncludePeers(),
+                    excludePeers: [],
+                    color: nil
+                ))
+            }
+            
             placeholder = placeholderValue
-            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout, displayPresence: chatSelection.displayPresence), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true, isMainTab: false)
+            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), chatListFilter: chatListFilter, previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters, displayAutoremoveTimeout: chatSelection.displayAutoremoveTimeout, displayPresence: chatSelection.displayPresence), isPeerEnabled: isPeerEnabled, theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true, isMainTab: false)
             chatListNode.passthroughPeerSelection = true
             chatListNode.disabledPeerSelected = { peer, _, reason in
                 attemptDisabledItemSelection?(peer, reason)
@@ -237,6 +252,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         var searchGroups = false
                         var searchChannels = false
                         var globalSearch = false
+                        var displaySavedMessages = true
+                        var filters = filters
                         switch mode {
                         case .groupCreation, .channelCreation:
                             globalSearch = true
@@ -245,15 +262,31 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchGroups = searchGroupsValue
                             searchChannels = searchChannelsValue
                             globalSearch = true
-                        case .chatSelection:
-                            searchChatList = true
-                            searchGroups = true
-                            searchChannels = true
+                        case let .chatSelection(chatSelection):
+                            if chatSelection.onlyUsers {
+                                searchChatList = true
+                                searchGroups = false
+                                searchChannels = false
+                                displaySavedMessages = false
+                                filters.append(.excludeSelf)
+                            } else {
+                                searchChatList = true
+                                searchGroups = true
+                                searchChannels = true
+                            }
                             globalSearch = false
                         case .premiumGifting, .requestedUsersSelection:
                             searchChatList = true
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(ContactListPresentation.Search(
+                                signal: searchText.get(),
+                                searchChatList: searchChatList,
+                                searchDeviceContacts: false,
+                                searchGroups: searchGroups,
+                                searchChannels: searchChannels,
+                                globalSearch: globalSearch,
+                                displaySavedMessages: displaySavedMessages
+                            ))), filters: filters, onlyWriteable: strongSelf.onlyWriteable, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

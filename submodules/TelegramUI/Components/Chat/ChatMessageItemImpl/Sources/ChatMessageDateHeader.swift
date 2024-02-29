@@ -524,7 +524,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
                 return
             }
             var messageId: MessageId?
-            if let messageReference = messageReference, case let .message(_, _, id, _, _, _) = messageReference.content {
+            if let messageReference = messageReference, case let .message(_, _, id, _, _, _, _) = messageReference.content {
                 messageId = id
             }
             strongSelf.controllerInteraction?.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
@@ -751,7 +751,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, Chat
 
     @objc private func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _) = self.messageReference?.content {
+            if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction?.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else if let peer = self.peer {
                 if let adMessageId = self.adMessageId {

@@ -424,6 +424,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0xef6922),
                 UIColor(rgb: 0xe95a2c),
                 UIColor(rgb: 0xe74e33),
+                UIColor(rgb: 0xe74e33), //replace
                 UIColor(rgb: 0xe54937),
                 UIColor(rgb: 0xe3433c),
                 UIColor(rgb: 0xdb374b),
@@ -434,6 +435,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x9b4fed),
                 UIColor(rgb: 0x8958ff),
                 UIColor(rgb: 0x676bff),
+                UIColor(rgb: 0x676bff), //replace
                 UIColor(rgb: 0x6172ff),
                 UIColor(rgb: 0x5b79ff),
                 UIColor(rgb: 0x4492ff),
@@ -530,6 +532,10 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .lastSeen
                         case .messagePrivacy:
                             demoSubject = .messagePrivacy
+                        case .business:
+                            demoSubject = .business
+                        default:
+                            demoSubject = .doubleLimits
                         }
                         
                         let buttonText: String

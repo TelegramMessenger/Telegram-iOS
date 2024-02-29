@@ -7,12 +7,19 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 final class VerticalListContextResultsChatInputPanelButtonItem: ListViewItem {
+    enum Style {
+        case regular
+        case round
+    }
+    
     fileprivate let theme: PresentationTheme
+    fileprivate let style: Style
     fileprivate let title: String
     fileprivate let pressed: () -> Void
     
-    public init(theme: PresentationTheme, title: String, pressed: @escaping () -> Void) {
+    public init(theme: PresentationTheme, style: Style = .regular, title: String, pressed: @escaping () -> Void) {
         self.theme = theme
+        self.style = style
         self.title = title
         self.pressed = pressed
     }
@@ -65,10 +72,15 @@ final class VerticalListContextResultsChatInputPanelButtonItem: ListViewItem {
     }
 }
 
-private let titleFont = Font.regular(15.0)
-
 final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItemNode {
-    static let itemHeight: CGFloat = 32.0
+    static func itemHeight(style: VerticalListContextResultsChatInputPanelButtonItem.Style) -> CGFloat {
+        switch style {
+        case .regular:
+            return 32.0
+        case .round:
+            return 42.0
+        }
+    }
     
     private let buttonNode: HighlightTrackingButtonNode
     private let titleNode: TextNode
@@ -125,11 +137,19 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { [weak self] item, params, mergedTop, mergedBottom in
+            let titleFont: UIFont
+            switch item.style {
+            case .regular:
+                titleFont = Font.regular(15.0)
+            case .round:
+                titleFont = Font.regular(17.0)
+            }
+            
             let titleString = NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemAccentColor)
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 16.0, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight), insets: UIEdgeInsets())
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight(style: item.style)), insets: UIEdgeInsets())
             
             return (nodeLayout, { _ in
                 if let strongSelf = self {
@@ -137,14 +157,24 @@ final class VerticalListContextResultsChatInputPanelButtonItemNode: ListViewItem
                     
                     strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
                     strongSelf.topSeparatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                    strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
+                    
+                    let titleOffsetY: CGFloat
+                    switch item.style {
+                    case .regular:
+                        strongSelf.backgroundColor = item.theme.list.plainBackgroundColor
+                        strongSelf.topSeparatorNode.isHidden = mergedTop
+                        strongSelf.separatorNode.isHidden = !mergedBottom
+                        titleOffsetY = 2.0
+                    case .round:
+                        strongSelf.backgroundColor = nil
+                        strongSelf.topSeparatorNode.isHidden = true
+                        strongSelf.separatorNode.isHidden = !mergedBottom
+                        titleOffsetY = 1.0
+                    }
                     
                     let _ = titleApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0) + 2.0), size: titleLayout.size)
-                    
-                    strongSelf.topSeparatorNode.isHidden = mergedTop
-                    strongSelf.separatorNode.isHidden = !mergedBottom
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0) + titleOffsetY), size: titleLayout.size)
                     
                     strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: UIScreenPixel))
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width, height: UIScreenPixel))

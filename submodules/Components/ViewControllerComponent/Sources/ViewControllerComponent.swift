@@ -46,6 +46,7 @@ open class ViewControllerComponentContainer: ViewController {
         public let statusBarHeight: CGFloat
         public let navigationHeight: CGFloat
         public let safeInsets: UIEdgeInsets
+        public let additionalInsets: UIEdgeInsets
         public let inputHeight: CGFloat
         public let metrics: LayoutMetrics
         public let deviceMetrics: DeviceMetrics
@@ -60,6 +61,7 @@ open class ViewControllerComponentContainer: ViewController {
             statusBarHeight: CGFloat,
             navigationHeight: CGFloat,
             safeInsets: UIEdgeInsets,
+            additionalInsets: UIEdgeInsets,
             inputHeight: CGFloat,
             metrics: LayoutMetrics,
             deviceMetrics: DeviceMetrics,
@@ -73,6 +75,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.statusBarHeight = statusBarHeight
             self.navigationHeight = navigationHeight
             self.safeInsets = safeInsets
+            self.additionalInsets = additionalInsets
             self.inputHeight = inputHeight
             self.metrics = metrics
             self.deviceMetrics = deviceMetrics
@@ -96,6 +99,9 @@ open class ViewControllerComponentContainer: ViewController {
                 return false
             }
             if lhs.safeInsets != rhs.safeInsets {
+                return false
+            }
+            if lhs.additionalInsets != rhs.additionalInsets {
                 return false
             }
             if lhs.inputHeight != rhs.inputHeight {
@@ -167,6 +173,7 @@ open class ViewControllerComponentContainer: ViewController {
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationHeight,
                 safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                additionalInsets: layout.additionalInsets,
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,

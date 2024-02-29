@@ -25,8 +25,8 @@ vertex RasterizerData defaultVertexShader(uint vertexID [[vertex_id]],
 fragment half4 defaultFragmentShader(RasterizerData in [[stage_in]],
                                       texture2d<half, access::sample> texture [[texture(0)]]) {
     constexpr sampler samplr(filter::linear, mag_filter::linear, min_filter::linear);
-    half3 color = texture.sample(samplr, in.texCoord).rgb;
-    return half4(color, 1.0);
+    half4 color = texture.sample(samplr, in.texCoord);
+    return color;
 }
 
 fragment half histogramPrepareFragmentShader(RasterizerData in [[stage_in]],
@@ -39,12 +39,12 @@ fragment half histogramPrepareFragmentShader(RasterizerData in [[stage_in]],
 }
 
 typedef struct {
-    float3 topColor;
-    float3 bottomColor;
+    float4 topColor;
+    float4 bottomColor;
 } GradientColors;
 
 fragment half4 gradientFragmentShader(RasterizerData in [[stage_in]],
                                      constant GradientColors& colors [[buffer(0)]]) {
     
-    return half4(half3(mix(colors.topColor, colors.bottomColor, in.texCoord.y)), 1.0);
+    return half4(half3(mix(colors.topColor.rgb, colors.bottomColor.rgb, in.texCoord.y)), 1.0);
 }

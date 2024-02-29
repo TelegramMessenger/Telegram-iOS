@@ -296,7 +296,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
             var editingOffset: CGFloat = 0.0
             
             if let isSelected = item.isSelected {
-                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, isSelected, false)
+                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, isSelected, .regular)
                 selectableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0
             }
@@ -308,6 +308,10 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
             if let label = item.label, case .semitransparent = label {
                 textConstrainedWidth -= 54.0
                 subtitleConstrainedWidth -= 30.0
+            }
+            if let _ = item.titleBadge {
+                textConstrainedWidth -= 32.0
+                subtitleConstrainedWidth -= 32.0
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: textConstrainedWidth, height: .greatestFiniteMagnitude)))

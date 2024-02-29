@@ -793,6 +793,7 @@ public final class PendingMessageManager {
                 var replyToStoryId: StoryId?
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
+                var quickReply: OutgoingQuickReplyMessageAttribute?
                 
                 var flags: Int32 = 0
                 
@@ -821,6 +822,8 @@ public final class PendingMessageManager {
                         hideCaptions = attribute.hideCaptions
                     } else if let attribute = attribute as? SendAsMessageAttribute {
                         sendAsPeerId = attribute.peerId
+                    } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
+                        quickReply = attribute
                     }
                 }
                                 
@@ -871,6 +874,16 @@ public final class PendingMessageManager {
                         topMsgId = Int32(clamping: threadId)
                     }
                     
+                    var quickReplyShortcut: Api.InputQuickReplyShortcut?
+                    if let quickReply {
+                        if let threadId = messages[0].0.threadId {
+                            quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
+                        } else {
+                            quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
+                        }
+                        flags |= 1 << 17
+                    }
+                    
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
@@ -878,7 +891,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -993,7 +1006,17 @@ public final class PendingMessageManager {
                         }
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    var quickReplyShortcut: Api.InputQuickReplyShortcut?
+                    if let quickReply {
+                        if let threadId = messages[0].0.threadId {
+                            quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
+                        } else {
+                            quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
+                        }
+                        flags |= 1 << 17
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut))
                 }
                 
                 return sendMessageRequest
@@ -1168,6 +1191,7 @@ public final class PendingMessageManager {
                 var scheduleTime: Int32?
                 var sendAsPeerId: PeerId?
                 var bubbleUpEmojiOrStickersets = false
+                var quickReply: OutgoingQuickReplyMessageAttribute?
                 
                 var flags: Int32 = 0
         
@@ -1202,6 +1226,8 @@ public final class PendingMessageManager {
                         scheduleTime = attribute.scheduleTime
                     } else if let attribute = attribute as? SendAsMessageAttribute {
                         sendAsPeerId = attribute.peerId
+                    } else if let attribute = attribute as? OutgoingQuickReplyMessageAttribute {
+                        quickReply = attribute
                     }
                 }
                 
@@ -1291,7 +1317,17 @@ public final class PendingMessageManager {
                             }
                         }
                     
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
+                        var quickReplyShortcut: Api.InputQuickReplyShortcut?
+                        if let quickReply {
+                            if let threadId = message.threadId {
+                                quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
+                            } else {
+                                quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
+                            }
+                            flags |= 1 << 17
+                        }
+                    
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         if bubbleUpEmojiOrStickersets {
                             flags |= Int32(1 << 15)
@@ -1355,8 +1391,18 @@ public final class PendingMessageManager {
                                 flags |= 1 << 16
                             }
                         }
+                    
+                        var quickReplyShortcut: Api.InputQuickReplyShortcut?
+                        if let quickReply {
+                            if let threadId = message.threadId {
+                                quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
+                            } else {
+                                quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
+                            }
+                            flags |= 1 << 17
+                        }
                         
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         var topMsgId: Int32?
@@ -1365,8 +1411,18 @@ public final class PendingMessageManager {
                             topMsgId = Int32(clamping: threadId)
                         }
                     
+                        var quickReplyShortcut: Api.InputQuickReplyShortcut?
+                        if let quickReply {
+                            if let threadId = message.threadId {
+                                quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
+                            } else {
+                                quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
+                            }
+                            flags |= 1 << 17
+                        }
+                    
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -1429,7 +1485,17 @@ public final class PendingMessageManager {
                             }
                         }
                     
-                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                        var quickReplyShortcut: Api.InputQuickReplyShortcut?
+                        if let quickReply {
+                            if let threadId = message.threadId {
+                                quickReplyShortcut = .inputQuickReplyShortcutId(shortcutId: Int32(clamping: threadId))
+                            } else {
+                                quickReplyShortcut = .inputQuickReplyShortcut(shortcut: quickReply.shortcut)
+                            }
+                            flags |= 1 << 17
+                        }
+                    
+                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
                         let replyTo: Api.InputReplyTo
@@ -1557,7 +1623,16 @@ public final class PendingMessageManager {
     private func applySentMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, content: PendingMessageUploadedContentAndReuploadInfo, result: Api.Updates) -> Signal<Void, NoError> {
         var apiMessage: Api.Message?
         for resultMessage in result.messages {
-            if let id = resultMessage.id(namespace: Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+            let targetNamespace: MessageId.Namespace
+            if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                targetNamespace = Namespaces.Message.ScheduledCloud
+            } else if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
+                targetNamespace = Namespaces.Message.QuickReplyCloud
+            } else {
+                targetNamespace = Namespaces.Message.Cloud
+            }
+                
+            if let id = resultMessage.id(namespace: targetNamespace) {
                 if id.peerId == message.id.peerId {
                     apiMessage = resultMessage
                     break
@@ -1567,7 +1642,9 @@ public final class PendingMessageManager {
         
         let silent = message.muted
         var namespace = Namespaces.Message.Cloud
-        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+        if message.id.namespace == Namespaces.Message.QuickReplyLocal {
+            namespace = Namespaces.Message.QuickReplyCloud
+        } else if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
             namespace = id.namespace
             
             if let attribute = message.attributes.first(where: { $0 is OutgoingMessageInfoAttribute }) as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
@@ -1594,7 +1671,9 @@ public final class PendingMessageManager {
     private func applySentGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
         var silent = false
         var namespace = Namespaces.Message.Cloud
-        if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.QuickReplyLocal {
+            namespace = Namespaces.Message.QuickReplyCloud
+        } else if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
             namespace = Namespaces.Message.ScheduledCloud
             if message.muted {
                 silent = true
@@ -1605,7 +1684,7 @@ public final class PendingMessageManager {
             for i in 0 ..< messages.count {
                 let message = messages[i]
                 let apiMessage = result.messages[i]
-                if let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+                if let id = apiMessage.id(namespace: namespace) {
                     if let attribute = message.attributes.first(where: { $0 is OutgoingMessageInfoAttribute }) as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
                         self.correlationIdToSentMessageId.with { value in
                             value.mapping[correlationId] = id

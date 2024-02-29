@@ -201,21 +201,25 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
             }
             
             let statusType: ChatMessageDateAndStatusType?
-            switch preparePosition {
-            case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
-                if incoming {
-                    statusType = .BubbleIncoming
-                } else {
-                    if item.message.flags.contains(.Failed) {
-                        statusType = .BubbleOutgoing(.Failed)
-                    } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
-                        statusType = .BubbleOutgoing(.Sending)
-                    } else {
-                        statusType = .BubbleOutgoing(.Sent(read: item.read))
-                    }
-                }
-            default:
+            if case .customChatContents = item.associatedData.subject {
                 statusType = nil
+            } else {
+                switch preparePosition {
+                case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
+                    if incoming {
+                        statusType = .BubbleIncoming
+                    } else {
+                        if item.message.flags.contains(.Failed) {
+                            statusType = .BubbleOutgoing(.Failed)
+                        } else if (item.message.flags.isSending && !item.message.isSentOrAcknowledged) || item.attributes.updatingMedia != nil {
+                            statusType = .BubbleOutgoing(.Sending)
+                        } else {
+                            statusType = .BubbleOutgoing(.Sent(read: item.read))
+                        }
+                    }
+                default:
+                    statusType = nil
+                }
             }
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)

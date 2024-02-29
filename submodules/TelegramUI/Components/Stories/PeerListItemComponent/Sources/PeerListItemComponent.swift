@@ -19,6 +19,7 @@ import ContextUI
 import EmojiTextAttachmentView
 import TextFormat
 import PhotoResources
+import ListSectionComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 15.0)
 private let readIconImage: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: .white)?.withRenderingMode(.alwaysTemplate)
@@ -64,6 +65,18 @@ public final class PeerListItemComponent: Component {
         case check
     }
     
+    public struct Avatar: Equatable {
+        public var icon: String
+        public var color: AvatarBackgroundColor
+        public var clipStyle: AvatarNodeClipStyle
+        
+        public init(icon: String, color: AvatarBackgroundColor, clipStyle: AvatarNodeClipStyle) {
+            self.icon = icon
+            self.color = color
+            self.clipStyle = clipStyle
+        }
+    }
+    
     public final class Reaction: Equatable {
         public let reaction: MessageReaction.Reaction
         public let file: TelegramMediaFile?
@@ -103,6 +116,7 @@ public final class PeerListItemComponent: Component {
     let style: Style
     let sideInset: CGFloat
     let title: String
+    let avatar: Avatar?
     let peer: EnginePeer?
     let storyStats: PeerStoryStats?
     let subtitle: String?
@@ -127,6 +141,7 @@ public final class PeerListItemComponent: Component {
         style: Style,
         sideInset: CGFloat,
         title: String,
+        avatar: Avatar? = nil,
         peer: EnginePeer?,
         storyStats: PeerStoryStats? = nil,
         subtitle: String?,
@@ -150,6 +165,7 @@ public final class PeerListItemComponent: Component {
         self.style = style
         self.sideInset = sideInset
         self.title = title
+        self.avatar = avatar
         self.peer = peer
         self.storyStats = storyStats
         self.subtitle = subtitle
@@ -185,6 +201,9 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.avatar != rhs.avatar {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -229,7 +248,7 @@ public final class PeerListItemComponent: Component {
         return true
     }
     
-    public final class View: ContextControllerSourceView {
+    public final class View: ContextControllerSourceView, ListSectionComponent.ChildView {
         private let extractedContainerView: ContextExtractedContentContainingView
         private let containerButton: HighlightTrackingButton
         
@@ -237,6 +256,7 @@ public final class PeerListItemComponent: Component {
         private let label = ComponentView<Empty>()
         private let separatorLayer: SimpleLayer
         private let avatarNode: AvatarNode
+        private var avatarImageView: UIImageView?
         private let avatarButtonView: HighlightTrackingButton
         private var avatarIcon: ComponentView<Empty>?
         
@@ -277,6 +297,9 @@ public final class PeerListItemComponent: Component {
         }
         
         private var isExtractedToContextMenu: Bool = false
+        
+        public var customUpdateIsHighlighted: ((Bool) -> Void)?
+        public private(set) var separatorInset: CGFloat = 0.0
         
         override init(frame: CGRect) {
             self.separatorLayer = SimpleLayer()
@@ -335,6 +358,15 @@ public final class PeerListItemComponent: Component {
                     return
                 }
                 component.contextAction?(peer, self.extractedContainerView, gesture)
+            }
+            
+            self.containerButton.highligthedChanged = { [weak self] highlighted in
+                guard let self else {
+                    return
+                }
+                if let customUpdateIsHighlighted = self.customUpdateIsHighlighted {
+                    customUpdateIsHighlighted(highlighted)
+                }
             }
         }
         
@@ -560,6 +592,27 @@ public final class PeerListItemComponent: Component {
             transition.setFrame(view: self.avatarButtonView, frame: avatarFrame)
             
             var statusIcon: EmojiStatusComponent.Content?
+            
+            if let avatar = component.avatar {
+                let avatarImageView: UIImageView
+                if let current = self.avatarImageView {
+                    avatarImageView = current
+                } else {
+                    avatarImageView = UIImageView()
+                    self.avatarImageView = avatarImageView
+                    self.containerButton.addSubview(avatarImageView)
+                }
+                if previousComponent?.avatar != avatar {
+                    avatarImageView.image = generateAvatarImage(size: avatarFrame.size, icon: generateTintedImage(image: UIImage(bundleImageName: avatar.icon), color: .white), cornerRadius: 12.0, color: avatar.color)
+                }
+                transition.setFrame(view: avatarImageView, frame: avatarFrame)
+            } else {
+                if let avatarImageView = self.avatarImageView {
+                    self.avatarImageView = nil
+                    avatarImageView.removeFromSuperview()
+                }
+            }
+            
             if let peer = component.peer {
                 let clipStyle: AvatarNodeClipStyle
                 if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
@@ -596,6 +649,7 @@ public final class PeerListItemComponent: Component {
                     lineWidth: 1.33,
                     inactiveLineWidth: 1.33
                 ), transition: transition)
+                self.avatarNode.isHidden = false
                 
                 if peer.isScam {
                     statusIcon = .text(color: component.theme.chat.message.incoming.scamColor, string: component.strings.Message_ScamAccount.uppercased())
@@ -608,6 +662,8 @@ public final class PeerListItemComponent: Component {
                 } else if peer.isPremium {
                     statusIcon = .premium(color: component.theme.list.itemAccentColor)
                 }
+            } else {
+                self.avatarNode.isHidden = true
             }
                         
             let previousTitleFrame = self.title.view?.frame
@@ -952,6 +1008,8 @@ public final class PeerListItemComponent: Component {
             
             let containerFrame = CGRect(origin: CGPoint(x: contextInset, y: verticalInset), size: CGSize(width: availableSize.width - contextInset * 2.0, height: height - verticalInset * 2.0))
             transition.setFrame(view: self.containerButton, frame: containerFrame)
+            
+            self.separatorInset = leftInset
             
             return CGSize(width: availableSize.width, height: height)
         }

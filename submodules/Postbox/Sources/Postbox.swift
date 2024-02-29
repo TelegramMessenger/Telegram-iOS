@@ -2997,6 +2997,8 @@ final class PostboxImpl {
     private func internalTransaction<T>(_ f: (Transaction) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
         let _ = self.isInTransaction.swap(true)
         
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         self.valueBox.begin()
         let transaction = Transaction(queue: self.queue, postbox: self)
         self.afterBegin(transaction: transaction)
@@ -3004,6 +3006,12 @@ final class PostboxImpl {
         let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit(currentTransaction: transaction)
         transaction.disposed = true
         self.valueBox.commit()
+        
+        let endTime = CFAbsoluteTimeGetCurrent()
+        let transactionDuration = endTime - startTime
+        if transactionDuration > 0.1 {
+            postboxLog("Postbox transaction took \(transactionDuration * 1000.0) ms")
+        }
         
         let _ = self.isInTransaction.swap(false)
         
@@ -3079,7 +3087,7 @@ final class PostboxImpl {
         switch chatLocation {
         case let .peer(peerId, threadId):
             return .single((.peer(peerId: peerId, threadId: threadId), false))
-        case .thread(_, _, let data), .feed(_, let data):
+        case .thread(_, _, let data):
             return Signal { subscriber in
                 var isHoleFill = false
                 return (data
@@ -3089,6 +3097,9 @@ final class PostboxImpl {
                     return (.external(value), wasHoleFill)
                 }).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
             }
+        case .customChatContents:
+            assert(false)
+            return .never()
         }
     }
     
@@ -3333,13 +3344,7 @@ final class PostboxImpl {
             readStates = transientReadStates
         }
         
-        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, clipHoles: clipHoles, peerIds: peerIds, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries, getMessageCountInRange: { lowerBound, upperBound in
-            if case let .tag(tagMask) = tag {
-                return Int32(self.messageHistoryTable.getMessageCountInRange(peerId: lowerBound.id.peerId, namespace: lowerBound.id.namespace, tag: tagMask, lowerBound: lowerBound, upperBound: upperBound))
-            } else {
-                return 0
-            }
-        })
+        let mutableView = MutableMessageHistoryView(postbox: self, orderStatistics: orderStatistics, clipHoles: clipHoles, trackHoles: true, peerIds: peerIds, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, anchor: anchor, combinedReadStates: readStates, transientReadStates: transientReadStates, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, count: count, topTaggedMessages: topTaggedMessages, additionalDatas: additionalDataEntries)
         
         let initialUpdateType: ViewUpdateType = .Initial
         

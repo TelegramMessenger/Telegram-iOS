@@ -76,12 +76,21 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             replyPanelNode.interfaceInteraction = interfaceInteraction
             replyPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return replyPanelNode
-        } else if let peerId = chatPresentationInterfaceState.chatLocation.peerId {
-            let panelNode = ReplyAccessoryPanelNode(context: context, chatPeerId: peerId, messageId: replyMessageSubject.messageId, quote: replyMessageSubject.quote, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
-            panelNode.interfaceInteraction = interfaceInteraction
-            return panelNode
         } else {
-            return nil
+            var chatPeerId: EnginePeer.Id?
+            if let peerId = chatPresentationInterfaceState.chatLocation.peerId {
+                chatPeerId = peerId
+            } else if case .customChatContents = chatPresentationInterfaceState.chatLocation {
+                chatPeerId = context.account.peerId
+            }
+            
+            if let chatPeerId {
+                let panelNode = ReplyAccessoryPanelNode(context: context, chatPeerId: chatPeerId, messageId: replyMessageSubject.messageId, quote: replyMessageSubject.quote, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
+                panelNode.interfaceInteraction = interfaceInteraction
+                return panelNode
+            } else {
+                return nil
+            }
         }
     } else {
         return nil
