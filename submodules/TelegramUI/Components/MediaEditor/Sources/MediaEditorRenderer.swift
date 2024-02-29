@@ -98,6 +98,7 @@ final class MediaEditorRenderer {
     }
     
     private var currentMainInput: Input?
+    var currentMainInputMask: MTLTexture?
     private var currentAdditionalInput: Input?
     private(set) var resultTexture: MTLTexture?
     
@@ -202,7 +203,7 @@ final class MediaEditorRenderer {
         }
         
         if let mainTexture {
-            return self.videoFinishPass.process(input: mainTexture, secondInput: additionalTexture, timestamp: mainInput.timestamp, device: device, commandBuffer: commandBuffer)
+            return self.videoFinishPass.process(input: mainTexture, inputMask: self.currentMainInputMask, secondInput: additionalTexture, timestamp: mainInput.timestamp, device: device, commandBuffer: commandBuffer)
         } else {
             return nil
         }

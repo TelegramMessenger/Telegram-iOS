@@ -1004,7 +1004,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     position: .top,
                                     model: .island,
                                     videoFile: configuration.videos["last_seen"],
-                                    decoration: .tag
+                                    decoration: .badgeStars
                                 )),
                                 title: strings.Premium_LastSeen,
                                 text: strings.Premium_LastSeenInfo,
@@ -1023,10 +1023,30 @@ private final class DemoSheetContent: CombinedComponent {
                                     position: .top,
                                     model: .island,
                                     videoFile: configuration.videos["message_privacy"],
-                                    decoration: .tag
+                                    decoration: .swirlStars
                                 )),
                                 title: strings.Premium_MessagePrivacy,
                                 text: strings.Premium_MessagePrivacyInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
+                availableItems[.folderTags] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.folderTags,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    model: .island,
+                                    videoFile: configuration.videos["folder_tags"],
+                                    decoration: .tag
+                                )),
+                                title: strings.Premium_FolderTags,
+                                text: strings.Premium_FolderTagsStandaloneInfo,
                                 textColor: textColor
                             )
                         )
@@ -1136,6 +1156,8 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_LastSeen_Proceed
                         case .messagePrivacy:
                             buttonText = strings.Premium_MessagePrivacy_Proceed
+                        case .folderTags:
+                            buttonText = strings.Premium_FolderTags_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }
@@ -1177,6 +1199,8 @@ private final class DemoSheetContent: CombinedComponent {
                         text = strings.Premium_LastSeenInfo
                     case .messagePrivacy:
                         text = strings.Premium_MessagePrivacyInfo
+                    case .folderTags:
+                        text = strings.Premium_FolderTagsStandaloneInfo
                     default:
                         text = ""
                     }

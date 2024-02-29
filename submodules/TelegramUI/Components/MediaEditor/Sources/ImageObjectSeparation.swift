@@ -55,6 +55,70 @@ public func cutoutStickerImage(from image: UIImage, onlyCheck: Bool = false) -> 
     }
 }
 
+public enum CutoutResult {
+    case image(UIImage)
+    case pixelBuffer(CVPixelBuffer)
+}
+
+public func cutoutImage(from image: UIImage, atPoint point: CGPoint?, asImage: Bool) -> Signal<CutoutResult?, NoError> {
+    if #available(iOS 17.0, *) {
+        guard let cgImage = image.cgImage else {
+            return .single(nil)
+        }
+        return Signal { subscriber in
+            let ciContext = CIContext(options: nil)
+            let inputImage = CIImage(cgImage: cgImage)
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            let request = VNGenerateForegroundInstanceMaskRequest { [weak handler] request, error in
+                guard let handler, let result = request.results?.first as? VNInstanceMaskObservation else {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                    return
+                }
+
+                let instances = IndexSet(instances(atPoint: point, inObservation: result).prefix(1))
+                if let mask = try? result.generateScaledMaskForImage(forInstances: instances, from: handler) {
+                    if asImage {
+                        let filter = CIFilter.blendWithMask()
+                        filter.inputImage = inputImage
+                        filter.backgroundImage = CIImage(color: .clear)
+                        filter.maskImage = CIImage(cvPixelBuffer: mask)
+                        if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
+                            let image = UIImage(cgImage: cgImage)
+                            subscriber.putNext(.image(image))
+                            subscriber.putCompletion()
+                            return
+                        }
+                    } else {
+                        let filter = CIFilter.blendWithMask()
+                        filter.inputImage = CIImage(color: .white)
+                        filter.backgroundImage = CIImage(color: .black)
+                        filter.maskImage = CIImage(cvPixelBuffer: mask)
+                        if let output  = filter.outputImage, let cgImage = ciContext.createCGImage(output, from: inputImage.extent) {
+                            let image = UIImage(cgImage: cgImage)
+                            subscriber.putNext(.image(image))
+                            subscriber.putCompletion()
+                            return
+                        }
+//                        subscriber.putNext(.pixelBuffer(mask))
+//                        subscriber.putCompletion()
+                    }
+                }
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+            }
+            
+            try? handler.perform([request])
+            return ActionDisposable {
+                request.cancel()
+            }
+        }
+        |> runOn(queue)
+    } else {
+        return .single(nil)
+    }
+}
+
 @available(iOS 17.0, *)
 private func instances(atPoint maybePoint: CGPoint?, inObservation observation: VNInstanceMaskObservation) -> IndexSet {
     guard let point = maybePoint else {

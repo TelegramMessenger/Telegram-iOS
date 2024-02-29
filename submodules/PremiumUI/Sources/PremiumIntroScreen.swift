@@ -282,6 +282,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .folderTags:
+            if case .folderTags = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -326,6 +332,7 @@ public enum PremiumSource: Equatable {
     case presence
     case readTime
     case messageTags
+    case folderTags
     
     var identifier: String? {
         switch self {
@@ -413,6 +420,8 @@ public enum PremiumSource: Equatable {
             return "read_time"
         case .messageTags:
             return "saved_tags"
+        case .folderTags:
+            return "folder_tags"
         }
     }
 }
@@ -448,7 +457,6 @@ public enum PremiumPerk: CaseIterable {
     case businessAwayMessage
     case businessChatBots
     
-    
     public static var allCases: [PremiumPerk] {
         return [
             .doubleLimits,
@@ -471,12 +479,28 @@ public enum PremiumPerk: CaseIterable {
             .messageTags,
             .lastSeen,
             .messagePrivacy,
+            .folderTags,
             .business
         ]
     }
     
-    init?(identifier: String) {
-        for perk in PremiumPerk.allCases {
+    public static var allBusinessCases: [PremiumPerk] {
+        return [
+            .businessLocation,
+            .businessHours,
+            .businessGreetingMessage,
+            .businessQuickReplies,
+            .businessAwayMessage,
+            .businessChatBots,
+//            .emojiStatus,
+//            .folderTags,
+//            .stories,
+        ]
+    }
+    
+    
+    init?(identifier: String, business: Bool) {
+        for perk in business ? PremiumPerk.allBusinessCases : PremiumPerk.allCases {
             if perk.identifier == identifier {
                 self = perk
                 return
@@ -527,10 +551,22 @@ public enum PremiumPerk: CaseIterable {
             return "last_seen"
         case .messagePrivacy:
             return "message_privacy"
+        case .folderTags:
+            return "folder_tags"
         case .business:
             return "business"
-        default:
-            return ""
+        case .businessLocation:
+            return "location"
+        case .businessHours:
+            return "opening_hours"
+        case .businessQuickReplies:
+            return "quick_replies"
+        case .businessGreetingMessage:
+            return "greeting_messages"
+        case .businessAwayMessage:
+            return "away_messages"
+        case .businessChatBots:
+            return "chatbots"
         }
     }
     
@@ -576,10 +612,23 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_LastSeen
         case .messagePrivacy:
             return strings.Premium_MessagePrivacy
+        case .folderTags:
+            return strings.Premium_FolderTags
         case .business:
             return strings.Premium_Business
-        default:
-            return ""
+            
+        case .businessLocation:
+            return strings.Business_Location
+        case .businessHours:
+            return strings.Business_OpeningHours
+        case .businessQuickReplies:
+            return strings.Business_QuickReplies
+        case .businessGreetingMessage:
+            return strings.Business_GreetingMessages
+        case .businessAwayMessage:
+            return strings.Business_AwayMessages
+        case .businessChatBots:
+            return strings.Business_Chatbots
         }
     }
     
@@ -625,10 +674,23 @@ public enum PremiumPerk: CaseIterable {
             return strings.Premium_LastSeenInfo
         case .messagePrivacy:
             return strings.Premium_MessagePrivacyInfo
+        case .folderTags:
+            return strings.Premium_FolderTagsInfo
         case .business:
             return strings.Premium_BusinessInfo
-        default:
-            return ""
+            
+        case .businessLocation:
+            return strings.Business_LocationInfo
+        case .businessHours:
+            return strings.Business_OpeningHoursInfo
+        case .businessQuickReplies:
+            return strings.Business_QuickRepliesInfo
+        case .businessGreetingMessage:
+            return strings.Business_GreetingMessagesInfo
+        case .businessAwayMessage:
+            return strings.Business_AwayMessagesInfo
+        case .businessChatBots:
+            return strings.Business_ChatbotsInfo
         }
     }
     
@@ -674,86 +736,22 @@ public enum PremiumPerk: CaseIterable {
             return "Premium/Perk/LastSeen"
         case .messagePrivacy:
             return "Premium/Perk/MessagePrivacy"
+        case .folderTags:
+            return "Premium/Perk/MessageTags"
         case .business:
             return "Premium/Perk/Business"
-        default:
-            return ""
-        }
-    }
-}
-
-private enum BusinessPerk: CaseIterable {
-    case location
-    case hours
-    case quickReplies
-    case greetings
-    case awayMessages
-    case chatbots
-    
-    var identifier: String {
-        switch self {
-        case .location:
-            return "location"
-        case .hours:
-            return "opening_hours"
-        case .quickReplies:
-            return "quick_replies"
-        case .greetings:
-            return "greeting_messages"
-        case .awayMessages:
-            return "away_messages"
-        case .chatbots:
-            return "chatbots"
-        }
-    }
-    
-    func title(strings: PresentationStrings) -> String {
-        switch self {
-        case .location:
-            return strings.Business_Location
-        case .hours:
-            return strings.Business_OpeningHours
-        case .quickReplies:
-            return strings.Business_QuickReplies
-        case .greetings:
-            return strings.Business_GreetingMessages
-        case .awayMessages:
-            return strings.Business_AwayMessages
-        case .chatbots:
-            return strings.Business_Chatbots
-        }
-    }
-    
-    func subtitle(strings: PresentationStrings) -> String {
-        switch self {
-        case .location:
-            return strings.Business_LocationInfo
-        case .hours:
-            return strings.Business_OpeningHoursInfo
-        case .quickReplies:
-            return strings.Business_QuickRepliesInfo
-        case .greetings:
-            return strings.Business_GreetingMessagesInfo
-        case .awayMessages:
-            return strings.Business_AwayMessagesInfo
-        case .chatbots:
-            return strings.Business_ChatbotsInfo
-        }
-    }
-    
-    var iconName: String {
-        switch self {
-        case .location:
+            
+        case .businessLocation:
             return "Premium/BusinessPerk/Location"
-        case .hours:
+        case .businessHours:
             return "Premium/BusinessPerk/Hours"
-        case .quickReplies:
+        case .businessQuickReplies:
             return "Premium/BusinessPerk/Replies"
-        case .greetings:
+        case .businessGreetingMessage:
             return "Premium/BusinessPerk/Greetings"
-        case .awayMessages:
+        case .businessAwayMessage:
             return "Premium/BusinessPerk/Away"
-        case .chatbots:
+        case .businessChatBots:
             return "Premium/BusinessPerk/Chatbots"
         }
     }
@@ -783,20 +781,32 @@ struct PremiumIntroConfiguration {
             .animatedUserpics,
             .premiumStickers,
             .business
+        ], businessPerks: [
+            .businessGreetingMessage,
+            .businessAwayMessage,
+            .businessQuickReplies,
+            .businessChatBots,
+            .businessHours,
+            .businessLocation
+//            .emojiStatus,
+//            .folderTags,
+//            .stories
         ])
     }
     
     let perks: [PremiumPerk]
+    let businessPerks: [PremiumPerk]
     
-    fileprivate init(perks: [PremiumPerk]) {
+    fileprivate init(perks: [PremiumPerk], businessPerks: [PremiumPerk]) {
         self.perks = perks
+        self.businessPerks = businessPerks
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumIntroConfiguration {
         if let data = appConfiguration.data, let values = data["premium_promo_order"] as? [String] {
             var perks: [PremiumPerk] = []
             for value in values {
-                if let perk = PremiumPerk(identifier: value) {
+                if let perk = PremiumPerk(identifier: value, business: false) {
                     if !perks.contains(perk) {
                         perks.append(perk)
                     } else {
@@ -825,7 +835,29 @@ struct PremiumIntroConfiguration {
                 perks.append(.business)
             }
             #endif
-            return PremiumIntroConfiguration(perks: perks)
+            
+            
+            var businessPerks: [PremiumPerk] = []
+            if let values = data["business_promo_order"] as? [String] {
+                for value in values {
+                    if let perk = PremiumPerk(identifier: value, business: true) {
+                        if !businessPerks.contains(perk) {
+                            businessPerks.append(perk)
+                        } else {
+                            businessPerks = []
+                            break
+                        }
+                    } else {
+                        businessPerks = []
+                        break
+                    }
+                }
+            }
+            if businessPerks.count < 4 {
+                businessPerks = PremiumIntroConfiguration.defaultValue.businessPerks
+            }
+            
+            return PremiumIntroConfiguration(perks: perks, businessPerks: businessPerks)
         } else {
             return .defaultValue
         }
@@ -1531,8 +1563,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 ApplicationSpecificNotice.dismissedPremiumColorsBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedMessageTagsBadge(accountManager: context.sharedContext.accountManager),
                 ApplicationSpecificNotice.dismissedLastSeenBadge(accountManager: context.sharedContext.accountManager),
-                ApplicationSpecificNotice.dismissedMessagePrivacyBadge(accountManager: context.sharedContext.accountManager)
-            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge, dismissedLastSeenBadge, dismissedMessagePrivacyBadge in
+                ApplicationSpecificNotice.dismissedMessagePrivacyBadge(accountManager: context.sharedContext.accountManager),
+                ApplicationSpecificNotice.dismissedBusinessBadge(accountManager: context.sharedContext.accountManager)
+            ).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge, dismissedPremiumWallpapersBadge, dismissedPremiumColorsBadge, dismissedMessageTagsBadge, dismissedLastSeenBadge, dismissedMessagePrivacyBadge, dismissedBusinessBadge in
                 guard let self else {
                     return
                 }
@@ -1552,8 +1585,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 if !dismissedMessagePrivacyBadge {
                     newPerks.append(PremiumPerk.messagePrivacy.identifier)
                 }
-                //TODO:
-                newPerks.append(PremiumPerk.business.identifier)
+                if !dismissedBusinessBadge {
+                    newPerks.append(PremiumPerk.business.identifier)
+                }
                 self.newPerks = newPerks
                 self.updated()
             })
@@ -1796,6 +1830,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x9b4fed),
                 UIColor(rgb: 0x8958ff),
                 UIColor(rgb: 0x676bff),
+                UIColor(rgb: 0x676bff), //replace
                 UIColor(rgb: 0x6172ff),
                 UIColor(rgb: 0x5b79ff),
                 UIColor(rgb: 0x4492ff),
@@ -1937,17 +1972,31 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     if case .business = context.component.mode, case .business = perk {
                         continue
                     }
+                    
+                    let isNew = state.newPerks.contains(perk.identifier)
+                    let titleComponent = AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: perk.title(strings: strings),
+                            font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                            textColor: environment.theme.list.itemPrimaryTextColor
+                        )),
+                        maximumNumberOfLines: 0
+                    ))
+                    
+                    let titleCombinedComponent: AnyComponent<Empty>
+                    if isNew {
+                        titleCombinedComponent = AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(BadgeComponent(color: gradientColors[i], text: strings.Premium_New)))
+                        ], spacing: 5.0))
+                    } else {
+                        titleCombinedComponent = AnyComponent(HStack([AnyComponentWithIdentity(id: AnyHashable(0), component: titleComponent)], spacing: 0.0))
+                    }
+                    
                     perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
                         title: AnyComponent(VStack([
-                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(
-                                    string: perk.title(strings: strings),
-                                    font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                    textColor: environment.theme.list.itemPrimaryTextColor
-                                )),
-                                maximumNumberOfLines: 0
-                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: titleCombinedComponent),
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
                                     string: perk.subtitle(strings: strings),
@@ -2013,6 +2062,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 let _ = ApplicationSpecificNotice.setDismissedMessagePrivacyBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .business:
                                 demoSubject = .business
+                                let _ = ApplicationSpecificNotice.setDismissedBusinessBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             default:
                                 demoSubject = .doubleLimits
                             }
@@ -2092,7 +2142,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 
                 var i = 0
                 var perksItems: [AnyComponentWithIdentity<Empty>] = []
-                for perk in BusinessPerk.allCases  {
+                for perk in state.configuration.businessPerks  {
                     perksItems.append(AnyComponentWithIdentity(id: perksItems.count, component: AnyComponent(ListActionItemComponent(
                         theme: environment.theme,
                         title: AnyComponent(VStack([
@@ -2123,7 +2173,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             let isPremium = state?.isPremium == true
                             if isPremium {
                                 switch perk {
-                                case .location:
+                                case .businessLocation:
                                     let _ = (accountContext.engine.data.get(
                                         TelegramEngine.EngineData.Item.Peer.BusinessLocation(id: accountContext.account.peerId)
                                     )
@@ -2133,7 +2183,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeBusinessLocationSetupScreen(context: accountContext, initialValue: businessLocation, completion: { _ in }))
                                     })
-                                case .hours:
+                                case .businessHours:
                                     let _ = (accountContext.engine.data.get(
                                         TelegramEngine.EngineData.Item.Peer.BusinessHours(id: accountContext.account.peerId)
                                     )
@@ -2143,7 +2193,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeBusinessHoursSetupScreen(context: accountContext, initialValue: businessHours, completion: { _ in }))
                                     })
-                                case .quickReplies:
+                                case .businessQuickReplies:
                                     let _ = (accountContext.sharedContext.makeQuickReplySetupScreenInitialData(context: accountContext)
                                     |> take(1)
                                     |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
@@ -2152,7 +2202,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeQuickReplySetupScreen(context: accountContext, initialData: initialData))
                                     })
-                                case .greetings:
+                                case .businessGreetingMessage:
                                     let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
                                     |> take(1)
                                     |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
@@ -2161,7 +2211,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: false))
                                     })
-                                case .awayMessages:
+                                case .businessAwayMessage:
                                     let _ = (accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreenInitialData(context: accountContext)
                                     |> take(1)
                                     |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
@@ -2170,7 +2220,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeAutomaticBusinessMessageSetupScreen(context: accountContext, initialData: initialData, isAwayMode: true))
                                     })
-                                case .chatbots:
+                                case .businessChatBots:
                                     let _ = (accountContext.sharedContext.makeChatbotSetupScreenInitialData(context: accountContext)
                                     |> take(1)
                                     |> deliverOnMainQueue).start(next: { [weak accountContext] initialData in
@@ -2179,25 +2229,29 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         }
                                         push(accountContext.sharedContext.makeChatbotSetupScreen(context: accountContext, initialData: initialData))
                                     })
+                                default:
+                                    fatalError()
                                 }
                             } else {
                                 var demoSubject: PremiumDemoScreen.Subject
                                 switch perk {
-                                case .location:
+                                case .businessLocation:
                                     demoSubject = .businessLocation
-                                case .hours:
+                                case .businessHours:
                                     demoSubject = .businessHours
-                                case .quickReplies:
+                                case .businessQuickReplies:
                                     demoSubject = .businessQuickReplies
-                                case .greetings:
+                                case .businessGreetingMessage:
                                     demoSubject = .businessGreetingMessage
-                                case .awayMessages:
+                                case .businessAwayMessage:
                                     demoSubject = .businessAwayMessage
-                                case .chatbots:
+                                case .businessChatBots:
                                     demoSubject = .businessChatBots
+                                default:
+                                    fatalError()
                                 }
                                 var dismissImpl: (() -> Void)?
-                                let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: [.businessLocation, .businessHours, .businessQuickReplies, .businessGreetingMessage, .businessAwayMessage, .businessChatBots], buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
+                                let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.businessPerks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "—").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium, forceDark: forceDark)
                                 controller.action = { [weak state] in
                                     dismissImpl?()
                                     if state?.isPremium == false {
@@ -3719,5 +3773,63 @@ private final class EmojiActionIconComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class BadgeComponent: CombinedComponent {
+    let color: UIColor
+    let text: String
+    
+    init(
+        color: UIColor,
+        text: String
+    ) {
+        self.color = color
+        self.text = text
+    }
+    
+    static func ==(lhs: BadgeComponent, rhs: BadgeComponent) -> Bool {
+        if lhs.color != rhs.color {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let badgeBackground = Child(RoundedRectangle.self)
+        let badgeText = Child(MultilineTextComponent.self)
+
+        return { context in
+            let component = context.component
+            
+            let badgeText = badgeText.update(
+                component: MultilineTextComponent(text: .plain(NSAttributedString(string: component.text, font: Font.semibold(11.0), textColor: .white))),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            let badgeSize = CGSize(width: badgeText.size.width + 7.0, height: 16.0)
+            let badgeBackground = badgeBackground.update(
+                component: RoundedRectangle(
+                    color: component.color,
+                    cornerRadius: 5.0
+                ),
+                availableSize: badgeSize,
+                transition: context.transition
+            )
+            
+            context.add(badgeBackground
+                .position(CGPoint(x: badgeSize.width / 2.0, y: badgeSize.height / 2.0))
+            )
+            
+            context.add(badgeText
+                .position(CGPoint(x: badgeSize.width / 2.0, y: badgeSize.height / 2.0))
+            )
+                    
+            return badgeSize
+        }
     }
 }

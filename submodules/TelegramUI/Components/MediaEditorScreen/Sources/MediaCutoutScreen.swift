@@ -15,6 +15,7 @@ import MediaEditor
 import Photos
 import LottieAnimationComponent
 import MessageInputPanelComponent
+import DustEffect
 
 private final class MediaCutoutScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -40,9 +41,13 @@ private final class MediaCutoutScreenComponent: Component {
     public final class View: UIView {
         private let buttonsContainerView = UIView()
         private let buttonsBackgroundView = UIView()
+        private let previewContainerView = UIView()
         private let cancelButton = ComponentView<Empty>()
         private let label = ComponentView<Empty>()
         private let doneButton = ComponentView<Empty>()
+        
+        private let fadeView = UIView()
+        private let separatedImageView = UIImageView()
                                 
         private var component: MediaCutoutScreenComponent?
         private weak var state: State?
@@ -51,16 +56,42 @@ private final class MediaCutoutScreenComponent: Component {
         override init(frame: CGRect) {
             self.buttonsContainerView.clipsToBounds = true
 
+            self.fadeView.alpha = 0.0
+            self.fadeView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
+
+            self.separatedImageView.contentMode = .scaleAspectFit
+            
             super.init(frame: frame)
             
             self.backgroundColor = .clear
 
             self.addSubview(self.buttonsContainerView)
             self.buttonsContainerView.addSubview(self.buttonsBackgroundView)
+            
+            self.addSubview(self.fadeView)
+            self.addSubview(self.separatedImageView)
+            self.addSubview(self.previewContainerView)
+            
+            self.previewContainerView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.previewTap(_:))))
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func previewTap(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            let location = gestureRecognizer.location(in: gestureRecognizer.view)
+            
+            let point = CGPoint(
+                x: location.x / self.previewContainerView.frame.width,
+                y: location.y / self.previewContainerView.frame.height
+            )
+            component.mediaEditor.setSeparationMask(point: point)
+            
+            self.playDissolveAnimation()
         }
         
         func animateInFromEditor() {
@@ -74,6 +105,7 @@ private final class MediaCutoutScreenComponent: Component {
             
             self.cancelButton.view?.isHidden = true
             
+            self.fadeView.layer.animateAlpha(from: self.fadeView.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
             self.buttonsBackgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                 completion()
             })
@@ -82,14 +114,35 @@ private final class MediaCutoutScreenComponent: Component {
             self.state?.updated()
         }
         
+        public func playDissolveAnimation() {
+            guard let component = self.component, let resultImage = component.mediaEditor.resultImage, let environment = self.environment, let controller = environment.controller() as? MediaCutoutScreen else {
+                return
+            }
+            let previewView = controller.previewView
+            
+            let dustEffectLayer = DustEffectLayer()
+            dustEffectLayer.position = previewView.center
+            dustEffectLayer.bounds = previewView.bounds
+            previewView.superview?.layer.insertSublayer(dustEffectLayer, below: previewView.layer)
+            
+            dustEffectLayer.animationSpeed = 2.2
+            dustEffectLayer.becameEmpty = { [weak dustEffectLayer] in
+                dustEffectLayer?.removeFromSuperlayer()
+            }
+
+            dustEffectLayer.addItem(frame: previewView.bounds, image: resultImage)
+            
+            controller.requestDismiss(animated: true)
+        }
+        
         func update(component: MediaCutoutScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
             self.environment = environment
             
+            let isFirstTime = self.component == nil
             self.component = component
             self.state = state
             
-//            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let isTablet: Bool
             if case .regular = environment.metrics.widthClass {
                 isTablet = true
@@ -97,8 +150,6 @@ private final class MediaCutoutScreenComponent: Component {
                 isTablet = false
             }
             
-//            let mediaEditor = (environment.controller() as? MediaCutoutScreen)?.mediaEditor
-                        
             let buttonSideInset: CGFloat
             let buttonBottomInset: CGFloat = 8.0
             var controlsBottomInset: CGFloat = 0.0
@@ -119,7 +170,7 @@ private final class MediaCutoutScreenComponent: Component {
                 }
             }
             
-//            var previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom + controlsBottomInset))
+            let previewContainerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - previewSize.width) / 2.0), y: environment.safeInsets.top), size: CGSize(width: previewSize.width, height: availableSize.height - environment.safeInsets.top - environment.safeInsets.bottom + controlsBottomInset))
             let buttonsContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - environment.safeInsets.bottom + controlsBottomInset), size: CGSize(width: availableSize.width, height: environment.safeInsets.bottom - controlsBottomInset))
                                     
             let cancelButtonSize = self.cancelButton.update(
@@ -140,7 +191,7 @@ private final class MediaCutoutScreenComponent: Component {
                         guard let controller = environment.controller() as? MediaCutoutScreen else {
                             return
                         }
-                        controller.requestDismiss(reset: true, animated: true)
+                        controller.requestDismiss(animated: true)
                     }
                 )),
                 environment: {},
@@ -177,6 +228,30 @@ private final class MediaCutoutScreenComponent: Component {
             transition.setFrame(view: self.buttonsContainerView, frame: buttonsContainerFrame)
             transition.setFrame(view: self.buttonsBackgroundView, frame: CGRect(origin: .zero, size: buttonsContainerFrame.size))
             
+            transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
+            transition.setFrame(view: self.separatedImageView, frame: previewContainerFrame)
+            
+            let frameWidth = floor(previewContainerFrame.width * 0.97)
+            
+            self.fadeView.frame = CGRect(x: floorToScreenPixels((previewContainerFrame.width - frameWidth) / 2.0), y: previewContainerFrame.minY + floorToScreenPixels((previewContainerFrame.height - frameWidth) / 2.0), width: frameWidth, height: frameWidth)
+            self.fadeView.layer.cornerRadius = frameWidth / 8.0
+            
+            if isFirstTime {
+                let _ = (component.mediaEditor.getSeparatedImage(point: nil)
+                |> deliverOnMainQueue).start(next: { [weak self] image in
+                    guard let self else {
+                        return
+                    }
+                    self.separatedImageView.image = image
+                    self.state?.updated(transition: .easeInOut(duration: 0.2))
+                })
+            } else {
+                if let _ = self.separatedImageView.image {
+                    transition.setAlpha(view: self.fadeView, alpha: 1.0)
+                } else {
+                    transition.setAlpha(view: self.fadeView, alpha: 0.0)
+                }
+            }
             return availableSize
         }
     }
@@ -316,14 +391,16 @@ public final class MediaCutoutScreen: ViewController {
     
     fileprivate let context: AccountContext
     fileprivate let mediaEditor: MediaEditor
+    fileprivate let previewView: MediaEditorPreviewView
     
     public var dismissed: () -> Void = {}
     
     private var initialValues: MediaEditorValues
         
-    public init(context: AccountContext, mediaEditor: MediaEditor) {
+    public init(context: AccountContext, mediaEditor: MediaEditor, previewView: MediaEditorPreviewView) {
         self.context = context
         self.mediaEditor = mediaEditor
+        self.previewView = previewView
         self.initialValues = mediaEditor.values.makeCopy()
         
         super.init(navigationBarPresentationData: nil)
@@ -344,11 +421,7 @@ public final class MediaCutoutScreen: ViewController {
         super.displayNodeDidLoad()
     }
             
-    func requestDismiss(reset: Bool, animated: Bool) {
-        if reset {
-            self.mediaEditor.values = self.initialValues
-        }
-        
+    func requestDismiss(animated: Bool) {
         self.dismissed()
         
         self.node.animateOutToEditor(completion: {

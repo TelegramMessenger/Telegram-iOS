@@ -384,7 +384,27 @@ public class PremiumLimitsListScreen: ViewController {
             let theme = self.presentationData.theme
             let strings = self.presentationData.strings
             
-            if let stickers = self.stickers, let appIcons = self.appIcons, let configuration = self.promoConfiguration {
+            let videos: [String: TelegramMediaFile] = self.promoConfiguration?.videos ?? [:]
+            let stickers = self.stickers ?? []
+            let appIcons = self.appIcons ?? []
+            
+            let isReady: Bool
+            switch controller.subject {
+            case .premiumStickers:
+                isReady = !stickers.isEmpty
+            case .appIcons:
+                isReady = !appIcons.isEmpty
+            case .stories:
+                isReady = true
+            case .doubleLimits:
+                isReady = true
+            case .business:
+                isReady = true
+            default:
+                isReady = !videos.isEmpty
+            }
+            
+            if isReady {
                 let context = controller.context
                     
                 let textColor = theme.actionSheet.primaryTextColor
@@ -482,7 +502,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["more_upload"],
+                                    videoFile: videos["more_upload"],
                                     decoration: .dataRain
                                 )),
                                 title: strings.Premium_UploadSize,
@@ -500,7 +520,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["faster_download"],
+                                    videoFile: videos["faster_download"],
                                     decoration: .fasterStars
                                 )),
                                 title: strings.Premium_FasterSpeed,
@@ -518,7 +538,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["voice_to_text"],
+                                    videoFile: videos["voice_to_text"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_VoiceToText,
@@ -536,7 +556,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["no_ads"],
+                                    videoFile: videos["no_ads"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_NoAds,
@@ -554,7 +574,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["infinite_reactions"],
+                                    videoFile: videos["infinite_reactions"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_InfiniteReactions,
@@ -593,7 +613,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["emoji_status"],
+                                    videoFile: videos["emoji_status"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_EmojiStatus,
@@ -611,7 +631,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["advanced_chat_management"],
+                                    videoFile: videos["advanced_chat_management"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_ChatManagement,
@@ -629,7 +649,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["profile_badge"],
+                                    videoFile: videos["profile_badge"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Badge,
@@ -647,7 +667,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["animated_userpics"],
+                                    videoFile: videos["animated_userpics"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_Avatar,
@@ -681,7 +701,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .bottom,
-                                    videoFile: configuration.videos["animated_emoji"],
+                                    videoFile: videos["animated_emoji"],
                                     decoration: .emoji
                                 )),
                                 title: strings.Premium_AnimatedEmoji,
@@ -700,7 +720,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["translations"],
+                                    videoFile: videos["translations"],
                                     decoration: .hello
                                 )),
                                 title: strings.Premium_Translation,
@@ -718,7 +738,7 @@ public class PremiumLimitsListScreen: ViewController {
                                 content: AnyComponent(PhoneDemoComponent(
                                     context: context,
                                     position: .top,
-                                    videoFile: configuration.videos["peer_colors"],
+                                    videoFile: videos["peer_colors"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_Colors,
@@ -737,7 +757,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["wallpapers"],
+                                    videoFile: videos["wallpapers"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_Wallpapers,
@@ -756,7 +776,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["saved_tags"],
+                                    videoFile: videos["saved_tags"],
                                     decoration: .tag
                                 )),
                                 title: strings.Premium_MessageTags,
@@ -775,7 +795,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["last_seen"],
+                                    videoFile: videos["last_seen"],
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_LastSeen,
@@ -794,7 +814,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["message_privacy"],
+                                    videoFile: videos["message_privacy"],
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_MessagePrivacy,
@@ -846,7 +866,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["business_location"],
+                                    videoFile: videos["business_location"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_Location,
@@ -866,7 +886,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["business_hours"],
+                                    videoFile: videos["business_hours"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_OpeningHours,
@@ -886,7 +906,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["quick_replies"],
+                                    videoFile: videos["quick_replies"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_QuickReplies,
@@ -906,7 +926,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["greeting_message"],
+                                    videoFile: videos["greeting_message"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_GreetingMessages,
@@ -926,7 +946,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["away_message"],
+                                    videoFile: videos["away_message"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_AwayMessages,
@@ -946,7 +966,7 @@ public class PremiumLimitsListScreen: ViewController {
                                     context: context,
                                     position: .top,
                                     model: .island,
-                                    videoFile: configuration.videos["business_bots"],
+                                    videoFile: videos["business_bots"],
                                     decoration: .business
                                 )),
                                 title: strings.Business_Chatbots,

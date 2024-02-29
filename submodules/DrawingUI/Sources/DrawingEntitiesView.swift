@@ -885,7 +885,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         } else if self.autoSelectEntities, gestureRecognizer.numberOfTouches == 1, let viewToSelect = self.entity(at: location) {
             self.selectEntity(viewToSelect.entity, animate: false)
             self.onInteractionUpdated(true)
-        } else if gestureRecognizer.numberOfTouches == 2 || self.isStickerEditor, let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
+        } else if gestureRecognizer.numberOfTouches == 2 || (self.isStickerEditor && self.autoSelectEntities), let mediaEntityView = self.subviews.first(where: { $0 is DrawingEntityMediaView }) as? DrawingEntityMediaView {
             mediaEntityView.handlePan(gestureRecognizer)
         }
     }

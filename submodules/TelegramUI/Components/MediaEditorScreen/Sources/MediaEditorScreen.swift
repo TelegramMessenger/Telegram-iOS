@@ -154,6 +154,7 @@ final class MediaEditorScreenComponent: Component {
             case tools
             case done
             case cutout
+            case undo
         }
         private var cachedImages: [ImageKey: UIImage] = [:]
         func image(_ key: ImageKey) -> UIImage {
@@ -172,6 +173,8 @@ final class MediaEditorScreenComponent: Component {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Tools"), color: .white)!
                 case .cutout:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Cutout"), color: .white)!
+                case .undo:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/CutoutUndo"), color: .white)!
                 case .done:
                     image = generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -981,13 +984,14 @@ final class MediaEditorScreenComponent: Component {
             }
             
             if controller.node.canCutout {
+                let isCutout = controller.node.isCutout
                 let cutoutButtonSize = self.cutoutButton.update(
                     transition: transition,
                     component: AnyComponent(PlainButtonComponent(
                         content: AnyComponent(CutoutButtonContentComponent(
                             backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.18),
-                            icon: state.image(.cutout),
-                            title: "Cut Out an Object"
+                            icon: state.image(isCutout ? .undo : .cutout),
+                            title: isCutout ? "Undo Cut Out" : "Cut Out an Object"
                         )),
                         effectAlignment: .center,
                         action: {
@@ -2161,6 +2165,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         private var isDismissBySwipeSuppressed = false
         
         fileprivate var canCutout = false
+        fileprivate var isCutout = false
         
         private (set) var hasAnyChanges = false
         
@@ -2513,7 +2518,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 self.canCutout = canCutout
                 controller.requestLayout(transition: .animated(duration: 0.25, curve: .easeInOut))
             }
-            
+            mediaEditor.isCutoutUpdated = { [weak self] isCutout in
+                guard let self else {
+                    return
+                }
+                self.isCutout = isCutout
+                self.requestLayout(forceUpdate: true, transition: .immediate)
+            }
             
             if case .message = effectiveSubject {
             } else {
@@ -4232,14 +4243,25 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.entitiesView.selectEntity(nil)
                                 }
                                 
-                                let controller = MediaCutoutScreen(context: self.context, mediaEditor: mediaEditor)
-                                controller.dismissed = { [weak self] in
-                                    if let self {
-                                        self.animateInFromTool(inPlace: true)
+                                if controller.node.isCutout {
+                                    let snapshotView = self.previewView.snapshotView(afterScreenUpdates: false)
+                                    if let snapshotView {
+                                        self.previewView.superview?.addSubview(snapshotView)
                                     }
+                                    self.previewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { _ in
+                                        snapshotView?.removeFromSuperview()
+                                    })
+                                    mediaEditor.removeSeparationMask()
+                                } else {
+                                    let controller = MediaCutoutScreen(context: self.context, mediaEditor: mediaEditor, previewView: self.previewView)
+                                    controller.dismissed = { [weak self] in
+                                        if let self {
+                                            self.animateInFromTool(inPlace: true)
+                                        }
+                                    }
+                                    self.controller?.present(controller, in: .window(.root))
+                                    self.animateOutToTool(inPlace: true)
                                 }
-                                self.controller?.present(controller, in: .window(.root))
-                                self.animateOutToTool(inPlace: true)
                             }
                         }
                     )
@@ -5085,35 +5107,46 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let title: String
-        let save: String
-        if case .draft = self.node.actualSubject {
-            title = presentationData.strings.Story_Editor_DraftDiscardDraft
-            save = presentationData.strings.Story_Editor_DraftKeepDraft
-        } else {
+        var title: String
+        var text: String
+        var save: String?
+        switch self.mode {
+        case .storyEditor:
+            if case .draft = self.node.actualSubject {
+                title = presentationData.strings.Story_Editor_DraftDiscardDraft
+                save = presentationData.strings.Story_Editor_DraftKeepDraft
+            } else {
+                title = presentationData.strings.Story_Editor_DraftDiscardMedia
+                save = presentationData.strings.Story_Editor_DraftKeepMedia
+            }
+            text = presentationData.strings.Story_Editor_DraftDiscaedText
+        case .stickerEditor:
             title = presentationData.strings.Story_Editor_DraftDiscardMedia
-            save = presentationData.strings.Story_Editor_DraftKeepMedia
+            text = presentationData.strings.Story_Editor_DiscardText
         }
+        
+        var actions: [TextAlertAction] = []
+        actions.append(TextAlertAction(type: .destructiveAction, title: presentationData.strings.Story_Editor_DraftDiscard, action: { [weak self] in
+            if let self {
+                self.requestDismiss(saveDraft: false, animated: true)
+            }
+        }))
+        if let save {
+            actions.append(TextAlertAction(type: .genericAction, title: save, action: { [weak self] in
+                if let self {
+                    self.requestDismiss(saveDraft: true, animated: true)
+                }
+            }))
+        }
+        actions.append(TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+            
+        }))
         let controller = textAlertController(
             context: self.context,
             forceTheme: defaultDarkPresentationTheme,
             title: title,
-            text: presentationData.strings.Story_Editor_DraftDiscaedText,
-            actions: [
-                TextAlertAction(type: .destructiveAction, title: presentationData.strings.Story_Editor_DraftDiscard, action: { [weak self] in
-                    if let self {
-                        self.requestDismiss(saveDraft: false, animated: true)
-                    }
-                }),
-                TextAlertAction(type: .genericAction, title: save, action: { [weak self] in
-                    if let self {
-                        self.requestDismiss(saveDraft: true, animated: true)
-                    }
-                }),
-                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                    
-                })
-            ],
+            text: text,
+            actions: actions,
             actionLayout: .vertical
         )
         self.present(controller, in: .window(.root))

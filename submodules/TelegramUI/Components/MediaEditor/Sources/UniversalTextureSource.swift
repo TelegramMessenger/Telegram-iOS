@@ -42,6 +42,13 @@ final class UniversalTextureSource: TextureSource {
         )
     }
     
+    var mainImage: UIImage? {
+        if let mainInput = self.mainInputContext?.input, case let .image(image) = mainInput {
+            return image
+        }
+        return nil
+    }
+    
     func setMainInput(_ input: Input) {
         guard let renderTarget = self.renderTarget else {
             return
