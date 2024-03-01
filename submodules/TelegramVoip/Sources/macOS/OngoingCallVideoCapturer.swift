@@ -8,7 +8,7 @@
 import Foundation
 import Cocoa
 import TgVoipWebrtc
-
+import SwiftSignalKit
 
 
 public enum OngoingCallVideoOrientation {
@@ -78,6 +78,25 @@ public final class OngoingCallVideoCapturer {
     public init(_ deviceId: String = "", keepLandscape: Bool = true) {
         self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: deviceId, keepLandscape: keepLandscape)
     }
+    
+    public func video() -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        return Signal { [weak self] subscriber in
+            let disposable = MetaDisposable()
+
+            guard let strongSelf = self else {
+                return disposable
+            }
+            let innerDisposable = strongSelf.impl.addVideoOutput({ videoFrameData in
+                subscriber.putNext(OngoingGroupCallContext.VideoFrameData(frameData: videoFrameData))
+            })
+            disposable.set(ActionDisposable {
+                innerDisposable.dispose()
+            })
+
+            return disposable
+        }
+    }
+       
     
     public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.makeOutgoingVideoView(false, completion: { view, _ in
