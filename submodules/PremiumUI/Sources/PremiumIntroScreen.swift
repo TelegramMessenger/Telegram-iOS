@@ -556,9 +556,9 @@ public enum PremiumPerk: CaseIterable {
         case .business:
             return "business"
         case .businessLocation:
-            return "location"
+            return "business_location"
         case .businessHours:
-            return "opening_hours"
+            return "business_hours"
         case .businessQuickReplies:
             return "quick_replies"
         case .businessGreetingMessage:
@@ -566,7 +566,7 @@ public enum PremiumPerk: CaseIterable {
         case .businessAwayMessage:
             return "away_message"
         case .businessChatBots:
-            return "chatbots"
+            return "business_bots"
         }
     }
     
@@ -847,9 +847,6 @@ struct PremiumIntroConfiguration {
                             businessPerks = []
                             break
                         }
-                    } else {
-                        businessPerks = []
-                        break
                     }
                 }
             }
