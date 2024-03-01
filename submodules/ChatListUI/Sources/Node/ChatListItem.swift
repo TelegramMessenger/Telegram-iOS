@@ -227,15 +227,18 @@ private final class ChatListItemTagListComponent: Component {
     let context: AccountContext
     let tags: [ChatListItemContent.Tag]
     let theme: PresentationTheme
+    let sizeFactor: CGFloat
     
     init(
         context: AccountContext,
         tags: [ChatListItemContent.Tag],
-        theme: PresentationTheme
+        theme: PresentationTheme,
+        sizeFactor: CGFloat
     ) {
         self.context = context
         self.tags = tags
         self.theme = theme
+        self.sizeFactor = sizeFactor
     }
     
     static func ==(lhs: ChatListItemTagListComponent, rhs: ChatListItemTagListComponent) -> Bool {
@@ -246,6 +249,9 @@ private final class ChatListItemTagListComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.sizeFactor != rhs.sizeFactor {
             return false
         }
         return true
@@ -267,18 +273,18 @@ private final class ChatListItemTagListComponent: Component {
             preconditionFailure()
         }
         
-        func update(context: AccountContext, title: String, backgroundColor: UIColor, foregroundColor: UIColor) -> CGSize {
+        func update(context: AccountContext, title: String, backgroundColor: UIColor, foregroundColor: UIColor, sizeFactor: CGFloat) -> CGSize {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: title.isEmpty ? " " : title, font: Font.semibold(11.0), textColor: foregroundColor))
+                    text: .plain(NSAttributedString(string: title.isEmpty ? " " : title, font: Font.semibold(floor(11.0 * sizeFactor)), textColor: foregroundColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             
-            let backgroundSideInset: CGFloat = 4.0
-            let backgroundVerticalInset: CGFloat = 2.0
+            let backgroundSideInset: CGFloat = floorToScreenPixels(4.0 * sizeFactor)
+            let backgroundVerticalInset: CGFloat = floorToScreenPixels(2.0 * sizeFactor)
             let backgroundSize = CGSize(width: titleSize.width + backgroundSideInset * 2.0, height: titleSize.height + backgroundVerticalInset * 2.0)
             
             let backgroundFrame = CGRect(origin: CGPoint(), size: backgroundSize)
@@ -310,7 +316,7 @@ private final class ChatListItemTagListComponent: Component {
         
         func update(component: ChatListItemTagListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             var validIds: [Int32] = []
-            let spacing: CGFloat = 5.0
+            let spacing: CGFloat = floorToScreenPixels(5.0 * component.sizeFactor)
             var nextX: CGFloat = 0.0
             for tag in component.tags {
                 if nextX != 0.0 {
@@ -347,7 +353,7 @@ private final class ChatListItemTagListComponent: Component {
                     self.addSubview(itemView)
                 }
                 
-                let itemSize = itemView.update(context: component.context, title: itemTitle, backgroundColor: itemBackgroundColor, foregroundColor: itemForegroundColor)
+                let itemSize = itemView.update(context: component.context, title: itemTitle, backgroundColor: itemBackgroundColor, foregroundColor: itemForegroundColor, sizeFactor: component.sizeFactor)
                 let itemFrame = CGRect(origin: CGPoint(x: nextX, y: 0.0), size: itemSize)
                 itemView.frame = itemFrame
                 
@@ -3968,7 +3974,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if !itemTags.isEmpty {
-                        let itemTagListFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.maxY - 12.0), size: CGSize(width: contentRect.width, height: 20.0))
+                        let sizeFactor = item.presentationData.fontSize.itemListBaseFontSize / 17.0
+                        
+                        let itemTagListFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.minY + measureLayout.size.height * 2.0 + floorToScreenPixels(2.0 * sizeFactor)), size: CGSize(width: contentRect.width, height: floorToScreenPixels(20.0 * sizeFactor)))
                         
                         var itemTagListTransition = transition
                         let itemTagList: ComponentView<Empty>
@@ -3984,7 +3992,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             component: AnyComponent(ChatListItemTagListComponent(
                                 context: item.context,
                                 tags: itemTags,
-                                theme: item.presentationData.theme
+                                theme: item.presentationData.theme,
+                                sizeFactor: sizeFactor
                             )),
                             environment: {},
                             containerSize: itemTagListFrame.size
