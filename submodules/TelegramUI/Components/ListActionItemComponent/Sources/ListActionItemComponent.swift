@@ -197,7 +197,7 @@ public final class ListActionItemComponent: Component {
             contentHeight += component.contentInsets.top
             
             if component.leftIcon != nil {
-                contentLeftInset += 52.0
+                contentLeftInset += 46.0
             }
 
             let titleSize = self.title.update(

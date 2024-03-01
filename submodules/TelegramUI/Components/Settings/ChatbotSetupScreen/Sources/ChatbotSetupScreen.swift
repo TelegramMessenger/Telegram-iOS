@@ -827,7 +827,21 @@ final class ChatbotSetupScreenComponent: Component {
                     selectionState: .none,
                     hasNext: false,
                     action: { peer, _, _ in
-                    }
+                    },
+                    inlineActions: PeerListItemComponent.InlineActionsState(
+                        actions: [PeerListItemComponent.InlineAction(
+                            id: AnyHashable(0),
+                            title: environment.strings.Common_Delete,
+                            color: .destructive,
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.additionalPeerList.categories.remove(category)
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        )]
+                    )
                 ))))
             }
             for peer in self.additionalPeerList.peers {
@@ -845,7 +859,21 @@ final class ChatbotSetupScreenComponent: Component {
                     selectionState: .none,
                     hasNext: false,
                     action: { peer, _, _ in
-                    }
+                    },
+                    inlineActions: PeerListItemComponent.InlineActionsState(
+                        actions: [PeerListItemComponent.InlineAction(
+                            id: AnyHashable(0),
+                            title: environment.strings.Common_Delete,
+                            color: .destructive,
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.additionalPeerList.peers.removeAll(where: { $0.peer.id == peer.peer.id })
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        )]
+                    )
                 ))))
             }
             

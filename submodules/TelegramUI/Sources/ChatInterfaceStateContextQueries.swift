@@ -234,7 +234,9 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
         
             var shortcuts: Signal<[ShortcutMessageList.Item], NoError> = .single([])
-            if peer is TelegramUser {
+            if let user = peer as? TelegramUser, user.botInfo == nil {
+                context.account.viewTracker.keepQuickRepliesApproximatelyUpdated()
+                
                 shortcuts = context.engine.accountData.shortcutMessageList()
                 |> map { shortcutMessageList -> [ShortcutMessageList.Item] in
                     return shortcutMessageList.items.filter { item in
